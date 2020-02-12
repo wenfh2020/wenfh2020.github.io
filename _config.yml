@@ -1,6 +1,6 @@
 # Site settings
-title: wenfh2020's Personal Website
-email: wenfh2020@126.com
+title: LiXizhi's Personal Website
+email: lixizhi@yeah.net
 description: Xizhi's Ideas & Blogs
 # > # this means to ignore newlines until "baseurl:"
 #   Write an awesome description for your new site here. You can edit this
@@ -15,8 +15,7 @@ permalink: /:year/:month/:day/:title/
 # this is the url root of the view source link on the footer page.
 viewsourceroot: https://github.com/LiXizhi/LiXizhi.github.io/blob/master/
 # this is the url root of the create page link on the footer page.
-newsourceroot: https://github.com/L:q
-iXizhi/LiXizhi.github.io/new/master
+newsourceroot: https://github.com/LiXizhi/LiXizhi.github.io/new/master
 #########################################
 # for duoshuo.com commenting system, uncomment following line if you do not want to include duoshuo.com. 
 #duoshuo_shortname: lixizhi
@@ -33,5 +32,3 @@ markdown: kramdown
 # highlighter: pygments
 # highlighter: rouge
 # highlighter: false
-
-theme: jekyll-theme-leap-day
