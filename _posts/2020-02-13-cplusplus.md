@@ -9,8 +9,6 @@ author: wenfh2020
 * content
 {:toc}
 ## 基础知识
-
----
 ### const 常量
 const 可以修饰常量，引用，函数。
 ```c
