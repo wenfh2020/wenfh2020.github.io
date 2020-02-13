@@ -52,7 +52,7 @@ kramdown:
 category_dir: category/
 tag_dir: tag/
 
-# excerpt
+# excerpt 摘要分割
 excerpt_separator: "\n\n\n\n"
 
 # paginate
