@@ -2,15 +2,16 @@
 layout: post
 title:  "[nginx 源码走读] 内存池"
 categories: nginx
-tags: c nginx
+tags: nginx c
 author: wenfh2020
 mathjax: 1
 ---
-* content
-{:toc}
+
 nginx 内存池([源码](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c))通过大小内存块的链式管理逻辑大致如下图(部分**内存对齐**的细节没有添加进去)：
 
 ![内存池](https://upload-images.jianshu.io/upload_images/4321487-8f46ae663fd2bef9?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+
 
 ---
 
