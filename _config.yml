@@ -15,7 +15,7 @@ permalink: /:year/:month/:day/:title/
 
 # other links
 twitter_username: 
-facebook_username:
+facebook_username: 
 github_username:  wenfh2020
 email: wenfh2020@126.com
 weibo_username: wenfh2020
@@ -56,11 +56,9 @@ tag_dir: tag/
 excerpt_separator: "\n\n\n\n"
 
 # paginate
-gems: [jekyll-paginate]
-paginate: 6
+#gems: [jekyll-paginate]
+#paginate: 6
 
-
-# Build settings
-# theme: minima
-# plugins:
-#   - jekyll-feed
+gems:
+  - jekyll-paginate
+paginate: 5
