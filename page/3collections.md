@@ -16,6 +16,12 @@ type: page
 
 ## 书籍
 
+## 其它
+* [github + jekyll 博客](https://github.com/Gaohaoyang/gaohaoyang.github.io)
+
+  本博客主要采用这个模版搭建。搭建框架，请参考该框架博主的搭建流程 `readme.md`。
+
+
 ## Comments
 
 {% include comments.html %}
