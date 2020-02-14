@@ -6,7 +6,7 @@ tags: redis golang msglist
 author: wenfh2020
 ---
 
-用 redis  的 list 数据结构作为轻量级的消息队列，对于小系统确实是小而美，可控能力强。当然与kafka 和 rabbitmq 相比它还有很多缺陷。
+用 redis  的 list 数据结构作为轻量级的消息队列，对于小系统确实是小而美，可控能力强。当然与 kafka 相比它还有很多缺陷。
 
 
 
@@ -25,7 +25,7 @@ author: wenfh2020
 
 ## 生产者
 
-生产者，生产 100 w 条数据， 并发 13817 。
+生产者，生产 100 w 条数据， 并发 13817 。([测试源码](https://github.com/wenfh2020/go-test/blob/master/redis/redis_list/producer/produce.go))
 
 ```go
 func Produce(szBytes []byte) (err error) {
@@ -59,7 +59,7 @@ avg: 13817.860879118389
 
 ## 消费者
 
-消费者，消费 100 w 条数据，并发 9433。
+消费者，消费 100 w 条数据，并发 9433。([测试源码](https://github.com/wenfh2020/go-test/blob/master/redis/redis_list/customer/logic.go))
 
 ```go
 func Custom() {
@@ -76,10 +76,7 @@ func Custom() {
     for {
         vals, err := redis.Values(c.Do("brpop", MESSAGE_KEY, WAIT_TIME))
         if err != nil {
-            if bStart {
-                ...
-                bStart = false
-            }
+            ...
             time.Sleep(3 * time.Second)
             continue
         }
