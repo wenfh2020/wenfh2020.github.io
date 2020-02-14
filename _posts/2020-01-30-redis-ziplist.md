@@ -8,6 +8,8 @@ author: wenfh2020
 
 点赞作者：redis 源码，注释很多而且很详细。看压缩列表源码前，可以先看看 ziplist.c 文件顶部注释，基本可以了解该数据结构设计。
 
+![结构](https://upload-images.jianshu.io/upload_images/4321487-ed4018cb19c2e8cb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
 
 
 * content
