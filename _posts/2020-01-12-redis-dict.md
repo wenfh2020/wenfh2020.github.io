@@ -9,7 +9,7 @@ mathjax: true
 
 redis 是 key-value 的 NoSQL 数据库，dict 是基本数据结构，dict 总体来说是一个`哈希表`，哈希表 $O(1)$ 的时间复杂度，能高效进行数据读取。dict 还有动态扩容/缩容的功能，能灵活有效地使用机器内存。因为 redis 是单进程服务，所以当数据量很大的时候，扩容/缩容这些内存操作，涉及到新内存重新分配，数据拷贝。当数据量大的时候，会导致系统卡顿，必然会影响服务质量，redis 作者采用了渐进式的方式，将一次性操作，分散到 dict 对应的各个增删改查操作中。每个操作触发有限制数量的数据进行迁移。所以 dict 会有两个哈希表（`dictht ht[2];`），相应的 `rehashidx` 迁移位置，方便数据迁移操作。
 
-![结构](https://upload-images.jianshu.io/upload_images/4321487-227d9385c17d1e3b?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![结构](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215155528.png)
 
 
 

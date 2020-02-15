@@ -49,14 +49,17 @@ typedef struct zset {
 ## 思路
 
 跳跃表是链表，链表查找`时间复杂度`是 $O(n)$，一般情况下，顺序查找比较慢。那比较取巧的，因为数据是顺序的，我们可以跳着找。例如下面 1 - 13 的数字，我们要找 9 这个数字。跳着找的流程是这样的:
-![跳跃查找](https://upload-images.jianshu.io/upload_images/4321487-01a90514228efcbe?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+![跳跃查找](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163546.png)
+
 在第三步发现 11 比 9 大，就尝试跳更小的间距寻找合适的数据。同样的以此类推直到找到我们需要的数据。这样比我们顺序找要快很多。
 我们可以拆分一下上图的查找流程。每次查找不到时，就重新定向查找。每次重新定向查找被看作一个层。
-![拆分层次](https://upload-images.jianshu.io/upload_images/4321487-8333b1fbb0c0aaa7?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+![拆分层次](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163607.png)
 
 链表的层次，类似一个二维空间。每个结点有若干层，每一层将结点连接在一起建立关系，查找时 level 从最高层自上而下，结点从左到右。
 
-![层次](https://upload-images.jianshu.io/upload_images/4321487-522a405317a9f836?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![层次](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163631.png)
 
 
 随机层 level，层数越高，概率越小。
@@ -185,18 +188,21 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
 当 level 为 2 的链表，插入 level 为 3 的结点 5。（这里忽略了 ele 和 score 的处理）
 > 插入数据的流程其实比不复杂，对于源码的理解，最好结合图表，这样大脑思考比较便捷。
 
-- 插入前
-![插入前](https://upload-images.jianshu.io/upload_images/4321487-1c35bcb38a41f15c?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+* 插入前
 
-- 插入后
-![插入后](https://upload-images.jianshu.io/upload_images/4321487-16fded662e512213?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![插入前](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163700.png)
+
+* 插入后
+
+![插入后](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163734.png)
 
 ---
 
 ## 调试
 
 可以修改 redis 源码，跟踪一下工作流程。
-![调试](https://upload-images.jianshu.io/upload_images/4321487-bd315f474f8a8fee?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+![调试](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215164013.png)
 server.c
 
 ```c

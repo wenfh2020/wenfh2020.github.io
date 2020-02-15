@@ -145,10 +145,12 @@ void zfree(void *ptr) {
 这个函数的实现让人费解，代码对 `_n` 进行操作，最后却保存了 `__n` 。github 上虽然提出了这个[问题](https://github.com/antirez/redis/issues/4739)，貌似没有得到解决.
 
 历史版本 [blame](https://github.com/antirez/redis/blame/9390c384b88de6b2363c3f33ba42bd25c1c3346d/src/zmalloc.c)
-![历史](https://upload-images.jianshu.io/upload_images/4321487-09126032630755ac.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+![历史](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163003.png)
 
 当前版本 [blame](https://github.com/antirez/redis/blame/unstable/src/zmalloc.c)
-![当前](https://upload-images.jianshu.io/upload_images/4321487-dfe68917d153652d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+![当前](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163054.png)
 
 ---
 
