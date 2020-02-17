@@ -13,6 +13,7 @@ type: page
 
 * [c 语言教程](https://www.runoob.com/cprogramming/c-tutorial.html)
 * [c++ 官网](http://www.cplusplus.com/)
+* [c++ 参考手册](https://zh.cppreference.com/)
 * [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)
 * [Redis 官网](https://redis.io/)
 * [Redis 教程](https://www.runoob.com/redis/redis-tutorial.html)
