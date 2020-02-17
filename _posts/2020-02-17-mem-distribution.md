@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "进程内存分布"
-categories: 系统
+categories: 技术
 tags: 系统 Linux
 author: wenfh2020
 ---
