@@ -23,7 +23,7 @@ author: wenfh2020
 
 高级语言 -> 编译器 -> 低级语言指令 -> 内核系统 <---> 硬件。
 
-![程序工作流程](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200218054219.png)
+![程序工作流程](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200218055355.png)
 
 ---
 
