@@ -1,3 +1,5 @@
+# wenfh2020/2020-02-18/auto commit to github
+
 #!/bin/sh
 
 cd `dirname $0`
@@ -9,4 +11,4 @@ if [ $# != 1 ]; then
     exit 1
 fi
 
-git add _post && git commit -m $1 && git push -u origin master
+git add ./_posts && git commit -m $1 && git push -u origin master
