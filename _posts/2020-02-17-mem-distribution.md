@@ -17,12 +17,15 @@ author: wenfh2020
 * content
 {:toc}
 
+---
 
 ## 工作流程
 
 高级语言 -> 编译器 -> 低级语言指令 -> 内核系统 <---> 硬件。
 
-![程序工作流程](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200217161717.png)
+![程序工作流程](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200218054219.png)
+
+---
 
 ## 测试
 
@@ -161,6 +164,8 @@ address: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked
 4. 文字常量区 `.rodata`。
 5. 程序代码区（包含 数据常量） `.text`。
 
+---
+
 ## elf 格式头
 
 `.text`， `.data`，`bss`，`.rodata` 数据区是程序运行前，编译器分配好的，并不是程序载入内存后进行分配的，可以通过 `objdump` 工具查询。
@@ -175,6 +180,8 @@ ELF 可重定位目标文件的格式头：
 | .text   | 已编译程序段机器代码。     |
 
 > 《深入理解计算机系统》7.4 可重定位目标文件
+
+---
 
 ## objdump 工具
 
@@ -275,6 +282,8 @@ The following switches are optional:
 
   ...
 ```
+
+---
 
 ## 参考
 
