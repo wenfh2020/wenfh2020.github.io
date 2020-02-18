@@ -1,0 +1,23 @@
+{
+  "name": "wenfh2020.github.io",
+  "version": "1.0.0",
+  "description": "参考 [github + jekyll 建自己的博客](https://wenfh2020.github.io/2020/02/17/make-blog/)",
+  "main": "index.js",
+  "dependencies": {
+    "simple-jekyll-search": "^1.7.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wenfh2020/wenfh2020.github.io.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wenfh2020/wenfh2020.github.io/issues"
+  },
+  "homepage": "https://github.com/wenfh2020/wenfh2020.github.io#readme"
+}

@@ -10,7 +10,4 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-echo $@
-exit 1
-
 git pull && git add _posts && git commit -m "$(echo "$@")" && git push -u origin master
