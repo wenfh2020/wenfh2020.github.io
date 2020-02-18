@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>c 源码运行流程</title>
+    <meta name="description" content="">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_8v3czwksspqlg14i.css">
+    <link rel="stylesheet" href="/css/main.css ">
+    <link rel="canonical" href="http://localhost:4000/bak/2020-02-14-c-workflow/">
+    <link rel="alternate" type="application/rss+xml" title=" " href="http://localhost:4000/feed.xml ">
+
+
+    <script>
+    // 百度统计代码
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?c0731ae90724efee0af2c272a7bd1594";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-158372315-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand"> </a>
+        <small> </small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/tag/">
+                        
+                            <i class="fa fa-tags"></i>Tags
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/collection/">
+                        
+                            <i class="fa fa-bookmark"></i>Collections
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-heart"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>c 源码运行流程</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>
+            </div>
+
+            <div class="label-card">
+                <i class="fa fa-user"></i>wenfh2020
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#c/c++" title="Category: c/c++" rel="category">c/c++</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <!--a href="/tag/#c+c%2B%2B" title="Tag: c c++" rel="tag">c c++</a-->
+        <a href="/tag/#c c++" title="Tag: c c++" rel="tag">c c++</a>
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>流程：高级语言 -&gt; 编译器 -&gt; 低级语言指令 -&gt; 内核系统 -&gt; 硬件。</p>
+
+<p><img src="https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215105302.png" alt="流程" /></p>
+
+<ul id="markdown-toc">
+  <li><a href="#进程" id="markdown-toc-进程">进程</a></li>
+  <li><a href="#虚拟内存" id="markdown-toc-虚拟内存">虚拟内存</a></li>
+  <li><a href="#反汇编" id="markdown-toc-反汇编">反汇编</a>    <ul>
+      <li><a href="#汇编指令" id="markdown-toc-汇编指令">汇编指令</a></li>
+    </ul>
+  </li>
+  <li><a href="#源码运行内存情况" id="markdown-toc-源码运行内存情况">源码运行内存情况</a></li>
+  <li><a href="#源码对应的地址" id="markdown-toc-源码对应的地址">源码对应的地址</a></li>
+  <li><a href="#源码执行流程" id="markdown-toc-源码执行流程">源码执行流程</a></li>
+  <li><a href="#进程内存管理" id="markdown-toc-进程内存管理">进程内存管理</a></li>
+  <li><a href="#参考" id="markdown-toc-参考">参考</a></li>
+</ul>
+
+<h2 id="进程">进程</h2>
+
+<blockquote>
+  <p>进程的经典定义就是一个执行中程序的实例。系统中的每一个程序都运行在某个进程的上下文（context）中。上下文是由程序正确运行所需的状态组成的。这个状态包括存放在内存中的程序的代码和数据，它的栈、通用目的寄存器、程序计数器、环境变量以及打开文件描述符的集合。
+每次用户通过向 shell 输入一个可执行目标文件的名字，运行程序时，shell 就会创建一个新的进程，然后在这个新进程的上下文中运行这个可执行目标文件。应用程序也能够创建新进程，并且在这个新进程的上下文中运行它们自己的代码或其它应用程序。– 《深入理解计算机系统:进程》</p>
+</blockquote>
+
+<p>先来个结论性的：不太严谨的说，物理内存一定要映射才能被访问，CPU不认物理内存，CPU只认线性地址（虚拟内存），访问物理内存是mmu的事情</p>
+
+<p>CPU访问的地址，都是线性地址，不是物理地址</p>
+
+<p>其实在用户态的用户进程从来都没有请求过物理页框。我们的应用需要内存，一般都是用glibc的malloc或者其他alloc函数，这个函数返回给你的逻辑地址，当你的应用真的touch这个地址，发现进程页表里没有从逻辑地址到物理地址的映射，会产生一个缺页中断，然后再handle这个中断，继而分配物理内存，更新页表。推荐你去看深入理解linux内核这本书。</p>
+
+<h2 id="虚拟内存">虚拟内存</h2>
+<p>mmu 进行地址翻译
+进程，段，页，虚拟页，物理页</p>
+<h2 id="反汇编">反汇编</h2>
+
+<h3 id="汇编指令">汇编指令</h3>
+
+<p>寄存器：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">寄存器</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">rbp</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">rsp</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ebp</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">esp</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">eax</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">esp</td>
+      <td style="text-align: left"> </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>汇编指令：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">命令</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">jmp</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sub</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">jle</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">mov</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">leaveq</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">retq</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">cmp</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">push</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">pop</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">callq</td>
+      <td style="text-align: left"> </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="源码运行内存情况">源码运行内存情况</h2>
+
+<p>1、数据寄存器
+数据寄存器主要用来保存操作数和运算结果等信息，从而节省读取操作数所需占用总线和访问存储器的时间。
+2、变址寄存器
+32位CPU有2个32位通用寄存器ESI和EDI。其低16位对应先前CPU中的SI和DI，对低16位数据的存取，不影响高16位的数据。
+寄存器ESI、EDI、SI和DI称为变址寄存器(Index Register)，它们主要用于存放存储单元在段内的偏移量，用它们可实现多种存储器操作数的寻址方式，为以不同的地址形式访问存储单元提供方便。变址寄存器不可分割成8位寄存器。作为通用寄存器，也可存储算术逻辑运算的操作数和运算结果。它们可作一般的存储器指针使用。在字符串操作指令的执行过程中，对它们有特定的要求，而且还具有特殊的功能。
+3、指针寄存器
+32位CPU有2个32位通用寄存器EBP和ESP。其低16位对应先前CPU中的SBP和SP，对低16位数据的存取，不影响高16位的数据。
+寄存器EBP、ESP、BP和SP称为指针寄存器(Pointer Register)，主要用于存放堆栈内存储单元的偏移量，用它们可实现多种存储器操作数的寻址方式，为以不同的地址形式访问存储单元提供方便。指针寄存器不可分割成8位寄存器。作为通用寄存器，也可存储算术逻辑运算的操作数和运算结果。
+它们主要用于访问堆栈内的存储单元，并且规定：
+BP为基指针(Base Pointer)寄存器，通过它减去一定的偏移值，来访问栈中的元素；
+SP为堆栈指针(Stack Pointer)寄存器，它始终指向栈顶。
+说明：因栈的生长方向是从高地址向低地址生长，所以，进栈时，sp自减；出栈时，sp自增；
+4、段寄存器
+段寄存器是根据内存分段的管理模式而设置的。内存单元的物理地址由段寄存器的值和一个偏移量组合而成
+的，这样可用两个较少位数的值组合成一个可访问较大物理空间的内存地址。
+5、指令指针寄存器
+32位CPU把指令指针扩展到32位，并记作EIP，EIP的低16位与先前CPU中的IP作用相同。
+指令指针EIP、IP(Instruction Pointer)是存放下次将要执行的指令在代码段的偏移量。在具有预取指令功能的系统中，下次要执行的指令通常已被预取到指令队列中，除非发生转移情况。所以，在理解它们的功能时，不考虑存在指令队列的情况。
+在实方式下，由于每个段的最大范围为64K，所以，EIP中的高16位肯定都为0，此时，相当于只用其低16位的IP来反映程序中指令的执行次序。
+6、标志寄存器</p>
+
+<hr />
+
+<h2 id="源码对应的地址">源码对应的地址</h2>
+
+<hr />
+
+<p>你代码的前几行是进入函数时的压栈操作。</p>
+
+<p>在函数退出时，为啥没有看到恢复RBP和RSP指令呢？
+答案是用了leaveq指令。leaveq和retq中的q是指64位操作数。
+leaveq相当于：
+movq %rbp, %rsp
+popq %rbp</p>
+
+<p>leaveq跟函数进入时的如下操作是对应的：
+push   %rbp
+mov    %rsp,%rbp
+有些指令集也把上述的两条指令叫做enterq。</p>
+
+<p>retq相当于：
+popq %rip</p>
+
+<p>首先在64位下，寄存器esp变成了rsp，ebp变成了rbp，ip变成了rip。</p>
+
+<p>IA-32系列有8个32位通用寄存器，名称分别为：EAX,EBX,ECX,EDX,ESP,EBP,ESI,EDI，如图：</p>
+
+<p>EDI和ESI分别是16位寄存器DI和SI的32位扩展
+它们是目的变址寄存器和源变址寄存器，用于串操作指令中。
+同时，它们也可以作为通用寄存器使用。</p>
+
+<hr />
+
+<p>movl     %eax,     %ebx       #把32位的EAX寄存器值传送给32为的EBX寄存器值</p>
+
+<p>movw   %ax,       %bx         #把32位的EAX寄存器值传送给32为的EBX寄存器值</p>
+
+<p>movb    %al,       %lx           #把32位的EAX寄存器值传送给32为的EBX寄存器值</p>
+
+<p>movl
+mov long ： 字长传送 ： 32位
+movw
+mov word：字传送 ：16位
+movb
+mov byte：字节传送 ：8位</p>
+
+<hr />
+
+<p>几个常用的寄存器</p>
+
+<p>sp/esp/rsp（16bit/32bit/64bit）栈寄存器—指向栈顶
+bp/ebp/rbp 栈基址寄存器—指向栈底
+ip/eip/rip 程序指令寄存器—指向下一条待执行指令
+<a href="https://www.cnblogs.com/penghuster/p/6537796.html">几个常用寄存器</a>
+<a href="https://blog.csdn.net/qq_36982160/article/details/82950848">汇编常用指令</a></p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">指令</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">mov</td>
+      <td style="text-align: left">mov &lt;dst&gt; &lt;src&gt;</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<p>通过宏的效率，反汇编后，看看运行情况。</p>
+
+<hr />
+<h2 id="源码执行流程">源码执行流程</h2>
+<p><img src="https://upload-images.jianshu.io/upload_images/4321487-6a0cc4e451528fec.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="源码编译执行流程" /></p>
+
+<hr />
+<h2 id="进程内存管理">进程内存管理</h2>
+<p><img src="https://upload-images.jianshu.io/upload_images/4321487-00c1258b95bd7347.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="进程地址空间" /></p>
+
+<hr />
+
+<h2 id="参考">参考</h2>
+
+<ul>
+  <li>《深入理解计算机系统》（第三版）</li>
+  <li>《程序员的自我修养》</li>
+  <li><a href="https://www.cnblogs.com/pugang/p/11428245.html">malloc vs memset</a></li>
+  <li><a href="https://www.cnblogs.com/penghuster/p/6537796.html">几个常用寄存器</a></li>
+  <li><a href="https://blog.csdn.net/linuxheik/article/details/49277041?t=1488286725179">hook leaveq retq</a></li>
+  <li><a href="https://zhidao.baidu.com/question/717108926608287405.html">CPU中有哪些主要寄存器</a></li>
+  <li><a href="https://blog.csdn.net/qq_38410730/article/details/81036768">【Linux】Linux的虚拟内存详解（MMU、页表结构）</a></li>
+</ul>
+
+        </article>
+        <hr>
+
+        
+        
+        
+
+        <div class="post-recent">
+    <div class="pre">
+        
+    </div>
+    <div class="nex">
+
+        
+    </div>
+</div>
+
+
+        <h2 id="comments">Comments</h2>
+        
+
+
+<div id="disqus_thread"></div>
+<script>
+    /**
+     * RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+     * LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables
+     */
+
+    var disqus_config = function() {
+        this.page.url = 'http://localhost:4000/bak/2020-02-14-c-workflow/'; // Replace PAGE_URL with your page's canonical URL variable
+        this.page.identifier = 'http://localhost:4000/bak/2020-02-14-c-workflow/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+    };
+
+    (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document,
+            s = d.createElement('script');
+
+        s.src = '//wenfh2020.disqus.com/embed.js';
+
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+            
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/wenfh2020" title="GitHub"><i class="fa fa-github"
+                    aria-hidden="true"></i></a>  
+            <a href="mailto:wenfh2020@126.com" title="email"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>
+             
+            <a href="http://weibo.com/wenfh2020" title="Weibo"><i class="fa fa-weibo"
+                    aria-hidden="true"></i></a>  
+            <a href="https://www.zhihu.com/people/wenfh2020" title="Zhihu"><i
+                    class="iconfont icon-daoruzhihu"></i></a>   
+             
+        </p>
+        <p>
+            本站总访问量<span id="busuanzi_value_site_pv"></span>次，本站访客数<span
+                id="busuanzi_value_site_uv"></span>人次，本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github
+                    Pages</a>.
+            </span>
+            <span>
+                Theme designed by <a href="https://github.com/wenfh2020">wenfh2020</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <div class="back-to-top">
+    <a href="#top" data-scroll>
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/smooth-scroll.min.js " charset="utf-8"></script>
+    <script type="text/javascript">
+      smoothScroll.init({
+        speed: 500, // Integer. How fast to complete the scroll in milliseconds
+        easing: 'easeInOutCubic', // Easing pattern to use
+        offset: 20, // Integer. How far to offset the scrolling anchor location in pixels
+      });
+    </script>
+    <!-- <script src=" /js/scroll.min.js " charset="utf-8"></script> -->
+  </body>
+
+</html>

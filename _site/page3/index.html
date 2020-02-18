@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title> </title>
+    <meta name="description" content="">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_8v3czwksspqlg14i.css">
+    <link rel="stylesheet" href="/css/main.css ">
+    <link rel="canonical" href="http://localhost:4000/page3/">
+    <link rel="alternate" type="application/rss+xml" title=" " href="http://localhost:4000/feed.xml ">
+
+
+    <script>
+    // 百度统计代码
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?c0731ae90724efee0af2c272a7bd1594";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-158372315-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand"> </a>
+        <small> </small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/tag/">
+                        
+                            <i class="fa fa-tags"></i>Tags
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/collection/">
+                        
+                            <i class="fa fa-bookmark"></i>Collections
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-heart"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" index>
+  <div class="left">
+    <h1></h1>
+    <small>纸上得来终觉浅，绝知此事要躬行。</small>
+    <hr>
+    <ul>
+      
+      <li>
+        <h2>
+          <a class="post-link" href="/2020/01/19/redis-zmalloc/">[redis 源码走读] zmalloc</a>
+        </h2>
+        <div class="label">
+          <div class="label-card">
+            <i class="fa fa-calendar"></i>2020-01-19
+          </div>
+          <div class="label-card">
+            <i class="fa fa-user"></i>wenfh2020
+            
+          </div>
+          <div class="label-card">
+            
+          </div>
+
+          <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#redis" title="Category: redis" rel="category">redis</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+          </div>
+
+          <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a>&nbsp;
+    
+        <a href="/tag/#zmalloc" title="Tag: zmalloc" rel="tag">zmalloc</a>
+    
+  
+
+</span>
+
+          </div>
+        </div>
+        <div class="excerpt">
+          <p>redis 内存管理实现，有三种方式：</p>
+
+<ol>
+  <li><code class="highlighter-rouge">jemalloc</code> (谷歌)</li>
+  <li><code class="highlighter-rouge">tcmalloc</code> （facebook）</li>
+  <li><code class="highlighter-rouge">libc</code> （系统）</li>
+</ol>
+
+<p>其中 <code class="highlighter-rouge">jemalloc</code>， <code class="highlighter-rouge">tcmalloc</code> 是第三方的实现，<code class="highlighter-rouge">libc</code> 的实现相对简单，没有做成一个内存池。没有像 <code class="highlighter-rouge">nginx</code>那样，有自己的内存管理链表。频繁向内核申请内存不是明智的做法。作者应该是推荐使用 <code class="highlighter-rouge">tcmallic</code> 或 <code class="highlighter-rouge">jemalloc</code>。</p>
+
+        </div>
+        <div class="read-all">
+          <a href="/2020/01/19/redis-zmalloc/"><i class="fa fa-newspaper-o"></i>Read All</a>
+        </div>
+        <hr>
+      </li>
+      
+      <li>
+        <h2>
+          <a class="post-link" href="/2020/01/15/redis-sds/">[redis 源码走读] 字符串(sds)</a>
+        </h2>
+        <div class="label">
+          <div class="label-card">
+            <i class="fa fa-calendar"></i>2020-01-15
+          </div>
+          <div class="label-card">
+            <i class="fa fa-user"></i>wenfh2020
+            
+          </div>
+          <div class="label-card">
+            
+          </div>
+
+          <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#redis" title="Category: redis" rel="category">redis</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+          </div>
+
+          <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a>&nbsp;
+    
+        <a href="/tag/#sds" title="Tag: sds" rel="tag">sds</a>
+    
+  
+
+</span>
+
+          </div>
+        </div>
+        <div class="excerpt">
+          <p>为了节省内存空间，灵活处理不同长度范围的字符串，redis 定义了几种 <code class="highlighter-rouge">sdshdr(X)</code> 数据结构：</p>
+
+<p><img src="https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200214074828.png" alt="数据结构内存" /></p>
+
+        </div>
+        <div class="read-all">
+          <a href="/2020/01/15/redis-sds/"><i class="fa fa-newspaper-o"></i>Read All</a>
+        </div>
+        <hr>
+      </li>
+      
+      <li>
+        <h2>
+          <a class="post-link" href="/2020/01/12/redis-dict/">[redis 源码走读] 字典(dict)</a>
+        </h2>
+        <div class="label">
+          <div class="label-card">
+            <i class="fa fa-calendar"></i>2020-01-12
+          </div>
+          <div class="label-card">
+            <i class="fa fa-user"></i>wenfh2020
+            
+          </div>
+          <div class="label-card">
+            
+          </div>
+
+          <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#redis" title="Category: redis" rel="category">redis</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+          </div>
+
+          <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a>&nbsp;
+    
+        <a href="/tag/#dict" title="Tag: dict" rel="tag">dict</a>&nbsp;
+    
+        <a href="/tag/#字典" title="Tag: 字典" rel="tag">字典</a>
+    
+  
+
+</span>
+
+          </div>
+        </div>
+        <div class="excerpt">
+          <p>redis 是 key-value 的 NoSQL 数据库，dict 是基本数据结构，dict 总体来说是一个<code class="highlighter-rouge">哈希表</code>，哈希表 $O(1)$ 的时间复杂度，能高效进行数据读取。dict 还有动态扩容/缩容的功能，能灵活有效地使用机器内存。因为 redis 是单进程服务，所以当数据量很大的时候，扩容/缩容这些内存操作，涉及到新内存重新分配，数据拷贝。当数据量大的时候，会导致系统卡顿，必然会影响服务质量，redis 作者采用了渐进式的方式，将一次性操作，分散到 dict 对应的各个增删改查操作中。每个操作触发有限制数量的数据进行迁移。所以 dict 会有两个哈希表（<code class="highlighter-rouge">dictht ht[2];</code>），相应的 <code class="highlighter-rouge">rehashidx</code> 迁移位置，方便数据迁移操作。</p>
+
+<p><img src="https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215155528.png" alt="结构" /></p>
+
+        </div>
+        <div class="read-all">
+          <a href="/2020/01/12/redis-dict/"><i class="fa fa-newspaper-o"></i>Read All</a>
+        </div>
+        <hr>
+      </li>
+      
+      <li>
+        <h2>
+          <a class="post-link" href="/2020/01/05/redis-gdb/">gdb 调试 redis</a>
+        </h2>
+        <div class="label">
+          <div class="label-card">
+            <i class="fa fa-calendar"></i>2020-01-05
+          </div>
+          <div class="label-card">
+            <i class="fa fa-user"></i>wenfh2020
+            
+          </div>
+          <div class="label-card">
+            
+          </div>
+
+          <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#redis" title="Category: redis" rel="category">redis</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+          </div>
+
+          <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a>&nbsp;
+    
+        <a href="/tag/#gdb" title="Tag: gdb" rel="tag">gdb</a>&nbsp;
+    
+        <a href="/tag/#vscode" title="Tag: vscode" rel="tag">vscode</a>
+    
+  
+
+</span>
+
+          </div>
+        </div>
+        <div class="excerpt">
+          <p>可以通过 gdb / vscode 调试 redis 源码，理解 redis 工作流程。</p>
+
+<p><img src="https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215134208.png" alt="调试" /></p>
+
+        </div>
+        <div class="read-all">
+          <a href="/2020/01/05/redis-gdb/"><i class="fa fa-newspaper-o"></i>Read All</a>
+        </div>
+        <hr>
+      </li>
+      
+      <li>
+        <h2>
+          <a class="post-link" href="/2019/11/17/redis-learn/">redis 学习的思考</a>
+        </h2>
+        <div class="label">
+          <div class="label-card">
+            <i class="fa fa-calendar"></i>2019-11-17
+          </div>
+          <div class="label-card">
+            <i class="fa fa-user"></i>wenfh2020
+            
+          </div>
+          <div class="label-card">
+            
+          </div>
+
+          <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#redis" title="Category: redis" rel="category">redis</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+          </div>
+
+          <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a>
+    
+  
+
+</span>
+
+          </div>
+        </div>
+        <div class="excerpt">
+          <p>喜欢王垠的一篇文章<a href="http://www.yinwang.org/blog-cn/2019/07/12/learning-philosophy">《学习的智慧》</a>，所有活知识都是对死知识思考实践过程产生的结果。基础决定你的下限，思维深度决定你的上限，当你陷入一个瓶颈，需要从这两个方面考虑。学而不思则罔，知识的总结和梳理，可以让思维更高效地思考。</p>
+
+        </div>
+        <div class="read-all">
+          <a href="/2019/11/17/redis-learn/"><i class="fa fa-newspaper-o"></i>Read All</a>
+        </div>
+        <hr>
+      </li>
+      
+    </ul>
+
+
+
+    <!-- Pagination links -->
+    <div class="pagination">
+      
+      <a href="/index.html" class="previous"><i class="fa fa-angle-double-left"></i></a>
+      <a href="/page2" class="previous"><i
+          class="fa fa-angle-left"></i></a>
+      
+      <span class="page_number ">3/5</span>
+      
+      <a href="/page4" class="next"><i class="fa fa-angle-right"></i></a>
+      <a href="/page5" class="next"><i
+          class="fa fa-angle-double-right"></i></a>
+      
+    </div>
+  </div>
+  <!-- <button class="anchor"><i class="fa fa-anchor"></i></button> -->
+  <div class="right">
+    <div class="wrap">
+      <div class="side">
+        <div>
+          <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+          Recent Posts
+        </div>
+        <ul class="content-ul" recent>
+          
+          <li><a href="/2020/02/17/mem-distribution/">进程内存分布</a></li>
+          
+          <li><a href="/2020/02/17/make-blog/">github + jekyll 建自己的博客</a></li>
+          
+          <li><a href="/2020/02/15/c-asm/">比较宏和宏函数的工作效率</a></li>
+          
+          <li><a href="/2020/02/08/ngx_align_ptr/">nginx 地址对齐(ngx_align_ptr)</a></li>
+          
+          <li><a href="/2020/02/05/redis-obj/">[redis 源码走读] 对象(redisObject)</a></li>
+          
+          <li><a href="/2020/02/04/redis-inset/">[redis 源码走读] 整数集合(inset)</a></li>
+          
+          <li><a href="/2020/02/03/redis-skiplist/">[redis 源码走读] 跳跃表(skiplist)</a></li>
+          
+          <li><a href="/2020/01/30/redis-ziplist/">[redis 源码走读] 压缩列表(ziplist)</a></li>
+          
+          <li><a href="/2020/01/21/redis-list/">[redis 源码走读] 链表</a></li>
+          
+          <li><a href="/2020/01/21/nginx-pool/">[nginx 源码走读] 内存池</a></li>
+          
+        </ul>
+      </div>
+
+      <!-- Content -->
+      <div class="side ">
+        <div>
+          <i class="fa fa-th-list"></i>
+          Categories
+        </div>
+        <ul class="content-ul" cate>
+          
+          <li>
+            <a href="/category/#c/c++" class="categories-list-item"
+              cate="c/c++">
+              <span class="name">
+                c/c++
+              </span>
+              <span class="badge">4</span>
+            </a>
+          </li>
+          
+          <li>
+            <a href="/category/#redis" class="categories-list-item"
+              cate="redis">
+              <span class="name">
+                redis
+              </span>
+              <span class="badge">12</span>
+            </a>
+          </li>
+          
+          <li>
+            <a href="/category/#随笔" class="categories-list-item"
+              cate="随笔">
+              <span class="name">
+                随笔
+              </span>
+              <span class="badge">2</span>
+            </a>
+          </li>
+          
+          <li>
+            <a href="/category/#nginx" class="categories-list-item"
+              cate="nginx">
+              <span class="name">
+                nginx
+              </span>
+              <span class="badge">2</span>
+            </a>
+          </li>
+          
+          <li>
+            <a href="/category/#技术" class="categories-list-item"
+              cate="技术">
+              <span class="name">
+                技术
+              </span>
+              <span class="badge">1</span>
+            </a>
+          </li>
+          
+        </ul>
+      </div>
+      <!-- 其他div框放到这里 -->
+      <div class="side">
+        <div>
+          <i class="fa fa-tags"></i>
+          Tags
+        </div>
+        <div class="tags-cloud">
+          
+          
+          
+          
+
+          
+
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#c"
+            style="font-size: 14.5pt; color: #333;">c</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#stl"
+            style="font-size: 9pt; color: #999;">stl</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#c++"
+            style="font-size: 10pt; color: #888;">c++</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#redis"
+            style="font-size: 18pt; color: #000;">redis</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#hiredis"
+            style="font-size: 9pt; color: #999;">hiredis</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#libev"
+            style="font-size: 9pt; color: #999;">libev</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#golang"
+            style="font-size: 9pt; color: #999;">golang</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#msglist"
+            style="font-size: 9pt; color: #999;">msglist</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#随笔"
+            style="font-size: 10pt; color: #888;">随笔</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#gdb"
+            style="font-size: 9pt; color: #999;">gdb</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#vscode"
+            style="font-size: 9pt; color: #999;">vscode</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#dict"
+            style="font-size: 9pt; color: #999;">dict</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#字典"
+            style="font-size: 9pt; color: #999;">字典</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#sds"
+            style="font-size: 9pt; color: #999;">sds</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#zmalloc"
+            style="font-size: 9pt; color: #999;">zmalloc</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#nginx"
+            style="font-size: 10pt; color: #888;">nginx</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#list"
+            style="font-size: 9pt; color: #999;">list</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#系统"
+            style="font-size: 9pt; color: #999;">系统</a>
+          
+          
+          
+          
+          
+          
+          <a href="/tag/#Linux"
+            style="font-size: 9pt; color: #999;">Linux</a>
+          
+        </div>
+      </div>
+
+      <!-- <div class="side">
+                <div>
+                    <i class="fa fa-external-link"></i>
+                    Links
+                </div>
+                <ul  class="content-ul">
+
+                </ul>
+            </div> -->
+    </div>
+  </div>
+</div>
+<!-- <script src="/js/scroll.min.js " charset="utf-8"></script> -->
+<!-- <script src="/js/pageContent.js " charset="utf-8"></script> -->
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+            
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/wenfh2020" title="GitHub"><i class="fa fa-github"
+                    aria-hidden="true"></i></a>  
+            <a href="mailto:wenfh2020@126.com" title="email"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>
+             
+            <a href="http://weibo.com/wenfh2020" title="Weibo"><i class="fa fa-weibo"
+                    aria-hidden="true"></i></a>  
+            <a href="https://www.zhihu.com/people/wenfh2020" title="Zhihu"><i
+                    class="iconfont icon-daoruzhihu"></i></a>   
+             
+        </p>
+        <p>
+            本站总访问量<span id="busuanzi_value_site_pv"></span>次，本站访客数<span
+                id="busuanzi_value_site_uv"></span>人次，本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github
+                    Pages</a>.
+            </span>
+            <span>
+                Theme designed by <a href="https://github.com/wenfh2020">wenfh2020</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <div class="back-to-top">
+    <a href="#top" data-scroll>
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/smooth-scroll.min.js " charset="utf-8"></script>
+    <script type="text/javascript">
+      smoothScroll.init({
+        speed: 500, // Integer. How fast to complete the scroll in milliseconds
+        easing: 'easeInOutCubic', // Easing pattern to use
+        offset: 20, // Integer. How far to offset the scrolling anchor location in pixels
+      });
+    </script>
+    <!-- <script src=" /js/scroll.min.js " charset="utf-8"></script> -->
+  </body>
+
+</html>

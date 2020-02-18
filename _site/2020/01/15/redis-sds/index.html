@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>[redis 源码走读] 字符串(sds)</title>
+    <meta name="description" content="为了节省内存空间，灵活处理不同长度范围的字符串，redis 定义了几种 sdshdr(X) 数据结构：">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_8v3czwksspqlg14i.css">
+    <link rel="stylesheet" href="/css/main.css ">
+    <link rel="canonical" href="http://localhost:4000/2020/01/15/redis-sds/">
+    <link rel="alternate" type="application/rss+xml" title=" " href="http://localhost:4000/feed.xml ">
+
+
+    <script>
+    // 百度统计代码
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?c0731ae90724efee0af2c272a7bd1594";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-158372315-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand"> </a>
+        <small> </small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/tag/">
+                        
+                            <i class="fa fa-tags"></i>Tags
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/collection/">
+                        
+                            <i class="fa fa-bookmark"></i>Collections
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-heart"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>[redis 源码走读] 字符串(sds)</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2020-01-15
+            </div>
+
+            <div class="label-card">
+                <i class="fa fa-user"></i>wenfh2020
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#redis" title="Category: redis" rel="category">redis</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <!--a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a-->
+        <a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a>&nbsp;
+    
+        <!--a href="/tag/#sds" title="Tag: sds" rel="tag">sds</a-->
+        <a href="/tag/#sds" title="Tag: sds" rel="tag">sds</a>
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>为了节省内存空间，灵活处理不同长度范围的字符串，redis 定义了几种 <code class="highlighter-rouge">sdshdr(X)</code> 数据结构：</p>
+
+<p><img src="https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200214074828.png" alt="数据结构内存" /></p>
+
+<ul id="markdown-toc">
+  <li><a href="#数据结构" id="markdown-toc-数据结构">数据结构</a>    <ul>
+      <li><a href="#sds-数据结构视图" id="markdown-toc-sds-数据结构视图">sds 数据结构视图</a></li>
+      <li><a href="#结构大小" id="markdown-toc-结构大小">结构大小</a></li>
+    </ul>
+  </li>
+  <li><a href="#核心接口" id="markdown-toc-核心接口">核心接口</a></li>
+  <li><a href="#工作流程" id="markdown-toc-工作流程">工作流程</a></li>
+  <li><a href="#后记" id="markdown-toc-后记">后记</a></li>
+</ul>
+
+<h2 id="数据结构">数据结构</h2>
+
+<p>为了节省内存空间，灵活处理不同长度范围的字符串</p>
+
+<ul>
+  <li>redis 定义了<code class="highlighter-rouge">sdshdr(X)</code>几种数据结构，可以查看<code class="highlighter-rouge">数据结构大小</code>。</li>
+  <li>同时 struct 数据结构没有进行内存对齐。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="kt">char</span> <span class="o">*</span><span class="n">sds</span><span class="p">;</span>
+<span class="cp">#define SDS_HDR(T,s) ((struct sdshdr##T *)((s)-(sizeof(struct sdshdr##T))))
+#define SDS_HDR_VAR(T,s) struct sdshdr##T *sh = (void*)((s)-(sizeof(struct sdshdr##T)));
+</span>
+<span class="cm">/* Note: sdshdr5 is never used, we just access the flags byte directly.
+ * However is here to document the layout of type 5 SDS strings. */</span>
+<span class="k">struct</span> <span class="n">__attribute__</span> <span class="p">((</span><span class="n">__packed__</span><span class="p">))</span> <span class="n">sdshdr5</span> <span class="p">{</span>
+    <span class="c1">// 当字符串很小时， `flags` 是一个8 个字节的组合字符，前 3 bit 是字符串类型，后面5bit是字符串长度。</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">flags</span><span class="p">;</span> <span class="cm">/* 3 lsb of type, and 5 msb of string length */</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[];</span>
+<span class="p">};</span>
+<span class="k">struct</span> <span class="n">__attribute__</span> <span class="p">((</span><span class="n">__packed__</span><span class="p">))</span> <span class="n">sdshdr8</span> <span class="p">{</span>
+    <span class="kt">uint8_t</span> <span class="n">len</span><span class="p">;</span> <span class="cm">/* used */</span>
+    <span class="kt">uint8_t</span> <span class="n">alloc</span><span class="p">;</span> <span class="cm">/* excluding the header and null terminator */</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">flags</span><span class="p">;</span> <span class="cm">/* 3 lsb of type, 5 unused bits */</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[];</span>
+<span class="p">};</span>
+<span class="k">struct</span> <span class="n">__attribute__</span> <span class="p">((</span><span class="n">__packed__</span><span class="p">))</span> <span class="n">sdshdr16</span> <span class="p">{</span>
+    <span class="kt">uint16_t</span> <span class="n">len</span><span class="p">;</span> <span class="cm">/* used */</span>
+    <span class="kt">uint16_t</span> <span class="n">alloc</span><span class="p">;</span> <span class="cm">/* excluding the header and null terminator */</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">flags</span><span class="p">;</span> <span class="cm">/* 3 lsb of type, 5 unused bits */</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[];</span>
+<span class="p">};</span>
+<span class="k">struct</span> <span class="n">__attribute__</span> <span class="p">((</span><span class="n">__packed__</span><span class="p">))</span> <span class="n">sdshdr32</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span> <span class="n">len</span><span class="p">;</span> <span class="cm">/* used */</span>
+    <span class="kt">uint32_t</span> <span class="n">alloc</span><span class="p">;</span> <span class="cm">/* excluding the header and null terminator */</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">flags</span><span class="p">;</span> <span class="cm">/* 3 lsb of type, 5 unused bits */</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[];</span>
+<span class="p">};</span>
+<span class="k">struct</span> <span class="n">__attribute__</span> <span class="p">((</span><span class="n">__packed__</span><span class="p">))</span> <span class="n">sdshdr64</span> <span class="p">{</span>
+    <span class="kt">uint64_t</span> <span class="n">len</span><span class="p">;</span> <span class="cm">/* used */</span>
+    <span class="kt">uint64_t</span> <span class="n">alloc</span><span class="p">;</span> <span class="cm">/* excluding the header and null terminator */</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">flags</span><span class="p">;</span> <span class="cm">/* 3 lsb of type, 5 unused bits */</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[];</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">成员</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">len</td>
+      <td style="text-align: left">当前已使用的内存空间长度</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">alloc</td>
+      <td style="text-align: left">分配的内存空间长度</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">flags</td>
+      <td style="text-align: left">数据结构类型 或者 （数据结构类型 + 字符串长度 例如：sdshdr5）</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">buf</td>
+      <td style="text-align: left">uf 如果有数据，是以 ‘\0’ 结束的字符串。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="sds-数据结构视图">sds 数据结构视图</h3>
+
+<p><img src="https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200214074828.png" alt="数据结构内存" /></p>
+
+<blockquote>
+  <p>制作图表方法可以用 processon，参考视频</p>
+
+  <ul>
+    <li>bilibili: <a href="https://www.bilibili.com/video/av83487454/">绘制 redis sds 数据结构内存空间视图</a></li>
+    <li>youtube: <a href="https://youtu.be/eT_qW3-q8no">Draw Redis SDS Struct Memmory Chart</a></li>
+  </ul>
+</blockquote>
+
+<h3 id="结构大小">结构大小</h3>
+
+<p>可以通过函数 <code class="highlighter-rouge">sdsReqType</code> 知道，sds 数据结构，是根据数据长度范围去确定数据结构类型的。下面列出的数据结构的比较。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">结构类型</th>
+      <th style="text-align: left">大小</th>
+      <th style="text-align: left">字符串长度</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">sdshdr5</td>
+      <td style="text-align: left">1</td>
+      <td style="text-align: left">1 « 5 - 1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sdshdr8</td>
+      <td style="text-align: left">3</td>
+      <td style="text-align: left">1 « 8 - 1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sdshdr16</td>
+      <td style="text-align: left">5</td>
+      <td style="text-align: left">1 « 16 - 1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sdshdr32</td>
+      <td style="text-align: left">9</td>
+      <td style="text-align: left">1 « 32 - 1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sdshdr64</td>
+      <td style="text-align: left">17</td>
+      <td style="text-align: left">大于 1 « 32</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kr">inline</span> <span class="kt">char</span> <span class="nf">sdsReqType</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">string_size</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">string_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="o">&lt;&lt;</span><span class="mi">5</span><span class="p">)</span>
+        <span class="c1">// 1 &lt;&lt; 5 == 32，所以长度最大 31，二进制 11111，占 5 位。结合数据结构可以查看 flags 的组合，左移 5 位，存储字符串长度，右边3位存储字符串长度。</span>
+        <span class="k">return</span> <span class="n">SDS_TYPE_5</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">string_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="o">&lt;&lt;</span><span class="mi">8</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SDS_TYPE_8</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">string_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="o">&lt;&lt;</span><span class="mi">16</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SDS_TYPE_16</span><span class="p">;</span>
+<span class="cp">#if (LONG_MAX == LLONG_MAX)
+</span>    <span class="k">if</span> <span class="p">(</span><span class="n">string_size</span> <span class="o">&lt;</span> <span class="mi">1ll</span><span class="o">&lt;&lt;</span><span class="mi">32</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SDS_TYPE_32</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">SDS_TYPE_64</span><span class="p">;</span>
+<span class="cp">#else
+</span>    <span class="k">return</span> <span class="n">SDS_TYPE_32</span><span class="p">;</span>
+<span class="cp">#endif
+</span><span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>例如 sdshdr32 数据结构， sizeof(sdshdr32) == 9 ，如果是字节对齐，应该 12 才对。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">__packed__</span><span class="p">))</span> <span class="n">sdshdr32</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span> <span class="n">len</span><span class="p">;</span>        <span class="cm">/* used */</span>
+    <span class="kt">uint32_t</span> <span class="n">alloc</span><span class="p">;</span>      <span class="cm">/* excluding the header and null terminator */</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">flags</span><span class="p">;</span> <span class="cm">/* 3 lsb of type, 5 unused bits */</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[];</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="核心接口">核心接口</h2>
+
+<p>sds 主要的逻辑是对字符串内存管理。可以参考下面接口进行理解。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">接口</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">sdsnew</td>
+      <td style="text-align: left">创建字符串对象</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sdsfree</td>
+      <td style="text-align: left">释放字符串结构对象</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sdsavail</td>
+      <td style="text-align: left">查询字符串对象空闲内存大小</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sdsnewlen</td>
+      <td style="text-align: left">根据字符串长度，分配合适的内存空间，设置数据结构的相关的成员数据</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sdsMakeRoomFor</td>
+      <td style="text-align: left">为对象分配增长的空间，增长小于 1M， newlen *= 2，否则  newlen += SDS_MAX_PREALLOC</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="工作流程">工作流程</h2>
+
+<p>我们依旧可以用 gdb 对 sds 进行调试，熟悉它对工作流程。作者在 sds.c 文件就设置了测试宏<code class="highlighter-rouge">SDS_TEST_MAIN</code>，我们可以编译一个文件进行调试。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gcc <span class="nt">-g</span>  <span class="nt">-DSDS_TEST_MAIN</span> sds.c zmalloc.c <span class="nt">-o</span> sds
+</code></pre></div></div>
+
+<blockquote>
+  <p>调试方法，可以参考视频</p>
+
+  <ul>
+    <li>bilibili: <a href="https://www.bilibili.com/video/av83332533/">Debug Redis sds with Gdb</a></li>
+    <li>youtube: <a href="https://youtu.be/_buPUWclhU0">Debug Redis sds with Gdb</a></li>
+  </ul>
+</blockquote>
+
+<ul>
+  <li>堆栈信息</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#0  sdsnewlen (init=0x100006a71, initlen=3) at sds.c:99</span>
+<span class="c">#1  0x00000001000018a6 in sdsnew (init=0x100006a71 "foo") at sds.c:156</span>
+<span class="c">#2  0x0000000100004cb7 in sdsTest () at sds.c:1130</span>
+<span class="c">#3  0x0000000100006124 in main () at sds.c:1294</span>
+</code></pre></div></div>
+
+<ul>
+  <li>sdsnewlen 根据字符串长度，用不同数据结构进行存储，每个数据结构有不同类型。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Create a new sds string starting from a null terminated C string. */</span>
+<span class="n">sds</span> <span class="nf">sdsnew</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">init</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">size_t</span> <span class="n">initlen</span> <span class="o">=</span> <span class="p">(</span><span class="n">init</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">?</span> <span class="mi">0</span> <span class="o">:</span> <span class="n">strlen</span><span class="p">(</span><span class="n">init</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">sdsnewlen</span><span class="p">(</span><span class="n">init</span><span class="p">,</span> <span class="n">initlen</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>根据字符串长度，分配合适的内存空间，设置数据结构的相关的成员数据</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Create a new sds string with the content specified by the 'init' pointer
+ * and 'initlen'.
+ * If NULL is used for 'init' the string is initialized with zero bytes.
+ * If SDS_NOINIT is used, the buffer is left uninitialized;
+ *
+ * The string is always null-termined (all the sds strings are, always) so
+ * even if you create an sds string with:
+ *
+ * mystring = sdsnewlen("abc",3);
+ *
+ * You can print the string with printf() as there is an implicit \0 at the
+ * end of the string. However the string is binary safe and can contain
+ * \0 characters in the middle, as the length is stored in the sds header. */</span>
+<span class="n">sds</span> <span class="nf">sdsnewlen</span><span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">init</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">initlen</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">sh</span><span class="p">;</span>
+    <span class="n">sds</span> <span class="n">s</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">type</span> <span class="o">=</span> <span class="n">sdsReqType</span><span class="p">(</span><span class="n">initlen</span><span class="p">);</span>
+    <span class="cm">/* Empty strings are usually created in order to append. Use type 8
+     * since type 5 is not good at this. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">type</span> <span class="o">==</span> <span class="n">SDS_TYPE_5</span> <span class="o">&amp;&amp;</span> <span class="n">initlen</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="n">type</span> <span class="o">=</span> <span class="n">SDS_TYPE_8</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">hdrlen</span> <span class="o">=</span> <span class="n">sdsHdrSize</span><span class="p">(</span><span class="n">type</span><span class="p">);</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">fp</span><span class="p">;</span> <span class="cm">/* flags pointer. */</span>
+
+    <span class="c1">// 申请数据结构内存。+ 1 是为了字符串的结束符 '\0'。</span>
+    <span class="n">sh</span> <span class="o">=</span> <span class="n">s_malloc</span><span class="p">(</span><span class="n">hdrlen</span><span class="o">+</span><span class="n">initlen</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">init</span><span class="o">==</span><span class="n">SDS_NOINIT</span><span class="p">)</span>
+        <span class="n">init</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">init</span><span class="p">)</span>
+        <span class="n">memset</span><span class="p">(</span><span class="n">sh</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">hdrlen</span><span class="o">+</span><span class="n">initlen</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sh</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">sh</span><span class="o">+</span><span class="n">hdrlen</span><span class="p">;</span>
+    <span class="n">fp</span> <span class="o">=</span> <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">s</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="k">switch</span><span class="p">(</span><span class="n">type</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_5</span><span class="p">:</span> <span class="p">{</span>
+            <span class="c1">// SDS_TYPE_BITS </span>
+            <span class="o">*</span><span class="n">fp</span> <span class="o">=</span> <span class="n">type</span> <span class="o">|</span> <span class="p">(</span><span class="n">initlen</span> <span class="o">&lt;&lt;</span> <span class="n">SDS_TYPE_BITS</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_8</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">SDS_HDR_VAR</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="n">s</span><span class="p">);</span>
+            <span class="n">sh</span><span class="o">-&gt;</span><span class="n">len</span> <span class="o">=</span> <span class="n">initlen</span><span class="p">;</span>
+            <span class="n">sh</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">=</span> <span class="n">initlen</span><span class="p">;</span>
+            <span class="o">*</span><span class="n">fp</span> <span class="o">=</span> <span class="n">type</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_16</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">SDS_HDR_VAR</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span><span class="n">s</span><span class="p">);</span>
+            <span class="n">sh</span><span class="o">-&gt;</span><span class="n">len</span> <span class="o">=</span> <span class="n">initlen</span><span class="p">;</span>
+            <span class="n">sh</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">=</span> <span class="n">initlen</span><span class="p">;</span>
+            <span class="o">*</span><span class="n">fp</span> <span class="o">=</span> <span class="n">type</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_32</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">SDS_HDR_VAR</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">s</span><span class="p">);</span>
+            <span class="n">sh</span><span class="o">-&gt;</span><span class="n">len</span> <span class="o">=</span> <span class="n">initlen</span><span class="p">;</span>
+            <span class="n">sh</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">=</span> <span class="n">initlen</span><span class="p">;</span>
+            <span class="o">*</span><span class="n">fp</span> <span class="o">=</span> <span class="n">type</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_64</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">SDS_HDR_VAR</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span><span class="n">s</span><span class="p">);</span>
+            <span class="n">sh</span><span class="o">-&gt;</span><span class="n">len</span> <span class="o">=</span> <span class="n">initlen</span><span class="p">;</span>
+            <span class="n">sh</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">=</span> <span class="n">initlen</span><span class="p">;</span>
+            <span class="o">*</span><span class="n">fp</span> <span class="o">=</span> <span class="n">type</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">initlen</span> <span class="o">&amp;&amp;</span> <span class="n">init</span><span class="p">)</span>
+        <span class="n">memcpy</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">init</span><span class="p">,</span> <span class="n">initlen</span><span class="p">);</span>
+    <span class="n">s</span><span class="p">[</span><span class="n">initlen</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'\0'</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">s</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>获取字符串长度</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define SDS_TYPE_5_LEN(f) ((f)&gt;&gt;SDS_TYPE_BITS)
+</span>
+<span class="k">static</span> <span class="kr">inline</span> <span class="kt">size_t</span> <span class="nf">sdslen</span><span class="p">(</span><span class="k">const</span> <span class="n">sds</span> <span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">flags</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
+    <span class="k">switch</span><span class="p">(</span><span class="n">flags</span><span class="o">&amp;</span><span class="n">SDS_TYPE_MASK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_5</span><span class="p">:</span>
+            <span class="c1">// 一个字节高 5 位是长度，通过向右移动 3 位获得大小。</span>
+            <span class="k">return</span> <span class="n">SDS_TYPE_5_LEN</span><span class="p">(</span><span class="n">flags</span><span class="p">);</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_8</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SDS_HDR</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="n">s</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_16</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SDS_HDR</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span><span class="n">s</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_32</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SDS_HDR</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">s</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_64</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SDS_HDR</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span><span class="n">s</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>释放内存，因为 sds struct 是一个连续的内存数据结构，根据 sds 指向的 buf，往回找 struct 的起始地址，进行释放。</li>
+</ul>
+
+<blockquote>
+  <p>看看 <code class="highlighter-rouge">sdsnewlen</code> 是如何申请内存的。</p>
+</blockquote>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Free an sds string. No operation is performed if 's' is NULL. */</span>
+<span class="kt">void</span> <span class="nf">sdsfree</span><span class="p">(</span><span class="n">sds</span> <span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">s</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+    <span class="n">s_free</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">s</span><span class="o">-</span><span class="n">sdsHdrSize</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sdsHdrSize</span><span class="p">(</span><span class="kt">char</span> <span class="n">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">switch</span><span class="p">(</span><span class="n">type</span><span class="o">&amp;</span><span class="n">SDS_TYPE_MASK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">sdshdr5</span><span class="p">);</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_8</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">sdshdr8</span><span class="p">);</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_16</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">sdshdr16</span><span class="p">);</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_32</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">sdshdr32</span><span class="p">);</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_64</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">sdshdr64</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>查询数据结构多少空闲内存空间</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kr">inline</span> <span class="kt">size_t</span> <span class="nf">sdsavail</span><span class="p">(</span><span class="k">const</span> <span class="n">sds</span> <span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">flags</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
+    <span class="k">switch</span><span class="p">(</span><span class="n">flags</span><span class="o">&amp;</span><span class="n">SDS_TYPE_MASK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_5</span><span class="p">:</span> <span class="p">{</span>
+            <span class="c1">// 小于 32 长度的内存，都是直接申请的，没有空余内存。</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_8</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">SDS_HDR_VAR</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="n">s</span><span class="p">);</span>
+            <span class="k">return</span> <span class="n">sh</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">-</span> <span class="n">sh</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_16</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">SDS_HDR_VAR</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span><span class="n">s</span><span class="p">);</span>
+            <span class="k">return</span> <span class="n">sh</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">-</span> <span class="n">sh</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_32</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">SDS_HDR_VAR</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">s</span><span class="p">);</span>
+            <span class="k">return</span> <span class="n">sh</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">-</span> <span class="n">sh</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">case</span> <span class="n">SDS_TYPE_64</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">SDS_HDR_VAR</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span><span class="n">s</span><span class="p">);</span>
+            <span class="k">return</span> <span class="n">sh</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">-</span> <span class="n">sh</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>追加内存</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Append the specified null termianted C string to the sds string 's'.
+ *
+ * After the call, the passed sds string is no longer valid and all the
+ * references must be substituted with the new pointer returned by the call. */</span>
+<span class="n">sds</span> <span class="nf">sdscat</span><span class="p">(</span><span class="n">sds</span> <span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">t</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">sdscatlen</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">t</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>redis sds 习惯先根据长度，分配合适的内存，再进行数据拷贝等操作。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Append the specified binary-safe string pointed by 't' of 'len' bytes to the
+ * end of the specified sds string 's'.
+ *
+ * After the call, the passed sds string is no longer valid and all the
+ * references must be substituted with the new pointer returned by the call. */</span>
+<span class="n">sds</span> <span class="nf">sdscatlen</span><span class="p">(</span><span class="n">sds</span> <span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">t</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">size_t</span> <span class="n">curlen</span> <span class="o">=</span> <span class="n">sdslen</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>
+
+    <span class="c1">// 根据当前数据和追加的数据，分配合适长度的内存资源。</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">sdsMakeRoomFor</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">len</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">s</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">memcpy</span><span class="p">(</span><span class="n">s</span><span class="o">+</span><span class="n">curlen</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="n">sdssetlen</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">curlen</span><span class="o">+</span><span class="n">len</span><span class="p">);</span>
+    <span class="n">s</span><span class="p">[</span><span class="n">curlen</span><span class="o">+</span><span class="n">len</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'\0'</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">s</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>根据增长的长度，为 sds 申请合适长度的空间。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Enlarge the free space at the end of the sds string so that the caller
+ * is sure that after calling this function can overwrite up to addlen
+ * bytes after the end of the string, plus one more byte for nul term.
+ *
+ * Note: this does not change the *length* of the sds string as returned
+ * by sdslen(), but only the free buffer space we have. */</span>
+<span class="n">sds</span> <span class="nf">sdsMakeRoomFor</span><span class="p">(</span><span class="n">sds</span> <span class="n">s</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">addlen</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">sh</span><span class="p">,</span> <span class="o">*</span><span class="n">newsh</span><span class="p">;</span>
+    <span class="c1">// 获取剩余的内存</span>
+    <span class="kt">size_t</span> <span class="n">avail</span> <span class="o">=</span> <span class="n">sdsavail</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>
+    <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="n">newlen</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">type</span><span class="p">,</span> <span class="n">oldtype</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;</span> <span class="n">SDS_TYPE_MASK</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">hdrlen</span><span class="p">;</span>
+
+    <span class="cm">/* Return ASAP if there is enough space left. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">avail</span> <span class="o">&gt;=</span> <span class="n">addlen</span><span class="p">)</span> <span class="k">return</span> <span class="n">s</span><span class="p">;</span>
+
+    <span class="n">len</span> <span class="o">=</span> <span class="n">sdslen</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>
+    <span class="n">sh</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">s</span><span class="o">-</span><span class="n">sdsHdrSize</span><span class="p">(</span><span class="n">oldtype</span><span class="p">);</span>
+    <span class="n">newlen</span> <span class="o">=</span> <span class="p">(</span><span class="n">len</span><span class="o">+</span><span class="n">addlen</span><span class="p">);</span>
+    <span class="c1">// 小于 1 M 内存的翻倍增加，否则每次增加 1M</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">newlen</span> <span class="o">&lt;</span> <span class="n">SDS_MAX_PREALLOC</span><span class="p">)</span>
+        <span class="n">newlen</span> <span class="o">*=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="k">else</span>
+        <span class="n">newlen</span> <span class="o">+=</span> <span class="n">SDS_MAX_PREALLOC</span><span class="p">;</span>
+
+    <span class="n">type</span> <span class="o">=</span> <span class="n">sdsReqType</span><span class="p">(</span><span class="n">newlen</span><span class="p">);</span>
+
+    <span class="c1">// 如果小数据，遇到 cat 操作，类型升级到 SDS_TYPE_8，方便 cat 的后续操作。这里作者估计是根据很多场景结合的经验得出的结论。</span>
+    <span class="cm">/* Don't use type 5: the user is appending to the string and type 5 is
+     * not able to remember empty space, so sdsMakeRoomFor() must be called
+     * at every appending operation. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">type</span> <span class="o">==</span> <span class="n">SDS_TYPE_5</span><span class="p">)</span> <span class="n">type</span> <span class="o">=</span> <span class="n">SDS_TYPE_8</span><span class="p">;</span>
+
+    <span class="c1">// 根据对应类型的对象申请相应的空间。</span>
+    <span class="n">hdrlen</span> <span class="o">=</span> <span class="n">sdsHdrSize</span><span class="p">(</span><span class="n">type</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">oldtype</span><span class="o">==</span><span class="n">type</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">newsh</span> <span class="o">=</span> <span class="n">s_realloc</span><span class="p">(</span><span class="n">sh</span><span class="p">,</span> <span class="n">hdrlen</span><span class="o">+</span><span class="n">newlen</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">newsh</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">newsh</span><span class="o">+</span><span class="n">hdrlen</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="cm">/* Since the header size changes, need to move the string forward,
+         * and can't use realloc */</span>
+        <span class="n">newsh</span> <span class="o">=</span> <span class="n">s_malloc</span><span class="p">(</span><span class="n">hdrlen</span><span class="o">+</span><span class="n">newlen</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">newsh</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+        <span class="n">memcpy</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">newsh</span><span class="o">+</span><span class="n">hdrlen</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">len</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+        <span class="n">s_free</span><span class="p">(</span><span class="n">sh</span><span class="p">);</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">newsh</span><span class="o">+</span><span class="n">hdrlen</span><span class="p">;</span>
+        <span class="n">s</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">type</span><span class="p">;</span>
+        <span class="n">sdssetlen</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">sdssetalloc</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">newlen</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">s</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>空数据结构 <code class="highlighter-rouge">sdsempty()</code>，一些不定长的字符串，例如 <code class="highlighter-rouge">sdscatprintf</code>，格式化的字符串，经常性有很长的字符串。所以在 <code class="highlighter-rouge">sdsnewlen</code> 中给申请 <code class="highlighter-rouge">SDS_TYPE_8</code> 类型进行处理。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sds</span> <span class="nf">sdsnewlen</span><span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">init</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">initlen</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">type</span> <span class="o">==</span> <span class="n">SDS_TYPE_5</span> <span class="o">&amp;&amp;</span> <span class="n">initlen</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="n">type</span> <span class="o">=</span> <span class="n">SDS_TYPE_8</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>去掉字符串头尾出现在字串的所有字符</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Remove the part of the string from left and from right composed just of
+ * contiguous characters found in 'cset', that is a null terminted C string.
+ *
+ * After the call, the modified sds string is no longer valid and all the
+ * references must be substituted with the new pointer returned by the call.
+ *
+ * Example:
+ *
+ * s = sdsnew("AA...AA.a.aa.aHelloWorld     :::");
+ * s = sdstrim(s,"Aa. :");
+ * printf("%s\n", s);
+ *
+ * Output will be just "HelloWorld".
+ */</span>
+<span class="n">sds</span> <span class="nf">sdstrim</span><span class="p">(</span><span class="n">sds</span> <span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">cset</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">start</span><span class="p">,</span> <span class="o">*</span><span class="n">end</span><span class="p">,</span> <span class="o">*</span><span class="n">sp</span><span class="p">,</span> <span class="o">*</span><span class="n">ep</span><span class="p">;</span>
+    <span class="kt">size_t</span> <span class="n">len</span><span class="p">;</span>
+
+    <span class="c1">// 通过两次遍历，从头向尾，</span>
+    <span class="n">sp</span> <span class="o">=</span> <span class="n">start</span> <span class="o">=</span> <span class="n">s</span><span class="p">;</span>
+    <span class="n">ep</span> <span class="o">=</span> <span class="n">end</span> <span class="o">=</span> <span class="n">s</span><span class="o">+</span><span class="n">sdslen</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">sp</span> <span class="o">&lt;=</span> <span class="n">end</span> <span class="o">&amp;&amp;</span> <span class="n">strchr</span><span class="p">(</span><span class="n">cset</span><span class="p">,</span> <span class="o">*</span><span class="n">sp</span><span class="p">))</span> <span class="n">sp</span><span class="o">++</span><span class="p">;</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">ep</span> <span class="o">&gt;</span> <span class="n">sp</span> <span class="o">&amp;&amp;</span> <span class="n">strchr</span><span class="p">(</span><span class="n">cset</span><span class="p">,</span> <span class="o">*</span><span class="n">ep</span><span class="p">))</span> <span class="n">ep</span><span class="o">--</span><span class="p">;</span>
+    <span class="n">len</span> <span class="o">=</span> <span class="p">(</span><span class="n">sp</span> <span class="o">&gt;</span> <span class="n">ep</span><span class="p">)</span> <span class="o">?</span> <span class="mi">0</span> <span class="o">:</span> <span class="p">((</span><span class="n">ep</span><span class="o">-</span><span class="n">sp</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">s</span> <span class="o">!=</span> <span class="n">sp</span><span class="p">)</span> <span class="n">memmove</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="n">s</span><span class="p">[</span><span class="n">len</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'\0'</span><span class="p">;</span>
+    <span class="n">sdssetlen</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">len</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">s</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>两个 sds 字符串比较</li>
+</ul>
+
+<blockquote>
+  <p>取最短字符串的长度，该长度的两个字符串相比较，在这个条件基础上，对余下字符串进行比较。返回相应结果。</p>
+</blockquote>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Compare two sds strings s1 and s2 with memcmp().
+ *
+ * Return value:
+ *
+ *     positive if s1 &gt; s2.
+ *     negative if s1 &lt; s2.
+ *     0 if s1 and s2 are exactly the same binary string.
+ *
+ * If two strings share exactly the same prefix, but one of the two has
+ * additional characters, the longer string is considered to be greater than
+ * the smaller one. */</span>
+<span class="kt">int</span> <span class="nf">sdscmp</span><span class="p">(</span><span class="k">const</span> <span class="n">sds</span> <span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">sds</span> <span class="n">s2</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">size_t</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">minlen</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">cmp</span><span class="p">;</span>
+
+    <span class="n">l1</span> <span class="o">=</span> <span class="n">sdslen</span><span class="p">(</span><span class="n">s1</span><span class="p">);</span>
+    <span class="n">l2</span> <span class="o">=</span> <span class="n">sdslen</span><span class="p">(</span><span class="n">s2</span><span class="p">);</span>
+    <span class="n">minlen</span> <span class="o">=</span> <span class="p">(</span><span class="n">l1</span> <span class="o">&lt;</span> <span class="n">l2</span><span class="p">)</span> <span class="o">?</span> <span class="n">l1</span> <span class="o">:</span> <span class="n">l2</span><span class="p">;</span>
+    <span class="n">cmp</span> <span class="o">=</span> <span class="n">memcmp</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="n">minlen</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">cmp</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span> <span class="n">l1</span> <span class="o">&gt;</span> <span class="n">l2</span> <span class="o">?</span> <span class="mi">1</span> <span class="o">:</span> <span class="p">(</span><span class="n">l1</span> <span class="o">&lt;</span> <span class="n">l2</span> <span class="o">?</span> <span class="o">-</span><span class="mi">1</span> <span class="o">:</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">cmp</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="后记">后记</h2>
+
+<p>源码走读系列，通过调试手段，走读源码，是自己流水账式的记录，从而理解了更多的实现细节。</p>
+
+        </article>
+        <hr>
+
+        
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <h2 id="similar_posts">Similar Posts</h2>
+                        <ul>
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/05/redis-obj/">[redis 源码走读] 对象(redisObject)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/04/redis-inset/">[redis 源码走读] 整数集合(inset)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/03/redis-skiplist/">[redis 源码走读] 跳跃表(skiplist)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/01/30/redis-ziplist/">[redis 源码走读] 压缩列表(ziplist)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/01/21/redis-list/">[redis 源码走读] 链表
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+        
+            </ul>
+        
+
+        <div class="post-recent">
+    <div class="pre">
+        
+        <p><strong>上一篇</strong> <a href="/2020/01/12/redis-dict/">[redis 源码走读] 字典(dict)</a></p>
+        
+    </div>
+    <div class="nex">
+
+        
+        <p><strong>下一篇</strong> <a href="/2020/01/19/redis-zmalloc/">[redis 源码走读] zmalloc</a></p>
+        
+    </div>
+</div>
+
+
+        <h2 id="comments">Comments</h2>
+        
+
+
+<div id="disqus_thread"></div>
+<script>
+    /**
+     * RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+     * LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables
+     */
+
+    var disqus_config = function() {
+        this.page.url = 'http://localhost:4000/2020/01/15/redis-sds/'; // Replace PAGE_URL with your page's canonical URL variable
+        this.page.identifier = 'http://localhost:4000/2020/01/15/redis-sds/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+    };
+
+    (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document,
+            s = d.createElement('script');
+
+        s.src = '//wenfh2020.disqus.com/embed.js';
+
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+            
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/wenfh2020" title="GitHub"><i class="fa fa-github"
+                    aria-hidden="true"></i></a>  
+            <a href="mailto:wenfh2020@126.com" title="email"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>
+             
+            <a href="http://weibo.com/wenfh2020" title="Weibo"><i class="fa fa-weibo"
+                    aria-hidden="true"></i></a>  
+            <a href="https://www.zhihu.com/people/wenfh2020" title="Zhihu"><i
+                    class="iconfont icon-daoruzhihu"></i></a>   
+             
+        </p>
+        <p>
+            本站总访问量<span id="busuanzi_value_site_pv"></span>次，本站访客数<span
+                id="busuanzi_value_site_uv"></span>人次，本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github
+                    Pages</a>.
+            </span>
+            <span>
+                Theme designed by <a href="https://github.com/wenfh2020">wenfh2020</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <div class="back-to-top">
+    <a href="#top" data-scroll>
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/smooth-scroll.min.js " charset="utf-8"></script>
+    <script type="text/javascript">
+      smoothScroll.init({
+        speed: 500, // Integer. How fast to complete the scroll in milliseconds
+        easing: 'easeInOutCubic', // Easing pattern to use
+        offset: 20, // Integer. How far to offset the scrolling anchor location in pixels
+      });
+    </script>
+    <!-- <script src=" /js/scroll.min.js " charset="utf-8"></script> -->
+  </body>
+
+</html>

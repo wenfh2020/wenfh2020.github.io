@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>比较宏和宏函数的工作效率</title>
+    <meta name="description" content="通过 gdb 查看程序的汇编代码，比较宏和宏函数的工作效率。">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_8v3czwksspqlg14i.css">
+    <link rel="stylesheet" href="/css/main.css ">
+    <link rel="canonical" href="http://localhost:4000/2020/02/15/c-asm/">
+    <link rel="alternate" type="application/rss+xml" title=" " href="http://localhost:4000/feed.xml ">
+
+
+    <script>
+    // 百度统计代码
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?c0731ae90724efee0af2c272a7bd1594";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-158372315-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand"> </a>
+        <small> </small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/tag/">
+                        
+                            <i class="fa fa-tags"></i>Tags
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/collection/">
+                        
+                            <i class="fa fa-bookmark"></i>Collections
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-heart"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>比较宏和宏函数的工作效率</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2020-02-15
+            </div>
+
+            <div class="label-card">
+                <i class="fa fa-user"></i>wenfh2020
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#c/c++" title="Category: c/c++" rel="category">c/c++</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <!--a href="/tag/#c" title="Tag: c" rel="tag">c</a-->
+        <a href="/tag/#c" title="Tag: c" rel="tag">c</a>
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>通过 gdb 查看程序的汇编代码，比较宏和宏函数的工作效率。</p>
+
+<p><img src="https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/mdgdb-c-asm1.jpg" alt="源码反汇编" /></p>
+
+<ul id="markdown-toc">
+  <li><a href="#程序" id="markdown-toc-程序">程序</a></li>
+  <li><a href="#汇编知识" id="markdown-toc-汇编知识">汇编知识</a>    <ul>
+      <li><a href="#寄存器" id="markdown-toc-寄存器">寄存器</a></li>
+      <li><a href="#汇编指令" id="markdown-toc-汇编指令">汇编指令</a></li>
+    </ul>
+  </li>
+  <li><a href="#引用" id="markdown-toc-引用">引用</a></li>
+</ul>
+
+<hr />
+
+<h2 id="程序">程序</h2>
+
+<p>例子中的最大值实现，宏和函数逻辑基本相同。宏在源码预编译阶段，被替换为代码，增加了代码的体积；函数多了参数传递，函数进栈和出栈等逻辑，自然资源消耗要比宏多。</p>
+
+<ul>
+  <li>测试代码</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define _max(x, y) (x) &gt; (y) ? (x) : (y)
+</span>
+<span class="kt">int</span> <span class="nf">max_func</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="n">y</span> <span class="o">?</span> <span class="n">x</span> <span class="o">:</span> <span class="n">y</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">,</span> <span class="n">ccc</span><span class="p">,</span> <span class="n">ddd</span><span class="p">,</span> <span class="n">eee</span><span class="p">,</span> <span class="n">mmm</span><span class="p">;</span>
+
+    <span class="n">aaa</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">bbb</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="n">eee</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
+    <span class="n">mmm</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="n">ccc</span> <span class="o">=</span> <span class="n">max_func</span><span class="p">(</span><span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">);</span>
+    <span class="n">ddd</span> <span class="o">=</span> <span class="n">_max</span><span class="p">(</span><span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">);</span>
+    <span class="n">eee</span> <span class="o">=</span> <span class="n">ddd</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>预编译后，宏被替换为源码。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gcc <span class="nt">-E</span> test.cpp <span class="nt">-o</span> test.i
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">max_func</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="n">y</span> <span class="o">?</span> <span class="n">x</span> <span class="o">:</span> <span class="n">y</span><span class="p">;</span> <span class="p">}</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">,</span> <span class="n">ccc</span><span class="p">,</span> <span class="n">ddd</span><span class="p">,</span> <span class="n">eee</span><span class="p">,</span> <span class="n">mmm</span><span class="p">;</span>
+
+    <span class="n">aaa</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">bbb</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="n">eee</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
+    <span class="n">mmm</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="n">ccc</span> <span class="o">=</span> <span class="n">max_func</span><span class="p">(</span><span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">);</span>
+    <span class="n">ddd</span> <span class="o">=</span> <span class="p">(</span><span class="n">aaa</span><span class="p">)</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">bbb</span><span class="p">)</span> <span class="o">?</span> <span class="p">(</span><span class="n">aaa</span><span class="p">)</span> <span class="o">:</span> <span class="p">(</span><span class="n">bbb</span><span class="p">);</span>
+    <span class="n">eee</span> <span class="o">=</span> <span class="n">ddd</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>编译源码为 elf 文件进行 gdb 调试</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gcc <span class="nt">-g</span> test.cpp <span class="nt">-o</span> <span class="nb">test</span>
+</code></pre></div></div>
+
+<ul>
+  <li>通过 gdb 命令查看程序汇编代码</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>layout asm
+</code></pre></div></div>
+<hr />
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0x4004ed &lt;max_func<span class="o">(</span>int, int<span class="o">)&gt;</span>           push   %rbp
+0x4004ee &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+1&gt;         mov    %rsp,%rbp
+0x4004f1 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+4&gt;         mov    %edi,-0x4<span class="o">(</span>%rbp<span class="o">)</span>
+0x4004f4 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+7&gt;         mov    %esi,-0x8<span class="o">(</span>%rbp<span class="o">)</span>
+0x4004f7 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+10&gt;        mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x4004fa &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+13&gt;        cmp    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x4004fd &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+16&gt;        jle    0x400504 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+23&gt;
+0x4004ff &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+18&gt;        mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400502 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+21&gt;        jmp    0x400507 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+26&gt;
+0x400504 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+23&gt;        mov    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400507 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+26&gt;        pop    %rbp
+0x400508 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+27&gt;        retq
+0x400509 &lt;main<span class="o">()&gt;</span>                       push   %rbp
+0x40050a &lt;main<span class="o">()</span>+1&gt;                     mov    %rsp,%rbp
+0x40050d &lt;main<span class="o">()</span>+4&gt;                     sub    <span class="nv">$0x20</span>,%rsp
+0x400511 &lt;main<span class="o">()</span>+8&gt;                     movl   <span class="nv">$0x1</span>,-0x4<span class="o">(</span>%rbp<span class="o">)</span>
+0x400518 &lt;main<span class="o">()</span>+15&gt;                    movl   <span class="nv">$0x2</span>,-0x8<span class="o">(</span>%rbp<span class="o">)</span>
+0x40051f &lt;main<span class="o">()</span>+22&gt;                    movl   <span class="nv">$0x3</span>,-0xc<span class="o">(</span>%rbp<span class="o">)</span>
+0x400526 &lt;main<span class="o">()</span>+29&gt;                    movl   <span class="nv">$0x4</span>,-0x10<span class="o">(</span>%rbp<span class="o">)</span>
+0x40052d &lt;main<span class="o">()</span>+36&gt;                    mov    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%edx
+0x400530 &lt;main<span class="o">()</span>+39&gt;                    mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400533 &lt;main<span class="o">()</span>+42&gt;                    mov    %edx,%esi
+0x400535 &lt;main<span class="o">()</span>+44&gt;                    mov    %eax,%edi
+0x400537 &lt;main<span class="o">()</span>+46&gt;                    callq  0x4004ed &lt;max_func<span class="o">(</span>int, int<span class="o">)&gt;</span>
+0x40053c &lt;main<span class="o">()</span>+51&gt;                    mov    %eax,-0x14<span class="o">(</span>%rbp<span class="o">)</span>
+0x40053f &lt;main<span class="o">()</span>+54&gt;                    mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400542 &lt;main<span class="o">()</span>+57&gt;                    cmp    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400545 &lt;main<span class="o">()</span>+60&gt;                    jle    0x40054c &lt;main<span class="o">()</span>+67&gt;
+0x400547 &lt;main<span class="o">()</span>+62&gt;                    mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x40054a &lt;main<span class="o">()</span>+65&gt;                    jmp    0x40054f &lt;main<span class="o">()</span>+70&gt;
+0x40054c &lt;main<span class="o">()</span>+67&gt;                    mov    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x40054f &lt;main<span class="o">()</span>+70&gt;                    mov    %eax,-0x18<span class="o">(</span>%rbp<span class="o">)</span>
+0x400552 &lt;main<span class="o">()</span>+73&gt;                    mov    <span class="nt">-0x18</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400555 &lt;main<span class="o">()</span>+76&gt;                    mov    %eax,-0xc<span class="o">(</span>%rbp<span class="o">)</span>
+0x400558 &lt;main<span class="o">()</span>+79&gt;                    mov    <span class="nv">$0x0</span>,%eax
+0x40055d &lt;main<span class="o">()</span>+84&gt;                    leaveq
+0x40055e &lt;main<span class="o">()</span>+85&gt;                    retq
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="汇编知识">汇编知识</h2>
+
+<p>测试中出现的汇编知识。</p>
+
+<h3 id="寄存器">寄存器</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">寄存器</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">rbp</td>
+      <td style="text-align: left">64 bit 栈基址寄存器—指向栈底顶</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ebp</td>
+      <td style="text-align: left">32 bit 栈基址寄存器—指向栈底</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">bp</td>
+      <td style="text-align: left">16 bit 栈基址寄存器—指向栈底</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">rsp</td>
+      <td style="text-align: left">64 bit 栈寄存器—指向栈顶</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">esp</td>
+      <td style="text-align: left">32 bit 栈寄存器—指向栈顶</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sp</td>
+      <td style="text-align: left">16 bit 栈寄存器—指向栈顶</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">eax</td>
+      <td style="text-align: left">32 bit 通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">rip</td>
+      <td style="text-align: left">64 bit 地址偏移寄存器</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="汇编指令">汇编指令</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">命令</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">jmp</td>
+      <td style="text-align: left">无条件段内直接转移指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sub</td>
+      <td style="text-align: left">减法指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">jle</td>
+      <td style="text-align: left"><a href="https://zhidao.baidu.com/question/284101534.html">条件转移指令</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">mov</td>
+      <td style="text-align: left">传送指令  (movl 32位, movw 16位, movb 8位)</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">cmp</td>
+      <td style="text-align: left">比较指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">push</td>
+      <td style="text-align: left">进栈指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">pop</td>
+      <td style="text-align: left">出栈指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ret</td>
+      <td style="text-align: left">段内过程返回指令，使子程序结束，继续执行主程序</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">callq</td>
+      <td style="text-align: left">相当于 pushq %rip；   jmpq addr</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">leaveq</td>
+      <td style="text-align: left">相当于 movq %rbp；    %rsp popq %rbp</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">retq</td>
+      <td style="text-align: left">相当于 popq %rip</td>
+    </tr>
+  </tbody>
+</table>
+
+<blockquote>
+  <p>callq，leaveq，retq 中的q是指64位操作数</p>
+</blockquote>
+
+<hr />
+<h2 id="引用">引用</h2>
+
+<ul>
+  <li><a href="https://blog.csdn.net/linuxheik/article/details/49277041?t=1488286725179">hook leaveq retq</a></li>
+  <li><a href="https://github.com/zhangyachen/zhangyachen.github.io/issues/134">GDB 单步调试汇编</a></li>
+  <li><a href="https://blog.csdn.net/qq_36982160/article/details/82950848">汇编常用指令</a></li>
+  <li><a href="https://www.cnblogs.com/daryl-blog/p/11369588.html">通用32位CPU 常用寄存器及其作用</a></li>
+</ul>
+
+        </article>
+        <hr>
+
+        
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                        
+                        <h2 id="similar_posts">Similar Posts</h2>
+                        <ul>
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/08/ngx_align_ptr/">nginx 地址对齐(ngx_align_ptr)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/05/redis-obj/">[redis 源码走读] 对象(redisObject)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/04/redis-inset/">[redis 源码走读] 整数集合(inset)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/03/redis-skiplist/">[redis 源码走读] 跳跃表(skiplist)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/01/30/redis-ziplist/">[redis 源码走读] 压缩列表(ziplist)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/01/21/nginx-pool/">[nginx 源码走读] 内存池
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+            
+                
+                    
+                
+            
+        
+        
+            </ul>
+        
+
+        <div class="post-recent">
+    <div class="pre">
+        
+        <p><strong>上一篇</strong> <a href="/2020/02/08/ngx_align_ptr/">nginx 地址对齐(ngx_align_ptr)</a></p>
+        
+    </div>
+    <div class="nex">
+
+        
+        <p><strong>下一篇</strong> <a href="/2020/02/17/make-blog/">github + jekyll 建自己的博客</a></p>
+        
+    </div>
+</div>
+
+
+        <h2 id="comments">Comments</h2>
+        
+
+
+<div id="disqus_thread"></div>
+<script>
+    /**
+     * RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+     * LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables
+     */
+
+    var disqus_config = function() {
+        this.page.url = 'http://localhost:4000/2020/02/15/c-asm/'; // Replace PAGE_URL with your page's canonical URL variable
+        this.page.identifier = 'http://localhost:4000/2020/02/15/c-asm/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+    };
+
+    (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document,
+            s = d.createElement('script');
+
+        s.src = '//wenfh2020.disqus.com/embed.js';
+
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+            
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/wenfh2020" title="GitHub"><i class="fa fa-github"
+                    aria-hidden="true"></i></a>  
+            <a href="mailto:wenfh2020@126.com" title="email"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>
+             
+            <a href="http://weibo.com/wenfh2020" title="Weibo"><i class="fa fa-weibo"
+                    aria-hidden="true"></i></a>  
+            <a href="https://www.zhihu.com/people/wenfh2020" title="Zhihu"><i
+                    class="iconfont icon-daoruzhihu"></i></a>   
+             
+        </p>
+        <p>
+            本站总访问量<span id="busuanzi_value_site_pv"></span>次，本站访客数<span
+                id="busuanzi_value_site_uv"></span>人次，本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github
+                    Pages</a>.
+            </span>
+            <span>
+                Theme designed by <a href="https://github.com/wenfh2020">wenfh2020</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <div class="back-to-top">
+    <a href="#top" data-scroll>
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/smooth-scroll.min.js " charset="utf-8"></script>
+    <script type="text/javascript">
+      smoothScroll.init({
+        speed: 500, // Integer. How fast to complete the scroll in milliseconds
+        easing: 'easeInOutCubic', // Easing pattern to use
+        offset: 20, // Integer. How far to offset the scrolling anchor location in pixels
+      });
+    </script>
+    <!-- <script src=" /js/scroll.min.js " charset="utf-8"></script> -->
+  </body>
+
+</html>

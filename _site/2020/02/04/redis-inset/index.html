@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>[redis 源码走读] 整数集合(inset)</title>
+    <meta name="description" content="整数集合，是一个有序的数值数组对象，存储的数值不允许重复。源码在 intset.c">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_8v3czwksspqlg14i.css">
+    <link rel="stylesheet" href="/css/main.css ">
+    <link rel="canonical" href="http://localhost:4000/2020/02/04/redis-inset/">
+    <link rel="alternate" type="application/rss+xml" title=" " href="http://localhost:4000/feed.xml ">
+
+
+    <script>
+    // 百度统计代码
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?c0731ae90724efee0af2c272a7bd1594";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-158372315-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand"> </a>
+        <small> </small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/tag/">
+                        
+                            <i class="fa fa-tags"></i>Tags
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/collection/">
+                        
+                            <i class="fa fa-bookmark"></i>Collections
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-heart"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>[redis 源码走读] 整数集合(inset)</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2020-02-04
+            </div>
+
+            <div class="label-card">
+                <i class="fa fa-user"></i>wenfh2020
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#redis" title="Category: redis" rel="category">redis</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+        <!--a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a-->
+        <a href="/tag/#redis" title="Tag: redis" rel="tag">redis</a>&nbsp;
+    
+        <!--a href="/tag/#c" title="Tag: c" rel="tag">c</a-->
+        <a href="/tag/#c" title="Tag: c" rel="tag">c</a>
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>整数集合，是一个有序的数值数组对象，存储的数值不允许重复。源码在 <code class="highlighter-rouge">intset.c</code></p>
+
+<ul id="markdown-toc">
+  <li><a href="#数据结构" id="markdown-toc-数据结构">数据结构</a></li>
+  <li><a href="#接口" id="markdown-toc-接口">接口</a>    <ul>
+      <li><a href="#数值编码" id="markdown-toc-数值编码">数值编码</a></li>
+      <li><a href="#插入数据" id="markdown-toc-插入数据">插入数据</a></li>
+      <li><a href="#升级" id="markdown-toc-升级">升级</a></li>
+      <li><a href="#搜索" id="markdown-toc-搜索">搜索</a></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="数据结构">数据结构</h2>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Note that these encodings are ordered, so:
+ * INTSET_ENC_INT16 &lt; INTSET_ENC_INT32 &lt; INTSET_ENC_INT64. */</span>
+<span class="cp">#define INTSET_ENC_INT16 (sizeof(int16_t))
+#define INTSET_ENC_INT32 (sizeof(int32_t))
+#define INTSET_ENC_INT64 (sizeof(int64_t))
+</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">intset</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span> <span class="n">encoding</span><span class="p">;</span> <span class="c1">// 编码。</span>
+    <span class="kt">uint32_t</span> <span class="n">length</span><span class="p">;</span>   <span class="c1">// 数组长度。</span>
+    <span class="kt">int8_t</span> <span class="n">contents</span><span class="p">[];</span> <span class="c1">// 整数值数值。</span>
+<span class="p">}</span> <span class="n">intset</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>根据插入数值大小，决定 <code class="highlighter-rouge">contents</code> 数组的<code class="highlighter-rouge">encoding</code>格式。编码格式分别有 <code class="highlighter-rouge">int16_t</code>，<code class="highlighter-rouge">int32_t</code>，<code class="highlighter-rouge">int64_t</code>。以最大的数值为准，如果最大的数值是 <code class="highlighter-rouge">int64_t</code> 那么数组的每个 <code class="highlighter-rouge">item</code> 都是 <code class="highlighter-rouge">int64_t</code>，优点是统一简单，提高数组查找效率——源码实现是通过二分法查找。如果数组不同数值用不同的编码存储，就很难用二分法查找了。
+但是这样做一方面提高了查找效率，另一方面也会导致内存浪费，如果所有数据中，只有一个数据是 <code class="highlighter-rouge">int64_t</code>，其它数据都是 <code class="highlighter-rouge">int16_t</code>，整个数组 <code class="highlighter-rouge">item</code> 都以 <code class="highlighter-rouge">int64_t</code> 存储，显然会造成内存浪费。
+当然 redis 的数据结构是丰富的，连续内存上的数据管理有：字符串对象（sds），压缩列表（ziplist），这里有整数集合（intset），都分别针对不同的应用场景进行应用。</p>
+
+<hr />
+
+<h2 id="接口">接口</h2>
+
+<h3 id="数值编码">数值编码</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define INT8_MAX         127
+#define INT16_MAX        32767
+#define INT32_MAX        2147483647
+#define INT64_MAX        9223372036854775807LL
+</span>
+<span class="cp">#define INT8_MIN          -128
+#define INT16_MIN         -32768
+</span>
+<span class="cm">/* Return the required encoding for the provided value. */</span>
+<span class="k">static</span> <span class="kt">uint8_t</span> <span class="nf">_intsetValueEncoding</span><span class="p">(</span><span class="kt">int64_t</span> <span class="n">v</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="o">&lt;</span> <span class="n">INT32_MIN</span> <span class="o">||</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">INT32_MAX</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">INTSET_ENC_INT64</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="o">&lt;</span> <span class="n">INT16_MIN</span> <span class="o">||</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">INT16_MAX</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">INTSET_ENC_INT32</span><span class="p">;</span>
+    <span class="k">else</span>
+        <span class="k">return</span> <span class="n">INTSET_ENC_INT16</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<h3 id="插入数据">插入数据</h3>
+
+<p>检查插入数据是否大于当前编码格式，决定是否需要升级</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Insert an integer in the intset */</span>
+<span class="n">intset</span> <span class="o">*</span><span class="nf">intsetAdd</span><span class="p">(</span><span class="n">intset</span> <span class="o">*</span><span class="n">is</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">value</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="o">*</span><span class="n">success</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">uint8_t</span> <span class="n">valenc</span> <span class="o">=</span> <span class="n">_intsetValueEncoding</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+    <span class="kt">uint32_t</span> <span class="n">pos</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">success</span><span class="p">)</span> <span class="o">*</span><span class="n">success</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="cm">/* Upgrade encoding if necessary. If we need to upgrade, we know that
+     * this value should be either appended (if &gt; 0) or prepended (if &lt; 0),
+     * because it lies outside the range of existing values. */</span>
+    <span class="c1">// 如果插入数值大于当前编码，那么需要升级数组</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">valenc</span> <span class="o">&gt;</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">encoding</span><span class="p">))</span> <span class="p">{</span>
+        <span class="cm">/* This always succeeds, so we don't need to curry *success. */</span>
+        <span class="k">return</span> <span class="n">intsetUpgradeAndAdd</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">value</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="cm">/* Abort if the value is already present in the set.
+         * This call will populate "pos" with the right position to insert
+         * the value when it cannot be found. */</span>
+        <span class="c1">// 如果数值已经存在，就不需要插入数据了。*success = 0;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">intsetSearch</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="o">&amp;</span><span class="n">pos</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">success</span><span class="p">)</span> <span class="o">*</span><span class="n">success</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="k">return</span> <span class="n">is</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 数据增长，重新申请内存。</span>
+        <span class="n">is</span> <span class="o">=</span> <span class="n">intsetResize</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pos</span> <span class="o">&lt;</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">))</span> <span class="n">intsetMoveTail</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">pos</span><span class="p">,</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">_intsetSet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">pos</span><span class="p">,</span><span class="n">value</span><span class="p">);</span>
+    <span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">is</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="升级">升级</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Upgrades the intset to a larger encoding and inserts the given integer. */</span>
+<span class="k">static</span> <span class="n">intset</span> <span class="o">*</span><span class="nf">intsetUpgradeAndAdd</span><span class="p">(</span><span class="n">intset</span> <span class="o">*</span><span class="n">is</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">value</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">uint8_t</span> <span class="n">curenc</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">encoding</span><span class="p">);</span>
+    <span class="kt">uint8_t</span> <span class="n">newenc</span> <span class="o">=</span> <span class="n">_intsetValueEncoding</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">);</span>
+
+    <span class="c1">// 因为插入新的数据，而且数据超出了当前数组所有数值的范围才会升级。</span>
+    <span class="c1">// 超出了负数，或者超出了正数。正数在数组末添加，负数在数组前面添加。</span>
+    <span class="kt">int</span> <span class="n">prepend</span> <span class="o">=</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">?</span> <span class="mi">1</span> <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="cm">/* First set new encoding and resize */</span>
+    <span class="n">is</span><span class="o">-&gt;</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">newenc</span><span class="p">);</span>
+    <span class="n">is</span> <span class="o">=</span> <span class="n">intsetResize</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+
+    <span class="cm">/* Upgrade back-to-front so we don't overwrite values.
+     * Note that the "prepend" variable is used to make sure we have an empty
+     * space at either the beginning or the end of the intset. */</span>
+    <span class="c1">// 扩充内存后，迁移数据。</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">length</span><span class="o">--</span><span class="p">)</span>
+        <span class="n">_intsetSet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">length</span><span class="o">+</span><span class="n">prepend</span><span class="p">,</span><span class="n">_intsetGetEncoded</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">length</span><span class="p">,</span><span class="n">curenc</span><span class="p">));</span>
+
+    <span class="cm">/* Set the value at the beginning or the end. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">prepend</span><span class="p">)</span>
+        <span class="n">_intsetSet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">value</span><span class="p">);</span>
+    <span class="k">else</span>
+        <span class="n">_intsetSet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">),</span><span class="n">value</span><span class="p">);</span>
+    <span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">is</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><img src="https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215164106.png" alt="升级" /></p>
+
+<h3 id="搜索">搜索</h3>
+
+<p>二分法搜索数组数据。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Search for the position of "value". Return 1 when the value was found and
+ * sets "pos" to the position of the value within the intset. Return 0 when
+ * the value is not present in the intset and sets "pos" to the position
+ * where "value" can be inserted. */</span>
+<span class="k">static</span> <span class="kt">uint8_t</span> <span class="nf">intsetSearch</span><span class="p">(</span><span class="n">intset</span> <span class="o">*</span><span class="n">is</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">value</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="o">*</span><span class="n">pos</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">max</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int64_t</span> <span class="n">cur</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+
+    <span class="cm">/* The value can never be found when the set is empty */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// 检查数值是否大于或小于数组里的所有数值。</span>
+        <span class="cm">/* Check for the case where we know we cannot find the value,
+         * but do know the insert position. */</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;</span> <span class="n">_intsetGet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">max</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">);</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="n">_intsetGet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 数值如果在存储的数据中间，用二分法查找。</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">max</span> <span class="o">&gt;=</span> <span class="n">min</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">mid</span> <span class="o">=</span> <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="p">)</span><span class="n">min</span> <span class="o">+</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="p">)</span><span class="n">max</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="n">cur</span> <span class="o">=</span> <span class="n">_intsetGet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">mid</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;</span> <span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">min</span> <span class="o">=</span> <span class="n">mid</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">max</span> <span class="o">=</span> <span class="n">mid</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">==</span> <span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="n">mid</span><span class="p">;</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="n">min</span><span class="p">;</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+        </article>
+        <hr>
+
+        
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                        
+                        <h2 id="similar_posts">Similar Posts</h2>
+                        <ul>
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/15/c-asm/">比较宏和宏函数的工作效率
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/08/ngx_align_ptr/">nginx 地址对齐(ngx_align_ptr)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/05/redis-obj/">[redis 源码走读] 对象(redisObject)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/02/03/redis-skiplist/">[redis 源码走读] 跳跃表(skiplist)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/01/30/redis-ziplist/">[redis 源码走读] 压缩列表(ziplist)
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                        
+                        <li class="relatedPost">
+                            <a href="/2020/01/21/redis-list/">[redis 源码走读] 链表
+                            
+                            </a>
+                        </li>
+                        
+                        
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+            
+            
+                
+                    
+                
+                    
+                
+            
+                
+                    
+                
+                    
+                
+            
+        
+        
+            </ul>
+        
+
+        <div class="post-recent">
+    <div class="pre">
+        
+        <p><strong>上一篇</strong> <a href="/2020/02/03/redis-skiplist/">[redis 源码走读] 跳跃表(skiplist)</a></p>
+        
+    </div>
+    <div class="nex">
+
+        
+        <p><strong>下一篇</strong> <a href="/2020/02/05/redis-obj/">[redis 源码走读] 对象(redisObject)</a></p>
+        
+    </div>
+</div>
+
+
+        <h2 id="comments">Comments</h2>
+        
+
+
+<div id="disqus_thread"></div>
+<script>
+    /**
+     * RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+     * LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables
+     */
+
+    var disqus_config = function() {
+        this.page.url = 'http://localhost:4000/2020/02/04/redis-inset/'; // Replace PAGE_URL with your page's canonical URL variable
+        this.page.identifier = 'http://localhost:4000/2020/02/04/redis-inset/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+    };
+
+    (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document,
+            s = d.createElement('script');
+
+        s.src = '//wenfh2020.disqus.com/embed.js';
+
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+            
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/wenfh2020" title="GitHub"><i class="fa fa-github"
+                    aria-hidden="true"></i></a>  
+            <a href="mailto:wenfh2020@126.com" title="email"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>
+             
+            <a href="http://weibo.com/wenfh2020" title="Weibo"><i class="fa fa-weibo"
+                    aria-hidden="true"></i></a>  
+            <a href="https://www.zhihu.com/people/wenfh2020" title="Zhihu"><i
+                    class="iconfont icon-daoruzhihu"></i></a>   
+             
+        </p>
+        <p>
+            本站总访问量<span id="busuanzi_value_site_pv"></span>次，本站访客数<span
+                id="busuanzi_value_site_uv"></span>人次，本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github
+                    Pages</a>.
+            </span>
+            <span>
+                Theme designed by <a href="https://github.com/wenfh2020">wenfh2020</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <div class="back-to-top">
+    <a href="#top" data-scroll>
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/smooth-scroll.min.js " charset="utf-8"></script>
+    <script type="text/javascript">
+      smoothScroll.init({
+        speed: 500, // Integer. How fast to complete the scroll in milliseconds
+        easing: 'easeInOutCubic', // Easing pattern to use
+        offset: 20, // Integer. How far to offset the scrolling anchor location in pixels
+      });
+    </script>
+    <!-- <script src=" /js/scroll.min.js " charset="utf-8"></script> -->
+  </body>
+
+</html>
