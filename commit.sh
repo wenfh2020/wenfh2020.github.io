@@ -1,5 +1,5 @@
 #!/bin/sh
-# wenfh2020/2020-02-18/auto commit to github
+# wenfh2020/2020-02-18/./commit.sh msg1 msg2
 
 cd `dirname $0`
 work_path=`pwd`
