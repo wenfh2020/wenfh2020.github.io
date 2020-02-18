@@ -11,4 +11,7 @@ if [ $# == 0 ]; then
     exit 1
 fi
 
-git add _posts && git commit -m $@ && git push -u origin master
+str="'"
+message=$str$@$str
+
+git add _posts && git commit -m $message && git push -u origin master
