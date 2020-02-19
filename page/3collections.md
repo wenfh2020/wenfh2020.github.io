@@ -91,4 +91,4 @@ type: page
   
   参照侯捷先生的书《STL源码剖析》和SGI STL源码及其文档
 
-{% include comments.html %}
+<!-- {% include comments.html %} -->

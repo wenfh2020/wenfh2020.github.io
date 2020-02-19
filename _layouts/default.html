@@ -7,10 +7,10 @@
 
   {% include header.html %}
 
-  <div id="search-demo-container">
+  <!-- <div id="search-demo-container" class="left">
     <input type="text" id="search-input" placeholder="search...">
     <ul id="results-container"></ul>
-  </div>
+  </div> -->
 
   {{ content }}
 
@@ -25,7 +25,7 @@
       offset: 20, // Integer. How far to offset the scrolling anchor location in pixels
     });
   </script>
-  <script src="{{ site.baseurl }}/js/simple-jekyll-search.min.js"></script>
+  <!-- <script src="{{ site.baseurl }}/js/simple-jekyll-search.min.js"></script>
 
   <script>
     window.simpleJekyllSearch = new SimpleJekyllSearch({
@@ -38,7 +38,7 @@
       fuzzy: false,
       exclude: ['Welcome']
     })
-  </script>
+  </script> -->
   <!-- <script src="{{ "/js/scroll.min.js " | prepend: site.baseurl }}" charset="utf-8"></script> -->
 </body>
 
