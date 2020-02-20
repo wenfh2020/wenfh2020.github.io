@@ -8,7 +8,7 @@ author: wenfh2020
 
 程序进程是不能直接访问物理内存的，系统通过虚拟内存方式管理进程内存。
 
-![进程地址空间](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200217155719.png)
+![进程地址空间](/images/2020-02-20-14-22-08.png)
 
 > 图片来源 《深入理解计算机系统》8.2.3 私有地址空间
 
@@ -23,7 +23,7 @@ author: wenfh2020
 
 高级语言 -> 编译器 -> 低级语言指令 -> 内核系统 <---> 硬件。
 
-![程序工作流程](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200218055355.png)
+![程序工作流程](/images/2020-02-20-14-22-32.png)
 
 ---
 
