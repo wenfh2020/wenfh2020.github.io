@@ -25,7 +25,7 @@ reboot
 shutdown -r now
 ```
 
---
+---
 
 ### 开放端口号
 
