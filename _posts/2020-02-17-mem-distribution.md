@@ -31,9 +31,7 @@ author: wenfh2020
 
 ### 系统
 
-发现 MacOS 和 Centos 的 gcc 编译出来的 elf 文件变量布局有点不一样。现在在 Centos 系统下进行测试。
-
-> CentOS Linux release 7.4.1708 (Core)  
+CentOS Linux release 7.4.1708 (Core)  
 
 ---
 
