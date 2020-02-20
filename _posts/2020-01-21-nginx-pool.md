@@ -9,8 +9,7 @@ mathjax: 1
 
 nginx 内存池([源码](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c))通过大小内存块的链式管理逻辑大致如下图(部分**内存对齐**的细节没有添加进去)：
 
-![内存池](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163135.png)
-
+![内存池](/images/2020-02-20-16-40-53.png)
 
 
 * content
