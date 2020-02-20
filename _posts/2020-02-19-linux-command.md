@@ -25,7 +25,9 @@ reboot
 shutdown -r now
 ```
 
-## 端口号添加
+--
+
+### 开放端口号
 
 ```shell
 vi /etc/sysconfig/iptables
