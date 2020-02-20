@@ -46,7 +46,7 @@ func Produce(szBytes []byte) (err error) {
 }
 ```
 
-![负载](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200214094325.png)
+![生产者负载](/images/2020-02-20-16-54-38.png)
 
 ```shell
 begin time: 2018-07-29 14:03:55.606
@@ -84,7 +84,7 @@ func Custom() {
 }
 ```
 
-![消费者负载](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200214095132.png)
+![消费者负载](/images/2020-02-20-16-55-06.png)
 
 ```shell
 begin time: 2018-07-29 14:46:11.166
