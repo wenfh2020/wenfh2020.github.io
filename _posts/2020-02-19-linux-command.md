@@ -92,7 +92,7 @@ service iptables stop
 
 ```shell
 zip -r mydata.zip mydata
-unzip my data -d mydatabak
+unzip mydata -d mydatabak
 tar zcf mydata.tar.gz mydata
 tar zxf mydata.tar.gz
 ```
@@ -411,7 +411,7 @@ pstree -p 1234 | wc -l
 ```shell
 scp -P端口号 username@ip:路径 本地路径
 scp -r root@120.25.44.163:/home/hhx/srv_20150120.tar.gz .
-scp /Users/wenfahua/src/other/c_test/normal/proc/main.cpp root@120.25.44.163:/home/other/c_test/normal/proc
+scp /Users/wenfh2020/src/other/c_test/normal/proc/main.cpp root@120.25.44.163:/home/other/c_test/normal/proc
 ```
 
 ---
@@ -666,7 +666,7 @@ vmstat 1 每秒输出一次统计结果
 
 不是 swap 空间占用性能就会下降，要看 si so 频率。
 
-![image-20191113090543751](./pic/image-20191113090543751.png)
+![image-20191113090543751](/images/image-20191113090543751.png)
 
 ---
 
@@ -692,7 +692,12 @@ strace-eclone php -r 'exec("ls");'
 [GDB 从裸奔到穿戴整齐](http://www.skywind.me/blog/archives/2036)
 ![命令](/images/2020-02-20-19-40-56.png)
 
-详细文档通过命令查看：man gdb
+详细文档通过命令查看
+
+```shell
+man gdb
+```
+
 | 命令                | 操作                                                                         |
 | ------------------- | ---------------------------------------------------------------------------- |
 | r                   | 运行调试                                                                     |
@@ -738,6 +743,7 @@ n/f/u三个参数可以一起使用
 | u    | 示从当前地址往后请求的字节数，如果不指定的话，GDB默认是4个bytes。u参数可以用下面的字符来代替，**b表示单字节，h表示双字节，w表示四字 节，g表示八字节**。当我们指定了字节长度后，GDB会从指内存定的内存地址开始，读写指定字节，并把其当作一个值取出来。 |
 
 格式
+
 | 命令 | 操作                         |
 | :--- | :--------------------------- |
 | x    | 按十六进制格式显示变量       |
