@@ -8,7 +8,7 @@ author: wenfh2020
 
 点赞作者：redis 源码，注释很多而且很详细。看压缩列表源码前，可以先看看 ziplist.c 文件顶部注释，基本可以了解该数据结构设计。
 
-![结构](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163218.png)
+![结构](/images/2020-02-20-16-44-19.png)
 
 
 
@@ -36,7 +36,7 @@ author: wenfh2020
 **头 + 结点 + 尾**
 `<zlbytes> <zltail> <zllen> <entry> <entry> ... <entry> <zlend>`
 
-![结构](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163218.png)
+![结构](/images/2020-02-20-16-44-19.png)
 
 ```c
 /* Size of the "end of ziplist" entry. Just one byte. */
@@ -322,7 +322,7 @@ gcc -g ziplist.c sds.c zmalloc.c util.c sha1.c -o ziplist  -I../deps/lua/src
 sudo gdb ziplist
 ```
 
-![调试](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163355.png)
+![调试](/images/2020-02-20-16-45-03.png)
 
 ---
 
@@ -399,7 +399,7 @@ int main() {
 
 主要画了部分令人费解的地方。
 
-![插入流程](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163316.png)
+![插入流程](/images/2020-02-20-16-45-26.png)
 
 ---
 
