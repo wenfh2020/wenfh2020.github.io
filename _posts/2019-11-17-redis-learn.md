@@ -41,7 +41,7 @@ author: wenfh2020
 
 有你学习需要的第一手资料
 
-![官网](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133241.png)
+![官网](/images/2020-02-20-16-01-33.png)
 
 ---
 
@@ -49,7 +49,7 @@ author: wenfh2020
 
 学生时代，发现一个有趣现象，上课抄笔记勤奋的同学，往往成绩不好。殊不知这些知识都在书本或者其它平台前人都已经很好地总结出来了。人的精力都是有限的，顾此往往就会失彼。上课主要目标是：认真听讲，思考理解课堂知识，不明白都地方标记下来，课后再解决。
 
-![其它平台](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133320.png)
+![其它平台](/images/2020-02-20-16-01-49.png)
 
 ---
 
@@ -57,9 +57,9 @@ author: wenfh2020
 
 好的书籍，往往是最好的老师。
 
-![纸质书籍](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133348.png)
+![纸质书籍](/images/2020-02-20-16-02-02.png)
 
-![电子书籍](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133526.png)
+![电子书籍](/images/2020-02-20-16-02-14.png)
 
 ---
 
@@ -67,7 +67,7 @@ author: wenfh2020
 
 拿来主义，知识分类管理，pc和移动设备能同步数据到云端，知识随时随地可以查阅。
 
-![网络笔记](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133450.png)
+![网络笔记](/images/2020-02-20-16-02-34.png)
 
 ---
 
@@ -75,19 +75,19 @@ author: wenfh2020
 
 通过源码学习，深入了解作者思路和软件工作流程。
 
-![源码](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133640.png)
+![源码](/images/2020-02-20-16-02-48.png)
 
 ---
 
 ### 思维导图
 
-![知识脉络](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133710.png)
+![知识脉络](/images/2020-02-20-16-03-03.png)
 
 ---
 
 ### 调试
 
-![调试](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133734.png)
+![调试](/images/2020-02-20-16-03-19.png)
 
 ---
 
@@ -95,7 +95,7 @@ author: wenfh2020
 
 通过具体实践，对知识工作流程进行梳理。
 
-![UML 流程时序](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133804.png)
+![UML 流程时序](/images/2020-02-20-16-03-39.png)
 
 ---
 
@@ -103,7 +103,7 @@ author: wenfh2020
 
 markdown，舒服的排版可以让知识归纳总结事半功倍。
 
-![markdown 排版](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133831.png)
+![markdown](/images/2020-02-20-16-03-58.png)
 
 ---
 
@@ -111,7 +111,7 @@ markdown，舒服的排版可以让知识归纳总结事半功倍。
 
 从优秀的人上身上学习知识，现实生活很难遇见一个高手手把手地教你或者与你面对面交流，网络平台上有丰富的资源，可以互动，同时也可以保存并且分享自己的成果。
 
-![github](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133913.png)
+![github](/images/2020-02-20-16-04-19.png)
 
 ---
 
@@ -119,4 +119,4 @@ markdown，舒服的排版可以让知识归纳总结事半功倍。
 
 看自己写的东西倍感亲切，学习总结归纳，将知识落地，条理化整理成文档，便于知识回顾复盘。
 
-![博客](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215133939.png)
+![博客](/images/2020-02-20-16-07-43.png)

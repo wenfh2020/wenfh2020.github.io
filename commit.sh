@@ -10,4 +10,4 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-git pull && git add _posts && git commit -m "$(echo "$@")" && git push -u origin master
+git pull && git add images _posts && git commit -m "$(echo "$@")" && git push -u origin master
