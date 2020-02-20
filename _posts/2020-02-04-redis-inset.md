@@ -135,7 +135,7 @@ static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
 }
 ```
 
-![升级](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215164106.png)
+![升级](/images/2020-02-20-16-39-40.png)
 
 ### 搜索
 
