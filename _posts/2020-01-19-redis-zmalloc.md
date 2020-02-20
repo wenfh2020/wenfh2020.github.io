@@ -146,11 +146,11 @@ void zfree(void *ptr) {
 
 历史版本 [blame](https://github.com/antirez/redis/blame/9390c384b88de6b2363c3f33ba42bd25c1c3346d/src/zmalloc.c)
 
-![历史](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163003.png)
+![历史](/images/2020-02-20-16-47-12.png)
 
 当前版本 [blame](https://github.com/antirez/redis/blame/unstable/src/zmalloc.c)
 
-![当前](https://raw.githubusercontent.com/wenfh2020/imgs_for_blog/master/md20200215163054.png)
+![当前](/images/2020-02-20-16-47-28.png)
 
 ---
 
