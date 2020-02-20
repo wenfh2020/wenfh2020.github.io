@@ -8,7 +8,7 @@ author: wenfh2020
 
 快捷登录阿里云效果
 
-![效果](https://upload-images.jianshu.io/upload_images/4321487-576fb7036b4e979c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![效果](/images/2020-02-20-17-22-08.png)
 
 
 
