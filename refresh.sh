@@ -6,5 +6,5 @@ cd `dirname $0`
 work_path=`pwd`
 cd $work_path
 
-[ -d _site ] rm -r _site
+[ -d _site ] &&  rm -r _site
 jekyll s --incremental
