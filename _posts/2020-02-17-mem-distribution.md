@@ -280,7 +280,6 @@ The following switches are optional:
   -m, --architecture=MACHINE     Specify the target architecture as MACHINE
   -j, --section=NAME             Only display information for section NAME
   -M, --disassembler-options=OPT Pass text OPT on to the disassembler
-
   ...
 ```
 
