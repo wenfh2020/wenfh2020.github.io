@@ -27,16 +27,6 @@ shutdown -r now
 
 ---
 
-### 开放端口号
-
-```shell
-vi /etc/sysconfig/iptables
--A INPUT -m state --state NEW -m tcp -p tcp --dport 19007 -j ACCEPT
-systemctl restart iptables.service
-```
-
----
-
 ### 修改密码
 
 ```shell
@@ -82,8 +72,18 @@ ln -s source dest
 ### 防火墙
 
 ```shell
-service iptables start 
+service iptables start
 service iptables stop
+```
+
+---
+
+### 开放端口号
+
+```shell
+vi /etc/sysconfig/iptables
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 19007 -j ACCEPT
+systemctl restart iptables.service
 ```
 
 ---
