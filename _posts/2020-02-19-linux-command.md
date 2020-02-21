@@ -589,6 +589,18 @@ sed -i '' "s:$src_pic_path:\.\/pic:g" $file
 
 ---
 
+#### printf
+
+```shell
+printf '%d\n' 0xA
+printf '%X\n' 320
+
+local end_time=`date +"%Y-%m-%d %H:%M:%S"`
+printf "%-10s %-11s" "end:" $end_time
+```
+
+---
+
 ### 命令
 
 #### xargs
@@ -689,4 +701,4 @@ strace-eclone php -r 'exec("ls");'
 
 ## 参考
 
-* 《程序员的自我修养》
+* [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)
