@@ -18,6 +18,7 @@ type: page
 * [c++ 官网](http://www.cplusplus.com/)
 * [c++ 参考手册](https://zh.cppreference.com/)
 * [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)
+* [Linux 内核源码分析](https://www.cnblogs.com/tolimit/default.html?page=1)
 * [golang 官网](https://golang.google.cn/)
 * [汇编常用指令](https://blog.csdn.net/qq_36982160/article/details/82950848)
 
