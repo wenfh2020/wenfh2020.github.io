@@ -13,4 +13,5 @@ do
     kill -9 $p
 done
 
+[ -d _site ] && rm -r _site
 jekyll serve -wIt
