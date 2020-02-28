@@ -52,3 +52,7 @@ author: wenfh2020
 
 ![逻辑时序](/images/2020-02-24-09-16-08.png)
 <!-- <div align=center><img src="/images/2020-02-24-09-16-08.png"/></div> -->
+
+---
+
+更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
