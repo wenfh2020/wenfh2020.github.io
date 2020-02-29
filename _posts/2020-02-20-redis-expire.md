@@ -4,18 +4,7 @@ title:  "redis 键过期"
 categories: redis
 tags: redis expire
 author: wenfh2020
---- 
-
-* [x] 过期存储逻辑。
-* [x] 终端逻辑。
-* [x] 过期策略。
-* [x] 集群同步过期策略。
-* [x] 数据库存储过期策略。
-* [ ] static 的使用范围。
-* [ ] 线程异步处理过期，线程的使用例子。
-* [x] rememberSlaveKeyWithExpire
-* [ ] 当内存达到最大内存时，回收过期内存。
-* [x] 定期快速和慢速检查。
+---
 
 redis 可能存在大量过期数据，一次性遍历检查不太现实。redis 有丰富的数据结构，`key-value`， `value` 数据结构对象(`redisObj`)可能存储大量数据，`key` 过期了，`value` 也不建议在进程中实时回收。为了保证系统高性能，每次处理一点点，逐渐完成大任务，“分而治之”这是 redis 处理大任务的一贯作风。
 
