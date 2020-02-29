@@ -17,4 +17,5 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-git pull && git add images _posts && git commit -m "$(echo "$@")" && git push -u origin master
+_files='images _posts commit.sh refresh.sh'
+git pull && git add $_files && git commit -m "$(echo "$@")" && git push -u origin master && git status
