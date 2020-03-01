@@ -36,12 +36,6 @@ typedef struct zskiplist {
     unsigned long length;
     int level;
 } zskiplist;
-
-// 跳跃表并不是单独使用的，在 sorted set 中，结合 dict 使用。
-typedef struct zset {
-    dict *dict; // 保存 ele 数据作为 key
-    zskiplist *zsl; // 跳跃表存储 ele
-} zset;
 ```
 
 ---
@@ -87,6 +81,12 @@ int zslRandomLevel(void) {
 sorted set 功能实现，跳跃表结合 dict 使用。
 
 ```c
+// 跳跃表并不是单独使用的，在 sorted set 中，结合 dict 使用。
+typedef struct zset {
+    dict *dict; // 保存 ele 数据作为 key
+    zskiplist *zsl; // 跳跃表存储 ele
+} zset;
+
 int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
     ...
     znode = zslInsert(zs->zsl,score,ele);
