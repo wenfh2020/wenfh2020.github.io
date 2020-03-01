@@ -20,5 +20,6 @@ do
     kill -9 $p
 done
 
+git pull
 [ -d _site ] && rm -r _site
 jekyll serve -wIt
