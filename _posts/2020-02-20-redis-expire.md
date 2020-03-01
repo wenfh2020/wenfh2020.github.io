@@ -580,3 +580,7 @@ replica-lazy-flush no
 
 * [redis 过期策略及内存回收机制](https://blog.csdn.net/alex_xfboy/article/details/88959647)
 * [redis3.2配置文件redis.conf详细说明](https://www.zhangshengrong.com/p/Z9a28xkVXV/)
+
+---
+
+* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
