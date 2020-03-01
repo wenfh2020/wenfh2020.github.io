@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "redis 键过期"
+title:  "redis 过期策略"
 categories: redis
 tags: redis expire
 author: wenfh2020
