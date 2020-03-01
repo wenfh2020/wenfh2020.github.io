@@ -178,3 +178,7 @@ size_t zmalloc_used_memory(void) {
 ## 参考
 
 * [关于redis源码的内存分配,jemalloc,tcmalloc,libc](https://blog.csdn.net/libaineu2004/article/details/79400357)
+
+---
+
+* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
