@@ -60,26 +60,24 @@ typedef struct redisDb {
 #### 同步
 
 ```c
-int dbSyncDelete(redisDb *db, robj *key)
-{
+int dbSyncDelete(redisDb *db, robj *key) {
     /* Deleting an entry from the expires dict will not free the sds of
      * the key, because it is shared with the main dictionary. */
     if (dictSize(db->expires) > 0)
         dictDelete(db->expires, key->ptr);
-    if (dictDelete(db->dict, key->ptr) == DICT_OK)
-    {
+    if (dictDelete(db->dict, key->ptr) == DICT_OK) {
         if (server.cluster_enabled)
             slotToKeyDel(key);
         return 1;
-    }
-    else
-    {
+    } else {
         return 0;
     }
 }
 ```
 
 #### 异步
+
+unlink 逻辑删除 key，数据放在 bio 线程异步删除。
 
 ```c
 #define LAZYFREE_THRESHOLD 64
@@ -156,7 +154,7 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 }
 ```
 
-#### 删除修改过期 key
+#### 修改/删除过期 key
 
 部分命令会修改或删除过期时间。
 
@@ -175,7 +173,7 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 
 #### maxmemory 淘汰
 
-超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，这里涉及到 `lru` 淘汰算法，后面再仔细跟进。
+超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，这里涉及到 `lru` 算法，后面再仔细跟进。
 
 ```c
 typedef struct redisObject {
@@ -223,7 +221,6 @@ void aeMain(aeEventLoop *eventLoop) {
     }
 }
 
-
 /* This function gets called every time Redis is entering the
  * main loop of the event driven library, that is, before to sleep
  * for ready file descriptors. */
@@ -263,7 +260,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 void databasesCron(void) {
     if (server.active_expire_enabled) {
         if (server.masterhost == NULL) {
-            // 主库快速检查
+            // 主库慢速检查
             activeExpireCycle(ACTIVE_EXPIRE_CYCLE_SLOW);
         } else {
             // 从库如果设置了可写功能。
@@ -278,13 +275,13 @@ redis 主逻辑在单进程中实现，要保证不能影响主业务前提下�
 
 1. 检查时间限制。
 2. 过期数据检查数量限制。
-3. 检查的过期数据是否达到可接受比例。
+3. 过期数据是否达到可接受比例。
 
-被检查的数据过期了，会将过期键值从字典中逻辑删除，切断数据与主逻辑联系。键值对应的数据，会放到线程队列中，后台异步回收（如果配置设置了异步回收）。
+被检查的数据到期了，系统会把该键值从字典中逻辑删除，切断数据与主逻辑联系。键值对应的数据，放到线程队列，后台进行异步回收（如果配置设置了异步回收）。
 
 ---
 
-`activeExpireCycle` 检查有“快速”和“慢速”两种，时钟定期检查属于慢速类型。慢速检查被分配更多的检查时间。在一个时间范围内，到期数据最好不要太密集，因为系统发现到期数据很多，会迫切希望尽快处理掉这些过期数据，所以每次检查都要耗尽分配的时间，处理起来比较费劲。
+`activeExpireCycle` 检查有“快速”和“慢速”两种，时钟定期检查属于慢速类型。慢速检查被分配更多的检查时间。在一个时间范围内，到期数据最好不要太密集，因为系统发现到期数据很多，会迫切希望尽快处理掉这些过期数据，所以每次检查都要耗尽分配的时间片，处理起来比较费劲。
 
 ```c
 #define CRON_DBS_PER_CALL 16 /* 每次检查的数据库个数 */
@@ -308,14 +305,12 @@ void activeExpireCycle(int type) {
     // 快速遍历时间范围，力度越大，给予遍历时间越多。
     config_cycle_fast_duration = ACTIVE_EXPIRE_CYCLE_FAST_DURATION +
                                  ACTIVE_EXPIRE_CYCLE_FAST_DURATION/4*effort,
+    // 慢速遍历检查时间片
     config_cycle_slow_time_perc = ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC +
                                   2*effort,
-    // 过期键处理 / 采样个数 比例。达到可以接受的比例。
+    // 已经到期数据 / 检查数据 比例。达到可以接受的比例。
     config_cycle_acceptable_stale = ACTIVE_EXPIRE_CYCLE_ACCEPTABLE_STALE-
                                     effort;
-
-    /* This function has some global state in order to continue the work
-     * incrementally across calls. */
 
     static unsigned int current_db = 0; /* Last DB tested. */
     // 检查是否已经超时。
@@ -323,6 +318,7 @@ void activeExpireCycle(int type) {
     // 上一次快速检查数据起始时间。
     static long long last_fast_cycle = 0; /* When last fast cycle ran. */
 
+    // iteration 迭代检查个数，每 16 次循环遍历，确认一下是否检查超时。
     int j, iteration = 0;
     // 每次周期检查的数据库个数。redis 默认有 16 个库。
     int dbs_per_call = CRON_DBS_PER_CALL;
@@ -333,7 +329,8 @@ void activeExpireCycle(int type) {
     if (clientsArePaused()) return;
 
     if (type == ACTIVE_EXPIRE_CYCLE_FAST) {
-        /* 检查还没超时，但是超时数据百分比已经达到了可以接受的范围，不需要快速检查了。*/
+        /* 检查还没超时，但是到期数据密集度已经达到了可以接受的范围，不要快速检查了，
+           毕竟它是快速的，留给其它方式的检查。*/
         if (!timelimit_exit &&
             server.stat_expired_stale_perc < config_cycle_acceptable_stale)
             return;
@@ -360,15 +357,14 @@ void activeExpireCycle(int type) {
 
     /* 过期数据一般是异步方式，检查到过期数据，都是从字典中移除键值信息，
      * 避免再次使用，但是数据回收放在后台回收，不是实时的，有数据有可能还存在数据库里。*/
+
     // 检查数据个数。
     long total_sampled = 0;
     // 检查数据，数据已经过期的个数。
     long total_expired = 0;
 
     for (j = 0; j < dbs_per_call && timelimit_exit == 0; j++) {
-        /* Expired and checked in a single loop. */
         unsigned long expired, sampled;
-
         redisDb *db = server.db+(current_db % server.dbnum);
         current_db++;
 
@@ -406,7 +402,7 @@ void activeExpireCycle(int type) {
             if (num > config_keys_per_loop)
                 num = config_keys_per_loop;
 
-            /* 哈希表本质上是一个数组，数组上保存了键值碰撞的数据，用链表将碰撞数据串联起来，
+            /* 哈希表本质上是一个数组，可能有键值碰撞的数据，用链表将碰撞数据串联起来，
              * 放在一个数组下标下，也就是放在哈希表的一个桶里。max_buckets 是最大能检查的桶个数。
              * 跳过空桶，不处理。*/
             long max_buckets = num*20;
@@ -424,11 +420,8 @@ void activeExpireCycle(int type) {
                     dictEntry *de = db->expires->ht[table].table[idx];
                     long long ttl;
 
-                    /* Scan the current bucket of the current table. */
                     checked_buckets++;
                     while(de) {
-                        /* Get the next entry now since this entry may get
-                         * deleted. */
                         dictEntry *e = de;
                         de = de->next;
 
@@ -451,7 +444,6 @@ void activeExpireCycle(int type) {
             total_expired += expired;
             total_sampled += sampled;
 
-            /* Update the average TTL stats for this database. */
             if (ttl_samples) {
                 long long avg_ttl = ttl_sum/ttl_samples;
 
@@ -463,7 +455,7 @@ void activeExpireCycle(int type) {
                 db->avg_ttl = (db->avg_ttl/50)*49 + (avg_ttl/50);
             }
 
-            /* 避免检查周期太长，当前数据库每 15 次循环迭代检查，检查是否超时，超时退出。*/
+            /* 避免检查周期太长，当前数据库每 16 次循环迭代检查，检查是否超时，超时退出。*/
             if ((iteration & 0xf) == 0) { /* check once every 16 iterations. */
                 elapsed = ustime()-start;
                 if (elapsed > timelimit) {
@@ -526,7 +518,7 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
 
 ## 总结
 
-* 看了几天源码，大致理解了键值过期处理策略。有很多细节的地方，感觉理解还是不够深刻，以后还是要结合实战多思考多吸取经验才行。
+* 看了几天源码，大致理解了键值过期处理策略。很多细节，感觉理解还是不够深刻，以后还是要结合实战多思考多吸取经验加以理解。
 * redis 为了保证系统的高性能，采取了很多巧妙的分治策略，例如键值过期检查。过期数据检查和处理流程看，它不是一个实时的操作，有一定的延时，这样系统不能很好地保证数据一致性。所以有得必有失。
 * 从定期回收策略的慢速检查中，我们可以看到，redis 处理到期数据，通过采样，判断到期数据的密集度。到期数据越密集，处理时间越多。我们使用中，不应该把大量数据设置在同一个时间段到期。
 * `redis.conf` 配置里面有比较详细的过期键处理策略描述。很多细节的地方，可以参考源码注释和文档。文档极其详细，作者的耐心，在开源项目中，是比较少见的 👍。例如：
