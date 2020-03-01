@@ -154,6 +154,20 @@ void zfree(void *ptr) {
 
 ---
 
+* 获得系统已使用内存
+
+redis 内存申请几乎都调用 zmalloc 接口，每次申请和回收都会被 `used_memory` 记录起来。当系统处理 `maxmemory` 的时候，就要知道系统使用了多少内存，从而进行一些回收数据的策略。
+
+```c
+size_t zmalloc_used_memory(void) {
+    size_t um;
+    atomicGet(used_memory,um);
+    return um;
+}
+```
+
+---
+
 ## 测试
 
 `jemalloc, tcmalloc, libc` 到底哪个库比较好用，是马是驴拉出来溜溜才能知道，要根据线上情况进行评估。
