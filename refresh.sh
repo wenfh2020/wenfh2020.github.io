@@ -21,4 +21,4 @@ do
 done
 
 [ -d _site ] && rm -r _site
-git pull && jekyll serve -wIt
+jekyll serve -wIt

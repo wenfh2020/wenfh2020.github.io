@@ -177,9 +177,11 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 
 ```c
 typedef struct redisObject {
+    ...
     unsigned lru:LRU_BITS; /* LRU time (relative to global lru_clock) or
                             * LFU data (least significant 8 bits frequency
                             * and most significant 16 bits access time). */
+    ...
 } robj;
 
 int processCommand(client *c) {
@@ -518,8 +520,8 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
 
 ## 总结
 
-* 看了几天源码，大致理解了键值过期处理策略。很多细节，感觉理解还是不够深刻，以后还是要结合实战多思考多吸取经验加以理解。
-* redis 为了保证系统的高性能，采取了很多巧妙的分治策略，例如键值过期检查。过期数据检查和处理流程看，它不是一个实时的操作，有一定的延时，这样系统不能很好地保证数据一致性。所以有得必有失。
+* 看了几天源码，大致理解了键值过期处理策略。很多细节，感觉理解还是不够深刻，以后还是要结合实战多思考。
+* redis 为了保证系统的高性能，采取了很多巧妙的“分治策略”，例如键值过期检查。过期数据检查和处理流程看，它不是一个实时的操作，有一定的延时，这样系统不能很好地保证数据一致性。有得必有失。
 * 从定期回收策略的慢速检查中，我们可以看到，redis 处理到期数据，通过采样，判断到期数据的密集度。到期数据越密集，处理时间越多。我们使用中，不应该把大量数据设置在同一个时间段到期。
 * `redis.conf` 配置里面有比较详细的过期键处理策略描述。很多细节的地方，可以参考源码注释和文档。文档极其详细，作者的耐心，在开源项目中，是比较少见的 👍。例如：
 
@@ -578,9 +580,10 @@ replica-lazy-flush no
 
 ## 参考
 
+* 《redis 设计与实现》
 * [redis 过期策略及内存回收机制](https://blog.csdn.net/alex_xfboy/article/details/88959647)
 * [redis3.2配置文件redis.conf详细说明](https://www.zhangshengrong.com/p/Z9a28xkVXV/)
 
 ---
 
-* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
+* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/) 
