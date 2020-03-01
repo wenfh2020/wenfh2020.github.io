@@ -243,8 +243,10 @@ void zsetTest() {
 
 ## 参考
 
-《redis 设计与实现》
+* 《redis 设计与实现》
+* [redis commands](https://redis.io/commands/zadd)
+* [Redis为什么用跳表而不用平衡树？](https://mp.weixin.qq.com/s/rXIVIW7RM56xwMaQtKnmqA)
 
-[redis commands](https://redis.io/commands/zadd)
+---
 
-[Redis为什么用跳表而不用平衡树？](https://mp.weixin.qq.com/s/rXIVIW7RM56xwMaQtKnmqA)
+* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
