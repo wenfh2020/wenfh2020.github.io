@@ -702,3 +702,7 @@ strace-eclone php -r 'exec("ls");'
 ## 参考
 
 * [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)
+
+---
+
+* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
