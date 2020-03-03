@@ -423,7 +423,7 @@ int dictExpand(dict *d, unsigned long size) {
 
 ### 缩容
 
-* 缩容，部分删除操作，会触发重新重新分配内存进行存储。
+* 缩容，部分删除操作，会触发重新分配内存进行存储。
 
 ```c
 #define HASHTABLE_MIN_FILL        10      /* Minimal hash table fill 10% */
