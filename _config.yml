@@ -9,7 +9,7 @@
 title: ' '
 brief-intro: ' '
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "https://wenfh2020.github.io" # the base hostname & protocol for your site
+url: "https://wenfh2020.com/" # the base hostname & protocol for your site
 
 permalink: /:year/:month/:day/:title/
 
