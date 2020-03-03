@@ -61,7 +61,7 @@ redis 内存管理实现，有三种方式：
 
 ---
 c 语言比较精简的内存池，可以参考 `nginx` 的[实现](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c)。nginx 这种简单的链式内存池，虽然避免了频繁从内核分配内存，也容易产生内存碎片。即便是 glibc 的 slab 实现内存管理，也不能很好地解决内存碎片问题。所以内存池就是个复杂的问题。在 redis 上要很好地解决该问题，必然会提高整个项目的复杂度，与其自己造轮子，不如用优秀的第三方库：`tcmalloc`, `jemalloc`
->[[nginx 源码走读] 内存池](https://wenfh2020.github.io/2020/01/21/nginx-pool/)
+>[[nginx 源码走读] 内存池](https://wenfh2020.com/2020/01/21/nginx-pool/)
 
 ---
 
