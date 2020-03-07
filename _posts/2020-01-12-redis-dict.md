@@ -356,7 +356,7 @@ static int _dictExpandIfNeeded(dict *d) {
      * table (global setting) or we should avoid it but the ratio between
      * elements/buckets is over the "safe" threshold, we resize doubling
      * the number of buckets. */
-    // 当使用的数据大于哈希表大小就可以扩展了。`dict_can_resize` 不允许扩展，那么数据的使用与哈希表的大小对比，要超出一个比率才能扩展内存。
+    // 当使用的数据大于哈希表大小就可以扩展了。当`dict_can_resize` 不允许扩展时，数据的使用与哈希表的大小对比，超出一个比率强制扩展内存。
     if (d->ht[0].used >= d->ht[0].size &&
         (dict_can_resize ||
          d->ht[0].used/d->ht[0].size > dict_force_resize_ratio)) {
@@ -466,7 +466,12 @@ int dictResize(dict *d) {
 * [Redis源码剖析和注释](https://blog.csdn.net/men_wen/article/details/69787532)
 
 ---
-# 问题
+
+* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
+
+---
+
+## 问题
 
 1. iterator 作用是啥。
 2. [scan 的用法](麥路人/articles/1410.html)。
