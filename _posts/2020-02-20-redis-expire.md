@@ -172,7 +172,7 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 
 #### maxmemory 淘汰
 
-超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，这里涉及到 `lru` 算法，可以参考[[redis 源码走读] maxmemory 数据淘汰策略
+超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，可以参考[[redis 源码走读] maxmemory 数据淘汰策略
 ](https://wenfh2020.com/2020/03/06/max-memory/)。
 
 ```c
@@ -517,6 +517,7 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
 
 ## 总结
 
+* 要熟悉字典 `dict` 的实现原理，`dict` 是 redis 常用的几个基础数据结构之一。
 * 看了几天源码，大致理解了键值过期处理策略。很多细节，感觉理解还是不够深刻，以后还是要结合实战多思考。
 * redis 为了保证系统的高性能，采取了很多巧妙的“分治策略”，例如键值过期检查。过期数据检查和处理流程看，它不是一个实时的操作，有一定的延时，这样系统不能很好地保证数据一致性。有得必有失。
 * 从定期回收策略的慢速检查中，我们可以看到，redis 处理到期数据，通过采样，判断到期数据的密集度。到期数据越密集，处理时间越多。我们使用中，不应该把大量数据设置在同一个时间段到期。

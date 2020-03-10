@@ -65,9 +65,6 @@ redis 申请和回收内存基本上都是通过 `zmalloc` 接口统一管理的
 | allkeys-lfu     | 使用近似的LFU算法淘汰整个数据库的键。                             |
 
 ```c
-/* Redis maxmemory strategies. Instead of using just incremental number
- * for this defines, we use a set of flags so that testing for certain
- * properties common to multiple policies is faster. */
 #define MAXMEMORY_FLAG_LRU (1<<0)
 #define MAXMEMORY_FLAG_LFU (1<<1)
 #define MAXMEMORY_FLAG_ALLKEYS (1<<2)
