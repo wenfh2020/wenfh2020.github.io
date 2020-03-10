@@ -172,7 +172,8 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 
 #### maxmemory 淘汰
 
-超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，这里涉及到 `lru` 算法，后面再仔细跟进。
+超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，这里涉及到 `lru` 算法，可以参考[[redis 源码走读] maxmemory 数据淘汰策略
+](https://wenfh2020.com/2020/03/06/max-memory/)。
 
 ```c
 typedef struct redisObject {
