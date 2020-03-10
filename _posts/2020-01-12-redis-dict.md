@@ -458,6 +458,131 @@ int dictResize(dict *d) {
 
 ---
 
+## 随机键
+
+随机键是配合一些算法使用的，例如 `maxmemory` 的淘汰策略，需要对数据进行采样，如果要随机取多个数据，`dictGetSomeKeys` 速度要比 `dictGetRandomKey` 快，但是随机分布效果没有`dictGetRandomKey` 好。
+
+### 随机取多个
+
+字典随机连续采样。不保证能采样满足 count 个数。采集到指定数量样本，或者样本不够，但是查找次数到达上限，会退出。
+
+```c
+unsigned int dictGetSomeKeys(dict *d, dictEntry **des, unsigned int count) {
+    unsigned long j; /* internal hash table id, 0 or 1. */
+    unsigned long tables; /* 1 or 2 tables? */
+    unsigned long stored = 0, maxsizemask;
+    unsigned long maxsteps;
+
+    if (dictSize(d) < count) count = dictSize(d);
+    maxsteps = count*10;
+
+    // 如果字典正在数据迁移，多迁移几个数据，然后再进行逻辑。
+    for (j = 0; j < count; j++) {
+        if (dictIsRehashing(d))
+            _dictRehashStep(d);
+        else
+            break;
+    }
+
+    tables = dictIsRehashing(d) ? 2 : 1;
+    maxsizemask = d->ht[0].sizemask;
+    if (tables > 1 && maxsizemask < d->ht[1].sizemask)
+        maxsizemask = d->ht[1].sizemask;
+
+    unsigned long i = random() & maxsizemask;
+    unsigned long emptylen = 0;
+
+    // 两个条件，采集到指定数量样本，或者样本不够，但是查找次数到达上限。
+    while(stored < count && maxsteps--) {
+        for (j = 0; j < tables; j++) {
+            if (tables == 2 && j == 0 && i < (unsigned long) d->rehashidx) {
+                /* 哈希表正在数据迁移，我们在表 1 上采样，如果 i < d->rehashidx，
+                 * 说明 i 下标指向的数据已经迁移到表 2 中去了，那么我们到表 2 中进行采样。
+                 * 如果 i 下标大于表 2 的大小，那么在表2 中索引将会越界，那么继续在表 1 中
+                 * 没有迁移的数据段（ > rehashidx）中查找。*/
+                if (i >= d->ht[1].size)
+                    i = d->rehashidx;
+                else
+                    continue;
+            }
+
+            // 如果下标已经超出了当前表大小，继续遍历下一张表。
+            if (i >= d->ht[j].size) continue;
+            dictEntry *he = d->ht[j].table[i];
+
+            // 如果连续几个桶都是空的，再随机位置进行采样。
+            if (he == NULL) {
+                emptylen++;
+                if (emptylen >= 5 && emptylen > count) {
+                    i = random() & maxsizemask;
+                    emptylen = 0;
+                }
+            } else {
+                emptylen = 0;
+                while (he) {
+                    *des = he;
+                    des++;
+                    he = he->next;
+                    stored++;
+                    if (stored == count) return stored;
+                }
+            }
+        }
+        i = (i+1) & maxsizemask;
+    }
+    return stored;
+}
+
+```
+
+### 随机取一个
+
+先找一个随机非空桶，再在桶里随机找一个元素。
+
+```c
+/* Return a random entry from the hash table. Useful to
+ * implement randomized algorithms */
+dictEntry *dictGetRandomKey(dict *d) {
+    dictEntry *he, *orighe;
+    unsigned long h;
+    int listlen, listele;
+
+    if (dictSize(d) == 0) return NULL;
+    if (dictIsRehashing(d)) _dictRehashStep(d);
+    if (dictIsRehashing(d)) {
+        do {
+            // 哈希表正在进行数据迁移，
+            // 从 表 1 的 rehashidx 到 d->ht[0].size 和 表 2 上随机抽取数据。
+            // 但是当哈希表正在扩容时，表2的大小至少是表 1 的两倍，而随机值落在表 2 的几率会更
+            //大。这个时候表2 的数据还没怎么进行填充，所以数据采集就会失败。失败几率会比较高。
+            h = d->rehashidx + (random() % (d->ht[0].size +
+                                            d->ht[1].size -
+                                            d->rehashidx));
+            he = (h >= d->ht[0].size) ? d->ht[1].table[h - d->ht[0].size] :
+                                      d->ht[0].table[h];
+        } while(he == NULL);
+    } else {
+        do {
+            h = random() & d->ht[0].sizemask;
+            he = d->ht[0].table[h];
+        } while(he == NULL);
+    }
+
+    listlen = 0;
+    orighe = he;
+    while(he) {
+        he = he->next;
+        listlen++;
+    }
+    listele = random() % listlen;
+    he = orighe;
+    while(listele--) he = he->next;
+    return he;
+}
+```
+
+---
+
 ## 参考
 
 * [Redis源码剖析和注释（三）--- Redis 字典结构](https://blog.csdn.net/men_wen/article/details/69787532)

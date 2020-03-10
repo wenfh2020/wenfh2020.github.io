@@ -20,5 +20,6 @@ do
     kill -9 $p
 done
 
+# 有时候不能实时刷新，需要删除 _site 目录，重新启动。
 [ -d _site ] && rm -r _site
 jekyll serve -wIt

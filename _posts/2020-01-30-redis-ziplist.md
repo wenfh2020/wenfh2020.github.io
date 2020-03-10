@@ -585,3 +585,7 @@ int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
 * [Redis的一个历史bug及其后续改进](https://segmentfault.com/a/1190000018878466?utm_source=tag-newest)
 
 * [Ziplist: insertion bug under particular conditions fixed.](https://github.com/wenfh2020/redis/commit/c495d095ae495ea5253443ee4562aaa30681a854?diff=unified)
+
+---
+
+* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)

@@ -129,8 +129,7 @@ int expireIfNeeded(redisDb *db, robj *key) {
     server.stat_expiredkeys++;
     // 传播数据更新，传播到集群中去，如果数据库是 `aof` 格式存储，更新落地 `aof` 文件。
     propagateExpire(db,key,server.lazyfree_lazy_expire);
-    notifyKeyspaceEvent(NOTIFY_EXPIRED,
-        "expired",key,db->id);
+    notifyKeyspaceEvent(NOTIFY_EXPIRED, "expired",key,db->id);
     return server.lazyfree_lazy_expire ? dbAsyncDelete(db,key) :
                                          dbSyncDelete(db,key);
 }
@@ -203,7 +202,7 @@ int freeMemoryIfNeededAndSafe(void) {
 
 ### 事件触发
 
-在事件模型，处理文件描述符响应事件前，触发快速检查。将过期检查负载分散到各个文件事件中去。
+在事件模型中，处理事件前，触发快速检查。将过期检查负载分散到各个事件中去。
 
 ```c
 int main(int argc, char **argv) {
@@ -223,9 +222,6 @@ void aeMain(aeEventLoop *eventLoop) {
     }
 }
 
-/* This function gets called every time Redis is entering the
- * main loop of the event driven library, that is, before to sleep
- * for ready file descriptors. */
 void beforeSleep(struct aeEventLoop *eventLoop) {
     ...
     if (server.active_expire_enabled && server.masterhost == NULL)
@@ -238,12 +234,12 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
 
 ### 定期检查
 
-定期检查过期键值，通过时钟实现。
+通过时钟实现，定期检查过期键值。
 
 ```c
-// server.c
 void initServer(void) {
     ...
+    // 创建时钟事件
     if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         serverPanic("Can't create event loop timers.");
         exit(1);
@@ -257,7 +253,6 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     ...
 }
 
-// server.c
 // 主库中检查即可，主库会同步结果到从库。
 void databasesCron(void) {
     if (server.active_expire_enabled) {
@@ -273,17 +268,19 @@ void databasesCron(void) {
 }
 ```
 
-redis 主逻辑在单进程中实现，要保证不能影响主业务前提下，对过期数据检查，不能太影响系统性能。检查过期数据主要三方面进行限制：
+---
+
+redis 主逻辑在单进程主线程中实现，要保证不能影响主业务前提下，检查过期数据，不能太影响系统性能。主要三方面进行限制：
 
 1. 检查时间限制。
 2. 过期数据检查数量限制。
 3. 过期数据是否达到可接受比例。
 
-被检查的数据到期了，系统会把该键值从字典中逻辑删除，切断数据与主逻辑联系。键值对应的数据，放到线程队列，后台进行异步回收（如果配置设置了异步回收）。
+被检查的数据到期了，系统会把该键值从字典中逻辑删除，切断数据与主逻辑联系。键值对应的数据，放到线程队列，后台线程进行异步回收（如果配置设置了异步回收）。
 
 ---
 
-`activeExpireCycle` 检查有“快速”和“慢速”两种，时钟定期检查属于慢速类型。慢速检查被分配更多的检查时间。在一个时间范围内，到期数据最好不要太密集，因为系统发现到期数据很多，会迫切希望尽快处理掉这些过期数据，所以每次检查都要耗尽分配的时间片，处理起来比较费劲。
+`activeExpireCycle` 检查有“快速”和“慢速”两种，时钟定期检查属于慢速类型。慢速检查被分配更多的检查时间。在一个时间范围内，到期数据最好不要太密集，因为系统发现到期数据很多，会迫切希望尽快处理掉这些过期数据，所以每次检查都要耗尽分配的时间片，直到到期数据到达一个可接受的密度比例。
 
 ```c
 #define CRON_DBS_PER_CALL 16 /* 每次检查的数据库个数 */
@@ -504,8 +501,7 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
             dbAsyncDelete(db,keyobj);
         else
             dbSyncDelete(db,keyobj);
-        notifyKeyspaceEvent(NOTIFY_EXPIRED,
-            "expired",keyobj,db->id);
+        notifyKeyspaceEvent(NOTIFY_EXPIRED, "expired", keyobj, db->id);
         trackingInvalidateKey(keyobj);
         decrRefCount(keyobj);
         server.stat_expiredkeys++;
@@ -523,7 +519,7 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
 * 看了几天源码，大致理解了键值过期处理策略。很多细节，感觉理解还是不够深刻，以后还是要结合实战多思考。
 * redis 为了保证系统的高性能，采取了很多巧妙的“分治策略”，例如键值过期检查。过期数据检查和处理流程看，它不是一个实时的操作，有一定的延时，这样系统不能很好地保证数据一致性。有得必有失。
 * 从定期回收策略的慢速检查中，我们可以看到，redis 处理到期数据，通过采样，判断到期数据的密集度。到期数据越密集，处理时间越多。我们使用中，不应该把大量数据设置在同一个时间段到期。
-* `redis.conf` 配置里面有比较详细的过期键处理策略描述。很多细节的地方，可以参考源码注释和文档。文档极其详细，作者的耐心，在开源项目中，是比较少见的 👍。例如：
+* `redis.conf` 配置里面有比较详细的过期键处理策略描述。很多细节，可以参考源码注释和文档。文档极其详细，redis 作者的耐心，在开源项目中，是比较少见的 👍。例如：
 
 ```shell
 ############################# LAZY FREEING ####################################
@@ -580,6 +576,7 @@ replica-lazy-flush no
 
 ## 参考
 
+* [[redis 源码走读] 字典(dict)](https://wenfh2020.com/2020/01/12/redis-dict/)
 * 《redis 设计与实现》
 * [redis 过期策略及内存回收机制](https://blog.csdn.net/alex_xfboy/article/details/88959647)
 * [redis3.2配置文件redis.conf详细说明](https://www.zhangshengrong.com/p/Z9a28xkVXV/)
