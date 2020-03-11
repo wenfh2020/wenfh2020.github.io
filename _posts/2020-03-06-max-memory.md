@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] maxmemory 数据淘汰策略"
 categories: redis
-tags: redis maxmemory 数据淘汰
+tags: redis maxmemory 数据淘汰 策略
 author: wenfh2020
 ---
 
@@ -773,4 +773,4 @@ cant_free:
 
 ---
 
-* 更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
+* 更精彩内容，可以关系我的博客：[wenfh2020.com](https://wenfh2020.com/)
