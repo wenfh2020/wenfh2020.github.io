@@ -4,7 +4,7 @@ title:  "[nginx 源码走读] 内存池"
 categories: nginx
 tags: nginx c
 author: wenfh2020
-mathjax: 1
+mathjax: true
 ---
 
 nginx 内存池([源码](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c))，通过链式管理大小内存块，减少系统频繁向内核申请空间，从而提高系统性能。

@@ -4,6 +4,7 @@ title:  "[redis 源码走读] 跳跃表(skiplist)"
 categories: redis
 tags: redis c
 author: wenfh2020
+mathjax: true
 ---
 
 [张铁蕾](http://zhangtielei.com/posts/blog-redis-skiplist.html)的博客将 `skiplist` 原理和算法复杂度描述得很清楚，具体可以参考。我分享一下自己对部分源码的阅读情况和思考。

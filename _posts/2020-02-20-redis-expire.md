@@ -4,6 +4,7 @@ title:  " [redis 源码走读] redis 过期策略"
 categories: redis
 tags: redis expire
 author: wenfh2020
+mathjax: true
 ---
 
 redis 可能存在大量过期数据，一次性遍历检查不太现实。redis 有丰富的数据结构，`key-value`， `value` 数据结构对象(`redisObj`)可能存储大量数据，`key` 过期了，`value` 也不建议在进程中实时回收。为了保证系统高性能，每次处理一点点，逐渐完成大任务，“分而治之”这是 redis 处理大任务的一贯作风。
