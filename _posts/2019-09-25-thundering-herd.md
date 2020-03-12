@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "静群效应理解"
+title:  "惊群效应理解"
 categories: 网络
 tags: 网络 惊群效应
 author: wenfh2020
