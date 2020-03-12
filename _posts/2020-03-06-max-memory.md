@@ -484,6 +484,8 @@ void evictionPoolPopulate(int dbid, dict *sampledict, dict *keydict, struct evic
 
 缓存目的是缓存活跃数据，`volatile-ttl` 淘汰最快到期的数据，存在缺陷：有可能把活跃的数据先淘汰了，可以采用 `allkeys-lru` 和 `volatile-lru` 策略，根据当前时间与上一次访问的时间间隔，间隔越小说明越活跃。通过采样，用近似 lru 算法淘汰那些很久没有使用的数据。
 
+> 简单的 lru 实现可以看看我这个帖子 [lru c++ 实现](https://wenfh2020.com/2020/03/11/lru/)
+
 ---
 
 * `redisObject` 成员 `lru` 保存了一个 24 bit 的系统访问数据时间戳。保存 lru 时间精度是秒，`LRU_CLOCK_MAX` 时间范围大概 194 天。
