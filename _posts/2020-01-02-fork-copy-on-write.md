@@ -29,7 +29,7 @@ macos
 
 ![子进程数据修改后](/images/2020-03-11-10-09-21.png)
 
-> 测试进程跑得比较快，两次抓图的进程不一样。感兴趣的朋友可以拿[源码](https://github.com/wenfh2020/c_test/blob/master/normal/proc.cpp)测试下。
+> 测试进程跑得比较快，跑了两次去抓图，所以两次抓图的进程不一样。感兴趣的朋友可以拿[源码](https://github.com/wenfh2020/c_test/blob/master/normal/proc.cpp)测试下。
 
 ---
 
