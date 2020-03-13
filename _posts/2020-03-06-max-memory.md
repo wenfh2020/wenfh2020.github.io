@@ -775,4 +775,4 @@ cant_free:
 
 ---
 
-* 更精彩内容，可以关系我的博客：[wenfh2020.com](https://wenfh2020.com/)
+* 更精彩内容，可以关注我的博客：[wenfh2020.com](https://wenfh2020.com/)
