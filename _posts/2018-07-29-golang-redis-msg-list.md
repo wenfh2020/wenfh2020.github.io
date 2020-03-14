@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "golang 压测 redis 消息队列"
+title:  "压测 redis 消息队列（golang）"
 categories: redis
-tags: redis golang msglist
+tags: redis 消息队列 压力测试 golang
 author: wenfh2020
 ---
 
