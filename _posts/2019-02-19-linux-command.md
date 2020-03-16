@@ -308,11 +308,8 @@ find / -name "*.mp3" |xargs rm -rf
 # 查询最近两个小时修改过的文件
 find /work/imdev/IM3.0 -iname "*" -mmin -120 -type f
 
-# linux 命令行转换，将源码文件 tab 替换为 4 个空格 
-find . -regex '.*\.h\|.*\.hpp\|.*\.cpp' ! -type d -exec bash -c 'expand -t 4 "$0" > /tmp/e && mv /tmp/e "$0"' {} \; 
-
-# linux 命令行转换，将源码文件 tab 替换为 4 个空格 
-find . -regex '.*\.h\|.*\.hpp\|.*\.cpp' ! -type d -exec bash -c 'expand -t 4 "$0" > /tmp/e && mv /tmp/e "$0"' {} \; 
+# linux 命令行转换，将源码文件 tab 替换为 4 个空格
+find . -regex '.*\.h\|.*\.hpp\|.*\.cpp' ! -type d -exec bash -c 'expand -t 4 "$0" > /tmp/e && mv /tmp/e "$0"' {} \;
 
 # 查找大于 500 字节的文件，并且删除。
 find ./ -size +500 | xargs rm -f

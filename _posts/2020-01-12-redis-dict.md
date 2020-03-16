@@ -339,7 +339,7 @@ int dictRehashMilliseconds(dict *d, int ms) {
 
 ## 扩容缩容
 
-`dict` 是 redis 使用对基础数据之一，该数据结构有动态扩容和缩容功能。
+`dict` 是 redis 基础数据之一，该数据结构有动态扩容和缩容功能。
 
 ### 是否需要扩容
 

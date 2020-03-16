@@ -228,7 +228,7 @@ unsigned int zipStoreEntryEncoding(unsigned char *p, unsigned char encoding, uns
 /* 'encoding' field of the zlentry structure. */
 #define ZIP_ENTRY_ENCODING(ptr, encoding) do {  \
     (encoding) = (ptr[0]); \
-    // 如果是字符串类型，取前面两个 bit，其它 bit 是 0
+    // 如果是字符串类型，取前面两个 bit，其它 bit 是 0 \
     if ((encoding) < ZIP_STR_MASK) (encoding) &= ZIP_STR_MASK; \
 } while(0)
 
