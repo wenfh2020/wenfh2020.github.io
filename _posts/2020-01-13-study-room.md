@@ -32,7 +32,6 @@ author: wenfh2020
 
 ![自习室3](/images/2020-03-11-09-01-24.png)
 
-
 ---
 
-更精彩内容，请关注作者博客：[wenfh2020.com](https://wenfh2020.com/)
+* 更精彩内容，请关注我的博客：[wenfh2020.com](https://wenfh2020.com/)
