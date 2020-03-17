@@ -248,7 +248,7 @@ ls -lR|grep "^-"|wc -l
 显示目录结构
 
 ```shell
-tree /dir/ -L 1 
+tree /dir/ -L 1
 ```
 
 ---
@@ -271,7 +271,7 @@ du -sh dir
 
 ### df
 
-Linux df命令用于显示目前在Linux系统上的文件系统的磁盘使用情况统计。
+用于显示目前在Linux系统上的文件系统的磁盘使用情况统计。
 
 ```shell
 # 查看磁盘空间
@@ -347,8 +347,8 @@ git 命令查看简单文档或 man git
 ### 执行权限
 
 ```shell
-chmod +x bus
-chown -Rf imdev:imdev ./
+chmod +x _file
+chown -Rf imdev:imdev _folder
 ```
 
 ---
