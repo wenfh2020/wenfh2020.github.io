@@ -6,7 +6,7 @@ tags: linux file right
 author: wenfh2020
 ---
 
-Linux 文件权限属性，比较基础的知识，很多地方都可以查，在这记录一下。
+Linux 文件权限属性，比较基础的知识，在这记录一下。
 
 
 
@@ -29,6 +29,7 @@ drwxr-xr-x  7 wenfh2020  staff   224B  3 13 14:51 lru
 ```
 
 ![权限属性](/images/2020-03-17-09-07-22.png)
+![linux 权限属性](/images/2020-03-17-11-00-14.png)
 
 ---
 
@@ -40,6 +41,7 @@ drwxr-xr-x  7 wenfh2020  staff   224B  3 13 14:51 lru
 
 ## 参考
 
+* 《鸟哥私房菜》
 * [Linux 文件基本属性](https://www.runoob.com/linux/linux-file-attr-permission.html)
 * [Linux文件和目录的777、755、644权限解释](https://www.cnblogs.com/ccw869476711/p/9213398.html)
 

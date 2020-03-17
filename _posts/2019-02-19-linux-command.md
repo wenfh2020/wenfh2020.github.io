@@ -292,6 +292,10 @@ tail -f file | grep '123'
 ### find
 
 ```shell
+man find
+```
+
+```shell
 find   path   -option   [   -print ]   [ -exec   -ok   command ]   {} \;
 ```
 
@@ -300,6 +304,7 @@ find   path   -option   [   -print ]   [ -exec   -ok   command ]   {} \;
 | -name name, -iname name | 文件名称符合 name 的文件。iname 会忽略大小写 |
 | -size                   | 文件大小                                     |
 | -type                   | 文件类型<br/>f 一般文件<br/>d 目录           |
+| -perm                   | 对应文件目录权限                             |
 
 ```shell
 # 查找删除文件
@@ -322,6 +327,9 @@ find ~/src/other/c_test -name '*.cpp' -type f | xargs grep -n 'include'
 
 # 将文件转换为 unix 格式
 find . -type f -exec dos2unix {} \;
+
+# 查找有执行权限文件
+find . -perm -111
 ```
 
 ---
