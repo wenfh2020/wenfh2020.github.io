@@ -318,7 +318,6 @@ int rdbSaveKeyValuePair(rio *rdb, robj *key, robj *val, long long expiretime) {
         if (rdbWriteRaw(rdb,buf,1) == -1) return -1;
     }
 
-    /* Save type, key, value */
     // 保存数据类型。
     if (rdbSaveObjectType(rdb,val) == -1) return -1;
     // 保存键数据。
@@ -327,6 +326,27 @@ int rdbSaveKeyValuePair(rio *rdb, robj *key, robj *val, long long expiretime) {
     if (rdbSaveObject(rdb,val,key) == -1) return -1;
     ...
     return 1;
+}
+
+// 数据对象，根据不同的结构类型，进行保存。
+ssize_t rdbSaveObject(rio *rdb, robj *o, robj *key) {
+    ...
+    if (o->type == OBJ_STRING) {
+        ...
+    } else if (o->type == OBJ_LIST) {
+        ...
+    } else if (o->type == OBJ_SET) {
+        ...
+    } else if (o->type == OBJ_ZSET) {
+        ...
+    } else if (o->type == OBJ_HASH) {
+        ...
+    } else if (o->type == OBJ_STREAM) {
+        ...
+    } else if (o->type == OBJ_MODULE) {
+        ...
+    }
+    ...
 }
 ```
 
