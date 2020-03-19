@@ -744,29 +744,29 @@ robj *createEmbeddedStringObject(const char *ptr, size_t len) {
 * 采样近似淘汰策略，巧妙避免了维护额外的数据结构，达到差不多的效果，这个思路独具匠心。
 * 采样算法，根据样本的 idle 值进行数据淘汰，所以当我们采用一种采样算法时，不要密集地设置大量相似的 idle 数据，否则效率也是很低的。
 * `maxmemory` 设置其实是一个学问，到底应该设置多少，才比较合理。很多人建议是物理内存大小的一半，原因如下：
-  1. 数据持久化过程中，redis 会 fork 子进程，在 linux 系统中虽然父子进程有 'copy-on-write' 模式，redis 也尽量避免子进程工作过程中修改数据，有些操作也是会修改内存的；
+  1. 数据持久化过程中，redis 会 fork 子进程，在 linux 系统中虽然父子进程有 'copy-on-write' 模式，redis 也尽量避免子进程工作过程中修改数据，子进程部分操作会使用内存，例如写 rdb 文件。
   2. `maxmemory` 限制的内存并不包括 `aof` 缓存和主从同步积压缓冲区部分内存。
   3. redis 集群数据同步机制，全量同步数据，某些场景也要也要占用不少内存。
-  4. 我们的机器有时不是只跑 redis 进程的，系统其它进程也要使用内存。
+  4. 我们的机器很多时候不是只跑 redis 进程的，系统其它进程也要使用内存。
 
 * `maxmemory` 虽然有众多的处理策略，然而超过阈值运行，这是不健康的，生产环境应该实时监控程序运行的健康状况。
 * redis 经常作为缓存使用，其实它也有持久化，可以存储数据。redis 作为缓存和数据库一般都是交叉使用，没有明确的界限，所以不建议设置 `allkeys-xxx` 全局淘汰数据的策略。
 * 当redis 内存到达 `maxmemory`，触发了数据淘汰，但是一顿操作后，内存始终无法成功降到阈值以下，那么 redis 主进程将会进入睡眠等待。这种问题是隐性的，很难查出来。新手很容易犯错误，经常把 redis 当做数据库使用，并发量高的系统，一段时间就跑满内存了，没经验的运维肯定第一时间想到切换到好点的机器解决问题。
 
-```c
-int freeMemoryIfNeeded(void) {
-    ...
-cant_free:
-    // 如果已经没有合适的键进行回收了，而且内存还没降到 maxmemory 以下，
-    // 那么需要看看回收线程中是否还有数据需要进行回收，通过 sleep 主线程等待回收线程处理。
-    while(bioPendingJobsOfType(BIO_LAZY_FREE)) {
-        if (((mem_reported - zmalloc_used_memory()) + mem_freed) >= mem_tofree)
-            break;
-        usleep(1000);
+    ```c
+    int freeMemoryIfNeeded(void) {
+        ...
+    cant_free:
+        // 如果已经没有合适的键进行回收了，而且内存还没降到 maxmemory 以下，
+        // 那么需要看看回收线程中是否还有数据需要进行回收，通过 sleep 主线程等待回收线程处理。
+        while(bioPendingJobsOfType(BIO_LAZY_FREE)) {
+            if (((mem_reported - zmalloc_used_memory()) + mem_freed) >= mem_tofree)
+                break;
+            usleep(1000);
+        }
+        return C_ERR;
     }
-    return C_ERR;
-}
-```
+    ```
 
 ---
 
