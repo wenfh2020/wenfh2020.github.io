@@ -6,7 +6,7 @@ tags: redis rdb 数据库
 author: wenfh2020
 ---
 
-rdb 文件是一个经过压缩的二进制文件，上一章讲了 [rdb 持久化 - 应用场景]()，本章主要讲述 rdb 文件的结构组成包含了哪些数据。
+rdb 文件是一个经过压缩的二进制文件，上一章讲了 [rdb 持久化 - 应用场景](https://wenfh2020.com/2020/03/19/redis-rdb-application/)，本章主要讲述 rdb 文件的结构组成包含了哪些数据。
 
 
 
