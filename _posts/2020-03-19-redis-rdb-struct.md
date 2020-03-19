@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] rdb 持久化 - 文件结构"
 categories: redis
-tags: redis rdb 数据库
+tags: redis rdb struct database
 author: wenfh2020
 ---
 
