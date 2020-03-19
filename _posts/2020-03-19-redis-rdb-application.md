@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] rdb 持久化 - 应用场景"
 categories: redis
-tags: redis rdb 数据库
+tags: redis rdb application database
 author: wenfh2020
 ---
 
