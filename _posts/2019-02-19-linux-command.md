@@ -334,22 +334,6 @@ find . -perm -111
 
 ---
 
-### git
-
-git 命令查看简单文档或 man git
-
-| 参数     | 描述                                                                                              |
-| -------- | ------------------------------------------------------------------------------------------------- |
-| pull     | 拉取文件                                                                                          |
-| push     | 提交文件<br/>git push -u origin master  <br/> https://www.cnblogs.com/qianqiannian/p/6008140.html |
-| log      | 文件是否存在<br/>获取简单的日志<br/>git log --pretty=oneline                                      |
-| status   | 目录文件状态<br/>git status .                                                                     |
-| checkout | 检索文件<br/>git checkout sync_pic.sh                                                             |
-| clone    | 拉取源码 <br/>git clone https://github.com/enki/libev.git                                         |
-| remote   | 查看 git 项目路径<br/>git remote -v                                                               |
-
----
-
 ## 权限
 
 ### 执行权限
