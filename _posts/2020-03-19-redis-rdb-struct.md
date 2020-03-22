@@ -107,9 +107,15 @@ static size_t rioFileWrite(rio *r, const void *buf, size_t len) {
 
 ![rdb 文件结构](/images/2020-03-19-13-57-01.png)
 
+> 有兴趣的朋友，可以参考我的帖子：[用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)，下个断点，走一下 redis 保存和加载 rdb 文件的工作流程。
+
 ---
 
 ### 数据保存时序
+
+从上图我们可以看到 rdb 文件的结构。整个文件是由不同类型的数据单元组成的(`type + value`) 。内存持久化为 rdb 文件，我们可以参考 `rdbSaveRio`。
+
+> redis 加载 rdb 文件时（`rdbLoadRio`），也是先读出数据类型 (`type`)，再根据数据类型，加载对应的数据——这样顺序将 rdb 文件数据加载到内存。
 
 ```c
 /* Produces a dump of the database in RDB format sending it to the specified
