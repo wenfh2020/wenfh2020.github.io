@@ -2,8 +2,8 @@
  * Syntax highlighting styles
  */
 code{
-    padding: 1px 4px;
-    margin: 0 2px;
+    // padding: 1px 4px;
+    // margin: 0 2px;
     font-size: 90%;
     border-radius: 3px;
     color: #000;
@@ -13,8 +13,8 @@ code{
 }
 
 pre {
-    margin: 12px 0;
-    padding: 8px 12px;
+    // margin: 12px 0;
+    // padding: 8px 12px;
     overflow-x: auto;      // 滚动条显示
     word-wrap: break-word;      /* IE 5.5-7 */
     white-space: -moz-pre-wrap; /* Firefox 1.0-2.0 */
@@ -23,11 +23,11 @@ pre {
     > code {
         margin: 0;
         padding: 0;
-        font-size: 12px;   // 代码块字体大小
+        font-size: 13px;   // 代码块字体大小
         color: #d1d1c9;
         border: none;
         background-color: #272822;
-        line-height: 1em;
+        line-height: 1.3em;
     }
 }
 

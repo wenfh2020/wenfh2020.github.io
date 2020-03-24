@@ -84,8 +84,8 @@ blockquote {
     }
 }
 table {
-    border-top: 2px solid #777;
-    border-bottom: 2px solid #777;
+    // border-top: 2px solid #777;
+    // border-bottom: 2px solid #777;
     margin: 8px 0;
     border-collapse: collapse;
     thead {
@@ -100,7 +100,7 @@ table {
     tbody {
         tr {
             &:nth-of-type(2n+1) {
-                background-color: #f8f8fd;
+                //background-color: #f8f8fd;
             }
             &:nth-of-type(2n) {
                 background-color: #e5eaed;
