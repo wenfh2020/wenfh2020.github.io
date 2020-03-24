@@ -78,7 +78,7 @@ rdb-save-incremental-fsync yes
 
 ```c
 void rioSetAutoSync(rio *r, off_t bytes) {
-    if(r->write != rioFileIO.write) return;
+    if (r->write != rioFileIO.write) return;
     r->io.file.autosync = bytes;
 }
 
