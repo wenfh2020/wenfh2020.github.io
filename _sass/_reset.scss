@@ -86,16 +86,23 @@ blockquote {
 table {
     // border-top: 2px solid #777;
     // border-bottom: 2px solid #777;
+    // border: 3;
+    
+    
+
+    // width: 100%;
+    border: 0;
     margin: 8px 0;
     border-collapse: collapse;
     thead {
         border-bottom: 1px solid #777;
-        background-color: #aaa;
-        color: #fff;
+        background-color: #acaaaa;
+        color: #404040;
     }
     th {
         padding: 2px 10px;
         text-align: left;
+        border:1px solid #272823;
     }
     tbody {
         tr {
@@ -103,12 +110,13 @@ table {
                 //background-color: #f8f8fd;
             }
             &:nth-of-type(2n) {
-                background-color: #e5eaed;
+                // background-color: #e5eaed;
             }
         }
     }
     td {
         padding: 2px 10px;
+        border:1px solid #272823;
     }
 }
 p {

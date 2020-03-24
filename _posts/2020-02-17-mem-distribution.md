@@ -149,6 +149,7 @@ address: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked
 | .text        | test_static                |
 | .text        | main                       |
 | .text        | test_code                  |
+{:.table-striped}
 
 * 变量内存分布特点：
 
