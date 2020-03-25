@@ -44,7 +44,7 @@ pre {
     .o { color: #d4d4d4 } /* Operator */
     .p { color: #c586c0 } /* Punctuation */
     .cm { color: #6a9955 } /* Comment.Multiline */
-    .cp { color: #5663d6 } /* Comment.Preproc */
+    .cp { color: #9e5a33 } /* Comment.Preproc */ //#define precompile
     .c1 { color: #6a9955 } /* Comment.Single */
     .cs { color: #75715e } /* Comment.Special */
     .ge { font-style: italic } /* Generic.Emph */
@@ -57,7 +57,7 @@ pre {
     .kt { color: #5663d6 } /* Keyword.Type */
     .ld { color: #e6db74 } /* Literal.Date */
     .m { color: #ae81ff } /* Literal.Number */
-    .s { color: #ce9178 } /* Literal.String */
+    .s { color: #ce9178 } /* Literal.String */ // const string
     .na { color: #a6e22e } /* Name.Attribute */
     .nb { color: #f8f8f2 } /* Name.Builtin */
     .nc { color: #a6e22e } /* Name.Class */
@@ -66,7 +66,7 @@ pre {
     .ni { color: #f8f8f2 } /* Name.Entity */
     .ne { color: #a6e22e } /* Name.Exception */
     .nf { color: #dcdcaa } /* Name.Function */
-    .nl { color: #f8f8f2 } /* Name.Label */
+    .nl { color: #91cbea } /* Name.Label */ // json key
     .nn { color: #f8f8f2 } /* Name.Namespace */
     .nx { color: #a6e22e } /* Name.Other */
     .py { color: #f8f8f2 } /* Name.Property */
@@ -81,7 +81,7 @@ pre {
     .sb { color: #e6db74 } /* Literal.String.Backtick */
     .sc { color: #e6db74 } /* Literal.String.Char */
     .sd { color: #e6db74 } /* Literal.String.Doc */
-    .s2 { color: #e6db74 } /* Literal.String.Double */
+    .s2 { color: #ce9178 } /* Literal.String.Double */ //json value
     .se { color: #ae81ff } /* Literal.String.Escape */
     .sh { color: #e6db74 } /* Literal.String.Heredoc */
     .si { color: #e6db74 } /* Literal.String.Interpol */
