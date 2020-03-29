@@ -214,7 +214,7 @@ appendfsync no
 
 数据与设备的交互流程：
 
-![数据持久化流程](/images/2020-03-29-15-16-07.png)
+![数据持久化流程](/images/2020-03-29-19-12-04.png)
 
 1. client 向 redis 服务发送写命令。
 2. redis 服务接收到 client 发送的写命令，存储于 redis 进程内存中（redis 服务缓存）。
