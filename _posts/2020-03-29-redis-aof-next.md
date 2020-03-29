@@ -6,7 +6,7 @@ tags: redis aof 持久化
 author: wenfh2020
 ---
 
-[redis 源码走读] aof 持久化，文章篇幅有点长，所以拆分上下为两章，可以先读上一章，再读这一章。
+[redis 源码走读] aof 持久化，文章篇幅有点长，所以拆分上下为两章，可以先读[上一章](https://wenfh2020.com/2020/03/29/redis-aof-prev/)，再读这一章。
 
 
 
