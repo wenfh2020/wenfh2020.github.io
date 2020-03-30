@@ -460,6 +460,7 @@ logfile "redis.log"
 * [Redis persistence demystified](http://oldblog.antirez.com/post/redis-persistence-demystified.html)
 * [Redis Persistence](https://redis.io/topics/persistence#how-durable-is-the-append-only-file)
 * [read/write/fsync与fread/fwrite/fflush的关系和区别](https://blog.csdn.net/ybxuwei/article/details/22727565)
+* 《redis 设计与实现》
 
 ---
 

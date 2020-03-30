@@ -29,59 +29,17 @@ type: page
 
 ## 书籍
 
-### c/c++
+| 类型   | 名称                                                                                                          |
+| :----- | :------------------------------------------------------------------------------------------------------------ |
+| c/c++  | 《c++ primer》 <br/>《effect c++》 <br/>《more effect++》<br/>《stl 源码剖析》<br/>《跟我一起学 Makefile》    |
+| go     | 《go 语言编程》                                                                                               |
+| python | 《The Django Book 2.0 中文译本》                                                                              |
+| 系统   | 《程序员的自我修养》<br/>《深入理解计算机系统》<br/>《鸟哥的 Linux 私房菜》系列<br/>《跟老男孩学 Linux 运维》 |
+| 网络   | 《Linux 高性能服务器编程》<br/>《UNIX环境高级编程》                                                           |
+| 数据库 | 《redis 设计与实现》                                                                                          |
+| 算法   | 《算法导论》                                                                                                  |
+| 面试   | 《剑指offer》                                                                                                 |
 
-* 《c++ primer》
-* 《effect c++》
-* 《more effect++》
-* 《stl 源码剖析》
-* 《跟我一起学 Makefile》
-
----
-
-### go
-
-* 《go 语言编程》
-
----
-
-### python
-
-* 《The Django Book 2.0 中文译本》
-
----
-
-### 系统
-
-* 《程序员的自我修养》
-* 《深入理解计算机系统》
-* 《鸟哥的 Linux 私房菜》系列
-* 《跟老男孩学 Linux 运维》
-
----
-
-### 网络
-
-* 《Linux 高性能服务器编程》
-* 《UNIX环境高级编程》
-
----
-
-### 数据库
-
-* 《redis 设计与实现》
-
----
-
-### 算法
-
-* 《算法导论》
-
----
-
-### 面试
-
-* 《剑指offer》
 
 ## 其它
 
@@ -92,6 +50,8 @@ type: page
 * [stl 源码剖析](https://www.kancloud.cn/digest/stl-sources/)
   
   参照侯捷先生的书《STL源码剖析》和SGI STL源码及其文档
+
+* [The GNU C Library (glibc)](https://www.gnu.org/software/libc/)
 
 ---
 

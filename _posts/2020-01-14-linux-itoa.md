@@ -94,3 +94,13 @@ int sdsll2str(char *s, long long value) {
     return l;
 }
 ```
+
+---
+
+### 方法三
+
+可以参考下 linux 源码，看看 printf 是怎么格式化字符串的。参考 [github 源码](https://github.com/torvalds/linux/blob/master/arch/x86/boot/printf.c)
+
+---
+
+* 更精彩内容，可以关注我的博客：[wenfh2020.com](https://wenfh2020.com/)
