@@ -73,7 +73,10 @@ int loadAppendOnlyFile(char *filename) {
 
 ### 写命令执行流程
 
-写命令，执行后，新的命令将会追加填充到 aof 数据缓冲区，待到合适的时候，redis 会将 aof 数据缓冲区落地，然后清空缓冲区。
+1. client 向 redis 服务发送写命令。
+2. redis 服务接收命令，进行业务处理。
+3. redis 服务将新的写命令追加到 aof 数据缓冲区。
+4. redis 服务会通过时钟，（`eventloop`）事件处理前(`beforeSleep`)等方法将 aof 数据缓冲区落地，然后清空 aof 缓冲区。
 
 * 流程
 
@@ -461,6 +464,7 @@ logfile "redis.log"
 * [Redis Persistence](https://redis.io/topics/persistence#how-durable-is-the-append-only-file)
 * [read/write/fsync与fread/fwrite/fflush的关系和区别](https://blog.csdn.net/ybxuwei/article/details/22727565)
 * 《redis 设计与实现》
+* 《UNINX 环境高级编程》
 
 ---
 
