@@ -22,10 +22,14 @@ type: page
 * [golang 官网](https://golang.google.cn/)
 * [汇编常用指令](https://blog.csdn.net/qq_36982160/article/details/82950848)
 
+---
+
 ## 常看博客
 
 * [云风的 BLOG](https://blog.codingnow.com/)
 * [峰云就她了](http://xiaorui.cc/)
+
+---
 
 ## 书籍
 
@@ -40,6 +44,7 @@ type: page
 | 算法   | 《算法导论》                                                                                                  |
 | 面试   | 《剑指offer》                                                                                                 |
 
+---
 
 ## 其它
 
@@ -52,6 +57,8 @@ type: page
   参照侯捷先生的书《STL源码剖析》和SGI STL源码及其文档
 
 * [The GNU C Library (glibc)](https://www.gnu.org/software/libc/)
+
+* [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp)
 
 ---
 
