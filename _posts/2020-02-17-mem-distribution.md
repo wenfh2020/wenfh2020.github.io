@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "变量的内存分布（Linux）"
+title:  "进程内存分布（Linux）"
 categories: 技术
 tags: 系统 Linux
 author: wenfh2020
