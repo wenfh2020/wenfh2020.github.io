@@ -184,6 +184,8 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
 }
 ```
 
+---
+
 ### 流程描述
 
 当 level 为 2 的链表，插入 level 为 3 的结点 5。（这里忽略了 ele 和 score 的处理）
@@ -202,6 +204,8 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
 ## 调试
 
 可以修改 redis 源码，跟踪一下工作流程。
+
+  > 调试方法可以参考我的帖子： [用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)
 
 ![调试](/images/2020-02-20-16-43-29.png)
 
