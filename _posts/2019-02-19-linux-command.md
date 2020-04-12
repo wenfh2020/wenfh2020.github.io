@@ -610,7 +610,7 @@ find / -name *.jpg -type f -print | xargs tar -cvzf images.tar.gz
 
 ```shell
 #显示完整命令
-top -c 
+top -c
 # 查看字段解析
 shift + f 
 # 内存排序
