@@ -96,7 +96,7 @@ char *strncpy(char *dest, const char *src, size_t count) {
 
 * sprintf
   
-  代码有点长，没仔细看完，从测试场景上看，是正常的。。。
+  代码有点长，没仔细看完，从测试场景上看，是正常的。。。（不严谨啊。^_^!）
 
 ```c
 // https://github.com/torvalds/linux/blob/master/lib/vsprintf.c
