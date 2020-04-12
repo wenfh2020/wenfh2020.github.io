@@ -75,7 +75,7 @@ char *strcpy(char *dest, const char *src) {
 
 * strncpy
 
-  从源码看，字符串拷贝也是寻找 '\0' 结束符，而且有数据大小限制。上面测试场景，数据拷贝是安全的，但是 printf 出问题了，因为 printf 在打印字符串时，也是在找字符串的 '\0' 结束符。而 strncpy 不会自动在末自己补 '\0'。
+  从源码看，字符串拷贝也是寻找 '\0' 结束符，而且有数据大小限制。上面测试场景，数据拷贝是安全的，但是 printf 出问题了，因为 printf 在打印字符串时，也是在找字符串的 '\0' 结束符。而 strncpy 不会自动在末自己填充 '\0'。
 
   > 关于 printf，详细可以参考下我的帖子 [printf 从现象到本质](https://wenfh2020.com/2020/03/01/c-printf/)
 
@@ -124,7 +124,7 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args) {
 
 * `snprintf` 比较安全。
 * `strcpy` 不安全。
-* `strncpy` 当目标内存很小时，拷贝完成后不会在末位添加 '\0' ，拷贝操作后，目标字符串在使用中可能会有问题。
+* `strncpy` 当目标内存很小时，拷贝完成后不会在末位填充 '\0' ，拷贝操作后，目标字符串在使用中可能会有问题。
 
 ---
 
