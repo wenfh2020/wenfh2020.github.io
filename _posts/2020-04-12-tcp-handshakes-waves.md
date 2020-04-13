@@ -57,7 +57,13 @@ telnet 127.0.0.1 12456
 
 * 用神器 `wireshark` 打开 `*.cap` 文件，比较直观。
 
-![wireshark](/images/2020-04-13-02-28-08.png)
+![wireshark](/images/2020-04-13-09-46-38.png)
+
+* 流程
+
+从上面抓包数据看，我们可以描述一下 tcp 握手挥手工作流程。
+
+![握手挥手流程](/images/2020-04-13-09-55-55.png)
 
 * 三次握手，三次挥手。
   
@@ -87,6 +93,7 @@ telnet 127.0.0.1 12456
 ## 参考
 
 * [为什么tcp 连接断开只有3个包？](https://www.zhihu.com/question/55890292)
+* [TCP_Relative_Sequence_Numbers](https://wiki.wireshark.org/TCP_Relative_Sequence_Numbers)
 
 ---
 
