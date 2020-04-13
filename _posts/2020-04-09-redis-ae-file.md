@@ -215,7 +215,7 @@ void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask) {
 
 ### 事件处理逻辑
 
-文件事件处理逻辑，从内核取出就绪的文件事件，根据事件的读写类型，分别进行回调处理相关业务逻辑。
+文件事件处理逻辑，从内核取出就绪事件，根据事件的读写类型，分别进行回调处理相关业务逻辑。
 
 ```c
 // ae.c
@@ -225,7 +225,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags) {
     numevents = aeApiPoll(eventLoop, tvp);
     ...
     for (j = 0; j < numevents; j++) {
-        // 根据就绪事件的 fd，取出对应的异步文件事件进行逻辑处理。
+        // 根据就绪事件 fd，取出对应的异步文件事件进行逻辑处理。
         aeFileEvent *fe = &eventLoop->events[eventLoop->fired[j].fd];
         int mask = eventLoop->fired[j].mask;
         int fd = eventLoop->fired[j].fd;
