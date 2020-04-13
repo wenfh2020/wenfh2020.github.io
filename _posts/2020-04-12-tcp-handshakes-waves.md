@@ -63,7 +63,7 @@ telnet 127.0.0.1 12456
 
 从上面抓包数据看，我们可以描述一下 tcp 握手挥手工作流程。
 
-![握手挥手流程](/images/2020-04-13-09-55-55.png)
+![握手挥手流程](/images/2020-04-13-13-20-03.png)
 
 * 三次握手，三次挥手。
   
@@ -84,6 +84,14 @@ telnet 127.0.0.1 12456
 
 ---
 
+## tcp 状态变迁
+  
+  > 图片来源：《TCP/IP 详解卷 1：协议》 -- 18.6 tcp 的状态变迁图
+
+![tcp 状态变迁](/images/2020-04-13-13-14-49.png)
+
+---
+
 ## 其它
 
 * 客户端主动 connect 服务端，三次握手是在服务端 accept 前完成的。服务端 accept 前面添加 sleep 再抓下包看看。
@@ -94,6 +102,7 @@ telnet 127.0.0.1 12456
 
 * [为什么tcp 连接断开只有3个包？](https://www.zhihu.com/question/55890292)
 * [TCP_Relative_Sequence_Numbers](https://wiki.wireshark.org/TCP_Relative_Sequence_Numbers)
+* 《TCP/IP 详解卷 1：协议》
 
 ---
 

@@ -407,6 +407,23 @@ scp /Users/wenfh2020/src/other/c_test/normal/proc/main.cpp root@120.25.44.163:/h
 
 ---
 
+### nslookup
+
+查域名对应的 ip
+
+```shell
+# nslookup wenfh2020.com
+
+Server:     116.116.116.116
+Address:    116.116.116.116#53
+
+Non-authoritative answer:
+Name:   wenfh2020.com
+Address: 120.25.83.163
+```
+
+---
+
 ### ssh
 
 ```shell
