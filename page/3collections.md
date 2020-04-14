@@ -11,16 +11,13 @@ type: page
 
 ## 常用查询
 
-* [Redis 官网](https://redis.io/)
-* [Redis 中文官方网站](http://www.redis.cn/)
-* [Redis 教程](https://www.runoob.com/redis/redis-tutorial.html)
-* [c 语言教程](https://www.runoob.com/cprogramming/c-tutorial.html)
-* [c++ 官网](http://www.cplusplus.com/)
-* [c++ 参考手册](https://zh.cppreference.com/)
-* [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)
-* [Linux 内核源码分析](https://www.cnblogs.com/tolimit/default.html?page=1)
-* [golang 官网](https://golang.google.cn/)
-* [汇编常用指令](https://blog.csdn.net/qq_36982160/article/details/82950848)
+| 选项   | 链接                                                                                                                                                                                                                  |
+| :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| redis  | [Redis 官网](https://redis.io/)<br/>[Redis 中文官方网站](http://www.redis.cn/)<br/>[Redis 教程](https://www.runoob.com/redis/redis-tutorial.html)                                                                     |
+| c/c++  | [c 语言教程](https://www.runoob.com/cprogramming/c-tutorial.html) <br/> [c++ 官网](http://www.cplusplus.com/) <br/> [c++ 参考手册](https://zh.cppreference.com/)                                                      |
+| linux  | [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)<br/>[Linux 内核源码分析](https://www.cnblogs.com/tolimit/default.html?page=1)<br/>[Linux man pages online](http://man7.org/linux/man-pages/) |
+| golang | [golang 官网](https://golang.google.cn/)                                                                                                                                                                              |
+| asm    | [汇编常用指令](https://blog.csdn.net/qq_36982160/article/details/82950848)                                                                                                                                            |
 
 ---
 
