@@ -55,7 +55,7 @@ telnet 127.0.0.1 12456
 02:24:25.615276 IP localhost.27749 > localhost.12456: Flags [.], ack 2, win 22, options [nop,nop,TS val 102146219 ecr 102146219], length 0
 ```
 
-* 用神器 `wireshark` 打开 `*.cap` 文件，比较直观。
+* 用神器 `wireshark` 打开 `*.cap` 文件。
 
 ![wireshark](/images/2020-04-13-09-46-38.png)
 
