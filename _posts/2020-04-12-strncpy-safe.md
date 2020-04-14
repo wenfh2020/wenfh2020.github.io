@@ -61,7 +61,7 @@ strcpy: hello world
 
 * strcpy
   
-  从源码看，字符串拷贝是寻找 '\0' 结束符，上面的测试场景看，这个函数是不安全的。
+  从源码看，字符串拷贝是寻找 '\0' 结束符，从上面的测试场景看，这个函数是不安全的。
 
 ```c
 // https://github.com/torvalds/linux/blob/master/lib/string.c
