@@ -17,5 +17,5 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-_files='images _posts commit.sh refresh.sh _config.yml README.md _includes page _sass index.html'
+_files='images _posts _layouts _sass _includes page index.html commit.sh refresh.sh _config.yml README.md'
 git pull && git add $_files && git commit -m "$(echo "$@")" && git push -u origin master && git status
