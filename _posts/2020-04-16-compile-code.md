@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 ```
 
 ```shell
-# gcc hello.c -o hello && ./hello
+# gcc -g hello.c -o hello && ./hello
 hello world
 ```
 
