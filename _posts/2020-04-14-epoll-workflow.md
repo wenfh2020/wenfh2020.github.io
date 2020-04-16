@@ -86,7 +86,7 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 `epoll` 是一个事件驱动，主要对文件描述符 fd 以及对于的事件进行管理，服务进程通过 `epoll_wait` 向事件驱动获取就绪的可读可写事件进行逻辑处理。
 
 * 服务器创建非阻塞 socket（server_fd）。
-* `epoll_create` 创建事件模型 (epoll_fd)。
+* `epoll_create` 创建 epoll 事件驱动 (epoll_fd)。
 * `epoll_ctl` 监控 server_fd 的可读事件 `EPOLLIN`。
 * 服务进程通过 `epoll_wait` 获取内核就绪事件处理。
 * 如果就绪事件是新连接，`accept` 为客户端新连接分配新的文件描述符 client_fd，设置非阻塞，然后 `epoll_ctl` 监控 client_fd 的可读事件 `EPOLLIN`。
