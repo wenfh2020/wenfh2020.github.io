@@ -94,7 +94,7 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 * 处理逻辑过程中需要 `write` 回复客户端，`write` 内容很大，超出了内核缓冲区，没能实时发送完成所有数据，需要下次继续发送；那么 `epoll_ctl` 监控 client_fd 的 `EPOLLOUT` 可写事件，下次触发事件进行发送。下次触发可写事件发送完毕后， `epoll_ctl` 删除 `EPOLLOUT` 事件。
 * 客户端关闭链接，服务端监控客户端 fd，如果 `read == 0`，`close` 关闭对应 fd 从而完成四次挥手。
 
-![epoll 事件逻辑](/images/2020-04-17-08-57-11.png)
+![epoll 事件逻辑](/images/2020-04-17-10-09-45.png)
 
 ---
 
