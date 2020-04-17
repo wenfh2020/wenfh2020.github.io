@@ -11,13 +11,13 @@ type: page
 
 ## 常用查询
 
-| 选项   | 链接                                                                                                                                                                                                                  |
-| :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| redis  | [Redis 官网](https://redis.io/)<br/>[Redis 中文官方网站](http://www.redis.cn/)<br/>[Redis 教程](https://www.runoob.com/redis/redis-tutorial.html)                                                                     |
-| c/c++  | [c 语言教程](https://www.runoob.com/cprogramming/c-tutorial.html) <br/> [c++ 官网](http://www.cplusplus.com/) <br/> [c++ 参考手册](https://zh.cppreference.com/)                                                      |
-| linux  | [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)<br/>[Linux 内核源码分析](https://www.cnblogs.com/tolimit/default.html?page=1)<br/>[Linux man pages online](http://man7.org/linux/man-pages/) |
-| golang | [golang 官网](https://golang.google.cn/)                                                                                                                                                                              |
-| asm    | [汇编常用指令](https://blog.csdn.net/qq_36982160/article/details/82950848)                                                                                                                                            |
+| 选项  | 链接                                                                                                                                                                                                                                                            |
+| :---- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Redis | [Redis 官网](https://redis.io/)<br/>[Redis 中文官方网站](http://www.redis.cn/)<br/>[Redis 教程](https://www.runoob.com/redis/redis-tutorial.html) <br/>[Redis 作者博客](http://antirez.com/) <br/> [Redis 源码](https://github.com/antirez/redis/tree/unstable) |
+| C/C++ | [C 语言教程](https://www.runoob.com/cprogramming/c-tutorial.html) <br/> [C++ 官网](http://www.cplusplus.com/) <br/> [C++ 参考手册](https://zh.cppreference.com/)                                                                                                |
+| Linux | [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)<br/>[Linux 内核源码分析](https://www.cnblogs.com/tolimit/default.html?page=1)<br/>[Linux man pages online](http://man7.org/linux/man-pages/)                                           |
+| Go    | [Golang 官网](https://golang.google.cn/)                                                                                                                                                                                                                        |
+| asm   | [汇编常用指令](https://blog.csdn.net/qq_36982160/article/details/82950848)                                                                                                                                                                                      |
 
 ---
 
@@ -30,16 +30,16 @@ type: page
 
 ## 书籍
 
-| 类型   | 名称                                                                                                                                    |
-| :----- | :-------------------------------------------------------------------------------------------------------------------------------------- |
-| c/c++  | 《c++ primer》 <br/>《effect c++》 <br/>《more effect++》<br/>《stl 源码剖析》<br/>《跟我一起学 Makefile》                              |
-| go     | 《go 语言编程》                                                                                                                         |
-| python | 《The Django Book 2.0 中文译本》                                                                                                        |
-| 系统   | 《深入理解计算机系统》<br/>《UNIX环境高级编程》<br/>《鸟哥的 Linux 私房菜》系列 <br/>《程序员的自我修养》<br/>《跟老男孩学 Linux 运维》 |
-| 网络   | 《Linux 高性能服务器编程》     <br/> 《tcp-ip 详解》系列                                                                                |
-| 数据库 | 《redis 设计与实现》<br/> 《MySQL性能调优与架构设计》                                                                                   |
-| 算法   | 《算法导论》                                                                                                                            |
-| 面试   | 《剑指offer》                                                                                                                           |
+| 类型     | 名称                                                                                                                                    |
+| :------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| C/C++    | 《C++ Primer》 <br/>《Effect C++》 <br/>《More Effect++》<br/>《STL 源码剖析》<br/>《跟我一起学 Makefile》                              |
+| Go       | 《go 语言编程》                                                                                                                         |
+| Python   | 《The Django Book 2.0 中文译本》                                                                                                        |
+| Linux    | 《深入理解计算机系统》<br/>《UNIX环境高级编程》<br/>《鸟哥的 Linux 私房菜》系列 <br/>《程序员的自我修养》<br/>《跟老男孩学 Linux 运维》 |
+| Network  | 《Linux 高性能服务器编程》     <br/> 《TCP/IP 详解》系列                                                                                |
+| DataBase | 《Redis 设计与实现》<br/> 《MySQL性能调优与架构设计》                                                                                   |
+| 算法     | 《算法导论》                                                                                                                            |
+| 面试     | 《剑指offer》                                                                                                                           |
 
 ---
 
@@ -47,9 +47,9 @@ type: page
 
 * [github + jekyll 博客](https://github.com/Gaohaoyang/gaohaoyang.github.io)
   
-  本博客主要采用这个模版搭建。搭建框架，请参考[这个文档](https://github.com/wonderseen/wonderseen.github.io)的搭建流程。
+  [本博客](https://wenfh2020.com/2020/02/17/make-blog/)主要采用这个模版搭建。搭建框架，请参考[这个文档](https://github.com/wonderseen/wonderseen.github.io)的搭建流程。
 
-* [stl 源码剖析](https://www.kancloud.cn/digest/stl-sources/)
+* [STL 源码剖析](https://www.kancloud.cn/digest/stl-sources/)
   
   参照侯捷先生的书《STL源码剖析》和SGI STL源码及其文档
 

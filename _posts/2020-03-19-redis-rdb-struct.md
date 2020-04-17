@@ -362,6 +362,7 @@ ssize_t rdbSaveObject(rio *rdb, robj *o, robj *key) {
 
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)
 * [redis配置文件样例(二)](https://blog.csdn.net/mishifangxiangdefeng/article/details/50032357)
+* [Redis RDB Dump File Format](https://github.com/sripathikrishnan/redis-rdb-tools/wiki/Redis-RDB-Dump-File-Format)
 
 ---
 

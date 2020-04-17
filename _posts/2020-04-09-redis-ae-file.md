@@ -312,3 +312,5 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
 * [用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)
 * [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp)
 * 《redis 设计与实现》
+* [Redis 多线程的 Redis](https://ruby-china.org/topics/38957)
+

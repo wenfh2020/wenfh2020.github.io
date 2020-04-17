@@ -130,9 +130,7 @@ SRCS = $(wildcard ./*.c)
 OBJS = $(patsubst %.c, %.o, $(SRCS))
 SERVER_NAME = my-redis-server
 
-all: $(SERVER_NAME)
-
-.PHONY: all clean
+.PHONY: clean
 
 $(SERVER_NAME): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
