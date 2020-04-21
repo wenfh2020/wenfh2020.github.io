@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "[redis 源码走读] 异步通信流程 - 多线程"
+title:  "[redis 源码走读] 多线程通信 I/O"
 categories: redis
-tags: reids client
+tags: reids mutithreading I/O
 author: wenfh2020
 ---
 
@@ -636,9 +636,11 @@ struct redisServer {
 
 ## 测试
 
-8 核心机器，本地测试。redis 服务默认开 4 线程，压测工具开 2 线程。有剩余核心处理机器的其它业务，这样不影响 redis 工作。
+8 核心，16G 内存， mac book 本地测试。
 
-> Linux 系统，有的安装不了 redis 最新版本的，请更新系统 gcc 版本。更新 gcc 这是非常危险的操作，请谨慎！Centos [yum 更新 gcc 到版本 8](https://blog.csdn.net/wfx15502104112/article/details/96508940)
+redis 服务默认开 4 线程，压测工具开 2 线程。有剩余核心处理机器的其它业务，这样不影响 redis 工作。
+
+> Linux 系统，有的安装不了 redis 最新版本的，请升级系统 gcc 版本。更新 gcc 这是非常危险的操作，请谨慎！Centos [yum 更新 gcc 到版本 8](https://blog.csdn.net/wfx15502104112/article/details/96508940)
 
 * 配置，多线程模式测试，开启读写两个选项；单线程模式测试则会关闭。
 
@@ -649,7 +651,7 @@ io-threads 4
 io-threads-do-reads yes
 ```
 
-* 压测命令，会针对客户端链接数/测试包体大小进行测试。命令逻辑已整理成脚本，放到 [github](https://github.com/wenfh2020/shell/blob/master/redis/benchmark.sh)，有兴趣的朋友，可以跑一下。
+* 压测命令，会针对客户端链接数/测试包体大小进行测试。命令逻辑已整理成脚本，放到 [github](https://github.com/wenfh2020/shell/blob/master/redis/benchmark.sh)，有兴趣的朋友，可以跑一下。做了个压力测试视频[压力测试 redis 多线程处理网络 I/O](https://www.bilibili.com/video/BV1r5411t7QF/)，可以参考操作。
 
 ```shell
 # 压测工具会模拟多个终端，防止超出限制，被停止。
@@ -661,11 +663,11 @@ ulimit -n 16384
 
 * 压测结果
 
+  在 mac book 上测试，从测试结果看，多线程反而没有单线程好。看到网上很多同学用压测工具测试，性能有很大的提升，有时间用其它机器跑下。可能是机器配置不一样，但是至少一点，这个多线程功能目前还有很大的优化空间，所以新特性，还需要放到真实环境中测试过，才能投产。
+
+  压测不理想原因：可能本地网络通信太好了，无法正确反映网络 I/O 问题。
+
 ![redis 压测过程](/images/2020-04-21-14-19-22.png)
-
----
-
-mac book 上测试（手上只有这个本子是 4 核心以上的机器），多线程效果，反而没有单线程好。看到网上很多同学用压测工具测试，性能有很大的提升，有时间用其它机器跑下。可能是机器配置不一样，但是至少一点，这个多线程功能目前还有很大的优化空间，所以新特性，还需要放到真实环境中测试过，才能投产。
 
 ---
 
@@ -687,6 +689,7 @@ mac book 上测试（手上只有这个本子是 4 核心以上的机器），�
 * [[redis 源码走读] 事件 - 定时器](https://wenfh2020.com/2020/04/06/ae-timer/)
 * [How fast is Redis?](https://redis.io/topics/benchmarks)
 * [redis 压力测试多线程读写脚本](https://github.com/wenfh2020/shell/blob/master/redis/benchmark.sh)
+* [压力测试 redis 多线程处理网络 I/O](https://www.bilibili.com/video/BV1r5411t7QF/)
 * [yum 更新 gcc 到版本 8](https://blog.csdn.net/wfx15502104112/article/details/96508940)
 
 ---

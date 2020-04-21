@@ -81,6 +81,8 @@ service iptables stop
 ### 开放端口号
 
 ```shell
+# centos
+
 vi /etc/sysconfig/iptables
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 19007 -j ACCEPT
 systemctl restart iptables.service
@@ -495,8 +497,16 @@ netstat -nat|grep -i "80"|wc -l
 
 ### lsof
 
+* 查询端口对应的信息
+
 ```shell
- lsof -i:30004
+lsof -i:30004
+```
+
+* 查询进程打开的文件
+
+```shell
+lsof -p <pid>
 ```
 
 ---
