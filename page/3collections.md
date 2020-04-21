@@ -18,6 +18,7 @@ type: page
 | Linux | [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)<br/>[Linux 内核源码分析](https://www.cnblogs.com/tolimit/default.html?page=1)<br/>[Linux man pages online](http://man7.org/linux/man-pages/)                                           |
 | Go    | [Golang 官网](https://golang.google.cn/)                                                                                                                                                                                                                        |
 | asm   | [汇编常用指令](https://blog.csdn.net/qq_36982160/article/details/82950848)                                                                                                                                                                                      |
+| shell | [Shell 教程 \| 菜鸟教程](https://www.runoob.com/linux/linux-shell.html)                                                                                                                                                                                         |
 
 ---
 
@@ -40,6 +41,13 @@ type: page
 | DataBase | 《Redis 设计与实现》<br/> 《MySQL性能调优与架构设计》                                                                                   |
 | 算法     | 《算法导论》                                                                                                                            |
 | 面试     | 《剑指offer》                                                                                                                           |
+
+---
+
+## ebook
+
+* https://evanli.github.io/programming-book/Git/
+* https://github.com/wenfh2020/books
 
 ---
 
