@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "ccache 优化C++编译速度"
-categories: c/c++
+categories: tool
 tags: ccache c/c++
 author: wenfh2020
 ---
