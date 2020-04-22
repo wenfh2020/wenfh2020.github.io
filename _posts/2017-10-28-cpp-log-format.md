@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "C++ 日志宏定义度"
+title:  "C++ 日志宏定义"
 categories: c/c++
 tags: log format
 author: wenfh2020
