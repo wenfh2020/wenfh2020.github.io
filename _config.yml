@@ -73,4 +73,4 @@ excerpt_separator: "\n\n\n\n"
 
 gems:
   - jekyll-paginate
-paginate: 10
+paginate: 5
