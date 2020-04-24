@@ -89,14 +89,14 @@ table {
     // border: 3;
     
     
-
+    // table-layout:fixed;
     // width: 100%;
     border: 0;
     margin: 8px 0;
     border-collapse: collapse;
     thead {
         border-bottom: 1px solid #777;
-        background-color: #acaaaa;
+        background-color: #c4bfbf;
         color: #404040;
     }
     th {
@@ -125,3 +125,5 @@ p {
 img {
     max-width: 100%;
 }
+
+// table tr td:first-child,table tr td:first-child{width:20px;text-align:left;}
