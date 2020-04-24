@@ -92,7 +92,7 @@ table {
     // table-layout:fixed;
     // width: 100%;
     border: 0;
-    margin: 8px 0;
+    margin: 1px 0;
     border-collapse: collapse;
     thead {
         border-bottom: 1px solid #777;
@@ -102,7 +102,7 @@ table {
     th {
         padding: 2px 10px;
         text-align: left;
-        border:1px solid #272823;
+        border:1px solid #eee8e8;
     }
     tbody {
         tr {
@@ -116,7 +116,7 @@ table {
     }
     td {
         padding: 2px 7px;
-        border:1px solid #272823;
+        border:1px solid #eee8e8;
     }
 }
 p {
@@ -126,4 +126,4 @@ img {
     max-width: 100%;
 }
 
-// table tr td:first-child,table tr td:first-child{width:20px;text-align:left;}
+table tr td:first-child,table tr td:first-child{color: #8d9191;}
