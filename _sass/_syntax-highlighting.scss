@@ -35,18 +35,18 @@ pre {
 .highlight {
     border-radius: 3px;
 
-    background: #eee8e8;
+    background: #e6e4e4;
     .hll { background-color: #f8f8fd; }
-    .c { color: #6a9955 } /* Comment */
+    .c { color: #377d22 } /* Comment */
     .err { color: #960050; background-color: #1e0010 } /* Error */
     .k { color: #09189c } /* Keyword */
     .l { color: #000 } /* Literal */
     .n { color: #000 } /* Name */
     .o { color: #000 } /* Operator */
     .p { color: #09189c } /* Punctuation */
-    .cm { color: #6a9955 } /* Comment.Multiline */
+    .cm { color: #377d22 } /* Comment.Multiline */
     .cp { color: #000 } /* Comment.Preproc */ //#define precompile
-    .c1 { color: #6a9955 } /* Comment.Single */
+    .c1 { color: #377d22 } /* Comment.Single */
     .cs { color: #000 } /* Comment.Special */
     .ge { font-style: italic } /* Generic.Emph */
     .gs { font-weight: bold } /* Generic.Strong */
