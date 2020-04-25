@@ -8,7 +8,7 @@ author: wenfh2020
 
 本章重点走读 redis 网络 I/O 的**多线程**部分源码。
 
-`key - value` 哈希表 + 内存数据库 + 非阻塞 + 多路复用 I/O 事件驱动，使得 redis 单线程处理主逻辑足够高效。当并发上来后，数据的逻辑处理肯定要占用大量时间，那样，客户端与服务端通信处理就会变得迟钝。所以在合适的时候（根据任务量自适应）采用多线程处理，充分地利用多核优势，分担主线程压力，使得客户端和服务端通信更加敏捷。
+`key - value` 哈希表 + 内存数据库 + 非阻塞系统调用 + 多路复用 I/O 事件驱动，使得 redis 单线程处理主逻辑足够高效。当并发上来后，数据的逻辑处理肯定要占用大量时间，那样，客户端与服务端通信处理就会变得迟钝。所以在合适的时候（根据任务量自适应）采用多线程处理，充分地利用多核优势，分担主线程压力，使得客户端和服务端通信更加敏捷。
 
 ---
 
@@ -215,21 +215,21 @@ void *IOThreadMain(void *myid) {
   
   忙等最大的问题是以浪费一定 cpu 性能为代价，如果 redis 链接并发量不是很高，redis 作者不建议开启多线程模式，所以主逻辑会根据写事件链接数量大小来开启/暂停多线程工作模式。
 
-    ```c
-    int stopThreadedIOIfNeeded(void) {
-        int pending = listLength(server.clients_pending_write);
+```c
+int stopThreadedIOIfNeeded(void) {
+    int pending = listLength(server.clients_pending_write);
 
-        // 如果单线程模式就直接返回。
-        if (server.io_threads_num == 1) return 1;
+    // 如果单线程模式就直接返回。
+    if (server.io_threads_num == 1) return 1;
 
-        if (pending < (server.io_threads_num*2)) {
-            if (io_threads_active) stopThreadedIO();
-            return 1;
-        } else {
-            return 0;
-        }
+    if (pending < (server.io_threads_num*2)) {
+        if (io_threads_active) stopThreadedIO();
+        return 1;
+    } else {
+        return 0;
     }
-    ```
+}
+```
 
 ---
 
@@ -239,36 +239,36 @@ void *IOThreadMain(void *myid) {
 
 * 网络读写核心接口：
 
-    | 接口                | 描述                 |
-    | :------------------ | :------------------- |
-    | readQueryFromClient | 服务读客户端数据。   |
-    | writeToClient       | 服务向客户端写数据。 |
+| 接口                | 描述                 |
+| :------------------ | :------------------- |
+| readQueryFromClient | 服务读客户端数据。   |
+| writeToClient       | 服务向客户端写数据。 |
 
 ---
 
 * 多线程工作模式核心接口(`networking.c`)，其它延时处理逻辑也有一部分源码。
 
-    | 接口                                       | 描述                                       |
-    | :----------------------------------------- | :----------------------------------------- |
-    | IOThreadMain                               | 子线程处理逻辑。                           |
-    | initThreadedIO                             | 主线程创建挂起子线程。                     |
-    | startThreadedIO                            | 主线程开启多线程工作模式。                 |
-    | stopThreadedIO                             | 主线程暂停多线程工作模式。                 |
-    | stopThreadedIOIfNeeded                     | 主线程根据写并发量是否关闭多线程工作模式。 |
-    | handleClientsWithPendingWritesUsingThreads | 主线程多线程处理延时写事件。               |
-    | handleClientsWithPendingReadsUsingThreads  | 主线程多线程处理延时读事件。               |
+| 接口                                       | 描述                                       |
+| :----------------------------------------- | :----------------------------------------- |
+| IOThreadMain                               | 子线程处理逻辑。                           |
+| initThreadedIO                             | 主线程创建挂起子线程。                     |
+| startThreadedIO                            | 主线程开启多线程工作模式。                 |
+| stopThreadedIO                             | 主线程暂停多线程工作模式。                 |
+| stopThreadedIOIfNeeded                     | 主线程根据写并发量是否关闭多线程工作模式。 |
+| handleClientsWithPendingWritesUsingThreads | 主线程多线程处理延时写事件。               |
+| handleClientsWithPendingReadsUsingThreads  | 主线程多线程处理延时读事件。               |
 
 ---
 
 * 其它延时处理逻辑，看看下面这些变量和宏在代码中的逻辑，这里不会详细展开。
 
-    | 变量/宏                      | 描述                             |
-    | :--------------------------- | :------------------------------- |
-    | server.clients_pending_read  | 延时处理读事件的客户端连接链表。 |
-    | server.clients_pending_write | 延时处理写事件的客户端连接链表。 |
-    | CLIENT_PENDING_READ          | 延时处理读事件标识。             |
-    | CLIENT_PENDING_WRITE         | 延时处理写事件标识。             |
-    | CLIENT_PENDING_COMMAND       | 延时处理命令逻辑标识。           |
+| 变量/宏                      | 描述                             |
+| :--------------------------- | :------------------------------- |
+| server.clients_pending_read  | 延时处理读事件的客户端连接链表。 |
+| server.clients_pending_write | 延时处理写事件的客户端连接链表。 |
+| CLIENT_PENDING_READ          | 延时处理读事件标识。             |
+| CLIENT_PENDING_WRITE         | 延时处理写事件标识。             |
+| CLIENT_PENDING_COMMAND       | 延时处理命令逻辑标识。           |
 
 ---
 
@@ -276,9 +276,9 @@ void *IOThreadMain(void *myid) {
 
 * 变量/宏
   
-  `io_threads_mutex` 互斥变量数组，为了方便主线程唤醒/挂起控制子线程。
+`io_threads_mutex` 互斥变量数组，为了方便主线程唤醒/挂起控制子线程。
 
-  `io_threads_pending` 原子变量，方便主线程统计子线程是否已经处理完所有任务。
+`io_threads_pending` 原子变量，方便主线程统计子线程是否已经处理完所有任务。
 
 ```c
 // 最大线程个数。
@@ -646,7 +646,7 @@ io-threads-do-reads yes
 
 * 压测命令，会针对客户端链接数/测试包体大小进行测试。
   
-  > 命令逻辑已整理成脚本，放到 [github](https://github.com/wenfh2020/shell/blob/master/redis/benchmark.sh)，顺手录制了测试视频：[压力测试 redis 多线程处理网络 I/O](https://www.bilibili.com/video/BV1r5411t7QF/)。
+> 命令逻辑已整理成脚本，放到 [github](https://github.com/wenfh2020/shell/blob/master/redis/benchmark.sh)，顺手录制了测试视频：[压力测试 redis 多线程处理网络 I/O](https://www.bilibili.com/video/BV1r5411t7QF/)。
 
 ```shell
 # 压测工具会模拟多个终端，防止超出限制，被停止。
@@ -658,7 +658,7 @@ ulimit -n 16384
 
 * 压测结果
 
-  在 mac book 上测试，从测试结果看，**多线程没有单线程好**。看到网上很多同学用压测工具测试，性能有很大的提升，有时间用其它机器跑下。可能是机器配置不一样，但是至少一点，这个多线程功能目前还有很大的优化空间，所以新特性，还需要放到真实环境中测试过，才能投产。
+在 mac book 上测试，从测试结果看，**多线程没有单线程好**。看到网上很多同学用压测工具测试，性能有很大的提升，有时间用其它机器跑下。可能是机器配置不一样，但是至少一点，这个多线程功能目前还有很大的优化空间，所以新特性，还需要放到真实环境中测试过，才能投产。
 
 ![redis 压测过程](/images/2020-04-21-14-19-22.png)
 

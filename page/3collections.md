@@ -31,16 +31,16 @@ type: page
 
 ## 书籍
 
-| 类型     | 名称                                                                                                                                    |
-| :------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
-| C/C++    | 《C++ Primer》 <br/>《Effect C++》 <br/>《More Effect++》<br/>《STL 源码剖析》<br/>《跟我一起学 Makefile》                              |
-| Go       | 《go 语言编程》                                                                                                                         |
-| Python   | 《The Django Book 2.0 中文译本》                                                                                                        |
-| Linux    | 《深入理解计算机系统》<br/>《UNIX环境高级编程》<br/>《鸟哥的 Linux 私房菜》系列 <br/>《程序员的自我修养》<br/>《跟老男孩学 Linux 运维》 |
-| Network  | 《Linux 高性能服务器编程》     <br/> 《TCP/IP 详解》系列                                                                                |
-| DataBase | 《Redis 设计与实现》<br/> 《MySQL性能调优与架构设计》                                                                                   |
-| 算法     | 《算法导论》                                                                                                                            |
-| 面试     | 《剑指offer》                                                                                                                           |
+| 类型     | 名称                                                                                                                                                                  |
+| :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C/C++    | 《C++ Primer》 <br/>《Effect C++》 <br/>《More Effect++》<br/>《STL 源码剖析》<br/>《跟我一起学 Makefile》                                                            |
+| Go       | 《go 语言编程》                                                                                                                                                       |
+| Python   | 《The Django Book 2.0 中文译本》                                                                                                                                      |
+| Linux    | 《深入理解计算机系统》<br/>《UNIX环境高级编程》<br/>《鸟哥的 Linux 私房菜》系列 <br/>《程序员的自我修养》<br/>《跟老男孩学 Linux 运维》<br/> 《Linux 内核设计与实现》 |
+| Network  | 《Linux 高性能服务器编程》     <br/> 《TCP/IP 详解》系列                                                                                                              |
+| DataBase | 《Redis 设计与实现》<br/> 《MySQL性能调优与架构设计》                                                                                                                 |
+| 算法     | 《算法导论》                                                                                                                                                          |
+| 面试     | 《剑指offer》                                                                                                                                                         |
 
 ---
 
@@ -48,6 +48,7 @@ type: page
 
 * https://evanli.github.io/programming-book/Git/
 * https://github.com/wenfh2020/books
+* https://github.com/hello2dj/Books-1
 
 ---
 

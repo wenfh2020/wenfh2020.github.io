@@ -123,7 +123,7 @@ sds catAppendOnlyGenericCommand(sds dst, int argc, robj **argv) {
 
 rdb 持久化速度快，而且落地文件小，这个优势理应加强使用。redis 持久化目前有两种方式，最终结合为一种方式，使其更加高效，这是 redis 作者一直努力的目标。
 
-> 有关 rdb 持久化，可以参考我的帖子：
+> 有关 rdb 持久化，可以参考帖子：
 > 
 > [[redis 源码走读] rdb 持久化 - 文件结构](https://wenfh2020.com/2020/03/19/redis-rdb-struct/)
 > 

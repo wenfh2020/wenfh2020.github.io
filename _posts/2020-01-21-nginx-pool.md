@@ -7,7 +7,9 @@ author: wenfh2020
 mathjax: true
 ---
 
-nginx 内存池([源码](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c))，通过链式管理大小内存块，减少系统频繁向内核申请空间，从而提高系统性能。
+内存池原理：内存池预申请一块比较大的连续内存空间，当外部向内存池申请内存分配时，内存池从连续内存空间中，划分一部分出去，剩下部分是空闲的空间，当有新的分配，再划分一部分出去，直到内存池中没有足够的内存空间分配给新的申请，那么内存池再申请新的连续内存块。当然内存池分配出去的内存，也会回收使它重新成为空闲空间，重复利用。这样，内存池避免频繁向内核申请/释放内存，从而提高系统性能。
+
+nginx 内存池源码([ngx_palloc.c](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c))，通过链式管理大小内存块，实现内存管理。
 
 
 
@@ -16,54 +18,51 @@ nginx 内存池([源码](https://github.com/nginx/nginx/blob/master/src/core/ngx
 
 ---
 
-## 内存池数据结构
+## 内存池使用测试
 
-![内存池](/images/2020-03-11-13-40-13.png)
+`ngx_palloc.c` 代码耦合不是很大，可以扣出来用 `gdb` 跟踪其工作流程。
+
+> 测试源码已上传 （[github](https://github.com/wenfh2020/c_test/blob/master/nginx/pool/pool.cpp)），测试视频已上传[bilibili](https://www.bilibili.com/video/bv1TA41187Jp)。
+
+```c
+int main() {
+    ngx_pool_t *pool = ngx_create_pool(2 * 1024);
+    void *p = ngx_palloc(pool, 256);
+    void *p2 = ngx_palloc(pool, 1024);
+    void *p3 = ngx_palloc(pool, 1024);
+    void *p4 = ngx_palloc(pool, 256);
+    void *p5 = ngx_palloc(pool, 1024);
+    void *p6 = ngx_palloc(pool, 1024);
+    void *p7 = ngx_palloc(pool, 4 * 1024);
+
+    ngx_pool_cleanup_t *c = (ngx_pool_cleanup_t *)ngx_pool_cleanup_add(pool, 0);
+    memcpy(p, "hello world!", strlen("hello world!") + 1);
+    c->handler = test_cleanup;
+    c->data = p;
+
+    ngx_destroy_pool(pool);
+    return 0;
+}
+```
 
 ---
 
-### 小内存块
+## 内存池
 
-小内存块是通过链表进行管理，内存分配过程，涉及到结点上空闲内存匹配是链表的遍历，复杂度是 $O(n)$，为了提高效率，增加了`failed` 分配内存失败次数统计（具体逻辑在分配函数里）
+![nginx 内存池](/images/2020-04-25-17-15-19.png)
 
-```c
-typedef struct {
-    u_char               *last;
-    u_char               *end;
-    ngx_pool_t           *next;
-    ngx_uint_t            failed;
-} ngx_pool_data_t;
-```
+---
 
-### 大内存块
+### 内存池数据结构
 
-大内存块没有复杂的空闲空间管理逻辑，都是直接分配单独的结点，需要销毁时直接释放。
+nginx 内存池，将大小内存的分配分开管理：
 
-```c
-typedef struct ngx_pool_large_s  ngx_pool_large_t;
-struct ngx_pool_large_s {
-    ngx_pool_large_t     *next;
-    void                 *alloc;
-};
-```
+* `ngx_pool_data_t` 链表管理小内存块。
+* `ngx_pool_large_t` 链表管理大内存块。
+* 系统小内存的申请频率比较高，分配的粒度比较小，容易在一块连续空闲内存上进行多次分配。
+* 大内存分配频率相对较低，而且在一块有限的连续内存上，可分配次数比较少，这样会产生比较大的碎片。
 
-### 内存文件
-
-```c
-struct ngx_chain_s {
-    ngx_buf_t    *buf;
-    ngx_chain_t  *next;
-};
-```
-
-### 内存池
-
-nginx 内存池，主要通过大小空闲内存块两个链表进行维护， 内存池主要是对小块内存（`max`）进行逻辑管理达到重复利用。
-
- 1. 小内存分配，在小内存块`ngx_pool_data_t`链表进行分配。
- 2. 大内存分配，在大内存块`ngx_pool_large_t`链表分配。
-
-可能因为大块内存长度比较大，重复利用率比较低，而且占用空间比较大，不宜长期留存在物理内存空间上，所以作者不对大块内存进行复杂大内存空间管理。
+这样，nginx 将大小内存的申请分开管理，逻辑更清晰，复杂度降低了，效率更高。
 
 ```c
 typedef struct ngx_pool_s ngx_pool_t;
@@ -80,24 +79,91 @@ struct ngx_pool_s {
 
 ---
 
+### 小内存块
+
+小内存块通过链表进行管理，内存分配过程，涉及到结点上空闲内存匹配是链表的遍历，复杂度是 $O(n)$，为了提高效率，增加了`failed` 分配内存失败次数统计（具体逻辑在分配函数里）
+
+```c
+typedef struct {
+    u_char               *last;
+    u_char               *end;
+    ngx_pool_t           *next;
+    ngx_uint_t            failed;
+} ngx_pool_data_t;
+```
+
+---
+
+### 大内存块
+
+大内存块由单向链表管理，没有复杂的空闲内存管理逻辑。
+
+```c
+typedef struct ngx_pool_large_s  ngx_pool_large_t;
+struct ngx_pool_large_s {
+    ngx_pool_large_t     *next;
+    void                 *alloc;
+};
+```
+
+---
+
+### 内存文件
+
+```c
+struct ngx_chain_s {
+    ngx_buf_t    *buf;
+    ngx_chain_t  *next;
+};
+```
+
+---
+
 ## 接口
+
+* 对外接口
+
+| 接口             | 描述               |
+| :--------------- | :----------------- |
+| ngx_create_pool  | 创建内存池。       |
+| ngx_destroy_pool | 释放内存池。       |
+| ngx_reset_pool   | 重置内存池。       |
+| ngx_memalign     | 内存对齐申请空间。 |
+| ngx_palloc       | 分配内存。         |
+| ngx_pfree        | 释放存块。         |
+
+* 私有接口
+
+| 接口             | 描述                                                                                   |
+| :--------------- | :------------------------------------------------------------------------------------- |
+| ngx_palloc_small | 分配小内存，内存池有足够空闲空间，从空闲空间分配，否则内存池申请新的小内存块进行分配。 |
+| ngx_palloc_block | 分配小内存块块。                                                                       |
+| ngx_palloc_large | 申请大块内存块。                                                                       |
+
+---
 
 ### 创建内存池
 
 ```c
 ngx_int_t
 ngx_os_init(ngx_log_t *log) {
+    ...
     ngx_pagesize = getpagesize();
+    ...
 }
 
+// 
 #define NGX_MAX_ALLOC_FROM_POOL  (ngx_pagesize - 1)
+
+// 数据对齐有利于提高 cpu 读数据效率。
 #define NGX_POOL_ALIGNMENT       16
 
+// size 参数是小内存块大小。
 ngx_pool_t *
 ngx_create_pool(size_t size, ngx_log_t *log) {
     ngx_pool_t  *p;
 
-    // 分配 16 字节对齐的内存。
+    // 分配 16 字节对齐的内存空间。
     p = ngx_memalign(NGX_POOL_ALIGNMENT, size, log);
     if (p == NULL) {
         return NULL;
@@ -124,9 +190,51 @@ ngx_create_pool(size_t size, ngx_log_t *log) {
 }
 ```
 
+---
+
+### 释放内存池
+
+除了对大小内存块数据进行释放，还增加了回调操作的设计，方便开发者进行部分具体的业务处理。
+
+```c
+void
+ngx_destroy_pool(ngx_pool_t *pool) {
+    ngx_pool_t          *p, *n;
+    ngx_pool_large_t    *l;
+    ngx_pool_cleanup_t  *c;
+
+    // 释放回调处理。
+    for (c = pool->cleanup; c; c = c->next) {
+        if (c->handler) {
+            ngx_log_debug1(NGX_LOG_DEBUG_ALLOC, pool->log, 0,
+                           "run cleanup: %p", c);
+            c->handler(c->data);
+        }
+    }
+
+    // 释放大内存块
+    for (l = pool->large; l; l = l->next) {
+        if (l->alloc) {
+            ngx_free(l->alloc);
+        }
+    }
+
+    // 释放小内存块
+    for (p = pool, n = pool->d.next; /* void */; p = n, n = n->d.next) {
+        ngx_free(p);
+
+        if (n == NULL) {
+            break;
+        }
+    }
+}
+```
+
+---
+
 ### 内存对齐申请空间
 
-内存对齐，涉及到 cpu 工作效率，是高性能系统不可缺少的一环，有空可以深入研究。
+内存对齐，涉及到 cpu 工作效率，是高性能系统不可缺少的一环。
 
 ```c
 #if (NGX_HAVE_POSIX_MEMALIGN)
@@ -168,7 +276,6 @@ ngx_memalign(size_t alignment, size_t size, ngx_log_t *log) {
     return p;
 }
 
-
 #else
 
 #define ngx_memalign(alignment, size, log)  ngx_alloc(size, log)
@@ -180,43 +287,7 @@ ngx_memalign(size_t alignment, size_t size, ngx_log_t *log) {
 #endif
 ```
 
-### 释放内存池
-
-除了对大小内存块数据进行释放，还增加了回调操作的设计，方便开发者进行部分具体的业务处理。
-
-```c
-void
-ngx_destroy_pool(ngx_pool_t *pool) {
-    ngx_pool_t          *p, *n;
-    ngx_pool_large_t    *l;
-    ngx_pool_cleanup_t  *c;
-
-    // 释放回调处理。
-    for (c = pool->cleanup; c; c = c->next) {
-        if (c->handler) {
-            ngx_log_debug1(NGX_LOG_DEBUG_ALLOC, pool->log, 0,
-                           "run cleanup: %p", c);
-            c->handler(c->data);
-        }
-    }
-
-    // 释放大内存块
-    for (l = pool->large; l; l = l->next) {
-        if (l->alloc) {
-            ngx_free(l->alloc);
-        }
-    }
-
-    // 释放小内存块
-    for (p = pool, n = pool->d.next; /* void */; p = n, n = n->d.next) {
-        ngx_free(p);
-
-        if (n == NULL) {
-            break;
-        }
-    }
-}
-```
+---
 
 ### 分配内存
 
@@ -240,6 +311,8 @@ ngx_palloc(ngx_pool_t *pool, size_t size) {
 size = size - sizeof(ngx_pool_t);
 p->max = (size < NGX_MAX_ALLOC_FROM_POOL) ? size : NGX_MAX_ALLOC_FROM_POOL;
 ```
+
+---
 
 ### 分配小内存
 
@@ -271,10 +344,12 @@ ngx_palloc_small(ngx_pool_t *pool, size_t size, ngx_uint_t align) {
         p = p->d.next;
     } while (p);
 
-    // 遍历链表后找不到合适的，申请新的内存块。
+    // 遍历链表后找不到合适的空闲空间，申请新的内存块。
     return ngx_palloc_block(pool, size);
 }
 ```
+
+---
 
 ### 分配小内存块
 
@@ -300,13 +375,13 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size) {
     new->d.next = NULL;
     new->d.failed = 0;
 
-    // 数据结构信息头后存储空闲数据
+    // 数据结构信息头后存储空闲数据。
     m += sizeof(ngx_pool_data_t);
 
-    // 从 m 开始，计算以NGX_ALIGNMENT对齐的偏移位置指针
+    // 从 m 开始，计算以NGX_ALIGNMENT对齐的偏移位置指针。
     m = ngx_align_ptr(m, NGX_ALIGNMENT);
 
-    // 分配 size 大小的空闲空间出去
+    // 分配 size 大小的空闲空间出去。
     new->d.last = m + size;
 
     // 原来的内存块结点均分配失败，要将失败的分配记录下来。
@@ -322,14 +397,15 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size) {
 }
 ```
 
+---
+
 ### 申请大块内存
 
 大块内存已分配的大块数据，除了内存块头部信息是可以重复利用的，数据不会重复利用，不用将被 ngx_pfree 释放掉。
 
 ```c
 static void *
-ngx_palloc_large(ngx_pool_t *pool, size_t size)
-{
+ngx_palloc_large(ngx_pool_t *pool, size_t size) {
     void              *p;
     ngx_uint_t         n;
     ngx_pool_large_t  *large;
@@ -341,20 +417,20 @@ ngx_palloc_large(ngx_pool_t *pool, size_t size)
 
     n = 0;
 
-    // 重复利用已分配的大内存块结点信息
+    // 重复利用已分配的大内存块结点信息。
     for (large = pool->large; large; large = large->next) {
         if (large->alloc == NULL) {
             large->alloc = p;
             return p;
         }
 
-        // 防止大量的链表遍历降低效率（粒度那么小，会不会造成大量碎片？）
+        // 防止大量的链表遍历降低效率（粒度那么小，会不会造成大量碎片？）。
         if (n++ > 3) {
             break;
         }
     }
 
-    // 为数据结构申请空间
+    // 为数据结构申请空间。
     large = ngx_palloc_small(pool, sizeof(ngx_pool_large_t), 1);
     if (large == NULL) {
         ngx_free(p);
@@ -370,6 +446,8 @@ ngx_palloc_large(ngx_pool_t *pool, size_t size)
 }
 ```
 
+---
+
 ### 释放大内存块
 
 只是释放数据，没有释放块的数据结构头。为了重复利用数据结构头信息，所以释放数据并没有删除链表结点，这里通过链表遍历进行删除，效率会不会很低。
@@ -381,8 +459,6 @@ ngx_pfree(ngx_pool_t *pool, void *p) {
 
     for (l = pool->large; l; l = l->next) {
         if (p == l->alloc) {
-            ngx_log_debug1(NGX_LOG_DEBUG_ALLOC, pool->log, 0,
-                           "free: %p", l->alloc);
             ngx_free(l->alloc);
             l->alloc = NULL;
             return NGX_OK;
@@ -392,6 +468,8 @@ ngx_pfree(ngx_pool_t *pool, void *p) {
     return NGX_DECLINED;
 }
 ```
+
+---
 
 ### 重置内存池
 
@@ -438,33 +516,6 @@ nginx 的内存池实现足够精简高效，但是依然有些问题不能兼�
 ---
 
 所以综合以上问题，这个内存池只适合于轻量级的内存管理。
-
----
-
-## 测试
-
-nginx 代码耦合不是很大，可以扣出来调试跟踪一下工作流程。（[源码](https://github.com/wenfh2020/c_test/blob/master/nginx/pool/pool.cpp)）
-
-```c
-int main() {
-    ngx_pool_t *pool = ngx_create_pool(2 * 1024);
-    void *p = ngx_palloc(pool, 256);
-    void *p2 = ngx_palloc(pool, 1024);
-    void *p3 = ngx_palloc(pool, 1024);
-    void *p4 = ngx_palloc(pool, 256);
-    void *p5 = ngx_palloc(pool, 1024);
-    void *p6 = ngx_palloc(pool, 1024);
-    void *p7 = ngx_palloc(pool, 4 * 1024);
-
-    ngx_pool_cleanup_t *c = (ngx_pool_cleanup_t *)ngx_pool_cleanup_add(pool, 0);
-    memcpy(p, "hello world!", strlen("hello world!") + 1);
-    c->handler = test_cleanup;
-    c->data = p;
-
-    ngx_destroy_pool(pool);
-    return 0;
-}
-```
 
 ---
 
