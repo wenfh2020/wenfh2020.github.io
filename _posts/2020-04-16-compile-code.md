@@ -44,8 +44,6 @@ GCC（GNU Compiler Collection，GNU编译器套件）是由GNU开发的编程语
 | -static | 禁止使用动态库，所以编译出来的目标文件很大。                                                                                 |
 | -share  | 尽量使用动态库，生成的文件很小，但是需要系统已经安装有动态库。                                                               |
 
----
-
 ```c
 // hello.c
 #include <stdio.h>
@@ -60,8 +58,6 @@ int main(int argc, char** argv) {
 # gcc -g hello.c -o hello && ./hello
 hello world
 ```
-
----
 
 ## make/Makefile
 
@@ -110,8 +106,6 @@ target ... : prerequisites ...
 | \$^      | 所有依赖目标集合，以空格分隔。                                                                                                                                                                                                                                                                                                                                                         |
 | \$@      | 表示目标集(也就是“foo.o bar.o”)<br/>$(CC) -c \$(CFLAGS) \$< -o \$@                                                                                                                                                                                                                                                                                                                     |
 | $        | 可以定义变量<br/>TARGETS = main<br/>$(TARGETS)                                                                                                                                                                                                                                                                                                                                         |
-
----
 
 ### Makefile 实例
 

@@ -22,7 +22,7 @@ nginx 内存池源码([ngx_palloc.c](https://github.com/nginx/nginx/blob/master/
 
 `ngx_palloc.c` 代码耦合不是很大，可以扣出来用 `gdb` 跟踪其工作流程。
 
-> 测试源码已上传 （[github](https://github.com/wenfh2020/c_test/blob/master/nginx/pool/pool.cpp)），测试视频已上传[bilibili](https://www.bilibili.com/video/bv1TA41187Jp)。
+> 测试源码已上传 [github](https://github.com/wenfh2020/c_test/blob/master/nginx/pool/pool.cpp)，测试视频已上传 [bilibili](https://www.bilibili.com/video/bv1TA41187Jp) 。
 
 ```c
 int main() {
