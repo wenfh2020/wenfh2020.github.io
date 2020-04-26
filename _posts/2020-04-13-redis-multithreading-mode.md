@@ -239,36 +239,32 @@ int stopThreadedIOIfNeeded(void) {
 
 * 网络读写核心接口：
 
-| 接口                | 描述                 |
-| :------------------ | :------------------- |
-| readQueryFromClient | 服务读客户端数据。   |
-| writeToClient       | 服务向客户端写数据。 |
-
----
+    | 接口                | 描述                 |
+    | :------------------ | :------------------- |
+    | readQueryFromClient | 服务读客户端数据。   |
+    | writeToClient       | 服务向客户端写数据。 |
 
 * 多线程工作模式核心接口(`networking.c`)，其它延时处理逻辑也有一部分源码。
 
-| 接口                                       | 描述                                       |
-| :----------------------------------------- | :----------------------------------------- |
-| IOThreadMain                               | 子线程处理逻辑。                           |
-| initThreadedIO                             | 主线程创建挂起子线程。                     |
-| startThreadedIO                            | 主线程开启多线程工作模式。                 |
-| stopThreadedIO                             | 主线程暂停多线程工作模式。                 |
-| stopThreadedIOIfNeeded                     | 主线程根据写并发量是否关闭多线程工作模式。 |
-| handleClientsWithPendingWritesUsingThreads | 主线程多线程处理延时写事件。               |
-| handleClientsWithPendingReadsUsingThreads  | 主线程多线程处理延时读事件。               |
-
----
+    | 接口                                       | 描述                                       |
+    | :----------------------------------------- | :----------------------------------------- |
+    | IOThreadMain                               | 子线程处理逻辑。                           |
+    | initThreadedIO                             | 主线程创建挂起子线程。                     |
+    | startThreadedIO                            | 主线程开启多线程工作模式。                 |
+    | stopThreadedIO                             | 主线程暂停多线程工作模式。                 |
+    | stopThreadedIOIfNeeded                     | 主线程根据写并发量是否关闭多线程工作模式。 |
+    | handleClientsWithPendingWritesUsingThreads | 主线程多线程处理延时写事件。               |
+    | handleClientsWithPendingReadsUsingThreads  | 主线程多线程处理延时读事件。               |
 
 * 其它延时处理逻辑，看看下面这些变量和宏在代码中的逻辑，这里不会详细展开。
 
-| 变量/宏                      | 描述                             |
-| :--------------------------- | :------------------------------- |
-| server.clients_pending_read  | 延时处理读事件的客户端连接链表。 |
-| server.clients_pending_write | 延时处理写事件的客户端连接链表。 |
-| CLIENT_PENDING_READ          | 延时处理读事件标识。             |
-| CLIENT_PENDING_WRITE         | 延时处理写事件标识。             |
-| CLIENT_PENDING_COMMAND       | 延时处理命令逻辑标识。           |
+    | 变量/宏                      | 描述                             |
+    | :--------------------------- | :------------------------------- |
+    | server.clients_pending_read  | 延时处理读事件的客户端连接链表。 |
+    | server.clients_pending_write | 延时处理写事件的客户端连接链表。 |
+    | CLIENT_PENDING_READ          | 延时处理读事件标识。             |
+    | CLIENT_PENDING_WRITE         | 延时处理写事件标识。             |
+    | CLIENT_PENDING_COMMAND       | 延时处理命令逻辑标识。           |
 
 ---
 
@@ -276,9 +272,8 @@ int stopThreadedIOIfNeeded(void) {
 
 * 变量/宏
   
-`io_threads_mutex` 互斥变量数组，为了方便主线程唤醒/挂起控制子线程。
-
-`io_threads_pending` 原子变量，方便主线程统计子线程是否已经处理完所有任务。
+  `io_threads_mutex` 互斥变量数组，为了方便主线程唤醒/挂起控制子线程。
+  `io_threads_pending` 原子变量，方便主线程统计子线程是否已经处理完所有任务。
 
 ```c
 // 最大线程个数。
@@ -347,8 +342,6 @@ void initThreadedIO(void) {
 }
 ```
 
----
-
 * 开启多线程模式
 
 ```c
@@ -360,8 +353,6 @@ void startThreadedIO(void) {
     io_threads_active = 1;
 }
 ```
-
----
 
 * 子线程逻辑处理
 
@@ -405,8 +396,6 @@ void *IOThreadMain(void *myid) {
 }
 ```
 
----
-
 * 是否需要停止多线程模式
 
 ```c
@@ -425,8 +414,6 @@ int stopThreadedIOIfNeeded(void) {
 }
 ```
 
----
-
 * 暂停多线程处理模式
 
 ```c
@@ -442,8 +429,6 @@ void stopThreadedIO(void) {
     io_threads_active = 0;
 }
 ```
-
----
 
 * 处理延时的读事件
 
@@ -507,8 +492,6 @@ int handleClientsWithPendingReadsUsingThreads(void) {
     return processed;
 }
 ```
-
----
 
 * 处理延时的写事件
 
@@ -609,8 +592,6 @@ typedef struct client {
     ...
 }
 ```
-
----
 
 * 服务端结构
 
