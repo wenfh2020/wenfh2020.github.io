@@ -29,10 +29,17 @@ pre {
         border: none;
         background-color: #ffffff;
         line-height: 1.3em;
-
+        
         .lineno {
             color: rgb(192, 187, 187);
         }
+    }
+}
+
+.rouge-table {
+    td {
+        padding: 2px 7px;
+        border:1px solid #ebe8e8;
     }
 }
 
