@@ -54,16 +54,12 @@ type: page
 
 ## 其它
 
+* [Linux slab 分配器剖析](https://www.ibm.com/developerworks/cn/linux/l-linux-slab-allocator/index.html)
 * [github + jekyll 博客](https://github.com/Gaohaoyang/gaohaoyang.github.io)
-  
   [本博客](https://wenfh2020.com/2020/02/17/make-blog/)主要采用这个模版搭建。搭建框架，请参考[这个文档](https://github.com/wonderseen/wonderseen.github.io)的搭建流程。
-
 * [STL 源码剖析](https://www.kancloud.cn/digest/stl-sources/)
-  
   参照侯捷先生的书《STL源码剖析》和SGI STL源码及其文档
-
 * [The GNU C Library (glibc)](https://www.gnu.org/software/libc/)
-
 * [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp)
 
 ---
