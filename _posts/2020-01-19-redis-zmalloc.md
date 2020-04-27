@@ -19,7 +19,7 @@ redis 内存管理实现，有三种方式：
 * content
 {:toc}
 
-## 内存管理
+## 1. 内存管理
 
 ```c
 // 理解宏对相关库的引入使用。
@@ -65,7 +65,7 @@ c 语言比较精简的内存池，可以参考 `nginx` 的[实现](https://gith
 
 ---
 
-## 核心接口
+## 2. 核心接口
 
 * 内存管理
   如果是 `libc` 实现的内存管理，内存分配会加一个前缀，保存内存长度。有点像 `nginx` 的字符串结构。分配内存返回内容指针，释放内存，指针要从数据部分移动到内存长度部分。
@@ -146,11 +146,11 @@ void zfree(void *ptr) {
 
 历史版本 [blame](https://github.com/antirez/redis/blame/9390c384b88de6b2363c3f33ba42bd25c1c3346d/src/zmalloc.c)
 
-![历史](/images/2020-02-20-16-47-12.png)
+![历史](/images/2020-02-20-16-47-12.png){: data-action="zoom"}
 
 当前版本 [blame](https://github.com/antirez/redis/blame/unstable/src/zmalloc.c)
 
-![当前](/images/2020-02-20-16-47-28.png)
+![当前](/images/2020-02-20-16-47-28.png){: data-action="zoom"}
 
 ---
 
@@ -168,14 +168,14 @@ size_t zmalloc_used_memory(void) {
 
 ---
 
-## 测试
+## 3. 测试
 
 `jemalloc, tcmalloc, libc` 到底哪个库比较好用，是马是驴拉出来溜溜才能知道，要根据线上情况进行评估。
 > 可以用 `redis-benchmark` 压力测试。
 
 ---
 
-## 参考
+## 4. 参考
 
 * [关于redis源码的内存分配,jemalloc,tcmalloc,libc](https://blog.csdn.net/libaineu2004/article/details/79400357)
 

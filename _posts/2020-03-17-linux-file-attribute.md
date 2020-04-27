@@ -15,7 +15,7 @@ Linux 文件权限属性，比较基础的知识，在这记录一下。
 
 ---
 
-## 权限
+## 1. 权限
 
 我们用 `ls -l` 来看看目录下文件的属性。第一列是文件属性权限。
 
@@ -28,17 +28,17 @@ drwxr-xr-x  7 wenfh2020  staff   224B  3 13 14:51 lru
 -rw-r--r--  1 wenfh2020  staff   2.7K 12 30 05:59 main.cpp
 ```
 
-![linux 权限属性](/images/2020-03-17-11-00-14.png)
+![linux 权限属性](/images/2020-03-17-11-00-14.png){: data-action="zoom"}
 
 ---
 
-## 修改权限
+## 2. 修改权限
 
 可以用 `chmod` 命令进行修改。命令相关操作可以参考[Linux chmod命令](https://www.runoob.com/linux/linux-comm-chmod.html)
 
 ---
 
-## 参考
+## 3. 参考
 
 * 《鸟哥私房菜》
 * [Linux 文件基本属性](https://www.runoob.com/linux/linux-file-attr-permission.html)

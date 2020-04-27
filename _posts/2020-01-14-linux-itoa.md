@@ -16,7 +16,7 @@ author: wenfh2020
 
 ---
 
-## 方法一
+## 1. 方法一
 
 感觉这方法有点费脑，不是很直观。
 
@@ -58,7 +58,7 @@ int main() {
 
 ---
 
-## 方法二
+## 2. 方法二
 
 参考 redis sds.c 源码，把下面源码的 10 改为 2 即可。
 
@@ -97,7 +97,7 @@ int sdsll2str(char *s, long long value) {
 
 ---
 
-### 方法三
+### 2.1. 方法三
 
 可以参考下 linux 源码，看看 printf 是怎么格式化字符串的。参考 [github 源码](https://github.com/torvalds/linux/blob/master/arch/x86/boot/printf.c)
 

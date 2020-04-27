@@ -28,7 +28,7 @@ aof (Append Only File) 是 redis 持久化的其中一种方式。
 
 ---
 
-## 开启 aof 持久化模式
+## 1. 开启 aof 持久化模式
 
 可以看一下 [redis.conf](https://github.com/antirez/redis/blob/unstable/redis.conf) 有关 aof 持久化配置，有redis 作者丰富的注释内容。
 
@@ -42,11 +42,11 @@ appendfilename "appendonly.aof"
 
 ---
 
-## 结构
+## 2. 结构
 
-### aof 文件结构
+### 2.1. aof 文件结构
 
-![aof 文件结构](/images/2020-03-28-15-38-27.png)
+![aof 文件结构](/images/2020-03-28-15-38-27.png){: data-action="zoom"}
 
 **aof 文件可以由 redis 协议命令组成文本文件**。 第一次启动 redis，执行第一个写命令： `set key1111 1111`。我们观察一下 aof 文件：
 
@@ -115,9 +115,9 @@ sds catAppendOnlyGenericCommand(sds dst, int argc, robj **argv) {
 
 ---
 
-### aof 和 rdb 混合结构
+### 2.2. aof 和 rdb 混合结构
 
-![rdb aof 混合结构](/images/2020-03-28-16-19-34.png)
+![rdb aof 混合结构](/images/2020-03-28-16-19-34.png){: data-action="zoom"}
 
 **redis 支持 aof 和 rdb 持久化同时使用**，rdb 和 aof 存储格式同时存储在一个 aof 文件中。
 
@@ -181,9 +181,9 @@ $4^M
 
 ---
 
-## 持久化策略
+## 3. 持久化策略
 
-### 策略
+### 3.1. 策略
 
 磁盘 I/O 速度慢，redis 作为高性能的缓存数据库，在平衡性能和持久化上，提供了几个存储策略：
 
@@ -210,7 +210,7 @@ appendfsync always
 appendfsync no
 ```
 
-### 流程原理
+### 3.2. 流程原理
 
 * 文件数据刷新到磁盘原理：
   
@@ -226,7 +226,7 @@ appendfsync no
   
   > 上文引用自 《UNINX 环境高级编程》 4.24
 
-![数据持久化流程](/images/2020-03-29-19-12-04.png)
+![数据持久化流程](/images/2020-03-29-19-12-04.png){: data-action="zoom"}
 
 * 文件数据刷新到磁盘流程。
 
@@ -265,7 +265,7 @@ appendfsync no
 
 ---
 
-### 策略实现
+### 3.3. 策略实现
 
 ```c
 #define AOF_WRITE_LOG_ERROR_RATE 30 /* Seconds between errors logging. */
@@ -426,7 +426,7 @@ try_fsync:
 
 ---
 
-## 异步持久化
+## 4. 异步持久化
 
 redis 作为高性能缓存系统，它的主逻辑都在主进程主线程中实现运行的。而持久化写磁盘是一个低效缓慢操作，因此redis 一般情况下不允许这个操作在主线程中运行。这样 redis 开启了后台线程，用来异步处理任务，保障主线程可以高速运行。
 

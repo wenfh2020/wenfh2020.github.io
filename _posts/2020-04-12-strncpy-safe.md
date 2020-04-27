@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-## 测试代码
+## 1. 测试代码
 
 数据拷贝，当目标内存很小，源数据很大时，从测试结果看：
 
@@ -57,7 +57,7 @@ strcpy: hello world
 
 ---
 
-## 看源码，探究原因
+## 2. 看源码，探究原因
 
 * strcpy
   
@@ -118,7 +118,7 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args) {
 
 ---
 
-## 总结
+## 3. 总结
 
 从测试结果看：
 

@@ -16,7 +16,7 @@ mathjax: true
 
 ---
 
-## 数据结构
+## 1. 数据结构
 
 跳跃表是一个有序的双向链表。理解 `zskiplistNode` 的 `zskiplistLevel` 是理解`zskiplist`工作流程的关键。
 
@@ -41,20 +41,20 @@ typedef struct zskiplist {
 
 ---
 
-## 思路
+## 2. 思路
 
 跳跃表是链表，链表查找`时间复杂度`是 $O(n)$，一般情况下，顺序查找比较慢。那比较取巧的，因为数据是顺序的，我们可以跳着找。例如下面 1 - 13 的数字，我们要找 9 这个数字。跳着找的流程是这样的:
 
-![跳跃查找](/images/2020-02-20-16-41-54.png)
+![跳跃查找](/images/2020-02-20-16-41-54.png){: data-action="zoom"}{: data-action="zoom"}
 
 在第三步发现 11 比 9 大，就尝试跳更小的间距寻找合适的数据。同样的以此类推直到找到我们需要的数据。这样比我们顺序找要快很多。
 我们可以拆分一下上图的查找流程。每次查找不到时，就重新定向查找。每次重新定向查找被看作一个层。
 
-![拆分层次](/images/2020-02-20-16-42-09.png)
+![拆分层次](/images/2020-02-20-16-42-09.png){: data-action="zoom"}{: data-action="zoom"}
 
 链表的层次，类似一个二维空间。每个结点有若干层，每一层将结点连接在一起建立关系，查找时 level 从最高层自上而下，结点从左到右。
 
-![层次](/images/2020-02-20-16-42-25.png)
+![层次](/images/2020-02-20-16-42-25.png){: data-action="zoom"}{: data-action="zoom"}
 
 
 随机层 level，层数越高，概率越小。
@@ -75,9 +75,9 @@ int zslRandomLevel(void) {
 
 ---
 
-## 接口
+## 3. 接口
 
-### 插入结点
+### 3.1. 插入结点
 
 sorted set 功能实现，跳跃表结合 dict 使用。
 
@@ -186,28 +186,28 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
 
 ---
 
-### 流程描述
+### 3.2. 流程描述
 
 当 level 为 2 的链表，插入 level 为 3 的结点 5。（这里忽略了 ele 和 score 的处理）
 > 插入数据的流程其实比不复杂，对于源码的理解，最好结合图表，这样大脑思考比较便捷。
 
 * 插入前
 
-![插入前](/images/2020-02-20-16-42-47.png)
+![插入前](/images/2020-02-20-16-42-47.png){: data-action="zoom"}
 
 * 插入后
 
-![插入后](/images/2020-02-20-16-43-11.png)
+![插入后](/images/2020-02-20-16-43-11.png){: data-action="zoom"}
 
 ---
 
-## 调试
+## 4. 调试
 
 可以修改 redis 源码，跟踪一下工作流程。
 
   > 调试方法可以参考我的帖子： [用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)
 
-![调试](/images/2020-02-20-16-43-29.png)
+![调试](/images/2020-02-20-16-43-29.png){: data-action="zoom"}
 
 server.c
 
@@ -246,7 +246,7 @@ void zsetTest() {
 
 ---
 
-## 参考
+## 5. 参考
 
 * 《redis 设计与实现》
 * [redis commands](https://redis.io/commands/zadd)

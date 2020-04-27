@@ -17,7 +17,7 @@ tmux 在同一个 session 里分割了多个 panel ， panel 间的切换方法�
 
 ---
 
-## 设置
+## 1. 设置
 
 * 修改 tmux 配置，绑定 prefix + b。
 
@@ -37,7 +37,7 @@ source-file ~/.tmux.conf
 
 ---
 
-## 参考
+## 2. 参考
 
 * [How to switch to the previous pane by any shortcut in tmux?](https://stackoverflow.com/questions/31980036/how-to-switch-to-the-previous-pane-by-any-shortcut-in-tmux)
 

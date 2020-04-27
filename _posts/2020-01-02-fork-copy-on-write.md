@@ -15,25 +15,25 @@ author: wenfh2020
 
 ---
 
-## 系统
+## 1. 系统
 
 macos
 
 ---
 
-## 测试
+## 2. 测试
 
 测试对象申请一块内存，主进程 fork 子进程后监测子进程对内存数据修改前后状况。
 
-![子进程数据修改前](/images/2020-03-11-10-09-06.png)
+![子进程数据修改前](/images/2020-03-11-10-09-06.png){: data-action="zoom"}
 
-![子进程数据修改后](/images/2020-03-11-10-09-21.png)
+![子进程数据修改后](/images/2020-03-11-10-09-21.png){: data-action="zoom"}
 
 > 测试进程跑得比较快，跑了两次去抓图，所以两次抓图的进程不一样。感兴趣的朋友可以拿[源码](https://github.com/wenfh2020/c_test/blob/master/normal/proc.cpp)测试下。
 
 ---
 
-## 测试源码
+## 3. 测试源码
 
 [源码](https://github.com/wenfh2020/c_test/blob/master/normal/proc.cpp)
 
@@ -65,7 +65,7 @@ int main() {
 
 ---
 
-## 测试结果
+## 4. 测试结果
 
 ```shell
 alloc, data ptr: 0x602140, array ptr: 0x602148
@@ -86,7 +86,7 @@ delete data, pid: 29118
 
 ---
 
-## 参考
+## 5. 参考
 
 * 《深入理解计算机系统》第二部分，8.4 章 进程控制
 

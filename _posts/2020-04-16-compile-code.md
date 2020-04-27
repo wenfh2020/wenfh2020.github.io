@@ -24,7 +24,7 @@ author: wenfh2020
 
 ---
 
-## gcc
+## 1. gcc
 
 GCC（GNU Compiler Collection，GNU编译器套件）是由GNU开发的编程语言译器。GNU编译器套件包括C、C++、 Objective-C、 Fortran、Java、Ada和Go语言前端，也包括了这些语言的库（如libstdc++，libgcj等）。
 
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 hello world
 ```
 
-## make/Makefile
+## 2. make/Makefile
 
 make 是一个命令工具，解释 Makefile 文件执行对应命令的工具。
 
@@ -67,7 +67,7 @@ Makefile 是一个自动化编译的关系文件。编写了功能模块之间�
 
 ---
 
-### make 工作流程
+### 2.1. make 工作流程
 
 1. 搜索读入项目中的 Makefile 文件。
 2. 读入被 include 的其它 Makefile 文件。
@@ -78,7 +78,7 @@ Makefile 是一个自动化编译的关系文件。编写了功能模块之间�
 
 ---
 
-### Makefile 规则
+### 2.2. Makefile 规则
 
 ```shell
 target ... : prerequisites ...
@@ -107,7 +107,7 @@ target ... : prerequisites ...
 | \$@      | 表示目标集(也就是“foo.o bar.o”)<br/>$(CC) -c \$(CFLAGS) \$< -o \$@                                                                                                                                                                                                                                                                                                                                  |
 | $        | 可以定义变量<br/>TARGETS = main<br/>$(TARGETS)                                                                                                                                                                                                                                                                                                                                                      |
 
-### Makefile 实例
+### 2.3. Makefile 实例
 
 * 编译前。
 
@@ -165,7 +165,7 @@ ae.o            ae_kqueue.o     config.h
 
 ---
 
-## 参考
+## 3. 参考
 
 * 《跟我一起学 Makefile》
 * [Make 命令教程](http://www.ruanyifeng.com/blog/2015/02/make.html)

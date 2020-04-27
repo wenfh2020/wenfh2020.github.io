@@ -8,7 +8,7 @@ author: wenfh2020
 
 用 `hiredis` 测试写命令 `set key value`，几个字节的 value，轻松 10 万+ 并发；1024 个字节的 value，10w 请求需要耗时 1.5 秒左右。所以 `hiredis` 的异步使用性能非常给力的，而且程序的性能损耗也不高。只是异步使用有点反人类，业务都要在 callback 里面处理，没有同步调用那么直观。`libev` 是一个不错的事件驱动库，在这里就不展开了。
 
-![本地性能](/images/2020-02-20-16-56-08.png)
+![本地性能](/images/2020-02-20-16-56-08.png){: data-action="zoom"}
 
 
 
@@ -17,7 +17,7 @@ author: wenfh2020
 
 ---
 
-## 测试
+## 1. 测试
 
 `hiredis` 代码提供了 `libev` 的 I/O 回调。只要绑定相关 libev 的相关回调，即可使用，代码也相对比较精简。([测试源码](https://github.com/wenfh2020/mytest/blob/master/c%2B%2B/hiredis_test/async/main.cpp))
 

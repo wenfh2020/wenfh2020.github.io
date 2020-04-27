@@ -8,7 +8,7 @@ author: wenfh2020
 
 快捷登录阿里云效果
 
-![效果](/images/2020-02-20-17-22-08.png)
+![效果](/images/2020-02-20-17-22-08.png){: data-action="zoom"}
 
 
 
@@ -17,7 +17,7 @@ author: wenfh2020
 
 ---
 
-## 机器
+## 1. 机器
 
 本地机器：macOS
 
@@ -25,7 +25,7 @@ author: wenfh2020
 
 ---
 
-## 配置
+## 2. 配置
 
 * 本地配置
 
@@ -57,6 +57,6 @@ source ~/.zshrc
 
 ---
 
-## 参考
+## 3. 参考
 
 * [ssh免密码快速登录配置](https://www.cnblogs.com/bingoli/p/10567734.html)

@@ -15,13 +15,13 @@ redis 的链表实现不是很复杂，从 `listNode` 可以知道，`list` 是�
 
 ---
 
-## 文件
+## 1. 文件
 
 >adlist.h, adlist.c
 
-## 数据结构
+## 2. 数据结构
 
-### 链表结点
+### 2.1. 链表结点
 
 ```c
 typedef struct listNode {
@@ -31,7 +31,7 @@ typedef struct listNode {
 } listNode;
 ```
 
-### 链表迭代器
+### 2.2. 链表迭代器
 
 ```c
 typedef struct listIter {
@@ -40,7 +40,7 @@ typedef struct listIter {
 } listIter;
 ```
 
-### 链表
+### 2.3. 链表
 
 ```c
 typedef struct list {

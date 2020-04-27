@@ -15,7 +15,7 @@ rdb 文件是一个经过压缩的二进制文件，上一章讲了 [rdb 持久�
 
 ---
 
-## rdb 临时文件
+## 1. rdb 临时文件
 
 redis 内存数据异步落地到临时 rdb 文件，成功存储后，临时文件覆盖原有文件。
 
@@ -67,7 +67,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
 
 ---
 
-## 逐步持久化
+## 2. 逐步持久化
 
 内存可以逐步持久化到磁盘，缓存满 REDIS_AUTOSYNC_BYTES （32MB），缓存刷新到磁盘。这样将大数据分散开来，减少系统压力，避免一次写盘带来的问题。
 
@@ -101,17 +101,17 @@ static size_t rioFileWrite(rio *r, const void *buf, size_t len) {
 
 ---
 
-## 结构
+## 3. 结构
 
 粗略将 rdb 文件的结构元素添加到图表，可以看作是“伪代码”吧，有些元素是建立在一定条件下才会添加进去。
 
-![rdb 文件结构](/images/2020-03-19-13-57-01.png)
+![rdb 文件结构](/images/2020-03-19-13-57-01.png){: data-action="zoom"}
 
 > 有兴趣的朋友，可以参考我的帖子：[用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)，下个断点，走一下 redis 保存和加载 rdb 文件的工作流程。
 
 ---
 
-### 数据保存时序
+### 3.1. 数据保存时序
 
 从上图我们可以看到 rdb 文件的结构。整个文件是由不同类型的数据单元组成的(`type + value`) 。内存持久化为 rdb 文件，我们可以参考 `rdbSaveRio`。
 
@@ -206,7 +206,7 @@ int rdbSaveRio(rio *rdb, int *error, int rdbflags, rdbSaveInfo *rsi) {
 
 ---
 
-### 保存集群复制信息
+### 3.2. 保存集群复制信息
 
 rdb 实现附加功能，保存服务数据复制的相关信息。当服务在某些数据复制场景下，需要 redis 进程的内存复制 id，复制位置，可以直接保存在 rdb 中，即便redis 服务重启或者服务角色发生转移(由主服务变成从服务)，也可以从 rdb 文件中，获得相应的复制数据信息，不至于什么信息都没有，需要重新全量同步。
 
@@ -250,7 +250,7 @@ int rdbSaveInfoAuxFields(rio *rdb, int rdbflags, rdbSaveInfo *rsi) {
 
 ---
 
-### 保存属性信息
+### 3.3. 保存属性信息
 
 ```c
 // 写入 redis 属性信息
@@ -284,7 +284,7 @@ int rdbSaveInfoAuxFields(rio *rdb, int rdbflags, rdbSaveInfo *rsi) {
 
 ---
 
-### 保存 key-value
+### 3.4. 保存 key-value
 
 ```c
 #define RDB_OPCODE_IDLE          248   /* LRU idle time. */
@@ -358,7 +358,7 @@ ssize_t rdbSaveObject(rio *rdb, robj *o, robj *key) {
 
 ---
 
-## 参考
+## 4. 参考
 
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)
 * [redis配置文件样例(二)](https://blog.csdn.net/mishifangxiangdefeng/article/details/50032357)

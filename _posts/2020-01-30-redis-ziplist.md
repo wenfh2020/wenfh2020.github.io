@@ -22,21 +22,21 @@ mathjax: true
 
 ---
 
-## 原理
+## 1. 原理
 
 压缩原理：举个例子，`int a = 0` a 是一个整型变量，占 4 个字节。但是 a = 0，0 这个数字只需要一个 bit 保存就足够了，如果用 4 个字节（32 bit）内存去保存就有点浪费了。按照这个思路，大致可以理解压缩策略是怎么样的，详细信息看文档和源码吧。
 > 压缩数据管理有点像数据序列化，序列化数据平常数据的传输经常用到，可以了解下 `protobuf` 源码，看看数据是怎么打包的。压缩列表除了数据序列化外，还需要对数据进行插入删除等操作，需要增加一些额外的结构进行内存管理。
 
 ---
 
-## 结构
+## 2. 结构
 
-### 列表结构
+### 2.1. 列表结构
 
 **头 + 结点 + 尾**
 `<zlbytes> <zltail> <zllen> <entry> <entry> ... <entry> <zlend>`
 
-![结构](/images/2020-02-20-16-44-19.png)
+![结构](/images/2020-02-20-16-44-19.png){: data-action="zoom"}
 
 ```c
 /* Size of the "end of ziplist" entry. Just one byte. */
@@ -59,14 +59,14 @@ mathjax: true
 #define ZIP_END 255
 ```
 
-### entry
+### 2.2. entry
 
 结点结构：`<prevlen> <encoding> <entry-data>`，但有时候数值很小，用 `<encoding>` 也能保存数据，不需要 `<entry-data>`， 即 `<prevlen> <encoding>`。
 
 ---
 压缩链表的结点有点特别，这里的链表不是传统的链表，传统的链表每个结点都有 prev 或者 next 的指针，连接起来。压缩链表结点通过 prevlen 在内存上进行定位前一个结点，因为 [`<encoding>`](#encoding) 存储了当前结点数据类型和数据长度，从而可以向后定位下一个结点。
 
-### prevlen
+### 2.3. prevlen
 
 | 条件        | 长度   | 格式                                                                    |
 | ----------- | ------ | ----------------------------------------------------------------------- |
@@ -110,13 +110,13 @@ prevlensize: 保存 prevlen 占用了多少内存（1/5）
 } while(0);
 ```
 
-### encoding
+### 2.4. encoding
 
 编码有两种类型：字符串/整数
 > The encoding field of the entry depends on the content of the entry. When the entry is a string, the first 2 bits of the encoding first byte will hold the type of encoding used to store the length of the string, followed by the actual length of the string. When the entry is an integer the first 2 bits are both set to 1. The following 2 bits are used to specify what kind of integer will be stored after this header. An overview of the different types and encodings is as follows. The first byte is always enough to determine the kind of entry.
 >
 
-#### 字符串
+#### 2.4.1. 字符串
 
 如果当结点内容是字符串，那么 `<encoding>` 前两个 bit 主要用来存储编码类型，剩下的保存当前字符串的字符串长度。从 `<encoding>` 可以获得 3 个信息：
 
@@ -141,7 +141,7 @@ prevlensize: 保存 prevlen 占用了多少内存（1/5）
 } while(0)
 ```
 
-#### 数值
+#### 2.4.2. 数值
 
 当结点内容是数值，`<encoding>` 前两个 bit 设置成 `1`，接下来两个 bit 用来保存数值类型。从 `<encoding>` 可以获得 3 个信息：
 
@@ -160,7 +160,7 @@ prevlensize: 保存 prevlen 占用了多少内存（1/5）
 | \|11111111\| | 1 byte        | 0 bit    | 列表结束符                                                                                                                       |
 
 
-#### 编解码实现
+#### 2.4.3. 编解码实现
 
 ```c
 
@@ -312,7 +312,7 @@ void zipSaveInteger(unsigned char *p, int64_t value, unsigned char encoding) {
 
 ---
 
-## 调试
+## 3. 调试
 
 我们可以先通过调试去走一次程序逻辑，观察该数据结构的内存管理，了解下 `ziplistNew`， `ziplistPush` 等接口的工作流程。
 > 调试为了编译通过，适当增减部分代码。
@@ -322,11 +322,11 @@ gcc -g ziplist.c sds.c zmalloc.c util.c sha1.c -o ziplist  -I../deps/lua/src
 sudo gdb ziplist
 ```
 
-![调试](/images/2020-02-20-16-45-03.png)
+![调试](/images/2020-02-20-16-45-03.png){: data-action="zoom"}
 
 ---
 
-### 调试中间插入结点
+### 3.1. 调试中间插入结点
 
 详细可以查看 ziplistInsert 接口源码
 
@@ -399,15 +399,15 @@ int main() {
 
 主要画了部分令人费解的地方。
 
-![插入流程](/images/2020-02-20-16-45-26.png)
+![插入流程](/images/2020-02-20-16-45-26.png){: data-action="zoom"}
 
 ---
 
-## 接口
+## 4. 接口
 
 可以通过 `sorted set` （t_zset.c）源码理解 `ziplist` 的使用。
 
-### 插入结点
+### 4.1. 插入结点
 
 根据 p 指定的位置，插入数据。
 
@@ -521,7 +521,7 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
 }
 ```
 
-## 问题
+## 5. 问题
 
 * 分配内存
   `ziplist` 插入删除数据需要重新分配内存。
@@ -578,7 +578,7 @@ int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
 
 ---
 
-## 参考
+## 6. 参考
 
 * [gdb中看内存(x命令)](https://blog.csdn.net/yasi_xi/article/details/9263955)
 

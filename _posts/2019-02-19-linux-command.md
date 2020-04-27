@@ -15,9 +15,9 @@ Centos 等 Linux 平台常用命令，记录起来，方便使用。
 
 ---
 
-## 系统
+## 1. 系统
 
-### 机器启动
+### 1.1. 机器启动
 
 ```shell
 poweroff
@@ -27,7 +27,7 @@ shutdown -r now
 
 ---
 
-### 修改密码
+### 1.2. 修改密码
 
 ```shell
 passwd root
@@ -35,7 +35,7 @@ passwd root
 
 ---
 
-### 查看 CPU
+### 1.3. 查看 CPU
 
 ```shell
 cat /proc/cpuinfo | grep "processor" | wc -l
@@ -43,7 +43,7 @@ cat /proc/cpuinfo | grep "processor" | wc -l
 
 ---
 
-### 查看系统内存情况
+### 1.4. 查看系统内存情况
 
 ```shell
 free -m
@@ -51,7 +51,7 @@ free -m
 
 ---
 
-### 查看系统信息
+### 1.5. 查看系统信息
 
 ```shell
 uname -a
@@ -61,7 +61,7 @@ cat /etc/redhat-release
 
 ---
 
-### 软链接
+### 1.6. 软链接
 
 ```shell
 ln -s source dest
@@ -69,7 +69,7 @@ ln -s source dest
 
 ---
 
-### 防火墙
+### 1.7. 防火墙
 
 ```shell
 service iptables start
@@ -78,7 +78,7 @@ service iptables stop
 
 ---
 
-### 开放端口号
+### 1.8. 开放端口号
 
 ```shell
 # centos
@@ -90,7 +90,7 @@ systemctl restart iptables.service
 
 ---
 
-### 压缩解压
+### 1.9. 压缩解压
 
 ```shell
 zip -r mydata.zip mydata
@@ -101,7 +101,7 @@ tar zxf mydata.tar.gz
 
 ---
 
-### 更新文件配置
+### 1.10. 更新文件配置
 
 ```shell
 source /etc/profile
@@ -109,7 +109,7 @@ source /etc/profile
 
 ---
 
-### 机器是多少位
+### 1.11. 机器是多少位
 
 ```shell
 file /sbin/init 或者 file /bin/ls
@@ -117,7 +117,7 @@ file /sbin/init 或者 file /bin/ls
 
 ---
 
-### 环境变量
+### 1.12. 环境变量
 
 ```shell
 env
@@ -125,7 +125,7 @@ env
 
 ---
 
-### 用户切换
+### 1.13. 用户切换
 
 ```shell
 su root
@@ -134,7 +134,7 @@ exit
 
 ---
 
-### 日期
+### 1.14. 日期
 
 ```shell
 date -d @1361542596 +"%Y-%m-%d %H:%M:%S"
@@ -142,7 +142,7 @@ date -d @1361542596 +"%Y-%m-%d %H:%M:%S"
 
 ---
 
-### 进程绝对路径
+### 1.15. 进程绝对路径
 
 ```shell
 top -c
@@ -153,9 +153,9 @@ ps -ef
 
 ---
 
-## 文本
+## 2. 文本
 
-### awk
+### 2.1. awk
 
 awk 动作 文件名
 
@@ -172,7 +172,7 @@ ps -ef | grep gdb | grep -v grep | awk '{print $3}' | xargs sudo kill -9
 
 ---
 
-### sed
+### 2.2. sed
 
 字符串处理
 
@@ -183,7 +183,7 @@ sed -i "s/\/usr\/local\/bin/\/usr\/bin/g" /etc/init.d/fdfs_storaged
 
 ---
 
-### grep
+### 2.3. grep
 
 | 命令      | 描述                       |
 | --------- | -------------------------- |
@@ -221,9 +221,9 @@ grep -r "pic" --include "*.md" .
 
 ---
 
-## 磁盘文件
+## 3. 磁盘文件
 
-### ls
+### 3.1. ls
 
 | 选项 | 描述                                                             |
 | ---- | ---------------------------------------------------------------- |
@@ -245,7 +245,7 @@ ls -lR|grep "^-"|wc -l
 
 ---
 
-### tree
+### 3.2. tree
 
 显示目录结构
 
@@ -255,7 +255,7 @@ tree /dir/ -L 1
 
 ---
 
-### du
+### 3.3. du
 
 用于显示目录或文件的大小。
 
@@ -271,7 +271,7 @@ du -sh dir
 
 ---
 
-### df
+### 3.4. df
 
 用于显示目前在Linux系统上的文件系统的磁盘使用情况统计。
 
@@ -282,7 +282,7 @@ df -h
 
 ---
 
-### tail
+### 3.5. tail
 
 ```shell
 tail -f file
@@ -291,7 +291,7 @@ tail -f file | grep '123'
 
 ---
 
-### find
+### 3.6. find
 
 ```shell
 man find
@@ -336,9 +336,9 @@ find . -perm -111
 
 ---
 
-## 权限
+## 4. 权限
 
-### 执行权限
+### 4.1. 执行权限
 
 ```shell
 chmod +x _file
@@ -347,9 +347,9 @@ chown -Rf imdev:imdev _folder
 
 ---
 
-## 进程线程
+## 5. 进程线程
 
-### 查找进程
+### 5.1. 查找进程
 
 ```shell
 ps aux | grep _proxy_srv
@@ -357,7 +357,7 @@ ps aux | grep _proxy_srv
 
 ---
 
-### 进程启动绝对路径
+### 5.2. 进程启动绝对路径
 
 ```shell
 ps -ef | grep xxx
@@ -366,7 +366,7 @@ ll /proc/pid ｜ grep exe
 
 ---
 
-### 查进程名称对应的 pid
+### 5.3. 查进程名称对应的 pid
 
 ```shell
 ps -ef | grep process_name | grep -v "grep" | awk '{print $2}' 
@@ -375,7 +375,7 @@ pidof redis-server
 
 ---
 
-### 进程启动时间
+### 5.4. 进程启动时间
 
 ```shell
 ps -p PID -o lstart
@@ -384,7 +384,7 @@ ps -ef | grep redis | awk '{print $2}' | xargs ps -o pid,tty,user,comm,lstart,et
 
 ---
 
-### 查看线程
+### 5.5. 查看线程
 
 ```shell
 top -H -p pid
@@ -394,9 +394,9 @@ pstree -p 1234 | wc -l
 
 ---
 
-## 网络
+## 6. 网络
 
-### scp
+### 6.1. scp
 
 1. scp -P端口号 本地文件路径 username@服务器ip:目的路径
 2. 从服务器下载文件到本地，scp -P端口号 username@ip:路径 本地路径
@@ -409,7 +409,7 @@ scp /Users/wenfh2020/src/other/c_test/normal/proc/main.cpp root@120.25.44.163:/h
 
 ---
 
-### nslookup
+### 6.2. nslookup
 
 查域名对应的 ip
 
@@ -426,7 +426,7 @@ Address: 120.25.83.163
 
 ---
 
-### ssh
+### 6.3. ssh
 
 ```shell
 ssh -p22 root@120.25.44.163
@@ -434,7 +434,7 @@ ssh -p22 root@120.25.44.163
 
 ---
 
-### tcpdump
+### 6.4. tcpdump
 
 Linux tcpdump [命令](https://www.runoob.com/linux/linux-comm-tcpdump.html)用于倾倒网络传输数据
 
@@ -464,7 +464,7 @@ tcpdump -i eth0 host api.fyber.com and port 80 -w 123.cap
 
 ---
 
-### wget
+### 6.5. wget
 
 ```shell
 wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.rpm
@@ -472,7 +472,7 @@ wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.r
 
 ---
 
-### netstat
+### 6.6. netstat
 
 netstat 命令用于显示网络状态
 
@@ -495,7 +495,7 @@ netstat -nat|grep -i "80"|wc -l
 
 ---
 
-### lsof
+### 6.7. lsof
 
 * 查询端口对应的信息
 
@@ -511,11 +511,11 @@ lsof -p <pid>
 
 ---
 
-## shell
+## 7. shell
 
-### 语法
+### 7.1. 语法
 
-#### for
+#### 7.1.1. for
 
 ```shell
 for p in paths
@@ -525,7 +525,7 @@ done
 
 ---
 
-#### [if](https://www.runoob.com/linux/linux-shell-test.html)
+#### 7.1.2. [if](https://www.runoob.com/linux/linux-shell-test.html)
 
 ```shell
 if [ ! -d "$dir" ]; then
@@ -535,7 +535,7 @@ fi
 
 ---
 
-#### 数组
+#### 7.1.3. 数组
 
 ```shell
 align=1
@@ -553,7 +553,7 @@ done
 
 ---
 
-#### 文件
+#### 7.1.4. 文件
 
 | 参数 | 描述               |
 | ---- | ------------------ |
@@ -563,7 +563,7 @@ done
 
 ---
 
-#### 数值比较
+#### 7.1.5. 数值比较
 
 | 参数 | 描述     |
 | ---- | -------- |
@@ -576,7 +576,7 @@ done
 
 ---
 
-#### 字符串
+#### 7.1.6. 字符串
 
 | 参数 | 描述              |
 | ---- | ----------------- |
@@ -587,9 +587,9 @@ done
 
 ---
 
-### 其它
+### 7.2. 其它
 
-#### 有空格的路径 grep 操作
+#### 7.2.1. 有空格的路径 grep 操作
 
 ```shell
 infos=`grep -r $src_pic_path --include '*.md' . | tr " " "\?"`
@@ -597,7 +597,7 @@ infos=`grep -r $src_pic_path --include '*.md' . | tr " " "\?"`
 
 ---
 
-#### 有空格路径进行 sed 操作
+#### 7.2.2. 有空格路径进行 sed 操作
 
 ```shell
 sed -i '' "s:$src_pic_path:\.\/pic:g" $file
@@ -605,7 +605,7 @@ sed -i '' "s:$src_pic_path:\.\/pic:g" $file
 
 ---
 
-#### printf
+#### 7.2.3. printf
 
 ```shell
 printf '%d\n' 0xA
@@ -617,9 +617,9 @@ printf "%-10s %-11s" "end:" $end_time
 
 ---
 
-### 命令
+### 7.3. 命令
 
-#### xargs
+#### 7.3.1. xargs
 
 是给命令传递参数的一个过滤器
 
@@ -631,9 +631,9 @@ find / -name *.jpg -type f -print | xargs tar -cvzf images.tar.gz
 
 ---
 
-## 工具
+## 8. 工具
 
-### top
+### 8.1. top
 
 ```shell
 #显示完整命令
@@ -646,41 +646,41 @@ shift + m
 shit + p 
 ```
 
-![image-20191113091943326](/images/image-20191113091943326.png)
+![image-20191113091943326](/images/image-20191113091943326.png){: data-action="zoom"}
 
 ---
 
-### htop
+### 8.2. htop
 
-![image-20191112180503405](/images/image-20191112180503405.png)
-
----
-
-### iftop
-
-![image-20191112175351966](/images/image-20191112175351966.png)
+![image-20191112180503405](/images/image-20191112180503405.png){: data-action="zoom"}
 
 ---
 
-### nload
+### 8.3. iftop
 
-![image-20191112180429804](/images/image-20191112180429804.png)
-
----
-
-### nethogs
-
-![image-20191112175719733](/images/image-20191112175719733.png)
+![image-20191112175351966](/images/image-20191112175351966.png){: data-action="zoom"}
 
 ---
 
-### iotop
+### 8.4. nload
 
-![image-20191112212348819](/images/image-20191112212348819.png)
+![image-20191112180429804](/images/image-20191112180429804.png){: data-action="zoom"}
 
 ---
 
-### vmstat
+### 8.5. nethogs
+
+![image-20191112175719733](/images/image-20191112175719733.png){: data-action="zoom"}
+
+---
+
+### 8.6. iotop
+
+![image-20191112212348819](/images/image-20191112212348819.png){: data-action="zoom"}
+
+---
+
+### 8.7. vmstat
 
 命令查看内存转换情况，跟踪转换的频率
 
@@ -696,11 +696,11 @@ vmstat 1 每秒输出一次统计结果
 
 不是 swap 空间占用性能就会下降，要看 si so 频率。
 
-![image-20191113090543751](/images/image-20191113090543751.png)
+![image-20191113090543751](/images/image-20191113090543751.png){: data-action="zoom"}
 
 ---
 
-### strace
+### 8.8. strace
 
 ```shell
 # 跟踪具体的进程信息
@@ -715,7 +715,7 @@ strace-eclone php -r 'exec("ls");'
 
 ---
 
-## 参考
+## 9. 参考
 
 * [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)
 

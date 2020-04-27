@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-## 解决方案
+## 1. 解决方案
 
 比较简单的方案，进行 redis 设置:
 
@@ -54,7 +54,7 @@ redis.conf 相关解析
 
 ---
 
-## 实现流程
+## 2. 实现流程
 
 ```c
 #define run_with_period(_ms_) if ((_ms_ <= 1000/server.hz) || !(server.cronloops%((_ms_)/(1000/server.hz))))
@@ -100,7 +100,7 @@ void refreshGoodSlavesCount(void) {
 
 ---
 
-## 参考
+## 3. 参考
 
 * [redis 脑裂等极端情况分析](https://www.cnblogs.com/yjmyzz/p/redis-split-brain-analysis.html)
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)

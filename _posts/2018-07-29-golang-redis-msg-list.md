@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-## 测试机器
+## 1. 测试机器
 
 机器配置：双核，4G
 
@@ -23,7 +23,7 @@ author: wenfh2020
 
 ---
 
-## 生产者
+## 2. 生产者
 
 生产者，生产 100 w 条数据， 并发 13817 。([测试源码](https://github.com/wenfh2020/go-test/blob/master/redis/redis_list/producer/produce.go))
 
@@ -46,7 +46,7 @@ func Produce(szBytes []byte) (err error) {
 }
 ```
 
-![生产者负载](/images/2020-02-20-16-54-38.png)
+![生产者负载](/images/2020-02-20-16-54-38.png){: data-action="zoom"}
 
 ```shell
 begin time: 2018-07-29 14:03:55.606
@@ -57,7 +57,7 @@ avg: 13817.860879118389
 
 ---
 
-## 消费者
+## 3. 消费者
 
 消费者，消费 100 w 条数据，并发 9433。([测试源码](https://github.com/wenfh2020/go-test/blob/master/redis/redis_list/customer/logic.go))
 
@@ -84,7 +84,7 @@ func Custom() {
 }
 ```
 
-![消费者负载](/images/2020-02-20-16-55-06.png)
+![消费者负载](/images/2020-02-20-16-55-06.png){: data-action="zoom"}
 
 ```shell
 begin time: 2018-07-29 14:46:11.166
@@ -95,7 +95,7 @@ avg: 9433
 
 ---
 
-## 总结
+## 4. 总结
 
 以上生产和消费测试都是独立测试的，生产数据和消费数据，能达到 1w 左右的并发；如果生产者和消费者同时进行工作，各自并发能力还要下降 20%左右。消费者为了保证数据被消费失败后，能保重新消费，还需要写一部分逻辑，估计性能还会下降一部分，所以单实例的Redis消息队列消费并发应该是5000左右(根据业务多开几条队列，通过性能叠加，解决更高的并发问题？！）
 

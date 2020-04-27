@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-## 现象
+## 1. 现象
 
 火焰图观察 accept，或者用 strace 命令观察底层调用。可以用脚本获取对应进程的火焰图。
 
@@ -36,13 +36,13 @@ flamegraph.pl perf.folded > perf.svg
 
 ---
 
-## 结果
+## 2. 结果
 
 线程或进程切换，内核需要保存上下文以及寄存器等资源，频繁切换会导致系统资源损耗。
 
 ---
 
-## 解决方案
+## 3. 解决方案
 
 解决 epoll 的惊群问题：
 
@@ -51,13 +51,13 @@ flamegraph.pl perf.folded > perf.svg
 
 ---
 
-## 原理
+## 4. 原理
 
 当用 epoll 事件处理高并发事件模型时候，多个进程或线程 epoll_wait 会阻塞等待网络事件，当有新的 client connect 进来，epoll_wait 会同时被会唤醒争抢这个链接资源，然后调用 accept 处理，争抢资源失败的 accept 会返回 EAGAIN。
 
 ---
 
-## 测试
+## 5. 测试
 
 [源码](https://github.com/wenfh2020/c_test/blob/master/network/thundering_herd/main.cpp) server 是 epoll 事件模型，client 用 telnet 即可。
 
@@ -315,7 +315,7 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## 参考
+## 6. 参考
 
 * [一个epoll惊群导致的性能问题](https://www.ichenfu.com/2017/05/03/proxy-epoll-thundering-herd/)
 * [Linux惊群效应详解](https://blog.csdn.net/lyztyycode/article/details/78648798)

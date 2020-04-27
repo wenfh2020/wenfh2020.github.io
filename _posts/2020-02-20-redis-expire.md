@@ -16,11 +16,11 @@ redis 可能存在大量过期数据，一次性遍历检查不太现实。redis
 
 ---
 
-## 流程
+## 1. 流程
 
 主服务检查过期/删除过期逻辑 -> 删除过期键值 -> 异步/同步删除数据 -> 主从同步。
 
-![流程](/images/2020-02-29-11-37-42.png)
+![流程](/images/2020-02-29-11-37-42.png){: data-action="zoom"}
 
 redis 数据库，数据内容和过期时间是分开保存。`expires` 保存了键值对应的过期时间。
 
@@ -34,9 +34,9 @@ typedef struct redisDb {
 
 ---
 
-## 策略概述
+## 2. 策略概述
 
-### 过期检查
+### 2.1. 过期检查
 
 过期数据检查有三个策略：
 
@@ -48,7 +48,7 @@ typedef struct redisDb {
 
 ---
 
-### 数据回收
+### 2.2. 数据回收
 
 数据回收有同步和异步两种方式，配置文件可以设置，一般默认异步回收数据。
 
@@ -58,7 +58,7 @@ typedef struct redisDb {
 2. 大数据放到任务队列，后台线程处理任务队列异步回收内存。
    > 可以看看 `bio.c` 的实现。
 
-#### 同步
+#### 2.2.1. 同步
 
 ```c
 int dbSyncDelete(redisDb *db, robj *key) {
@@ -76,7 +76,7 @@ int dbSyncDelete(redisDb *db, robj *key) {
 }
 ```
 
-#### 异步
+#### 2.2.2. 异步
 
 unlink 逻辑删除 key，数据放在 bio 线程异步删除。
 
@@ -111,11 +111,11 @@ int dbAsyncDelete(redisDb *db, robj *key) {
 
 ---
 
-## 检查具体策略
+## 3. 检查具体策略
 
-### 访问检查
+### 3.1. 访问检查
 
-#### expireIfNeeded
+#### 3.1.1. expireIfNeeded
 
 外部读写命令/内部逻辑调用，基本所有的键值读写操作都会触发 `expireIfNeeded` 过期检查。
 
@@ -154,7 +154,7 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 }
 ```
 
-#### 修改/删除过期 key
+#### 3.1.2. 修改/删除过期 key
 
 部分命令会修改或删除过期时间。
 
@@ -171,7 +171,7 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 | expireat  | 设置一个 UNIX 时间戳的过期时间。        |
 | pexpireat | 设置key到期 UNIX 时间戳，以毫秒为单位。 |
 
-#### maxmemory 淘汰
+#### 3.1.3. maxmemory 淘汰
 
 超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，可以参考[[redis 源码走读] maxmemory 数据淘汰策略
 ](https://wenfh2020.com/2020/03/06/max-memory/)。
@@ -202,7 +202,7 @@ int freeMemoryIfNeededAndSafe(void) {
 
 ---
 
-### 事件触发
+### 3.2. 事件触发
 
 在事件模型中，处理事件前，触发快速检查。将过期检查负载分散到各个事件中去。
 
@@ -234,7 +234,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
 
 ---
 
-### 定期检查
+### 3.3. 定期检查
 
 通过时钟实现，定期检查过期键值。
 
@@ -516,7 +516,7 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
 
 ---
 
-## 总结
+## 4. 总结
 
 * 要熟悉字典 `dict` 的实现原理，`dict` 是 redis 常用的几个基础数据结构之一。
 * 看了几天源码，大致理解了键值过期处理策略。很多细节，感觉理解还是不够深刻，以后还是要结合实战多思考。
@@ -577,7 +577,7 @@ replica-lazy-flush no
 
 ---
 
-## 参考
+## 5. 参考
 
 * [[redis 源码走读] 字典(dict)](https://wenfh2020.com/2020/01/12/redis-dict/)
 * 《redis 设计与实现》

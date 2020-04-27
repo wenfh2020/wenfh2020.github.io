@@ -15,7 +15,7 @@ rdb 文件是一个经过压缩的二进制文件，是 redis 持久化方式之
 
 ---
 
-## 配置
+## 1. 配置
 
 redis 有两种持久化方式，分别为：aof 和 rdb，默认开启 rdb，本章重点讲 rdb。
 
@@ -42,7 +42,7 @@ void initServer(void) {
 
 ---
 
-## 异步持久化
+## 2. 异步持久化
 
 redis 主逻辑是在单进程，单线程里实现的。像持久化这种耗大量性能的操作，主进程一般会通过 fork 子进程异步进行。
 
@@ -62,11 +62,11 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
 
 ---
 
-## 应用场景
+## 3. 应用场景
 
-![快照应用场景](/images/2020-03-19-13-08-31.png)
+![快照应用场景](/images/2020-03-19-13-08-31.png){: data-action="zoom"}
 
-### 服务启动加载数据
+### 3.1. 服务启动加载数据
 
 redis 程序启动，从磁盘 rdb 文件加载数据到内存。
 
@@ -101,7 +101,7 @@ void loadDataFromDisk(void) {
 
 ---
 
-### 命令
+### 3.2. 命令
 
 * `SAVE` 命令同步存盘。
 
@@ -191,7 +191,7 @@ int prepareForShutdown(int flags) {
 
 ---
 
-### 数据定期持久化
+### 3.3. 数据定期持久化
 
 rdb 持久化是有条件限制的：
 
@@ -302,7 +302,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
 ---
 
-### 重写 aof 文件
+### 3.4. 重写 aof 文件
 
 aof 文件在重写过程中，为了快速将数据落地，也会将文件保存成 rdb 文件，rdb 文件里会保存 aof 标识进行识别。
 
@@ -357,7 +357,7 @@ int loadAppendOnlyFile(char *filename) {
 
 ---
 
-### 信号终止进程
+### 3.5. 信号终止进程
 
 服务运行过程中，一般情况是通过定期策略对内存数据进行持久化，内存数据和持久化文件数据不同步的，所以当服务正常退出或者重启，需要将内存数据进行持久化。
 
@@ -404,7 +404,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
 ---
 
-### 主从复制
+### 3.6. 主从复制
 
 主从复制，全量同步数据，可以通过 rdb 文件传输。rdb 文件可以采用硬盘备份方式；也可以无盘备份，数据不存盘，直接通过 socket 发送给其它服务。
 
@@ -479,7 +479,7 @@ int startBgsaveForReplication(int mincapa) {
 
 ---
 
-## 总结
+## 4. 总结
 
 rdb 作为持久化方式的一种，它是一种经过压缩的二进制数据。
 
@@ -495,7 +495,7 @@ rdb 这一块内容挺多的，一章节太长了，所以分开了两章，本�
 
 ---
 
-## 参考
+## 5. 参考
 
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)
 * [redis配置文件样例(二)](https://blog.csdn.net/mishifangxiangdefeng/article/details/50032357)

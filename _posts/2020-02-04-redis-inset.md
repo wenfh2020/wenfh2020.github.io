@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-## 数据结构
+## 1. 数据结构
 
 ```c
 /* Note that these encodings are ordered, so:
@@ -37,9 +37,9 @@ typedef struct intset {
 
 ---
 
-## 接口
+## 2. 接口
 
-### 数值编码
+### 2.1. 数值编码
 
 ```c
 #define INT8_MAX         127
@@ -62,7 +62,7 @@ static uint8_t _intsetValueEncoding(int64_t v) {
 
 ```
 
-### 插入数据
+### 2.2. 插入数据
 
 检查插入数据是否大于当前编码格式，决定是否需要升级
 
@@ -101,7 +101,7 @@ intset *intsetAdd(intset *is, int64_t value, uint8_t *success) {
 }
 ```
 
-### 升级
+### 2.3. 升级
 
 ```c
 /* Upgrades the intset to a larger encoding and inserts the given integer. */
@@ -135,9 +135,9 @@ static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
 }
 ```
 
-![升级](/images/2020-02-20-16-39-40.png)
+![升级](/images/2020-02-20-16-39-40.png){: data-action="zoom"}
 
-### 搜索
+### 2.4. 搜索
 
 二分法搜索数组数据。
 

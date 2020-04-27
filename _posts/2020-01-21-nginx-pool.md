@@ -18,7 +18,7 @@ nginx 内存池源码([ngx_palloc.c](https://github.com/nginx/nginx/blob/master/
 
 ---
 
-## 内存池使用测试
+## 1. 内存池使用测试
 
 `ngx_palloc.c` 代码耦合不是很大，可以扣出来用 `gdb` 跟踪其工作流程。
 
@@ -47,13 +47,13 @@ int main() {
 
 ---
 
-## 内存池
+## 2. 内存池
 
-![nginx 内存池](/images/2020-04-25-17-15-19.png)
+![nginx 内存池](/images/2020-04-25-17-15-19.png){: data-action="zoom"}
 
 ---
 
-### 内存池数据结构
+### 2.1. 内存池数据结构
 
 nginx 内存池，将大小内存的分配分开管理：
 
@@ -79,7 +79,7 @@ struct ngx_pool_s {
 
 ---
 
-### 小内存块
+### 2.2. 小内存块
 
 小内存块通过链表进行管理，内存分配过程，涉及到结点上空闲内存匹配是链表的遍历，复杂度是 $O(n)$，为了提高效率，增加了`failed` 分配内存失败次数统计（具体逻辑在分配函数里）
 
@@ -94,7 +94,7 @@ typedef struct {
 
 ---
 
-### 大内存块
+### 2.3. 大内存块
 
 大内存块由单向链表管理，没有复杂的空闲内存管理逻辑。
 
@@ -108,7 +108,7 @@ struct ngx_pool_large_s {
 
 ---
 
-### 内存文件
+### 2.4. 内存文件
 
 ```c
 struct ngx_chain_s {
@@ -119,7 +119,7 @@ struct ngx_chain_s {
 
 ---
 
-## 接口
+## 3. 接口
 
 * 对外接口
 
@@ -142,7 +142,7 @@ struct ngx_chain_s {
 
 ---
 
-### 创建内存池
+### 3.1. 创建内存池
 
 ```c
 ngx_int_t
@@ -192,7 +192,7 @@ ngx_create_pool(size_t size, ngx_log_t *log) {
 
 ---
 
-### 释放内存池
+### 3.2. 释放内存池
 
 除了对大小内存块数据进行释放，还增加了回调操作的设计，方便开发者进行部分具体的业务处理。
 
@@ -232,7 +232,7 @@ ngx_destroy_pool(ngx_pool_t *pool) {
 
 ---
 
-### 内存对齐申请空间
+### 3.3. 内存对齐申请空间
 
 内存对齐，涉及到 cpu 工作效率，是高性能系统不可缺少的一环。
 
@@ -289,7 +289,7 @@ ngx_memalign(size_t alignment, size_t size, ngx_log_t *log) {
 
 ---
 
-### 分配内存
+### 3.4. 分配内存
 
 如果分配的内存在小内存块空间范围内，就通过小内存块空闲链表中分配，否则直接分配到大内存块链表中。
 
@@ -314,7 +314,7 @@ p->max = (size < NGX_MAX_ALLOC_FROM_POOL) ? size : NGX_MAX_ALLOC_FROM_POOL;
 
 ---
 
-### 分配小内存
+### 3.5. 分配小内存
 
 满足条件 `size <= pool->max` 的小内存的空间分配，遍历小内存块链表，从已分配的空间中查找合适的空闲空间进行分配，否则再创建新的小内存块进行匹配。
 
@@ -351,7 +351,7 @@ ngx_palloc_small(ngx_pool_t *pool, size_t size, ngx_uint_t align) {
 
 ---
 
-### 分配小内存块
+### 3.6. 分配小内存块
 
 ```c
 static void *
@@ -399,7 +399,7 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size) {
 
 ---
 
-### 申请大块内存
+### 3.7. 申请大块内存
 
 大块内存已分配的大块数据，除了内存块头部信息是可以重复利用的，数据不会重复利用，不用将被 ngx_pfree 释放掉。
 
@@ -448,7 +448,7 @@ ngx_palloc_large(ngx_pool_t *pool, size_t size) {
 
 ---
 
-### 释放大内存块
+### 3.8. 释放大内存块
 
 只是释放数据，没有释放块的数据结构头。为了重复利用数据结构头信息，所以释放数据并没有删除链表结点，这里通过链表遍历进行删除，效率会不会很低。
 
@@ -471,7 +471,7 @@ ngx_pfree(ngx_pool_t *pool, void *p) {
 
 ---
 
-### 重置内存池
+### 3.9. 重置内存池
 
 ```c
 void
@@ -500,7 +500,7 @@ ngx_reset_pool(ngx_pool_t *pool) {
 
 ---
 
-## 问题
+## 4. 问题
 
 nginx 的内存池实现足够精简高效，但是依然有些问题不能兼顾到：
 
@@ -519,7 +519,7 @@ nginx 的内存池实现足够精简高效，但是依然有些问题不能兼�
 
 ---
 
-## 参考
+## 5. 参考
 
 [Nginx 源码分析-- 内存池(pool)的分析 三](https://www.cnblogs.com/jzhlin/archive/2012/06/07/ngx_palloc.html)
 

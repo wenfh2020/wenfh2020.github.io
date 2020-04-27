@@ -15,7 +15,7 @@ Linux 环境下，用 `tcpdump` 抓包分析 tcp 三次握手和四次挥手/三
 
 ---
 
-## 工具
+## 1. 工具
 
 * tcpdump
 * wireshark
@@ -23,7 +23,7 @@ Linux 环境下，用 `tcpdump` 抓包分析 tcp 三次握手和四次挥手/三
 
 ---
 
-## 抓包分析
+## 2. 抓包分析
 
 * 服务端口 `12456`。
 
@@ -57,13 +57,13 @@ telnet 127.0.0.1 12456
 
 * 用神器 `wireshark` 打开 `*.cap` 文件。
 
-![wireshark](/images/2020-04-13-09-46-38.png)
+![wireshark](/images/2020-04-13-09-46-38.png){: data-action="zoom"}
 
 * 流程
 
 从上面抓包数据看，我们可以描述一下 tcp 握手挥手工作流程。
 
-![握手挥手流程](/images/2020-04-13-13-20-03.png)
+![握手挥手流程](/images/2020-04-13-13-20-03.png){: data-action="zoom"}
 
 * 三次握手，三次挥手。
   
@@ -84,21 +84,21 @@ telnet 127.0.0.1 12456
 
 ---
 
-## tcp 状态变迁
+## 3. tcp 状态变迁
   
   > 图片来源：《TCP/IP 详解卷 1：协议》 -- 18.6 tcp 的状态变迁图
 
-![tcp 状态变迁](/images/2020-04-13-13-14-49.png)
+![tcp 状态变迁](/images/2020-04-13-13-14-49.png){: data-action="zoom"}
 
 ---
 
-## 其它
+## 4. 其它
 
 * 客户端主动 connect 服务端，三次握手是在服务端 accept 前完成的。服务端 accept 前面添加 sleep 再抓下包看看。
 
 ---
 
-## 参考
+## 5. 参考
 
 * [为什么tcp 连接断开只有3个包？](https://www.zhihu.com/question/55890292)
 * [TCP_Relative_Sequence_Numbers](https://wiki.wireshark.org/TCP_Relative_Sequence_Numbers)

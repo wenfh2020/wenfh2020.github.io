@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-## epoll
+## 1. epoll
 
 回顾一下 epoll 的相关知识：
 
@@ -25,7 +25,7 @@ epoll 是 Linux 内核为处理大批量文件描述符而作了改进的 poll �
 
 ---
 
-### 事件结构
+### 1.1. 事件结构
 
 ```c
 // epoll.h
@@ -53,7 +53,7 @@ struct epoll_event {
 
 ---
 
-### 操作接口
+### 1.2. 操作接口
 
 * 创建 epoll 文件描述符。
 
@@ -81,7 +81,7 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 
 ---
 
-## 工作流程
+## 2. 工作流程
 
 `epoll` 是一个事件驱动，主要对文件描述符 fd 以及对应的事件进行管理，服务进程通过 `epoll_wait` 往内核获取就绪可读可写事件进行逻辑处理。
 
@@ -94,11 +94,11 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 * 处理逻辑过程中需要 `write` 回复客户端，`write` 内容很大，超出了内核缓冲区，没能实时发送完成所有数据，需要下次继续发送；那么 `epoll_ctl` 监控 client_fd 的 `EPOLLOUT` 可写事件，下次触发事件进行发送。下次触发可写事件发送完毕后， `epoll_ctl` 删除 `EPOLLOUT` 事件。
 * 客户端关闭链接，服务端监控客户端 fd，如果 `read == 0`，`close` 关闭对应 fd 从而完成四次挥手。
 
-![epoll 事件逻辑](/images/2020-04-17-10-09-45.png)
+![epoll 事件逻辑](/images/2020-04-17-10-09-45.png){: data-action="zoom"}
 
 ---
 
-## 参考
+## 3. 参考
 
 * [http://man7.org/linux/man-pages/dir_all_by_section.html](http://man7.org/linux/man-pages/dir_all_by_section.html)
 * [http://man7.org/linux/man-pages/man2/write.2.html](http://man7.org/linux/man-pages/man2/write.2.html)

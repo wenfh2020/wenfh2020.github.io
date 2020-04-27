@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-## 概述
+## 1. 概述
 
 文件服务器是 FDFS（FastDFS）文件存储系统的一个代理。
 
@@ -31,9 +31,9 @@ author: wenfh2020
 
 ---
 
-## 架构
+## 2. 架构
 
-![文件服务器架构](/images/2020-02-24-09-14-59.png)
+![文件服务器架构](/images/2020-02-24-09-14-59.png){: data-action="zoom"}
 
 <!-- <div align=center><img src="/images/2020-02-24-09-14-59.png"/></div> -->
 
@@ -48,9 +48,9 @@ author: wenfh2020
 
 ---
 
-## 逻辑时序
+## 3. 逻辑时序
 
-![逻辑时序](/images/2020-02-24-09-16-08.png)
+![逻辑时序](/images/2020-02-24-09-16-08.png){: data-action="zoom"}
 <!-- <div align=center><img src="/images/2020-02-24-09-16-08.png"/></div> -->
 
 ---

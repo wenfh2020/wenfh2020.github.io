@@ -15,11 +15,11 @@ author: wenfh2020
 
 ---
 
-## 应用场景
+## 1. 应用场景
 
-![应用场景](/images/2020-03-29-19-03-42.png)
+![应用场景](/images/2020-03-29-19-03-42.png){: data-action="zoom"}
 
-### 启动加载
+### 1.1. 启动加载
 
 redis 启动，程序会模拟一个客户端加载从 aof 文件读出的命令。
 
@@ -71,7 +71,7 @@ int loadAppendOnlyFile(char *filename) {
 
 ---
 
-### 写命令执行流程
+### 1.2. 写命令执行流程
 
 1. client 向 redis 服务发送写命令。
 2. redis 服务接收命令，进行业务处理。
@@ -183,7 +183,7 @@ void aofChildPipeReadable(aeEventLoop *el, int fd, void *privdata, int mask) {}
 
 ---
 
-### 定时保存
+### 1.3. 定时保存
 
 主要对延时刷新和写磁盘出现错误回写的检查刷新。
 
@@ -214,7 +214,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
 ---
 
-### 重写
+### 1.4. 重写
 
 服务器接收到写入操作命令会追加到 aof 文件，那么 aof 文件相当于一个流水文件。随着时间推移，文件将会越来越大。然而 aof 文件主要目的是为了持久化，并不是为了记录服务器流水。这些流水命令有可能很多是冗余的，需要重新整理——通过**重写**来减小 aof 文件体积。
 
@@ -229,7 +229,7 @@ set key1 4
 
 ---
 
-#### 重写方式
+#### 1.4.1. 重写方式
 
 * 通过命令 [`BGREWRITEAOF`](https://redis.io/commands/bgrewriteaof) 重写。
 
@@ -288,7 +288,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
 ---
 
-#### 重写实现
+#### 1.4.2. 重写实现
 
 1. 父进程 fork 子进程实现重写逻辑。
 2. 子进程创建 aof 临时文件存储重写子进程`fork-on-write` 内存到 aof 文件。
@@ -415,7 +415,7 @@ werr:
 
 ---
 
-## 调试
+## 2. 调试
 
 我一直认为：看文档和结合源码调试是理解一个项目的最好方法。
 
@@ -423,7 +423,7 @@ werr:
   
   > 调试方法可以参考我的帖子： [用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)
   
-![调试走流程](/images/2020-03-25-16-40-24.png)
+![调试走流程](/images/2020-03-25-16-40-24.png){: data-action="zoom"}
 
 * 开启日志
 
@@ -446,7 +446,7 @@ logfile "redis.log"
 
 ---
 
-## 总结
+## 3. 总结
 
 * aof 文件存储 RESP 命令，新数据追加到文件末。
 * aof 存储为了避免冗余，需要设置重写处理。
@@ -456,7 +456,7 @@ logfile "redis.log"
 * aof 持久化文件支持 aof 和 rdb 方式混合存储，可以快速重写，并且减少 aof 体积。
 * aof 与 rdb 相比文件体积大，但是容灾能力强，出现问题丢失数据少。
 
-## 参考
+## 4. 参考
 
 * [[redis 源码走读] rdb 持久化 - 文件结构](https://wenfh2020.com/2020/03/19/redis-rdb-struct/)
 * [[redis 源码走读] rdb 持久化 - 应用场景](https://wenfh2020.com/2020/03/19/redis-rdb-application/)

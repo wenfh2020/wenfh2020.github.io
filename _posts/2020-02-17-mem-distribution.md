@@ -15,31 +15,31 @@ author: wenfh2020
 
 ---
 
-## 进程虚拟内存
+## 1. 进程虚拟内存
 
-![进程地址空间](/images/2020-02-20-14-22-08.png)
+![进程地址空间](/images/2020-02-20-14-22-08.png){: data-action="zoom"}
 
 > 图片来源 《深入理解计算机系统》8.2.3 私有地址空间
 
 ---
 
-## 工作流程
+## 2. 工作流程
 
 高级语言 -> 编译器 -> 低级语言指令 -> 内核系统 <---> 硬件。
 
-![程序工作流程](/images/2020-02-20-14-22-32.png)
+![程序工作流程](/images/2020-02-20-14-22-32.png){: data-action="zoom"}
 
 ---
 
-## 测试
+## 3. 测试
 
-### 系统
+### 3.1. 系统
 
 CentOS Linux release 7.4.1708 (Core)  
 
 ---
 
-### 源码
+### 3.2. 源码
 
 * [测试源码](https://github.com/wenfh2020/c_test/tree/master/normal/address.cpp)
 
@@ -172,7 +172,7 @@ address: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked
 
 ---
 
-## elf 格式头
+## 4. elf 格式头
 
 `.text`， `.data`，`bss`，`.rodata` 数据区是程序运行前，编译器分配好的，并不是程序载入内存后进行分配的，可以通过 `objdump` 工具查询。
 
@@ -189,7 +189,7 @@ ELF 可重定位目标文件的格式头：
 
 ---
 
-## objdump 工具
+## 5. objdump 工具
 
 * 通过 objdump 工具查询程序部分变量在 elf 文件中分配在虚拟内存哪个区。
   
@@ -290,7 +290,7 @@ The following switches are optional:
 
 ---
 
-## 参考
+## 6. 参考
 
 * [进程内存分配](https://www.cnblogs.com/coolYuan/p/9228739.html)
 * 《深入理解计算机系统》
