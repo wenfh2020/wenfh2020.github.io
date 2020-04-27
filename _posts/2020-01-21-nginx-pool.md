@@ -208,8 +208,6 @@ ngx_destroy_pool(ngx_pool_t *pool) {
     // 释放回调处理。
     for (c = pool->cleanup; c; c = c->next) {
         if (c->handler) {
-            ngx_log_debug1(NGX_LOG_DEBUG_ALLOC, pool->log, 0,
-                           "run cleanup: %p", c);
             c->handler(c->data);
         }
     }
@@ -249,13 +247,8 @@ ngx_memalign(size_t alignment, size_t size, ngx_log_t *log) {
     err = posix_memalign(&p, alignment, size);
 
     if (err) {
-        ngx_log_error(NGX_LOG_EMERG, log, err,
-                      "posix_memalign(%uz, %uz) failed", alignment, size);
         p = NULL;
     }
-
-    ngx_log_debug3(NGX_LOG_DEBUG_ALLOC, log, 0,
-                   "posix_memalign: %p:%uz @%uz", p, size, alignment);
 
     return p;
 }
@@ -268,12 +261,8 @@ ngx_memalign(size_t alignment, size_t size, ngx_log_t *log) {
 
     p = memalign(alignment, size);
     if (p == NULL) {
-        ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
-                      "memalign(%uz, %uz) failed", alignment, size);
+        ...
     }
-
-    ngx_log_debug3(NGX_LOG_DEBUG_ALLOC, log, 0,
-                   "memalign: %p:%uz @%uz", p, size, alignment);
 
     return p;
 }
