@@ -51,8 +51,15 @@
 
 <!-- Bootstrap Core JavaScript -->
 <script src="https://libs.baidu.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
-<!-- <script src="{{ '/js/bootstrap.min.js' | prepend: site.baseurl }}"></script> -->
 
+<!-- inside <head> -->
+<link href="https://cdn.jsdelivr.net/npm/zoom-vanilla.js/dist/zoom.css" rel="stylesheet">
+
+<!-- before </body> -->
+<script src="https://cdn.jsdelivr.net/npm/zoom-vanilla.js/dist/zoom-vanilla.min.js"></script>
+
+
+<!-- <script src="{{ '/js/bootstrap.min.js' | prepend: site.baseurl }}"></script> -->
 
 <div class="cb-search-tool" style="position: fixed; top:0 ; bottom:0; left:0; right: 0;
       opacity: 0.95; background-color: #111111; z-index: 9999; display: none;">
@@ -66,6 +73,8 @@
 
 <!-- Custom Theme JavaScript -->
 <script src="{{ '/js/codeboy.min.js' | prepend: site.baseurl }}"></script>
+
+
 
 <div style="position: fixed; left: 16px; bottom: 20px;">
     <img src="/search/img/cb-search.png" id="cb-search-btn" title="双击ctrl试一下" />
