@@ -79,9 +79,7 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 
 ---
 
-## 2. 工作流程
-
-`epoll` 是一个事件驱动，主要对文件描述符 fd 以及对应的事件进行管理，服务进程通过 `epoll_wait` 往内核获取就绪可读可写事件进行逻辑处理。
+## 2. 服务器使用流程
 
 * 服务器创建非阻塞 socket（server_fd）。
 * `epoll_create` 创建 epoll 事件驱动 (epoll_fd)。
