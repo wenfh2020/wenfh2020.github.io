@@ -61,13 +61,9 @@ int main(int argc, char** argv) {
 hello world
 ```
 
-## 2. make/Makefile
-
-make 是一个命令工具，解释 Makefile 文件执行对应命令的工具。
-
-Makefile 是一个自动化编译的关系文件。编写了功能模块之间的依赖关系，告诉 make 命令怎么样将模块功能连接起来去编译和链接程序，Makefile 带来的好处就是——“自动化编译”，一旦写好，只需要一个 make 命令，整个工程完全自动编译。
-
 ---
+
+## 2. make/Makefile
 
 ### 2.1. make 工作流程
 
