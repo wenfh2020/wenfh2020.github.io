@@ -1,21 +1,21 @@
 ---
 layout: post
-title:  "进程内存分布（Linux）"
+title:  "程序变量内存分布（Linux）"
 categories: 技术
 tags: 系统 Linux
 author: wenfh2020
 ---
 
-程序进程不能直接访问物理内存，系统通过虚拟内存方式管理进程内存。
+系统通过虚拟内存方式管理进程内存，我们测试一下程序中的变量分别分布在虚拟内存哪些区域。
 
 
 
 * content
 {:toc}
 
----
-
 ## 1. 进程虚拟内存
+
+系统通过虚拟内存方式管理进程内存。
 
 ![进程地址空间](/images/2020-02-20-14-22-08.png){: data-action="zoom"}
 
@@ -23,25 +23,19 @@ author: wenfh2020
 
 ---
 
-## 2. 工作流程
+## 2. 内存分布
 
-高级语言 -> 编译器 -> 低级语言指令 -> 内核系统 <---> 硬件。
-
-![程序工作流程](/images/2020-02-20-14-22-32.png){: data-action="zoom"}
-
----
-
-## 3. 变量分布
+程序源码通过编译，产生可执行的 elf 文件。源码对应的变量，有的在执行前已经在虚拟内存中分配好内存空间，有的需要在程序运行起来才会分配。
 
 * 数据分区
 
-  | 区域       | ELF 格式头      |
-  | :--------- | :-------------- |
-  | 堆栈区     | `stack`         |
-  | 堆区       | `heap`          |
-  | 全局数据区 | `.data`，`.bss` |
-  | 文字常量区 | `.rodata`       |
-  | 程序代码区 | `.text`         |
+  | 区域            | 描述       | 变量类型               |
+  | :-------------- | :--------- | :--------------------- |
+  | `stack`         | 栈区       | 临时变量               |
+  | `heap`          | 堆区       | malloc  分配空间的变量 |
+  | `.data`，`.bss` | 全局数据区 | 全局变量/静态变量      |
+  | `.rodata`       | 文字常量区 | 字符串常量             |
+  | `.text`         | 程序代码区 | 程序代码               |
 
 ---
 
@@ -54,15 +48,15 @@ author: wenfh2020
 
 ---
 
-## 4. 测试
+## 3. 测试
 
-### 4.1. 系统
+### 3.1. 系统
 
 CentOS Linux release 7.4.1708 (Core)  
 
 ---
 
-### 4.2. 源码
+### 3.2. 源码
 
 * 测试源码 ([github](https://github.com/wenfh2020/c_test/tree/master/normal/address.cpp))
 
@@ -92,6 +86,8 @@ int main() {
     return 0;
 }
 ```
+
+* 源码运行结果
 
 ```shell
 # g++ -g address.cpp -o address
@@ -175,7 +171,7 @@ address: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked
 
 ---
 
-## 5. elf 格式头
+## 4. elf 格式头
 
 `.text`， `.data`，`bss`，`.rodata` 数据区是程序运行前，编译器分配好的，并不是程序载入内存后进行分配的，可以通过 `objdump` 工具查询。
 
@@ -192,7 +188,7 @@ ELF 可重定位目标文件的格式头：
 
 ---
 
-## 6. objdump 工具
+## 5. objdump 工具
 
 * 通过 objdump 工具查询程序部分变量在 elf 文件中分配在虚拟内存哪个区。
   
@@ -293,10 +289,11 @@ The following switches are optional:
 
 ---
 
-## 7. 参考
+## 6. 参考
 
 * [进程内存分配](https://www.cnblogs.com/coolYuan/p/9228739.html)
 * 《深入理解计算机系统》
+* 《UNIX 环境高级编程》
 * 《程序员的自我修养》
 * [C语言中的static 详细分析](https://blog.csdn.net/keyeagle/article/details/6708077)
 
