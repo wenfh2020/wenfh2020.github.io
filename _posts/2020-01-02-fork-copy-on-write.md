@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "fork 进程测试 copy-on-write"
-categories: 技术
+categories: Linux
 tags: fork 进程 copy-on-write
 author: wenfh2020
 ---
