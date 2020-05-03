@@ -44,7 +44,7 @@ redis 作者建议：
 
 ## 2. 主线程工作流程
 
-![redis 多线程I/O通信流程](/images/2020-04-20-07-25-44.png){: data-action="zoom"}{: data-action="zoom"}
+![redis 多线程I/O通信流程](/images/2020-05-03-12-47-36.png){:data-action="zoom"}
 
 1. 主线程通过事件驱动从内核获取就绪事件，记录下需要延时操作的客户端连接。
 2. 多线程并行处理延时读事件。
@@ -125,7 +125,7 @@ void afterSleep(struct aeEventLoop *eventLoop) {
 
 ## 3. 多线程协作
 
-![redis 多线程I/O通信流程](/images/2020-04-20-07-25-44.png){: data-action="zoom"}{: data-action="zoom"}
+![redis 多线程I/O通信流程](/images/2020-05-03-12-47-36.png){:data-action="zoom"}
 
 ### 3.1. 特点
 
