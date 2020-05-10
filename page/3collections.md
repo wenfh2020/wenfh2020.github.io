@@ -9,7 +9,7 @@ type: page
 * content
 {:toc}
 
-## 常用查询
+## 1. 常用查询
 
 | 选项     | 链接                                                                                                                                                                                                                                                            |
 | :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -23,14 +23,14 @@ type: page
 
 ---
 
-## 常看博客
+## 2. 常看博客
 
 * [云风的 BLOG](https://blog.codingnow.com/)
 * [峰云就她了](http://xiaorui.cc/)
 
 ---
 
-## 书籍
+## 3. 书籍
 
 | 类型     | 名称                                                                                                                                                                  |
 | :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -45,29 +45,25 @@ type: page
 
 ---
 
-## ebook
+## 4. 收藏
 
-* https://evanli.github.io/programming-book/Git/
-* https://github.com/wenfh2020/books
-* https://github.com/hello2dj/Books-1
+| 类型  | 链接                                                                                                                                                                                                                                                                                                                                                                                                            |
+| :---- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 系统  | [「图文结合」Linux 进程、线程、文件描述符的底层原理](https://www.solves.com.cn/news/hlw/2020-03-15/13907.html) <br/> [Linux slab 分配器剖析](https://www.ibm.com/developerworks/cn/linux/l-linux-slab-allocator/index.html) <br/> [用户空间_内核空间以及内存映射](https://www.solves.com.cn/news/hlw/2020-03-15/13907.html) <br/> [Linux进程调度器-进程切换](https://www.cnblogs.com/LoyenWang/p/12386281.html) |
+| c/c++ | [STL 源码剖析](https://www.kancloud.cn/digest/stl-sources/)                                                                                                                                                                                                                                                                                                                                                     |
+| 管理  | [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp)                                                                                                                                                                                                                                                                                                                                            |
+| ebook | [book1](https://evanli.github.io/programming-book/Git/) <br/> [book2](https://github.com/wenfh2020/books) <br/> [book3](https://github.com/hello2dj/Books-1)                                                                                                                                                                                                                                                    |
+| 素材  | [iconarchive](http://www.iconarchive.com/) <br/> [download video from url](https://en.savefrom.net/11/)                                                                                                                                                                                                                                                                                                         |
 
 ---
 
-## 其它
+## 5. 其它
 
-* [Linux slab 分配器剖析](https://www.ibm.com/developerworks/cn/linux/l-linux-slab-allocator/index.html)
 * [github + jekyll 博客](https://github.com/Gaohaoyang/gaohaoyang.github.io)
   [本博客](https://wenfh2020.com/2020/02/17/make-blog/)主要采用这个模版搭建。搭建框架，请参考[这个文档](https://github.com/wonderseen/wonderseen.github.io)的搭建流程。
-* [STL 源码剖析](https://www.kancloud.cn/digest/stl-sources/)
-  参照侯捷先生的书《STL源码剖析》和SGI STL源码及其文档
 * [The GNU C Library (glibc)](https://www.gnu.org/software/libc/)
-* [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp)
 
 ---
 
-## 素材
-
-* [iconarchive](http://www.iconarchive.com/)
-* [download video from url](https://en.savefrom.net/11/)
 
 <!-- {% include comments.html %} -->
