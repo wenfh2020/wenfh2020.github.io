@@ -20,7 +20,7 @@ author: wenfh2020
 
 * 参数
 
-  品牌: Gobigger；型号：zb156u（非触控4k屏）；重量： 678g；价钱：1899 RMB。
+  品牌：Gobigger；型号：zb156u（非触控4k屏）；重量：678g；价钱：1899 RMB。
 
 ![Gobigger](/images/2020-05-13-11-27-48.png){:data-action="zoom"}
 
