@@ -90,6 +90,26 @@ telnet 127.0.0.1 12456
 
 ![tcp 状态变迁](/images/2020-04-13-13-14-49.png){: data-action="zoom"}
 
+```c
+// tcp_states.h
+enum {
+    TCP_ESTABLISHED = 1,
+    TCP_SYN_SENT,
+    TCP_SYN_RECV,
+    TCP_FIN_WAIT1,
+    TCP_FIN_WAIT2,
+    TCP_TIME_WAIT,
+    TCP_CLOSE,
+    TCP_CLOSE_WAIT,
+    TCP_LAST_ACK,
+    TCP_LISTEN,
+    TCP_CLOSING,    /* Now a valid state */
+    TCP_NEW_SYN_RECV,
+
+    TCP_MAX_STATES    /* Leave at the end! */
+};
+```
+
 ---
 
 ## 4. 其它
