@@ -14,21 +14,18 @@ type: page
         <ul>
             {% for category in site.categories %}
             <h2 id="{{category | first}}">{{category | first}}</h2>
-                {% for posts in category  %}
-                    {% for post in posts %}
-                        {% if post.url %}
-                        <li>
-                            <time>
-                            {{ post.date | date:"%F" }} {{ post.date | date: "%a" }}.
-                            </time>
-                            <a class="title" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
-
-                            {% include category.html %}
-                            {% include tag.html %}
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-                {% endfor %}
+            {% for posts in category  %}
+            {% for post in posts %}
+            {% if post.url %}
+            <li>
+                <time>
+                    {{ post.date | date:"%F" }} {{ post.date | date: "%a" }}.
+                </time>
+                <a class="title" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
             {% endfor %}
         </ul>
     </div>
@@ -43,11 +40,11 @@ type: page
                 </div>
                 <ul id="content-side" class="content-ul">
                     {% for category in site.categories%}
-                        <li>
-                            <a data-scroll href="#{{ category | first }}">
-                                {{ category | first }} ({{ category | last | size }})
-                            </a>
-                        </li>
+                    <li>
+                        <a data-scroll href="#{{ category | first }}">
+                            {{ category | first }} ({{ category | last | size }})
+                        </a>
+                    </li>
                     {% endfor %}
                 </ul>
             </div>

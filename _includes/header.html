@@ -9,24 +9,24 @@
                     {% if page.url == '/' %}
                     <a class="active" href="{{site.baseurl}}/">
                         {% else %}
-                    <a href="{{site.baseurl}}/">
-                    {% endif %}
-                        <i class="fa fa-home"></i>Home
-                    </a>
+                        <a href="{{site.baseurl}}/">
+                            {% endif %}
+                            <i class="fa fa-home"></i>Home
+                        </a>
                 </li>
 
                 {% for my_page in site.pages %}
-                    {% if my_page.type == 'page' %}
-                    <li>
-                        {% if my_page.url == page.url %}
-                        <a class="active" href="{{ my_page.url | prepend: site.baseurl }}">
-                            {% else %}
+                {% if my_page.type == 'page' and my_page.url != '/tag/' %}
+                <li>
+                    {% if my_page.url == page.url %}
+                    <a class="active" href="{{ my_page.url | prepend: site.baseurl }}">
+                        {% else %}
                         <a href="{{ my_page.url | prepend: site.baseurl }}">
-                        {% endif %}
+                            {% endif %}
                             <i class="fa fa-{{my_page.icon}}"></i>{{ my_page.title }}
                         </a>
-                    </li>
-                    {% endif %}
+                </li>
+                {% endif %}
                 {% endfor %}
             </ul>
         </nav>
