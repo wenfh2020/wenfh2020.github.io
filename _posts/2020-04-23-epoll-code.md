@@ -6,13 +6,11 @@ tags: epoll Linux
 author: wenfh2020
 ---
 
-主要针对 tcp，对 epoll 源码进行走读。
+文章主要对 tcp 通信进行 epoll 源码走读。
 
-Linux 源码：github 上的 [Linux 5.7 版本](https://github.com/torvalds/linux/releases/tag/v5.7-rc4)。
+Linux 源码：[Linux 5.7 版本](https://github.com/torvalds/linux/releases/tag/v5.7-rc4)。epoll 核心源码：[eventpoll.h](https://github.com/torvalds/linux/blob/master/include/linux/eventpoll.h) / [eventpoll.c](https://github.com/torvalds/linux/blob/master/fs/eventpoll.c)。
 
-epoll 核心源码：[eventpoll.h](https://github.com/torvalds/linux/blob/master/include/linux/eventpoll.h) / [eventpoll.c](https://github.com/torvalds/linux/blob/master/fs/eventpoll.c)。
 
-epoll 涉及到很多内核知识点，理解 `ep_poll_callback` 这个回调函数的调用时机和实现原理，可以说 epoll 已经理解一半了。
 
 * content
 {:toc}
@@ -25,15 +23,14 @@ epoll 涉及到很多内核知识点，理解 `ep_poll_callback` 这个回调函
 
 例如 app，正常用户并不是 24 小时都拿起手机玩个不停，可能玩一下，又去干别的事，回头又玩一下，断断续续地操作。即便正在使用 app 也不是连续产生读写通信事件，可能手指点击几下页面，页面产生需要的内容，用户就去浏览内容，不再操作了。换句话说，在海量用户里，同一个时间段内，很可能只有一小部分用户正在活跃，而在这一小部分活跃用户里，又只有一小撮人同时点击页面上的操作。那 epoll 管理海量用户，只需要将这一小撮人产生的事件，及时通知 appserver 处理逻辑即可。
 
----
-
-同样的场景，如果用户是机器人，24 小时不停地工作，这种场景下 epoll 模型还合适吗？带着问题，我们去解 epoll。
+> 问题：同样场景，如果用户是机器人，24 小时持续工作，这种场景下使用 epoll 还合适吗？
 
 ---
 
 ## 2. 预备知识
 
-走读 epoll 源码前，可以先参考：网络通信过程中，内核是如何工作的，这样思路才会清晰。
+* 走读 epoll 源码前，先熟悉网络的通信流程。
+* 理解过程中，可以通过 [Linux 文档](https://linux.die.net/man/) 搜索 epoll 相关知识。
 
 ---
 
@@ -53,98 +50,36 @@ epoll 涉及到很多内核知识点，理解 `ep_poll_callback` 这个回调函
 
 ---
 
-## 4. 源码
+## 4. 事件
 
-### 4.1. 事件
-
-对应事件注释可以参考文档 [epoll_ctl](http://man7.org/linux/man-pages/man2/epoll_ctl.2.html)。
+常用事件解析可以请参考 [epoll_ctl 文档](http://man7.org/linux/man-pages/man2/epoll_ctl.2.html)。
 
 ```c
 // eventpoll.h
-
-/* Epoll event masks */
 #define EPOLLIN     (__force __poll_t)0x00000001
-#define EPOLLPRI    (__force __poll_t)0x00000002
 #define EPOLLOUT    (__force __poll_t)0x00000004
 #define EPOLLERR    (__force __poll_t)0x00000008
 #define EPOLLHUP    (__force __poll_t)0x00000010
-#define EPOLLNVAL   (__force __poll_t)0x00000020
-#define EPOLLRDNORM (__force __poll_t)0x00000040
-#define EPOLLRDBAND (__force __poll_t)0x00000080
-#define EPOLLWRNORM (__force __poll_t)0x00000100
-#define EPOLLWRBAND (__force __poll_t)0x00000200
-#define EPOLLMSG    (__force __poll_t)0x00000400
 #define EPOLLRDHUP  (__force __poll_t)0x00002000
-
 #define EPOLLEXCLUSIVE  ((__force __poll_t)(1U << 28))
-#define EPOLLWAKEUP ((__force __poll_t)(1U << 29))
-#define EPOLLONESHOT    ((__force __poll_t)(1U << 30))
 #define EPOLLET     ((__force __poll_t)(1U << 31))
 ```
 
-| 事件 | 描述 |
-| :--- | :--- |
-|      |      |
+| 事件           | 描述                                                                                                                                                           |
+| :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EPOLLIN        | 有可读数据到来。                                                                                                                                               |
+| EPOLLOUT       | 有数据要写。                                                                                                                                                   |
+| EPOLLERR       | 该文件描述符发生错误。                                                                                                                                         |
+| EPOLLHUP       | 该文件描述符被挂断。常见 socket 被关闭（read == 0）。                                                                                                          |
+| EPOLLRDHUP     | 对端已关闭链接，或者用 shutdown 关闭了写链接。                                                                                                                 |
+| EPOLLEXCLUSIVE | 唯一唤醒事件，主要为了解决 epoll_wait 惊群问题。多线程下多个 epoll_wait 同时等待，只唤醒一个 epoll_wait 执行。 该事件只支持 epoll_ctl 添加操作 EPOLL_CTL_ADD。 |
+| EPOLLET        | 边缘触发模式。                                                                                                                                                 |
 
-### 4.2. 数据结构
+---
 
-* fd 管理节点
+## 5. 数据结构
 
-```c
-struct epitem {
-    union {
-        /* RB tree node links this structure to the eventpoll RB tree */
-        struct rb_node rbn;
-        /* Used to free the struct epitem */
-        struct rcu_head rcu;
-    };
-
-    /* List header used to link this structure to the eventpoll ready list */
-    struct list_head rdllink;
-
-    /*
-     * Works together "struct eventpoll"->ovflist in keeping the
-     * single linked chain of items.
-     */
-    struct epitem *next;
-
-    /* The file descriptor information this item refers to */
-    struct epoll_filefd ffd;
-
-    /* Number of active wait queue attached to poll operations */
-    int nwait;
-
-    /* List containing poll wait queues */
-    struct list_head pwqlist;
-
-    /* The "container" of this item */
-    struct eventpoll *ep;
-
-    /* List header used to link this item to the "struct file" items list */
-    struct list_head fllink;
-
-    /* wakeup_source used when EPOLLWAKEUP is set */
-    struct wakeup_source __rcu *ws;
-
-    /* The structure that describe the interested events and the source fd */
-    struct epoll_event event;
-};
-```
-
-| 成员    | 描述                                                              |
-| :------ | :---------------------------------------------------------------- |
-| rbn     | 连接红黑树结构节点。                                              |
-| rdllink | 就绪队列节点，用于将 epitem 串联成 epoll 就绪队列列表。           |
-| next    |                                                                   |
-| ffd     | 记录节点对应的 fd 和 file 文件信息。                              |
-| nwait   | 等待队列个数。                                                    |
-| pwqlist | 等待事件回调队列。当数据进入网卡，底层中断执行 ep_poll_callback。 |
-| ep      | eventpoll 指针，epitem 与 eventpoll 进行关联。                    |
-| fllink  |                                                                   |
-| ws      |                                                                   |
-| event   | 用户关注的事件。                                                  |
-
-* eventpoll
+### 5.1. eventpoll
 
 ```c
 /*
@@ -202,30 +137,155 @@ struct eventpoll {
 };
 ```
 
-| 成员      | 描述                                                                                                                                                                                                        |
-| :-------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| mtx       | 互斥变量，避免在遍历 epi 节点时（例如 ep_send_events），epi 被删除。                                                                                                                                        |
-| wq        | 等待队列，当 epoll_wait 没发现就绪事件需要处理，添加等待事件，需要睡眠阻塞等待唤醒进程。                                                                                                                    |
-| poll_wait | 等待队列，当epoll_ctl 监听的是另外一个 epoll fd 时使用。                                                                                                                                                    |
-| rdllist   | 就绪列表，产生了用户注册的 fd读写事件的 epi 链表。                                                                                                                                                          |
-| lock      | 锁，保护 rdllist 和 ovflist 。                                                                                                                                                                              |
-| rbr       | 红黑树根结点，管理 fd 结点。                                                                                                                                                                                |
-| ovflist   | 单链表，当 rdllist 被锁定遍历，向用户空间发送数据时，rdllist 不允许被修改，所以新触发的就绪 epi 被保存在 ovflist，等待 rdllist 被处理完了，重新将 ovflist 数据写入 rdllist。 详看 ep_scan_ready_list 逻辑。 |
-| user      | 创建 eventpoll 的用户结构信息。                                                                                                                                                                             |
-| file      | eventpoll 对应的文件结构，Linux 一切皆文件，用 vfs 管理数据。                                                                                                                                               |
-| napi_id   | 应用于中断缓解技术。                                                                                                                                                                                        |
+| 成员      | 描述                                                                                                                                                                                                          |
+| :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| mtx       | 互斥变量，避免在遍历 epi 节点时（例如 ep_send_events），epi 被删除。                                                                                                                                          |
+| wq        | 等待队列，当 epoll_wait 没发现就绪事件需要处理，添加等待事件，需要睡眠阻塞等待唤醒进程。                                                                                                                      |
+| poll_wait | 等待队列，当epoll_ctl 监听的是另外一个 epoll fd 时使用。                                                                                                                                                      |
+| rdllist   | 就绪列表，产生了用户注册的 fd读写事件的 epi 链表。                                                                                                                                                            |
+| ovflist   | 单链表，当 rdllist 被锁定遍历，向用户空间发送数据时，rdllist 不允许被修改，新触发的就绪 epitem 被 ovflist 串联起来，等待 rdllist 被处理完了，重新将 ovflist 数据写入 rdllist。 详看 ep_scan_ready_list 逻辑。 |
+| user      | 创建 eventpoll 的用户结构信息。                                                                                                                                                                               |
+| lock      | 锁，保护 rdllist 和 ovflist 。                                                                                                                                                                                |
+| rbr       | 红黑树根结点，管理 fd 结点。                                                                                                                                                                                  |
+| file      | eventpoll 对应的文件结构，Linux 一切皆文件，用 vfs 管理数据。                                                                                                                                                 |
+| napi_id   | 应用于中断缓解技术。                                                                                                                                                                                          |
 
 ---
 
-### 4.3. 关键源码函数
+### 5.2. epitem
 
-| 函数 | 描述 |
-| :--- | :--- |
-|      |      |
+fd 事件管理节点。可以添加到红黑树，也可以串联成就绪列表或其它列表。
+
+```c
+/*
+ * Each file descriptor added to the eventpoll interface will
+ * have an entry of this type linked to the "rbr" RB tree.
+ * Avoid increasing the size of this struct, there can be many thousands
+ * of these on a server and we do not want this to take another cache line.
+ */
+struct epitem {
+    union {
+        /* RB tree node links this structure to the eventpoll RB tree */
+        struct rb_node rbn;
+        /* Used to free the struct epitem */
+        struct rcu_head rcu;
+    };
+
+    /* List header used to link this structure to the eventpoll ready list */
+    struct list_head rdllink;
+
+    /*
+     * Works together "struct eventpoll"->ovflist in keeping the
+     * single linked chain of items.
+     */
+    struct epitem *next;
+
+    /* The file descriptor information this item refers to */
+    struct epoll_filefd ffd;
+
+    /* Number of active wait queue attached to poll operations */
+    int nwait;
+
+    /* List containing poll wait queues */
+    struct list_head pwqlist;
+
+    /* The "container" of this item */
+    struct eventpoll *ep;
+
+    /* List header used to link this item to the "struct file" items list */
+    struct list_head fllink;
+
+    /* wakeup_source used when EPOLLWAKEUP is set */
+    struct wakeup_source __rcu *ws;
+
+    /* The structure that describe the interested events and the source fd */
+    struct epoll_event event;
+};
+```
+
+| 成员    | 描述                                                                                         |
+| :------ | :------------------------------------------------------------------------------------------- |
+| rbn     | 连接红黑树结构节点。                                                                         |
+| rdllink | 就绪队列节点，用于将 epitem 串联成就绪队列列表。                                             |
+| next    | 指向下一个单链表节点的指针。配合 eventpoll 的 ovflist 使用。                                 |
+| ffd     | 记录节点对应的 fd 和 file 文件信息。                                                         |
+| nwait   | 等待队列个数。                                                                               |
+| pwqlist | 等待事件回调队列。当数据进入网卡，底层中断执行 ep_poll_callback。                            |
+| ep      | eventpoll 指针，epitem 关联 eventpoll。                                                      |
+| fllink  | epoll 文件链表结点，与 epoll 文件链表进行关联 file.f_ep_links。参考 fs.h, struct file 结构。 |
+| ws      | EPOLLWAKEUP 模式下使用。                                                                     |
+| event   | 用户关注的事件。                                                                             |
 
 ---
 
-### 4.4. 初始化
+### 5.3. epoll_filefd
+
+fd 对应 file 文件结构，Linux 一切皆文件，采用了 vfs （虚拟文件系统）管理文件或设备。
+
+```c
+struct epoll_filefd {
+    struct file *file;
+    int fd;
+} __packed;
+```
+
+---
+
+### 5.4. epoll_event
+
+用户关注的 epoll 事件结构。
+
+```c
+struct epoll_event {
+    __poll_t events;
+    __u64 data;
+} EPOLL_PACKED;
+```
+
+| 成员   | 描述     |
+| :----- | :------- |
+| events | 事件集合 |
+| data   | fd       |
+
+---
+
+### 5.5. poll_table_struct
+
+就绪事件处理结构。
+
+```c
+typedef struct poll_table_struct {
+    poll_queue_proc _qproc;
+    __poll_t _key;
+} poll_table;
+```
+
+| 成员   | 描述     |
+| :----- | :------- |
+| _qproc | 处理函数 |
+| _key   | 事件组合 |
+
+---
+
+## 6. 关键源码函数
+
+| 函数                | 描述                                                                                                                                                                                                      |
+| :------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| eventpoll_init      | 初始化 epoll 模块。eventpoll 作为 Linux 内核的一部分，模块化管理。                                                                                                                                        |
+| do_epoll_create     | 为 eventpoll 结构分配资源。                                                                                                                                                                               |
+| do_epoll_ctl        | epoll 管理 fd 事件接口。                                                                                                                                                                                  |
+| do_epoll_wait       | 有条件阻塞等待 fd 事件发生，返回对fd 和对应事件数据。                                                                                                                                                     |
+| ep_item_poll        | 获取 fd 就绪事件，并关联 fd 和事件触发回调函数 ep_poll_callback。                                                                                                                                         |
+| ep_poll_callback    | fd 事件回调函数。当底层收到数据，中断调用 fd 关联的 ep_poll_callback 回调函数，如果事件是用户关注的事件，会将 fd 对应的 epi 结点添加进就绪队列，然后唤醒阻塞等待的 epoll_wait 处理。                      |
+| ep_send_events      | 遍历就绪列表，拷贝内核空间就绪数据到用户空间。结合 ep_scan_ready_list 和 ep_send_events_proc 使用。                                                                                                       |
+| ep_scan_ready_list  | 遍历就绪列表。当 fd 收到数据，回调 ep_poll_callback，如果事件是用户关注的，那么将 fd 对应的 epi 结点添加到就绪队列，ep_scan_ready_list 会遍历这个就绪列表，将数据从内核空间拷贝到用户空间，或者其它操作。 |
+| ep_send_events_proc | 内核将就绪列表数据，发送到用户空间。结合 ep_scan_ready_list 使用。LT/ET 模式在这个函数里实现。                                                                                                            |
+
+---
+
+## 7. 源码
+
+### 7.1. 初始化
 
 添加 epoll 模块到内核，slab 算法为 epoll 分配资源。
 
@@ -248,7 +308,7 @@ fs_initcall(eventpoll_init);
 
 ---
 
-### 4.5. epoll_create
+### 7.2. epoll_create
 
 创建 eventpoll 关联 vfs 文件。
 
@@ -293,7 +353,7 @@ out_free_ep:
 
 ---
 
-### 4.6. epoll_ctl
+### 7.3. epoll_ctl
 
 增删改 fd 对应的关注事件。添加关注事件，整个流程就是，将 fd 加入到等待队列，等待队列关联回调 ep_poll_callback。当 fd 有事件发生时，触发等待队列，从而执行 ep_poll_callback 处理就绪事件，并唤醒进程。整个流程：
 
@@ -510,7 +570,7 @@ static void ep_ptable_queue_proc(struct file *file, wait_queue_head_t *whead, po
 }
 ```
 
-### 4.7. epoll_wait
+### 7.4. epoll_wait
   
 ```c
 SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
@@ -765,7 +825,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 ---
 
-## 5. ep_poll_callback
+## 8. ep_poll_callback
 
 fd 事件回调。当 fd 有网络事件发生，就会通过等待队列，进行回调。参考 __wake_up_common，如果事件是用户关注的事件，回调会唤醒进程进行处理。
 
@@ -870,7 +930,7 @@ out_unlock:
 
 ```
 
-## 6. question
+## 9. question
 
 * select/poll/epoll 区别。
 * 红黑树
@@ -887,10 +947,12 @@ out_unlock:
 * vfs 架构。
 * lt/et 区别
 * 解决多个 epoll_wait 惊群问题。
+* EPOLLOUT
+* listen 的流程。
 
 ---
 
-## 7. 参考
+## 10. 参考
 
 * [Linux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
 * [inux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
@@ -915,6 +977,7 @@ out_unlock:
 * [EPOLL 源码分析](http://www.pigpig.vip/?p=8)
 * [用户空间和内核空间传递数据](https://www.cnblogs.com/wanghetao/archive/2012/06/02/2532225.html)
 * [《Linux内核设计与实现》读书笔记（十）- 内核同步方法](https://www.cnblogs.com/wang_yb/archive/2013/05/01/3052865.html)
+* [虚拟文件系统VFS](https://www.cnblogs.com/nufangrensheng/p/3579145.html)
 
 ---
 
