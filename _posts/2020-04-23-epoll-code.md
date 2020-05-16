@@ -433,7 +433,7 @@ struct ep_pqueue {
 
 ---
 
-## 8. 源码
+## 8. 核心源码
 
 ### 8.1. 初始化
 
@@ -618,8 +618,15 @@ static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
 
     return 0;
 }
+```
 
-// fd 节点就绪事件处理。
+---
+
+### 8.4. ep_item_poll
+
+fd 节点就绪事件处理。
+
+```c
 static __poll_t ep_item_poll(const struct epitem *epi, poll_table *pt, int depth) {
     struct eventpoll *ep;
     bool locked;
@@ -683,8 +690,15 @@ static inline void poll_wait(struct file * filp, wait_queue_head_t * wait_addres
         // _qproc ---> ep_ptable_queue_proc
         p->_qproc(filp, wait_address, p);
 }
+```
 
-// socket 的等待队列关联回调函数 ep_poll_callback
+---
+
+### 8.5. ep_ptable_queue_proc
+
+socket 的等待队列关联回调函数 ep_poll_callback
+
+```c
 static void ep_ptable_queue_proc(struct file *file, wait_queue_head_t *whead, poll_table *pt) {
     struct epitem *epi = ep_item_from_epqueue(pt);
     struct eppoll_entry *pwq;
@@ -716,7 +730,7 @@ static void ep_ptable_queue_proc(struct file *file, wait_queue_head_t *whead, po
 }
 ```
 
-### 8.4. epoll_wait
+### 8.6. epoll_wait
   
 ```c
 SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
@@ -852,8 +866,16 @@ static int ep_send_events(struct eventpoll *ep,
     ep_scan_ready_list(ep, ep_send_events_proc, &esed, 0, false);
     return esed.res;
 }
+```
 
-// 遍历就绪列表，处理 sproc。
+---
+
+### 8.7. ep_scan_ready_list
+
+遍历就绪列表，处理 sproc 函数。这里 sproc 函数指针的使用，是为了减少代码冗余，将 ep_scan_ready_list 做成一个通用的函数。
+
+```c
+// 
 static __poll_t ep_scan_ready_list(struct eventpoll *ep,
                   __poll_t (*sproc)(struct eventpoll *,
                        struct list_head *, void *),
@@ -879,8 +901,15 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
     list_splice(&txlist, &ep->rdllist);
     ...
 }
+```
 
-// 处理就绪列表，将数据从内核空间拷贝到用户空间。
+---
+
+### 8.8. ep_send_events_proc
+
+处理就绪列表，将数据从内核空间拷贝到用户空间。
+
+```c
 static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head, void *priv) {
     struct ep_send_events_data *esed = priv;
     __poll_t revents;
@@ -948,7 +977,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 ---
 
-## 9. ep_poll_callback
+### 8.9. ep_poll_callback
 
 fd 事件回调。当 fd 有网络事件发生，就会通过等待队列，进行回调。参考 __wake_up_common，如果事件是用户关注的事件，回调会唤醒进程进行处理。
 
@@ -1054,7 +1083,7 @@ out_unlock:
 
 ---
 
-## 10. 参考
+## 9. 参考
 
 * [Linux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
 * [inux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
