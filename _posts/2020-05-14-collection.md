@@ -6,7 +6,7 @@ tags:
 author: wenfh2020
 --- 
 
-主要是常用知识的整理和收藏，方便查阅。
+常用知识整理和收藏，方便查阅。
 
 
 
@@ -60,7 +60,7 @@ author: wenfh2020
 | 系统  | [「图文结合」Linux 进程、线程、文件描述符的底层原理](https://www.solves.com.cn/news/hlw/2020-03-15/13907.html) <br/> [Linux slab 分配器剖析](https://www.ibm.com/developerworks/cn/linux/l-linux-slab-allocator/index.html) <br/> [用户空间_内核空间以及内存映射](https://www.solves.com.cn/news/hlw/2020-03-15/13907.html) <br/> [Linux进程调度器-进程切换](https://www.cnblogs.com/LoyenWang/p/12386281.html) |
 | c/c++ | [STL 源码剖析](https://www.kancloud.cn/digest/stl-sources/)                                                                                                                                                                                                                                                                                                                                                     |
 | 管理  | [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp)                                                                                                                                                                                                                                                                                                                                            |
-| ebook | [book1](https://evanli.github.io/programming-book/Git/) <br/> [book2](https://github.com/wenfh2020/books) <br/> [book3](https://github.com/hello2dj/Books-1)   <br/> [book4](https://github.com/yuebaii/books)                                                                                                                                                                                                  |
+| ebook | [book1](https://evanli.github.io/programming-book/Git/) <br/> [book2](https://github.com/wenfh2020/books) <br/> [book3](https://github.com/hello2dj/Books-1)   <br/> [book4](https://github.com/yuebaii/books)     <br/> [book5](https://github.com/lancetw/ebook-1)                                                                                                                                            |
 | 素材  | [iconarchive](http://www.iconarchive.com/) <br/> [download video from url](https://en.savefrom.net/11/)                                                                                                                                                                                                                                                                                                         |
 
 ---
@@ -73,4 +73,4 @@ author: wenfh2020
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/05/14/collection/)
