@@ -1097,7 +1097,6 @@ out_unlock:
 * [epoll_ctl 文档](http://man7.org/Linux/man-pages/man2/epoll_ctl.2.html)
 * [epoll的原理过程讲解](https://www.bilibili.com/video/BV1T4411h7nH?from=search&seid=4446246779743557520)
 * [socket---proto_ops---inetsw_array等基本结构](https://blog.csdn.net/hhhhhyyyyy8/article/details/102755866)
-* [EPOLL内核原理极简图文解读](https://blog.csdn.net/linkedin_38454662/article/details/73337208)
 * [epoll高效IO复用](https://zhuanlan.zhihu.com/p/72532475)
 * [Epoll技术扩展](https://blog.csdn.net/wind_602/article/details/104863808)
 * [Linux网络包收发总体过程](https://www.cnblogs.com/zhjh256/p/12227883.html)
@@ -1109,6 +1108,7 @@ out_unlock:
 * [用户空间和内核空间传递数据](https://www.cnblogs.com/wanghetao/archive/2012/06/02/2532225.html)
 * [《Linux内核设计与实现》读书笔记（十）- 内核同步方法](https://www.cnblogs.com/wang_yb/archive/2013/05/01/3052865.html)
 * [虚拟文件系统VFS](https://www.cnblogs.com/nufangrensheng/p/3579145.html)
+* [epoll用法【整理】](https://www.cnblogs.com/apprentice89/archive/2013/05/06/3063039.html)
 
 ---
 
