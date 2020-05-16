@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[epoll 源码走读] epoll 源码理解-预备知识"
+title:  "[epoll 源码走读] epoll 源码实现-预备知识"
 categories: 网络
 tags: epoll Linux
 author: wenfh2020

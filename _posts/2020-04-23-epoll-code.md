@@ -254,10 +254,38 @@ struct epoll_event {
 就绪事件处理结构。
 
 ```c
+/* poll.h
+ * Do not touch the structure directly, use the access functions
+ * poll_does_not_wait() and poll_requested_events() instead.
+ */
 typedef struct poll_table_struct {
     poll_queue_proc _qproc;
     __poll_t _key;
 } poll_table;
+
+/*
+ * structures and helpers for f_op->poll implementations
+ */
+typedef void (*poll_queue_proc)(struct file *, wait_queue_head_t *, struct poll_table_struct *);
+```
+
+| 成员   | 描述                                                   |
+| :----- | :----------------------------------------------------- |
+| _qproc | 处理函数，可以指向 ep_ptable_queue_proc 函数，或者空。 |
+| _key   | 事件组合                                               |
+
+---
+
+### 5.6. ep_pqueue
+
+包装就绪事件处理结构，关联 epitem。
+
+```c
+/* Wrapper struct used by poll queueing */
+struct ep_pqueue {
+    poll_table pt;
+    struct epitem *epi;
+};
 ```
 
 | 成员   | 描述     |
@@ -269,17 +297,18 @@ typedef struct poll_table_struct {
 
 ## 6. 关键源码函数
 
-| 函数                | 描述                                                                                                                                                                                                      |
-| :------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| eventpoll_init      | 初始化 epoll 模块。eventpoll 作为 Linux 内核的一部分，模块化管理。                                                                                                                                        |
-| do_epoll_create     | 为 eventpoll 结构分配资源。                                                                                                                                                                               |
-| do_epoll_ctl        | epoll 管理 fd 事件接口。                                                                                                                                                                                  |
-| do_epoll_wait       | 有条件阻塞等待 fd 事件发生，返回对fd 和对应事件数据。                                                                                                                                                     |
-| ep_item_poll        | 获取 fd 就绪事件，并关联 fd 和事件触发回调函数 ep_poll_callback。                                                                                                                                         |
-| ep_poll_callback    | fd 事件回调函数。当底层收到数据，中断调用 fd 关联的 ep_poll_callback 回调函数，如果事件是用户关注的事件，会将 fd 对应的 epi 结点添加进就绪队列，然后唤醒阻塞等待的 epoll_wait 处理。                      |
-| ep_send_events      | 遍历就绪列表，拷贝内核空间就绪数据到用户空间。结合 ep_scan_ready_list 和 ep_send_events_proc 使用。                                                                                                       |
-| ep_scan_ready_list  | 遍历就绪列表。当 fd 收到数据，回调 ep_poll_callback，如果事件是用户关注的，那么将 fd 对应的 epi 结点添加到就绪队列，ep_scan_ready_list 会遍历这个就绪列表，将数据从内核空间拷贝到用户空间，或者其它操作。 |
-| ep_send_events_proc | 内核将就绪列表数据，发送到用户空间。结合 ep_scan_ready_list 使用。LT/ET 模式在这个函数里实现。                                                                                                            |
+| 函数                 | 描述                                                                                                                                                                                                      |
+| :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| eventpoll_init       | 初始化 epoll 模块。eventpoll 作为 Linux 内核的一部分，模块化管理。                                                                                                                                        |
+| do_epoll_create      | 为 eventpoll 结构分配资源。                                                                                                                                                                               |
+| do_epoll_ctl         | epoll 管理 fd 事件接口。                                                                                                                                                                                  |
+| do_epoll_wait        | 有条件阻塞等待 fd 事件发生，返回对fd 和对应事件数据。                                                                                                                                                     |
+| ep_item_poll         | 获取 fd 就绪事件，并关联 fd 和事件触发回调函数 ep_poll_callback。                                                                                                                                         |
+| ep_poll_callback     | fd 事件回调函数。当底层收到数据，中断调用 fd 关联的 ep_poll_callback 回调函数，如果事件是用户关注的事件，会将 fd 对应的 epi 结点添加进就绪队列，然后唤醒阻塞等待的 epoll_wait 处理。                      |
+| ep_send_events       | 遍历就绪列表，拷贝内核空间就绪数据到用户空间。结合 ep_scan_ready_list 和 ep_send_events_proc 使用。                                                                                                       |
+| ep_scan_ready_list   | 遍历就绪列表。当 fd 收到数据，回调 ep_poll_callback，如果事件是用户关注的，那么将 fd 对应的 epi 结点添加到就绪队列，ep_scan_ready_list 会遍历这个就绪列表，将数据从内核空间拷贝到用户空间，或者其它操作。 |
+| ep_send_events_proc  | 内核将就绪列表数据，发送到用户空间。结合 ep_scan_ready_list 使用。LT/ET 模式在这个函数里实现。                                                                                                            |
+| ep_ptable_queue_proc | 添加 fd 的等待事件到等待队列。                                                                                                                                                                            |
 
 ---
 
@@ -310,7 +339,7 @@ fs_initcall(eventpoll_init);
 
 ### 7.2. epoll_create
 
-创建 eventpoll 关联 vfs 文件。
+创建 eventpoll 对象，关联文件资源。
 
 ```c
 static int do_epoll_create(int flags) {
@@ -342,12 +371,7 @@ static int do_epoll_create(int flags) {
     // fd 与 file* 结构进行绑定。
     fd_install(fd, file);
     return fd;
-
-out_free_fd:
-    put_unused_fd(fd);
-out_free_ep:
-    ep_free(ep);
-    return error;
+    ...
 }
 ```
 
@@ -355,11 +379,21 @@ out_free_ep:
 
 ### 7.3. epoll_ctl
 
-增删改 fd 对应的关注事件。添加关注事件，整个流程就是，将 fd 加入到等待队列，等待队列关联回调 ep_poll_callback。当 fd 有事件发生时，触发等待队列，从而执行 ep_poll_callback 处理就绪事件，并唤醒进程。整个流程：
+fd 对应的事件管理（增删改）。
+
+* 添加 fd 事件管理流程：fd 关联回调 ep_poll_callback。
 
 ```shell
-fd -> socket -> poll -> ep_ptable_queue_proc -> wait_queue -> ep_poll_callback -> waitup -> epoll_wait(wake up)
+fd -> socket -> poll -> ep_ptable_queue_proc -> wait_queue -> ep_poll_callback
 ```
+
+* 触发了 fd 关注的事件回调处理。
+
+```shell
+driver -> ep_poll_callback -> waitup -> epoll_wait(wake up)
+```
+
+---
 
 ```c
 SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
@@ -384,17 +418,18 @@ int do_epoll_ctl(int epfd, int op, int fd, struct epoll_event *epds, bool nonblo
     ...
     // 检查参数合法性。
     ...
-    // 在 anon_inode_getfile 中关联 private_data 与 eventpoll。
+    // 在 do_epoll_create 实现里 anon_inode_getfile 将 private_data 与 eventpoll 关联。
     ep = f.file->private_data;
     ...
-    // 从二叉树中查找，检查 epoll 是否已经监控 fd 的事件。（fd 被红黑树管理起来，每个 fd 对应一个树节点。）
+    // 红黑树检查 fd 是否已经被添加。
     epi = ep_find(ep, tf.file, fd);
 
     error = -EINVAL;
     switch (op) {
     case EPOLL_CTL_ADD:
         if (!epi) {
-            // epoll 如果没有添加过该 fd，就添加到红黑树进行管理。
+            /* epoll 如果没有添加过该 fd，就添加到红黑树进行管理。
+             * 事件默认关注异常处理(EPOLLERR | EPOLLHUP)。*/
             epds->events |= EPOLLERR | EPOLLHUP;
             error = ep_insert(ep, epds, tf.file, fd, full_check);
         } else
@@ -422,25 +457,12 @@ int do_epoll_ctl(int epfd, int op, int fd, struct epoll_event *epds, bool nonblo
     return error;
 }
 
-// 用户关注的 epoll 事件结构。
-struct epoll_event {
-    __poll_t events; // 事件
-    __u64 data;      // fd
-} EPOLL_PACKED;
-
-// 就绪事件处理结构。
-typedef struct poll_table_struct {
-    poll_queue_proc _qproc; // 处理函数。
-    __poll_t _key;          // 事件组合。
-} poll_table;
-
 static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
              struct file *tfile, int fd, int full_check) {
     // epoll 管理 fd 和对应事件节点 epitem 数据结构。
     struct epitem *epi;
     struct ep_pqueue epq;
     ...
-    /* Initialize the poll table using the queue callback */
     epq.epi = epi;
 
     // 初始化就绪事件处理函数调用。poll() 接口调用 ep_ptable_queue_proc。
@@ -449,8 +471,7 @@ static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
     // 添加等待队列，如果 fd 有用户关注的事件发生，返回对应 fd 关注的事件 revents。
     revents = ep_item_poll(epi, &epq.pt, 1);
     ...
-    /* Add the current item to the list of active epoll hook for this file */
-    // 将当前节点，添加到文件钩子。
+    // 将当前节点，添加到 epoll 文件钩子，将 epoll 文件与 fd 对应文件串联起来。
     list_add_tail_rcu(&epi->fllink, &tfile->f_ep_links);
 
     // 将节点添加进二叉树
@@ -461,10 +482,9 @@ static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
         list_add_tail(&epi->rdllink, &ep->rdllist);
         ep_pm_stay_awake(epi);
 
-        /* Notify waiting tasks that events are available */
-        /* 如果进程正在睡眠等待，唤醒它去处理就绪事件。睡眠事件 ep->wq 是在 epoll_wait 中添加进去的，
-         * 如果没有就绪事件处理 epoll_wait就睡眠，等待有就绪事件处理，被唤醒。*/
+        /* 如果进程正在睡眠等待，唤醒它去处理就绪事件。睡眠事件 ep->wq 在 epoll_wait 中添加*/
         if (waitqueue_active(&ep->wq))
+            // 唤醒进程
             wake_up(&ep->wq);
 
         // 如果监控的是另外一个 epoll_create 的 fd，有就绪事件，也唤醒进程。
@@ -485,10 +505,10 @@ static __poll_t ep_item_poll(const struct epitem *epi, poll_table *pt, int depth
 
     pt->_key = epi->event.events;
     if (!is_file_epoll(epi->ffd.file)) {
-        // 非 epoll fd，tcp_poll 函数检查 socket 对应读写事件是否已经发生。
+        // 非 epoll fd，tcp_poll 检查 socket 就绪事件，fd 关联回调函数 ep_poll_callback。
         return vfs_poll(epi->ffd.file, pt) & epi->event.events;
     } else {
-        // epoll fd 嵌套处理。epoll_ctl 添加另外一个 epoll 的 fd。
+        // epoll 嵌套。epoll_ctl 添加关注了另外一个 epoll 的 fd(epfd)。
         ep = epi->ffd.file->private_data;
         poll_wait(epi->ffd.file, &ep->poll_wait, pt);
         locked = pt && (pt->_qproc == ep_ptable_queue_proc);
@@ -509,13 +529,15 @@ static inline __poll_t vfs_poll(struct file *file, struct poll_table_struct *pt)
 }
 
 // tcp.c
+// tcp 就绪事件获取函数。
 __poll_t tcp_poll(struct file *file, struct socket *sock, poll_table *wait) {
     __poll_t mask;
     struct sock *sk = sock->sk;
     const struct tcp_sock *tp = tcp_sk(sk);
     int state;
 
-    // 添加等待队列和事件回调函数 ep_poll_callback
+    /* 添加等待队列和关联事件回调函数 ep_poll_callback
+     *（只有 epoll_ctl EPOLL_CTL_ADD 的情况下，才会添加等待事件，否则 wait == NULL）*/
     sock_poll_wait(file, sock, wait);
 
     // 检查 fd 是否有事件发生。
@@ -549,18 +571,21 @@ static void ep_ptable_queue_proc(struct file *file, wait_queue_head_t *whead, po
     if (epi->nwait >= 0 && (pwq = kmem_cache_alloc(pwq_cache, GFP_KERNEL))) {
         // 关联等待队列和ep_poll_callback。
         init_waitqueue_func_entry(&pwq->wait, ep_poll_callback);
+
         // whead ---> socket->wq.wait
         pwq->whead = whead;
         pwq->base = epi;
-        // 等待事件，添加到等待队列。
+
+        /* 等待事件，添加到等待队列。EPOLLEXCLUSIVE 为了解决 epoll_wait 惊群问题。
+         * 如果多线程同时调用 epoll_wait，那么 fd 应该设置 EPOLLEXCLUSIVE 事件。 */
         if (epi->event.events & EPOLLEXCLUSIVE) {
             add_wait_queue_exclusive(whead, &pwq->wait);
-        }
-        else {
+        } else {
             add_wait_queue(whead, &pwq->wait);
         }
 
-        // 等待事件，关联 epitem。
+        /* 等待事件，关联 epitem。epitem 为什么要有一个等待队列呢，
+         * 因为有可能一个进程里存在多个 epoll 实例同时 epoll_ctl 关注一个 fd。*/
         list_add_tail(&pwq->llink, &epi->pwqlist);
         epi->nwait++;
     } else {
@@ -580,15 +605,7 @@ SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 
 static int do_epoll_wait(int epfd, struct epoll_event __user *events,
              int maxevents, int timeout) {
-    int error;
-    struct fd f;
-    struct eventpoll *ep;
     ...
-    f = fdget(epfd);
-    ...
-    // 在 anon_inode_getfile 中关联 private_data 与 eventpoll。
-    ep = f.file->private_data;
-
     // timeout 阻塞等待处理并返回就绪事件。
     error = ep_poll(ep, events, maxevents, timeout);
     ...
@@ -617,12 +634,7 @@ fetch_events:
         // 如果有就绪事件了，就直接不用睡眠等待了，进入发送环节。
         goto send_events;
 
-    /*
-     * Busy poll timed out.  Drop NAPI ID for now, we can add
-     * it back in when we have moved a socket with a valid NAPI
-     * ID onto the ready list.
-     */
-    ep_reset_busy_poll_napi_id(ep);
+    ...
 
     // 没有就绪事件发生，需要睡眠等待。
     if (!waiter) {
@@ -686,8 +698,7 @@ send_events:
      * more luck.
      */
 
-    // 如果程序运行正确，有就绪事件，那么发送就绪事件到用户空间。
-    // 如果程序运行正确，有就绪事件，发送事件失败，但是还没有超时，那么继续获取就绪事件进行发送。
+    // 有就绪事件就发送到用户空间，否则继续获取数据直到超时。
     if (!res && eavail && !(res = ep_send_events(ep, events, maxevents)) &&
         !timed_out)
         goto fetch_events;
@@ -716,12 +727,12 @@ static int ep_send_events(struct eventpoll *ep,
     esed.maxevents = maxevents;
     esed.events = events;
 
-    // 遍历事件就绪列表。
+    // 遍历事件就绪列表，发送就绪事件到用户空间。
     ep_scan_ready_list(ep, ep_send_events_proc, &esed, 0, false);
     return esed.res;
 }
 
-// 遍历就绪列表
+// 遍历就绪列表，处理 sproc。
 static __poll_t ep_scan_ready_list(struct eventpoll *ep,
                   __poll_t (*sproc)(struct eventpoll *,
                        struct list_head *, void *),
@@ -734,25 +745,10 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
     list_splice_init(&ep->rdllist, &txlist);
     res = (*sproc)(ep, &txlist, priv);
     ...
-    // 在处理 sproc 回调过程中，可能产生新的就绪事件，将事件写入 rdllist
-    /*
-     * During the time we spent inside the "sproc" callback, some
-     * other events might have been queued by the poll callback.
-     * We re-insert them inside the main ready-list here.
-     */
+    // 在处理 sproc 回调处理过程中，可能产生新的就绪事件被写入 ovflist，将 ovflist 回写 rdllist。
     for (nepi = READ_ONCE(ep->ovflist); (epi = nepi) != NULL;
          nepi = epi->next, epi->next = EP_UNACTIVE_PTR) {
-        /*
-         * We need to check if the item is already in the list.
-         * During the "sproc" callback execution time, items are
-         * queued into ->ovflist but the "txlist" might already
-         * contain them, and the list_splice() below takes care of them.
-         */
         if (!ep_is_linked(epi)) {
-            /*
-             * ->ovflist is LIFO, so we have to reverse it in order
-             * to keep in FIFO.
-             */
             list_add(&epi->rdllink, &ep->rdllist);
             ep_pm_stay_awake(epi);
         }
@@ -774,11 +770,14 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
     init_poll_funcptr(&pt, NULL);
     ...
 
-    // 遍历处理 txlist（ep->rdllist 的拷贝）就绪队列。
+    // 遍历处理 txlist（原 ep->rdllist 数据）就绪队列结点，获取事件拷贝到用户空间。
     list_for_each_entry_safe (epi, tmp, head, rdllink) {
         if (esed->res >= esed->maxevents)
             break;
         ...
+        // 先从就绪队列中删除 epi，如果是 LT 模式，就绪事件还没处理完，再把它添加回去。
+        list_del_init(&epi->rdllink);
+
         // 获取 epi 对应 fd 的就绪事件。
         revents = ep_item_poll(epi, &pt, 1);
         if (!revents)
@@ -794,6 +793,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
                 esed->res = -EFAULT;
             return 0;
         }
+
         // 成功处理就绪事件的 fd 个数。
         esed->res++;
         uevent++;
@@ -812,8 +812,10 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
              * ep_scan_ready_list() holding "mtx" and the
              * poll callback will queue them in ep->ovflist.
              */
-            // lt 模式下，当前事件被处理完后，不会从就绪列表中删除，留待下一次 epoll_wait
-            // 调用，再查看是否还有事件没处理，如果没有事件了就从就绪列表中删除。
+            /* lt 模式下，当前事件被处理完后，不会从就绪列表中删除，留待下一次 epoll_wait
+             * 调用，再查看是否还有事件没处理，如果没有事件了就从就绪列表中删除。
+             * 在遍历事件的过程中，不能写 ep->rdllist，因为已经上锁，只能把新的就绪信息
+             * 添加到 ep->ovflist */
             list_add_tail(&epi->rdllink, &ep->rdllist);
             ep_pm_stay_awake(epi);
         }
@@ -927,32 +929,11 @@ out_unlock:
 
     return ewake;
 }
-
 ```
-
-## 9. question
-
-* select/poll/epoll 区别。
-* 红黑树
-* 内存拷贝。用户数据，拷贝到内核。
-* epoll/poll/select 性能，使用场景，优缺点。
-* slab 内部结构。
-* redis 动态内存分配。
-* 发送和接收数据缓存是怎么样的。
-* 惊群事件。
-* 红黑树算法，二叉树遍历。(`rbtree.h`)
-* redis epoll 的封装 [ae_epoll.c](https://github.com/antirez/redis/blob/unstable/src/ae_epoll.c)
-* 异步，如果数据一次读不完，一次写不完，怎么办。
-* listen back_log 有什么关系。
-* vfs 架构。
-* lt/et 区别
-* 解决多个 epoll_wait 惊群问题。
-* EPOLLOUT
-* listen 的流程。
 
 ---
 
-## 10. 参考
+## 9. 参考
 
 * [Linux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
 * [inux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
