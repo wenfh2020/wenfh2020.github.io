@@ -45,14 +45,14 @@ epoll 源码涉及到很多知识点：（socket）网络通信，进程调度�
 | TASK_RUNNING         | 正在运行                           |
 | TASK_INTERRUPTIBLE   | 等待状态。等待状态可被信号解除。   |
 | TASK_UNINTERRUPTIBLE | 等待状态。等待状态不可被信号解除。 |
-
 ---
+
 
 ## 3. 等待队列
 
 什么是等待队列，进程阻塞睡眠后，内核如何通过等待队列唤醒进程工作。
 
-> 参考 [linux等待队列 wait_queue的使用](https://blog.csdn.net/u012218309/article/details/81148083)。
+> 参考 [linux等待队列 wait_queue 的使用](https://blog.csdn.net/u012218309/article/details/81148083)。
 
 ---
 
@@ -460,4 +460,4 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/04/22/epoll_code-prepare/)
