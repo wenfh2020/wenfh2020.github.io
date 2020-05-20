@@ -176,12 +176,20 @@ ps -ef | grep gdb | grep -v grep | awk '{print $3}' | xargs sudo kill -9
 
 字符串处理
 
+* linux
+
 ```shell
-# linux
+# replace
 sed -i "s/jack/tom/g" test.txt
 sed -i "s/\/usr\/local\/bin/\/usr\/bin/g" /etc/init.d/fdfs_storaged
 
-# mac
+# find and delete line.
+sed '/gettimeofday/d' /tmp/connect.slave
+```
+
+* mac
+
+```shell
 sed -i '' 's/\/usr\/local\/bin/\/usr\/bin/g' /etc/init.d/fdfs_storaged
 ```
 

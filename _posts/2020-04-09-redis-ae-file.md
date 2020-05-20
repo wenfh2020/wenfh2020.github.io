@@ -316,4 +316,4 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/04/09/redis-ae-file/)

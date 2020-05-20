@@ -75,7 +75,7 @@ $4^M
 *3\r\n$3\r\nset\r\n$7\r\nkey1111$4\r\n$1111\r\n
 ```
 
-* RESP 协议格式，以 `\r\n` 作为分隔符，有一个作用：可以用 `fgets`，将文件数据一行一行读出来。
+* [RESP 协议格式](https://redis.io/topics/protocol)，以 `\r\n` 作为分隔符，有一个作用：可以用 `fgets`，将文件数据一行一行读出来。
 
 ```shell
 *<命令参数个数>\r\n$<第1个参数字符串长度>\r\n$<第1个参数字符串>\r\n$<第2个参数字符串长度>\r\n$<第2个参数字符串>\r\n$<第n个参数字符串长度>\r\n$<第n个参数字符串>
@@ -506,4 +506,4 @@ void *bioProcessBackgroundJobs(void *arg) {
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/03/29/redis-aof-prev/)
