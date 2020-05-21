@@ -212,7 +212,10 @@ rdb 实现附加功能，保存服务数据复制的相关信息。当服务在�
 
 ---
 
-可以参考 redis 这两个源码改动：[PSYNC2: Save replication ID/offset on RDB file.](https://github.com/antirez/redis/commit/28c96d73b2e157a37465560bc421280d17005708?diff=unified)，[PSYNC2: different improvements to Redis replication.](https://github.com/antirez/redis/commit/2669fb8364c4c4080b7b75809ca94fc8022151de?diff=unified)
+可以参考 redis 这两个源码改动：
+
+* [PSYNC2: Save replication ID/offset on RDB file.](https://github.com/antirez/redis/commit/28c96d73b2e157a37465560bc421280d17005708?diff=unified)
+* [PSYNC2: different improvements to Redis replication.](https://github.com/antirez/redis/commit/2669fb8364c4c4080b7b75809ca94fc8022151de?diff=unified)
 
 ```c
 /* This structure can be optionally passed to RDB save/load functions in

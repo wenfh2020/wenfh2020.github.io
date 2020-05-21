@@ -1,23 +1,22 @@
 ---
 layout: post
-title:  "[redis 源码走读] 主从复制"
+title:  "[redis 源码走读] 主从复制（数据同步）"
 categories: redis
 tags: redis replication
 author: wenfh2020
 ---
 
-redis 主从模式有两个作用：
+redis 主从模式主要作用：
 
-* 支持读写分离，提高系统的负载能力。
-* 集群模式或哨兵模式，保证 redis 高可用。
+* 读写分离，提高系统的负载能力。
+* 集群模式或哨兵模式，保证服务高可用。
 
-本章主要研究一下源码，了解 redis 主从数据同步的策略是怎么样的。
+本章主要走读源码，理解 redis 主从数据同步流程。
 
 * 握手流程。
 * 全量同步，非全量同步流程。
 * 数据同步完成后，实时数据同步流程。
 * 断线重连后的同步流程。
-
 
 
 
@@ -28,7 +27,7 @@ redis 主从模式有两个作用：
 
 ## 1. 命令
 
-`replicaof`/`slaveof` 命令，可以使得两个 redis 实例产生副本关系。
+`replicaof`/`slaveof` 命令，可以使得两个 redis 实例产生主从关系。
 
 ```shell
 # 建立副本关系。
@@ -40,7 +39,7 @@ replicaof no one
 
 ---
 
-redis 5.0 以后，建议使用 [replicaof](https://redis.io/commands/replicaof)，不建议使用 [slaveof](https://redis.io/commands/slaveof)，但是仍然支持，两个命令功能是一样的。当 redis 是 `cluster` 集群模式情况下，`replicaof`/`slaveof` 命令不允许使用。
+[replicaof](https://redis.io/commands/replicaof) 和 [slaveof](https://redis.io/commands/slaveof) 命令实现方法相同，但是不支持 redis `cluster` 集群模式下使用。
 
 ```c
 // replicaof 和 slaveof 命令功能实现相同。
@@ -70,7 +69,7 @@ void replicaofCommand(client *c) {
 
 ## 2. 流程
 
-主从数据同步主要分两种，全量同步，增量同步。我们先跑一下，从日志和数据抓取查看它的工作流程，然后再走读源码。
+主从数据同步主要分两种：全量同步，增量同步。先跑一下，跟踪它的工作流程，然后再走读源码。
 
 客户端 client 将 redis-server1 设置成 redis-server2 的副本。
 
@@ -79,6 +78,10 @@ void replicaofCommand(client *c) {
 * client
 
 ```shell
+# 链接 6379 端口服务。
+./src/redis-cli -h 127.0.0.1 -p 6379
+
+# 设置主从关系。
 replicaof 127.0.0.1 16379
 ```
 
@@ -96,65 +99,18 @@ replicaof 127.0.0.1 16379
 
 ---
 
-### 2.1. 日志流程
+### 2.1. 全量同步
+
+slave 与 master 第一次建立主从关系，数据全量同步。
 
 * slave (127.0.0.1:6379)
-
-```shell
-19836:S 20 May 2020 06:53:07.745 * Before turning into a replica, using my own master parameters to synthesize a cached master: I may be able to synchronize with the new master with just a partial transfer.
-19836:S 20 May 2020 06:53:07.746 * REPLICAOF 127.0.0.1:16379 enabled (user request from 'id=4 addr=127.0.0.1:13832 fd=7 name= age=16 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=45 qbuf-free=32723 obl=0 oll=0 omem=0 events=r cmd=replicaof user=default')
-# 链接握手。
-19836:S 20 May 2020 06:53:08.507 * Connecting to MASTER 127.0.0.1:16379
-19836:S 20 May 2020 06:53:08.508 * MASTER <-> REPLICA sync started
-19836:S 20 May 2020 06:53:08.508 * Non blocking connect for SYNC fired the event.
-19836:S 20 May 2020 06:53:08.511 * Master replied to PING, replication can continue...
-# 向主服务发送同步信息，服务 id 和 服务当前数据偏移量。
-19836:S 20 May 2020 06:53:08.514 * Trying a partial resynchronization (request 48f9e4f8d75856f90b65299ce0c6ae57a8a69814:1).
-# 向 master 进行数据全量同步。
-19836:S 20 May 2020 06:53:08.531 * Full resync from master: d28bd808c0922b5679039db98a7493f76689084e:0
-19836:S 20 May 2020 06:53:08.532 * Discarding previously cached master state.
-# 接收 master 发送的数据。
-19836:S 20 May 2020 06:53:08.799 * MASTER <-> REPLICA sync: receiving 276 bytes from master to disk
-# 服务删除旧数据。
-19836:S 20 May 2020 06:53:08.800 * MASTER <-> REPLICA sync: Flushing old data
-# 从新的 rdb 文件中加载数据进入内存。
-19836:S 20 May 2020 06:53:08.800 * MASTER <-> REPLICA sync: Loading DB in memory
-19836:S 20 May 2020 06:53:08.801 * Loading RDB produced by version 5.9.104
-19836:S 20 May 2020 06:53:08.802 * RDB age 0 seconds
-19836:S 20 May 2020 06:53:08.802 * RDB memory usage when created 1.83 Mb
-# 数据全量同步成功。
-19836:S 20 May 2020 06:53:08.804 * MASTER <-> REPLICA sync: Finished with success
-```
-
-* master (127.0.0.1:16379)
-
-```shell
-# 通过握手与 slave 进行通信。
-19831:M 20 May 2020 06:53:08.515 * Replica 127.0.0.1:6379 asks for synchronization
-19831:M 20 May 2020 06:53:08.516 * Partial resynchronization not accepted: Replication ID mismatch (Replica asked for '48f9e4f8d75856f90b65299ce0c6ae57a8a69814', my replication IDs are '667662257ed2a295ae15f5a3b92c93fb535ece50' and '0000000000000000000000000000000000000000')
-# 确认全量数据同步，先将内存数据通过 BGSAVE 命令异步保存为 rdb 文件快照。
-19831:M 20 May 2020 06:53:08.516 * Starting BGSAVE for SYNC with target: disk
-19831:M 20 May 2020 06:53:08.518 * Background saving started by pid 19934
-# rdb 文件存盘成功。
-19934:C 20 May 2020 06:53:08.522 * DB saved on disk
-19934:C 20 May 2020 06:53:08.523 * RDB: 0 MB of memory used by copy-on-write
-19831:M 20 May 2020 06:53:08.795 * Background saving terminated with success
-# 传输数据到 slave，成功后收到回复。
-19831:M 20 May 2020 06:53:08.798 * Synchronization with replica 127.0.0.1:6379 succeeded
-```
-
----
-
-### 2.2. 网络通信流程
-
-* slave
 
 ```shell
 # strace 抓取底层通信接口的调用。
 strace -p 19836 -s 512 -o /tmp/connect.slave
 
 # 太多时间接口调用了。可以通过 sed 过滤这些数据。
-sed '/gettimeofday/d' /tmp/connect.slave >  /tmp/connect.slave.bak 
+sed '/gettimeofday/d' /tmp/connect.slave >  /tmp/connect.slave.bak
 ```
 
 ```shell
@@ -166,6 +122,7 @@ write(1, "19836:S 20 May 2020 06:53:07.745 * Before turning into a replica, usin
 getpeername(7, {sa_family=AF_INET, sin_port=htons(13832), sin_addr=inet_addr("127.0.0.1")}, [16]) = 0
 # 给客户端返回 ack，服务开始与 master 进行通信连接。
 write(7, "+OK\r\n", 5)                  = 5
+# -------------------------------------------
 epoll_wait(5, [], 10128, 757)           = 0
 write(1, "19836:S 20 May 2020 06:53:08.507 * Connecting to MASTER 127.0.0.1:16379\n", 72) = 72
 # 创建 socket 进行连接。
@@ -342,10 +299,12 @@ read(8, "*1\r\n$4\r\nPING\r\n", 16384)  = 14
 write(8, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n14\r\n", 35) = 35
 ```
 
-* master
+* master (127.0.0.1:16379)
 
 ```shell
 strace -p 19831 -s 512 -o /tmp/connect.master
+sed '/gettimeofday/d' /tmp/connect.master >  /tmp/connect.master.bak
+
 ```
 
 ```shell
@@ -640,17 +599,13 @@ static void connSocketEventHandler(struct aeEventLoop *el, int fd, void *clientD
 
 ---
 
-## 5. question
+## 6. 总结
 
-* 复制的命令。
-* 复制的时序流程。
-* 相关结构。
-* 同步数据的流程，从 connect 开始。链接状态，副本状态。
-* 要观察发送和接收两方面的数据。
+* 异步逻辑，与同步比较，逻辑不够直观，通过回调实现逻辑有点绕，复杂的逻辑往往把人绕晕。如果支持协程，用同步逻辑写异步那维护成本显然会降低很多，然而协程对于 c/c++ 也不是个简单的东西。不像 `golang`，源码级别上支持。如果要安装一大堆库去支持，那就得不偿失了！
 
 ---
 
-## 6. 参考
+## 7. 参考
 
 * 《redis 设计与实现》
 
