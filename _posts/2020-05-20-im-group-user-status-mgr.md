@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[即时通讯]分布式系统-用户在线状态管理"
+title:  "[即时通讯] 分布式系统-用户在线状态管理"
 categories: 即时通讯
 tags: im group
 author: wenfh2020
@@ -55,4 +55,4 @@ author: wenfh2020
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/05/20/im-group-user-status-mgr/)
