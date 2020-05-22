@@ -9,14 +9,24 @@ author: wenfh2020
 redis 主从模式主要作用：
 
 * 读写分离，提高系统的负载能力。
-* 集群模式或哨兵模式，保证服务高可用。
+* 集群模式下，保证服务高可用。
 
-本章主要走读源码，理解 redis 主从数据同步流程。
+本章主要走读源码 [`replication.c`](https://github.com/antirez/redis/blob/unstable/src/replication.c)，理解 redis 主从数据同步流程。
+
+```shell
+# Master-Replica replication. Use replicaof to make a Redis instance a copy of
+# another Redis server. A few things to understand ASAP about Redis replication.
+#
+#   +------------------+      +---------------+
+#   |      Master      | ---> |    Replica    |
+#   | (receive writes) |      |  (exact copy) |
+#   +------------------+      +---------------+
+```
 
 * 握手流程。
-* 全量同步，非全量同步流程。
-* 数据同步完成后，实时数据同步流程。
-* 断线重连后的同步流程。
+* 全量/增量同步流程。
+* 断线重连数据同步流程。
+* 握手同步数据成功后，运行过程中的数据同步策略。
 
 
 
@@ -25,13 +35,27 @@ redis 主从模式主要作用：
 
 ---
 
-## 1. 命令
+## 1. 概述
+
+---
+
+## 2. 预备知识
+
+走读源码前，有三件事需要做的：
+
+1. 查阅官方文档 [Replication](https://redis.io/topics/replication)。
+2. 熟悉 redis.conf 配置文件，对应 `REPLICATION` 部分配置项作用。
+3. Linux 平台下用 `strace` 命令跟踪 slave 和 master 的工作流程。
+
+---
+
+## 3. 命令
 
 `replicaof`/`slaveof` 命令，可以使得两个 redis 实例产生主从关系。
 
 ```shell
 # 建立副本关系。
-replicaof host port
+replicaof <masterip> <masterport>
 
 # 取消副本关系。
 replicaof no one
@@ -67,9 +91,9 @@ void replicaofCommand(client *c) {
 
 ---
 
-## 2. 流程
+## 4. 流程
 
-主从数据同步主要分两种：全量同步，增量同步。先跑一下，跟踪它的工作流程，然后再走读源码。
+主从数据同步主要分两种：全量同步，增量同步。先跑一下，熟悉它的工作流程。
 
 客户端 client 将 redis-server1 设置成 redis-server2 的副本。
 
@@ -87,9 +111,11 @@ replicaof 127.0.0.1 16379
 
 ---
 
-1. slave 和 master 双方握手建立连接。
-2. 链接成功后，slave 发送命令 `psync` 要求 master 数据同步。
-3. `master` 检查 slave 的数据偏移量，确认是否全量同步，还是局部数据同步。
+### 4.1. 全量同步
+
+1. slave 和 master 双方走握手流程。
+2. slave 发送命令 `psync` 要求 master 数据同步。
+3. master 检查 slave 的数据偏移量，确认是否全量同步，还是局部数据同步。
 4. 全量同步，master 给 slave 回复 `+FULLRESYNC`，并且通过 bgsave 命令将当前内存数据存储为一个 rdb 文件快照，准备发送给 slave。
 5. slave 收到全量同步回复，创建临时 rdb 文件，等待 master 发送 rdb 文件进行数据同步。
 6. master 成功产生 rdb 文件，给 slave 发送文件。
@@ -97,13 +123,16 @@ replicaof 127.0.0.1 16379
 8. slave 接收完 rdb 文件后，将 rdb 数据重新加载到 redis 内存。
 9. slave 通知 master 数据复制完成。
 
+![redis 全量同步流程](/images/2020-05-22-19-36-49.png){:data-action="zoom"}
+
+redis 实例建立主从关系，数据全量同步。
+
 ---
 
-### 2.1. 全量同步
+#### 4.1.1. slave (127.0.0.1:6379)
 
-slave 与 master 第一次建立主从关系，数据全量同步。
-
-* slave (127.0.0.1:6379)
+* 同步流程： `syncWithMaster`。
+* 同步文件逻辑：`readSyncBulkPayload`。
 
 ```shell
 # strace 抓取底层通信接口的调用。
@@ -125,13 +154,13 @@ write(7, "+OK\r\n", 5)                  = 5
 # -------------------------------------------
 epoll_wait(5, [], 10128, 757)           = 0
 write(1, "19836:S 20 May 2020 06:53:08.507 * Connecting to MASTER 127.0.0.1:16379\n", 72) = 72
-# 创建 socket 进行连接。
+# 创建非阻塞 socket。
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 8
 setsockopt(8, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
 fcntl(8, F_GETFL)                       = 0x2 (flags O_RDWR)
 fcntl(8, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
 bind(8, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("127.0.0.1")}, 16) = 0
-# 连接，注意这里的通信是阻塞的。
+# 连接 master。
 connect(8, {sa_family=AF_INET, sin_port=htons(16379), sin_addr=inet_addr("127.0.0.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
 # 连接成功后发送数据。
 epoll_ctl(5, EPOLL_CTL_ADD, 8, {EPOLLOUT, {u32=8, u64=8}}) = 0
@@ -164,7 +193,6 @@ read(8, "O", 1)                         = 1
 read(8, "K", 1)                         = 1
 read(8, "\r", 1)                        = 1
 read(8, "\n", 1)                        = 1
-# 成功握手后，发送命令 psync2，要求 master 进行数据同步工作。
 # REPLCONF CAPA is used in order to notify masters that a slave is able to understand the new +CONTINUE reply.
 write(8, "*5\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$3\r\neof\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n", 59) = 59
 epoll_wait(5, [{EPOLLIN, {u32=8, u64=8}}], 10128, 995) = 1
@@ -256,6 +284,7 @@ read(8, "REDIS0009\372\tredis-ver\0075.9.104\372\nredis-bits\300@\372\5ctime\302
 # 保存在本地临时文件。
 write(9, "REDIS0009\372\tredis-ver\0075.9.104\372\nredis-bits\300@\372\5ctime\302Tc\304^\372\10used-mem\302\2704\35\0\372\16repl-stream-db\300\0\372\7repl-id(d28bd808c0922b5679039db98a7493f76689084e\372\vrepl-offset\300\0\372\faof-preamble\300\0\376\0\373\6\0\0\7fsddf3a\tfddsffdsf\0\3fsf\4fdsf\0\4fsdf\4fdsf\0\5fsdf3\10fdsffdsf\0\6fsddf3\10fdsffdsf\0\tfsd44df3a\tfddsffdsf\377Q\211\240\211\306\270\r$", 276) = 276
 write(1, "19836:S 20 May 2020 06:53:08.800 * MASTER <-> REPLICA sync: Flushing old data\n", 78) = 78
+# 在导入数据前，先删除 fd 读事件，避免事件触发异步回调，导致递归重复处理逻辑。
 epoll_ctl(5, EPOLL_CTL_DEL, 8, 0x7fff69cdcb24) = 0
 write(1, "19836:S 20 May 2020 06:53:08.800 * MASTER <-> REPLICA sync: Loading DB in memory\n", 81) = 81
 open("dump.rdb", O_RDONLY|O_NONBLOCK)   = 10
@@ -299,7 +328,9 @@ read(8, "*1\r\n$4\r\nPING\r\n", 16384)  = 14
 write(8, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n14\r\n", 35) = 35
 ```
 
-* master (127.0.0.1:16379)
+---
+
+#### 4.1.2. master (127.0.0.1:16379)
 
 ```shell
 strace -p 19831 -s 512 -o /tmp/connect.master
@@ -333,7 +364,7 @@ read(7, "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6379\r\n", 16384
 # 回复。
 write(7, "+OK\r\n", 5)                  = 5
 epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 281) = 1
-# ？
+# slave 回复，支持新协议。(REPLCONF CAPA is used in order to notify masters that a slave is able to understand the new +CONTINUE reply.)
 read(7, "*5\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$3\r\neof\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n", 16384) = 59
 write(7, "+OK\r\n", 5)                  = 5
 epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 280) = 1
@@ -398,9 +429,9 @@ read(7, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n14\r\n", 16384) = 35
 
 ---
 
-## 3. 数据结构
+## 5. 数据结构
 
-### 3.1. redisServer
+### 5.1. redisServer
 
 ```c
 #define CONFIG_RUN_ID_SIZE 40
@@ -430,7 +461,9 @@ struct redisServer {
 
 ---
 
-### 3.2. 通信状态
+### 5.2. 通信状态
+
+同步数据流程，每一个步骤的状态。
 
 ```c
 /* Slave replication state. Used in server.repl_state for slaves to remember
@@ -457,7 +490,9 @@ struct redisServer {
 
 ---
 
-## 4. 通信逻辑
+## 6. 通信逻辑
+
+核心逻辑在这个函数里 `syncWithMaster`。
 
 ```c
 int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
@@ -597,17 +632,37 @@ static void connSocketEventHandler(struct aeEventLoop *el, int fd, void *clientD
 
 ```
 
+## 7. 其它
+
+* 防止脑裂。
+* 
+
 ---
 
-## 6. 总结
+## 8. 总结
 
-* 异步逻辑，与同步比较，逻辑不够直观，通过回调实现逻辑有点绕，复杂的逻辑往往把人绕晕。如果支持协程，用同步逻辑写异步那维护成本显然会降低很多，然而协程对于 c/c++ 也不是个简单的东西。不像 `golang`，源码级别上支持。如果要安装一大堆库去支持，那就得不偿失了！
+* 异步逻辑，与同步比较，逻辑不够直观，复杂的回调实现逻辑经常会把人绕晕。
+* 主从全量数据同步，当数据量大的时，同步时间比较长。redis 支持一主多从，并不是 slave 越多越好，如果多个 slave 同时掉线，需要全量同步，肯定会导致系统集群卡顿一段时间。可以考虑多级 slave。
 
 ---
 
-## 7. 参考
+## 9. question
 
+* 根据测试流程，走读源码。
+* 增量同步。逻辑。
+* slaves chain 逻辑。
+* 断线重连逻辑。
+* 实时通信。
+* 积压缓冲区。
+* 传递过程中有新的命令，怎么同步。
+
+---
+
+## 10. 参考
+
+* [Replication](https://redis.io/topics/replication)
 * 《redis 设计与实现》
+* [Codis 与 RedisCluster 的原理详解](https://www.cnblogs.com/pingyeaa/p/11294773.html)
 
 ---
 

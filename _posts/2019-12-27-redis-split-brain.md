@@ -20,9 +20,9 @@ author: wenfh2020
 比较简单的方案，进行 redis 设置:
 
 ```shell
-# master 至少有 3 个副本连接
+# master 至少有 N 个副本连接。
 min-slaves-to-write 3
-# 数据复制和同步的延迟不能超过 10 秒
+# 数据复制和同步的延迟不能超过 M 秒。
 min-slaves-max-lag 10
 ```
 
@@ -56,6 +56,8 @@ redis.conf 相关解析
 
 ## 2. 实现流程
 
+* 时钟定期检查副本链接健康情况。
+
 ```c
 #define run_with_period(_ms_) if ((_ms_ <= 1000/server.hz) || !(server.cronloops%((_ms_)/(1000/server.hz))))
 
@@ -64,7 +66,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 }
 
 /* Replication cron function, called 1 time per second. */
-// 复制周期执行的函数，每秒调用1次
+// 复制周期执行的函数，每秒调用1次。
 void replicationCron(void) {
     // 更新延迟至log小于min-slaves-max-lag的从服务器数量
     refreshGoodSlavesCount();
@@ -79,22 +81,43 @@ void refreshGoodSlavesCount(void) {
     listNode *ln;
     int good = 0;
 
-    // 没设置限制则返回
+    // 没设置限制则返回。
     if (!server.repl_min_slaves_to_write ||
         !server.repl_min_slaves_max_lag) return;
 
     listRewind(server.slaves,&li);
-    // 遍历所有的从节点client
+    // 遍历所有的从节点 client。
     while((ln = listNext(&li))) {
         client *slave = ln->value;
         // 计算延迟值
         time_t lag = server.unixtime - slave->repl_ack_time;
 
-        // 计数小于延迟限制的个数
+        // 计数小于延迟限制的个数。
         if (slave->replstate == SLAVE_STATE_ONLINE &&
             lag <= server.repl_min_slaves_max_lag) good++;
     }
     server.repl_good_slaves_count = good;
+}
+```
+
+* 超出配置范围，禁止写命令。
+
+```c
+int processCommand(client *c) {
+    ...
+    /* Don't accept write commands if there are not enough good slaves and
+     * user configured the min-slaves-to-write option. */
+    if (server.masterhost == NULL &&
+        server.repl_min_slaves_to_write &&
+        server.repl_min_slaves_max_lag &&
+        c->cmd->flags & CMD_WRITE &&
+        server.repl_good_slaves_count < server.repl_min_slaves_to_write)
+    {
+        flagTransaction(c);
+        addReply(c, shared.noreplicaserr);
+        return C_OK;
+    }
+    ...
 }
 ```
 
