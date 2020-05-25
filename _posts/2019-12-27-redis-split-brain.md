@@ -17,7 +17,7 @@ author: wenfh2020
 
 ## 1. 解决方案
 
-比较简单的方案，进行 redis 设置:
+比较简单的方案，修改 redis 配置 [redis.conf](https://github.com/antirez/redis/blob/unstable/redis.conf) :
 
 ```shell
 # master 至少有 N 个副本连接。
@@ -25,6 +25,15 @@ min-slaves-to-write 3
 # 数据复制和同步的延迟不能超过 M 秒。
 min-slaves-max-lag 10
 ```
+
+> **注意：高版本 redis 已经修改这个两个选项**
+>
+>```shell
+># min-replicas-to-write 3
+># min-replicas-max-lag 10
+>```
+
+---
 
 redis.conf 相关解析
 
@@ -100,7 +109,7 @@ void refreshGoodSlavesCount(void) {
 }
 ```
 
-* 超出配置范围，禁止写命令。
+* 超出配置范围，master 禁止写命令。
 
 ```c
 int processCommand(client *c) {
@@ -127,3 +136,7 @@ int processCommand(client *c) {
 
 * [redis 脑裂等极端情况分析](https://www.cnblogs.com/yjmyzz/p/redis-split-brain-analysis.html)
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)
+
+---
+
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2019/12/27/redis-split-brain/)
