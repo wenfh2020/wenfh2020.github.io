@@ -1,13 +1,12 @@
 ---
 layout: post
 title:  "libev 源码理解方式"
-categories: 算法
-tags: heap sort
+categories: c/c++
+tags: libev
 author: wenfh2020
-mathjax: true
 ---
 
-理解 libev 工作流程，[官方文档](http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#code_ev_timer_code_relative_and_opti) 和网上有很多资料可以查阅。libev 源码，宏的使用频率比较高，也因为这样，源码理解起来比较费脑，可以展开宏查阅源码，或者通过调试方式，理解 libev 的工作流程。redis-ae 事件管理与 libev 有点类似，也可以相互比较一下。
+理解 libev 工作流程，[官方文档](http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#code_ev_timer_code_relative_and_opti) 和网上有很多资料可以查阅（[事件库之Libev（一）](https://my.oschina.net/u/917596/blog/176658)，[随笔分类 - libev](https://www.cnblogs.com/gqtcgq/category/1043758.html)）。libev 源码，宏的使用频率比较高，也因为这样，源码理解起来比较费脑，可以展开宏查阅源码，或者通过调试方式，理解 libev 的工作流程。redis-ae 事件管理与 libev 有点类似，也可以相互比较一下。
 
 
 
@@ -91,6 +90,8 @@ ev_timer_start (struct ev_loop *loop, ev_timer *w)
 3. 编译安装源码：./configure && make && make install
 4. gdb 调试测试源码。
 
+> 详细请参考：[gdb & libev 调试视频](https://www.bilibili.com/video/BV1U54y1D7uM/)
+
 ![libev 调试](/images/2020-05-28-21-04-53.png){:data-action="zoom"}
 
 ---
@@ -164,9 +165,11 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
 * [官网](http://software.schmorp.de/pkg/libev.html)
 * [官方源码](http://dist.schmorp.de/libev/)
 * [官方文档](http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#code_ev_timer_code_relative_and_opti)
-* [事件库之Libev（一）](https://my.oschina.net/u/917596/blog/176658) 
+* [事件库之Libev（一）](https://my.oschina.net/u/917596/blog/176658)
 * [随笔分类 - libev](https://www.cnblogs.com/gqtcgq/category/1043758.html)
+* [[redis 源码走读] 事件 - 定时器](https://wenfh2020.com/2020/04/06/ae-timer/)
+* [[redis 源码走读] 事件 - 文件事件](https://wenfh2020.com/2020/04/09/redis-ae-file/)
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2019/12/09/heap-sort/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/05/28/libev-source-reading/)
