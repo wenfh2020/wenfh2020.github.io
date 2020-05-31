@@ -27,10 +27,10 @@ author: wenfh2020
 #   +------------------+      +---------------+
 ```
 
-主从复制，数据是由主服务发送到从服务。一般有两种模式：一主多从，链式主从。这两种复制模式各有优缺点：
+主从复制，数据是由 master 发送到 slave。一般有两种模式：一主多从，链式主从。这两种复制模式各有优缺点：
 
-* A 图，数据同步实时性比较好，但是如果从服务节点数量多了，主服务同步数据量就会增大，特别是全量同步场景。
-* B 图，D，E 从服务节点数据同步实时性相对差一点，但是能解决多个从节点下，数据同步的压力，能支撑系统更大的负载。
+* A 图，数据同步实时性比较好，但是如果 slave 节点数量多了，master 同步数据量就会增大，特别是全量同步场景。
+* B 图，D，E slave节点数据同步实时性相对差一点，但是能解决多个从节点下，数据同步的压力，能支撑系统更大的负载。
 
 ![主从复制模式](/images/2020-05-31-12-04-10.png){:data-action="zoom"}
 
@@ -41,16 +41,16 @@ author: wenfh2020
 redis.conf 对应 `REPLICATION` 部分主要配置项内容。
 
 ```shell
-# 服务建立主从关系命令，设置该服务为其它服务的从服务。
+# 服务建立主从关系命令，设置该服务为其它服务的slave。
 replicaof <masterip> <masterport>
 
-# 从服务是否支持写命令操作。
+# slave是否支持写命令操作。
 replica-read-only yes
 
-# 积压缓冲区大小。缓冲区在主服务，从服务断线重连后，如果是增量同步，主服务就从缓冲区里取出数据同步给从服务。
+# 积压缓冲区大小。缓冲区在master ，slave断线重连后，如果是增量同步，master 就从缓冲区里取出数据同步给slave。
 repl-backlog-size 1mb
 
-# 防止脑裂设置，从 slave 的链接数量和 slave 同步（保活）时间限制。
+# 防止脑裂设置，对 slave 的链接数量和 slave 同步（保活）时间限制。
 min-replicas-to-write 3
 min-replicas-max-lag 10
 ```
@@ -61,13 +61,13 @@ min-replicas-max-lag 10
 
 ### 3.1. replicaof
 
-客户端命令：`replicaof`/`slaveof`，可以使两个 redis 实例产生主从关系。
+客户端命令：`replicaof`/`slaveof`，可以使两个 redis 实例实现主从复制关系。
 
 ```shell
-# 建立副本关系。
+# 建立主从关系。
 replicaof <masterip> <masterport>
 
-# 取消副本关系。
+# 取消主从关系。
 replicaof no one
 ```
 
@@ -117,17 +117,17 @@ into replication
 
 主从数据复制，有三种方式：
 
-1. 全量同步，当从服务第一次与主服务链接，或从服务与主服务断开链接很久，主从服务数据严重不一致了，需要全部数据进行复制。
-2. 增量同步，从服务因为网络抖动或其它原因，与主服务断开一段时间，重新链接，发现主从数据差异不大，主服务只需要同步增加部分数据即可。
-3. 正常链接同步，主从成功链接，在工作过程中，主服务数据有变化，异步实时同步到从服务。
+1. 全量同步，当 slave 第一次与 master 链接或 slave 与 master 断开链接很久，重新链接后，主从数据严重不一致了，需要全部数据进行复制。
+2. 增量同步，slave 因为网络抖动或其它原因，与 master 断开一段时间，重新链接，发现主从数据差异不大，master 只需要同步增加部分数据即可。
+3. 正常链接同步，主从成功链接，在工作过程中，master 数据有变化，异步同步到slave。
 
 ---
 
-### 4.2. 复制参数
+### 4.2. 请求复制参数
 
 slave 数据复制要解决两个问题：
 
-* 向谁要数据，\<repild> 副本 id，master 通过副本 id 标识。
+* 向谁要数据，\<repild> 副本 id，master 通过副本 id 标识自己。
 * 要多少数据，\<offset> 数据偏移量，slave 保存的偏移量和 master 保存的偏移量之间的数据差，就是需要同步的增量数据。
 
 所以 slave 保存了一份 master 数据：master 的 \<master_repild> 和 数据偏移量 \<master_offset>。主从数据复制是异步操作，主从数据并非严格一致，有一定延时。当主从断开链接，slave 重新链接 master，需要通过协议，传递 \<replid>  和 \<offset> 给 master。
@@ -146,7 +146,7 @@ PSYNC ? -1
 
 ## 5. 主从数据同步流程
 
-通过 strace 抓包，观察主从数据同步工作流程。
+Linux 平台可以通过 `strace` 抓包，观察主从数据同步工作流程。
 
 客户端 client 将 redis-server1 设置成 redis-server2 的副本。
 
@@ -167,10 +167,6 @@ replicaof 127.0.0.1 16379
 ---
 
 ### 5.1. slave (127.0.0.1:6379)
-
-* 同步数据每个流程状态。
-
----
 
 * strace 查看底层通信流程。
 
@@ -378,7 +374,6 @@ write(8, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n14\r\n", 35) = 35
 ```shell
 strace -p 19831 -s 512 -o /tmp/connect.master
 sed '/gettimeofday/d' /tmp/connect.master >  /tmp/connect.master.bak
-
 ```
 
 ```shell
