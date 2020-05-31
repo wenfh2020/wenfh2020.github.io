@@ -589,17 +589,8 @@ dictEntry *dictGetRandomKey(dict *d) {
 * 《redis 设计与实现》
 * [Redis源码学习简记（三）dict哈希原理与个人理解](https://blog.csdn.net/qq_30085733/article/details/79843175)
 * [Redis源码剖析和注释](https://blog.csdn.net/men_wen/article/details/69787532)
+* [Redis Scan迭代器遍历操作原理（二）–dictScan反向二进制迭代器](http://chenzhenianqing.com/articles/1101.html)
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
-
----
-
-## 9. 问题
-
-1. iterator 作用是啥。
-2. [scan 的用法](麥路人/articles/1410.html)。
-
-> * [让人爱恨交加的Redis Scan遍历操作原理](麥路人/articles/1410.html)
-> * [Redis Scan迭代器遍历操作原理（二）–dictScan反向二进制迭代器](http://chenzhenianqing.com/articles/1101.html)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/01/12/redis-dict/)

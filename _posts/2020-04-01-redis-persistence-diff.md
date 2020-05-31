@@ -78,4 +78,4 @@ redis 持久化 aof 和 rdb 区别，详细文档可以参考 redis 作者的文
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/04/01/redis-persistence-diff/)

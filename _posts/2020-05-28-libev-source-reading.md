@@ -85,7 +85,7 @@ ev_timer_start (struct ev_loop *loop, ev_timer *w)
 
 ## 2. gdb 调试
 
-1. 下载源码：[源码地址](http://dist.schmorp.de/libev/)
+1. 下载 libev 源码：[源码地址](http://dist.schmorp.de/libev/)
 2. 修改源码目录下的 configure 文件，将所有编译优化项（CFLAGS），修改为 CFLAGS="-g O0"。
 3. 编译安装源码：./configure && make && make install
 4. gdb 调试测试源码。
@@ -169,6 +169,7 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
 * [随笔分类 - libev](https://www.cnblogs.com/gqtcgq/category/1043758.html)
 * [[redis 源码走读] 事件 - 定时器](https://wenfh2020.com/2020/04/06/ae-timer/)
 * [[redis 源码走读] 事件 - 文件事件](https://wenfh2020.com/2020/04/09/redis-ae-file/)
+* [Libev轻网络库 源码浅析](http://chenzhenianqing.com/articles/1051.html)
 
 ---
 

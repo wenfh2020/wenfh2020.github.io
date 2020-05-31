@@ -66,7 +66,17 @@ author: wenfh2020
 
 ---
 
-## 5. 其它
+## 5. 开源
+
+| 类型   | 项目                                                                                               |
+| :----- | :------------------------------------------------------------------------------------------------- |
+| c/c++  | [libev](http://software.schmorp.de/pkg/libev.html) <br/> [redis](https://github.com/antirez/redis) |
+| golang | [codis](https://github.com/CodisLabs/codis)                                                        |
+
+
+---
+
+## 6. 其它
 
 * [github + jekyll 博客](https://github.com/Gaohaoyang/gaohaoyang.github.io)
   [本博客](https://wenfh2020.com/2020/02/17/make-blog/)主要采用这个模版搭建。搭建框架，请参考[这个文档](https://github.com/wonderseen/wonderseen.github.io)的搭建流程。

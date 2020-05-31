@@ -1,17 +1,21 @@
 ---
 layout: post
-title:  "[redis 源码走读] 主从复制（数据同步）"
+title:  "[redis 源码走读] 主从复制（上）"
 categories: redis
 tags: redis replication
 author: wenfh2020
 ---
 
-redis 主从模式主要作用：
+熟悉源码前，先熟悉 redis 主从复制的基本知识和操作。
 
-* 读写分离，提高系统的负载能力。
-* 集群模式下，保证服务高可用。
 
-本章主要走读源码 [`replication.c`](https://github.com/antirez/redis/blob/unstable/src/replication.c)，理解 redis 主从数据同步流程。
+
+* content
+{:toc}
+
+---
+
+## 1. 同步模式
 
 ```shell
 # Master-Replica replication. Use replicaof to make a Redis instance a copy of
@@ -23,35 +27,41 @@ redis 主从模式主要作用：
 #   +------------------+      +---------------+
 ```
 
-* 握手流程。
-* 全量/增量同步流程。
-* 断线重连数据同步流程。
-* 握手同步数据成功后，运行过程中的数据同步策略。
+主从复制，数据是由主服务发送到从服务。一般有两种模式：一主多从，链式主从。这两种复制模式各有优缺点：
 
+* A 图，数据同步实时性比较好，但是如果从服务节点数量多了，主服务同步数据量就会增大，特别是全量同步场景。
+* B 图，D，E 从服务节点数据同步实时性相对差一点，但是能解决多个从节点下，数据同步的压力，能支撑系统更大的负载。
 
-
-* content
-{:toc}
+![主从复制模式](/images/2020-05-31-12-04-10.png){:data-action="zoom"}
 
 ---
 
-## 1. 概述
+## 2. 配置
+
+redis.conf 对应 `REPLICATION` 部分主要配置项内容。
+
+```shell
+# 服务建立主从关系命令，设置该服务为其它服务的从服务。
+replicaof <masterip> <masterport>
+
+# 从服务是否支持写命令操作。
+replica-read-only yes
+
+# 积压缓冲区大小。缓冲区在主服务，从服务断线重连后，如果是增量同步，主服务就从缓冲区里取出数据同步给从服务。
+repl-backlog-size 1mb
+
+# 防止脑裂设置，从 slave 的链接数量和 slave 同步（保活）时间限制。
+min-replicas-to-write 3
+min-replicas-max-lag 10
+```
 
 ---
 
-## 2. 预备知识
+## 3. 客户端命令
 
-走读源码前，有三件事需要做的：
+### 3.1. replicaof
 
-1. 查阅官方文档 [Replication](https://redis.io/topics/replication)。
-2. 熟悉 redis.conf 配置文件，对应 `REPLICATION` 部分配置项作用。
-3. Linux 平台下用 `strace` 命令跟踪 slave 和 master 的工作流程。
-
----
-
-## 3. 命令
-
-`replicaof`/`slaveof` 命令，可以使得两个 redis 实例产生主从关系。
+客户端命令：`replicaof`/`slaveof`，可以使两个 redis 实例产生主从关系。
 
 ```shell
 # 建立副本关系。
@@ -91,14 +101,57 @@ void replicaofCommand(client *c) {
 
 ---
 
-## 4. 流程
+### 3.2. info
 
-主从数据同步主要分两种：全量同步，增量同步。先跑一下，熟悉它的工作流程。
+[info](https://redis.io/commands/info) 命令可以查询主从副本的相关属性信息。
+
+```shell
+into replication
+```
+
+---
+
+## 4. 主从复制方法
+
+### 4.1. 复制方式
+
+主从数据复制，有三种方式：
+
+1. 全量同步，当从服务第一次与主服务链接，或从服务与主服务断开链接很久，主从服务数据严重不一致了，需要全部数据进行复制。
+2. 增量同步，从服务因为网络抖动或其它原因，与主服务断开一段时间，重新链接，发现主从数据差异不大，主服务只需要同步增加部分数据即可。
+3. 正常链接同步，主从成功链接，在工作过程中，主服务数据有变化，异步实时同步到从服务。
+
+---
+
+### 4.2. 复制参数
+
+slave 数据复制要解决两个问题：
+
+* 向谁要数据，\<repild> 副本 id，master 通过副本 id 标识。
+* 要多少数据，\<offset> 数据偏移量，slave 保存的偏移量和 master 保存的偏移量之间的数据差，就是需要同步的增量数据。
+
+所以 slave 保存了一份 master 数据：master 的 \<master_repild> 和 数据偏移量 \<master_offset>。主从数据复制是异步操作，主从数据并非严格一致，有一定延时。当主从断开链接，slave 重新链接 master，需要通过协议，传递 \<replid>  和 \<offset> 给 master。
+
+```shell
+PSYNC <master_replid> <master_offset>
+```
+
+第一次链接，slave 还没有 master 的数据。
+
+```shell
+PSYNC ? -1
+```
+
+---
+
+## 5. 主从数据同步流程
+
+通过 strace 抓包，观察主从数据同步工作流程。
 
 客户端 client 将 redis-server1 设置成 redis-server2 的副本。
 
-* redis-server1: 端口 6379
-* redis-server2: 端口 16379
+* (**slave**) redis-server1: 端口 6379
+* (**master**) redis-server2: 端口 16379
 * client
 
 ```shell
@@ -109,30 +162,17 @@ void replicaofCommand(client *c) {
 replicaof 127.0.0.1 16379
 ```
 
----
-
-### 4.1. 全量同步
-
-1. slave 和 master 双方走握手流程。
-2. slave 发送命令 `psync` 要求 master 数据同步。
-3. master 检查 slave 的数据偏移量，确认是否全量同步，还是局部数据同步。
-4. 全量同步，master 给 slave 回复 `+FULLRESYNC`，并且通过 bgsave 命令将当前内存数据存储为一个 rdb 文件快照，准备发送给 slave。
-5. slave 收到全量同步回复，创建临时 rdb 文件，等待 master 发送 rdb 文件进行数据同步。
-6. master 成功产生 rdb 文件，给 slave 发送文件。
-7. slave 接收 rdb 文件，进行数据同步。
-8. slave 接收完 rdb 文件后，将 rdb 数据重新加载到 redis 内存。
-9. slave 通知 master 数据复制完成。
-
-![redis 全量同步流程](/images/2020-05-22-19-36-49.png){:data-action="zoom"}
-
-redis 实例建立主从关系，数据全量同步。
+![redis 全量同步流程](/images/2020-05-31-10-16-02.png){:data-action="zoom"}
 
 ---
 
-#### 4.1.1. slave (127.0.0.1:6379)
+### 5.1. slave (127.0.0.1:6379)
 
-* 同步流程： `syncWithMaster`。
-* 同步文件逻辑：`readSyncBulkPayload`。
+* 同步数据每个流程状态。
+
+---
+
+* strace 查看底层通信流程。
 
 ```shell
 # strace 抓取底层通信接口的调用。
@@ -203,9 +243,11 @@ read(8, "\r", 1)                        = 1
 read(8, "\n", 1)                        = 1
 write(1, "19836:S 20 May 2020 06:53:08.514 * Trying a partial resynchronization (request 48f9e4f8d75856f90b65299ce0c6ae57a8a69814:1).\n", 124) = 124
 # 成功握手后，发送命令 psync，（服务 id + 当前数据偏移量）要求 master 进行数据同步工作。
+# slaveTryPartialResynchronization(conn,0)
 write(8, "*3\r\n$5\r\nPSYNC\r\n$40\r\n48f9e4f8d75856f90b65299ce0c6ae57a8a69814\r\n$1\r\n1\r\n", 69) = 69
 epoll_wait(5, [{EPOLLIN, {u32=8, u64=8}}], 10128, 993) = 1
 # master 回复确认 '+FULLRESYNC'，进行全量同步。(+FULLRESYNC <replid> <offset>)
+# reply = sendSynchronousCommand(SYNC_CMD_READ,conn,NULL);
 read(8, "+", 1)                         = 1
 read(8, "F", 1)                         = 1
 read(8, "U", 1)                         = 1
@@ -262,7 +304,7 @@ read(8, " ", 1)                         = 1
 read(8, "0", 1)                         = 1
 read(8, "\r", 1)                        = 1
 read(8, "\n", 1)                        = 1
-# ？
+# connSetReadHandler(conn, NULL);
 epoll_ctl(5, EPOLL_CTL_DEL, 8, 0x7fff69ce0a74) = 0
 write(1, "19836:S 20 May 2020 06:53:08.531 * Full resync from master: d28bd808c0922b5679039db98a7493f76689084e:0\n", 103) = 103
 write(1, "19836:S 20 May 2020 06:53:08.532 * Discarding previously cached master state.\n", 78) = 78
@@ -279,9 +321,9 @@ read(8, "\r", 1)                        = 1
 read(8, "\n", 1)                        = 1
 write(1, "19836:S 20 May 2020 06:53:08.799 * MASTER <-> REPLICA sync: receiving 276 bytes from master to disk\n", 100) = 100
 epoll_wait(5, [{EPOLLIN, {u32=8, u64=8}}], 10128, 709) = 1
-# 接收数据。
+# slave 接收 master 发送的数据。
 read(8, "REDIS0009\372\tredis-ver\0075.9.104\372\nredis-bits\300@\372\5ctime\302Tc\304^\372\10used-mem\302\2704\35\0\372\16repl-stream-db\300\0\372\7repl-id(d28bd808c0922b5679039db98a7493f76689084e\372\vrepl-offset\300\0\372\faof-preamble\300\0\376\0\373\6\0\0\7fsddf3a\tfddsffdsf\0\3fsf\4fdsf\0\4fsdf\4fdsf\0\5fsdf3\10fdsffdsf\0\6fsddf3\10fdsffdsf\0\tfsd44df3a\tfddsffdsf\377Q\211\240\211\306\270\r$", 276) = 276
-# 保存在本地临时文件。
+# 保存在本地临时 rdb 文件。
 write(9, "REDIS0009\372\tredis-ver\0075.9.104\372\nredis-bits\300@\372\5ctime\302Tc\304^\372\10used-mem\302\2704\35\0\372\16repl-stream-db\300\0\372\7repl-id(d28bd808c0922b5679039db98a7493f76689084e\372\vrepl-offset\300\0\372\faof-preamble\300\0\376\0\373\6\0\0\7fsddf3a\tfddsffdsf\0\3fsf\4fdsf\0\4fsdf\4fdsf\0\5fsdf3\10fdsffdsf\0\6fsddf3\10fdsffdsf\0\tfsd44df3a\tfddsffdsf\377Q\211\240\211\306\270\r$", 276) = 276
 write(1, "19836:S 20 May 2020 06:53:08.800 * MASTER <-> REPLICA sync: Flushing old data\n", 78) = 78
 # 在导入数据前，先删除 fd 读事件，避免事件触发异步回调，导致递归重复处理逻辑。
@@ -304,7 +346,7 @@ write(1, "19836:S 20 May 2020 06:53:08.802 * RDB memory usage when created 1.83 
 close(10)                               = 0
 munmap(0x7f80929da000, 4096)            = 0
 close(9)                                = 0
-# 主从通信设置成 非阻塞。
+# rdb 文件加载进内存完成，slave 创建 master 的链接对象。 replicationCreateMasterClient
 fcntl(8, F_GETFL)                       = 0x802 (flags O_RDWR|O_NONBLOCK)
 fcntl(8, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
 setsockopt(8, SOL_TCP, TCP_NODELAY, [1], 4) = 0
@@ -312,6 +354,7 @@ setsockopt(8, SOL_SOCKET, SO_KEEPALIVE, [1], 4) = 0
 setsockopt(8, SOL_TCP, TCP_KEEPIDLE, [300], 4) = 0
 setsockopt(8, SOL_TCP, TCP_KEEPINTVL, [100], 4) = 0
 setsockopt(8, SOL_TCP, TCP_KEEPCNT, [3], 4) = 0
+# connSetReadHandler(server.master->conn, readQueryFromClient);
 epoll_ctl(5, EPOLL_CTL_ADD, 8, {EPOLLIN, {u32=8, u64=8}}) = 0
 write(1, "19836:S 20 May 2020 06:53:08.804 * MASTER <-> REPLICA sync: Finished with success\n", 82) = 82
 epoll_wait(5, [], 10128, 703)           = 0
@@ -324,13 +367,13 @@ epoll_wait(5, [{EPOLLIN, {u32=8, u64=8}}], 10128, 999) = 1
 # 双方链接通过心跳保活。
 # master 发送 ‘PING’
 read(8, "*1\r\n$4\r\nPING\r\n", 16384)  = 14
-# 回复 'nACK'。
+# 回复 'ACK'。
 write(8, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n14\r\n", 35) = 35
 ```
 
 ---
 
-#### 4.1.2. master (127.0.0.1:16379)
+### 5.2. master (127.0.0.1:16379)
 
 ```shell
 strace -p 19831 -s 512 -o /tmp/connect.master
@@ -340,7 +383,7 @@ sed '/gettimeofday/d' /tmp/connect.master >  /tmp/connect.master.bak
 
 ```shell
 ...
-# 监听 socket 接收到 slave 的链接。
+# 监听 socket 接收到 slave 的 connect。
 epoll_wait(5, [{EPOLLIN, {u32=6, u64=6}}], 10128, 1000) = 1
 accept(6, {sa_family=AF_INET, sin_port=htons(32795), sin_addr=inet_addr("127.0.0.1")}, [16]) = 7
 fcntl(7, F_GETFL)                       = 0x2 (flags O_RDWR)
@@ -359,12 +402,13 @@ read(7, "*1\r\n$4\r\nPING\r\n", 16384)  = 14
 # 回复 'PONG'
 write(7, "+PONG\r\n", 7)                = 7
 epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 283) = 1
-# 接收 slave 的监听端口。
+# replconfCommand。
 read(7, "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6379\r\n", 16384) = 49
 # 回复。
 write(7, "+OK\r\n", 5)                  = 5
 epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 281) = 1
 # slave 回复，支持新协议。(REPLCONF CAPA is used in order to notify masters that a slave is able to understand the new +CONTINUE reply.)
+# replconfCommand
 read(7, "*5\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$3\r\neof\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n", 16384) = 59
 write(7, "+OK\r\n", 5)                  = 5
 epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 280) = 1
@@ -426,243 +470,6 @@ epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 999) = 1
 read(7, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n14\r\n", 16384) = 35
 ...
 ```
-
----
-
-## 5. 数据结构
-
-### 5.1. redisServer
-
-```c
-#define CONFIG_RUN_ID_SIZE 40
-
-struct redisServer {
-    ...
-    list *slaves, *monitors;    /* List of slaves and MONITORs */
-    ...
-    /* Replication (master) */
-    char replid[CONFIG_RUN_ID_SIZE+1];  /* My current replication ID. */
-    char replid2[CONFIG_RUN_ID_SIZE+1]; /* replid inherited from master*/
-    long long second_replid_offset; /* Accept offsets up to this for replid2. */
-    int slaveseldb;                 /* Last SELECTed DB in replication output */
-    time_t repl_no_slaves_since;    /* We have no slaves since that time.
-    ...
-    /* Replication (slave) */
-    char *masterhost;               /* Hostname of master */
-    int masterport;                 /* Port of master */
-    int repl_state;          /* Replication status if the instance is a slave */
-    int repl_transfer_fd;    /* Slave -> Master SYNC temp file descriptor */
-    char *repl_transfer_tmpfile; /* Slave-> master SYNC temp file name */
-    connection *repl_transfer_s;     /* Slave -> Master SYNC connection */
-    client *master;     /* Client that is master for this slave */
-    client *cached_master; /* Cached master to be reused for PSYNC. */
-}
-```
-
----
-
-### 5.2. 通信状态
-
-同步数据流程，每一个步骤的状态。
-
-```c
-/* Slave replication state. Used in server.repl_state for slaves to remember
- * what to do next. */
-#define REPL_STATE_NONE 0 /* No active replication */
-#define REPL_STATE_CONNECT 1 /* Must connect to master */
-#define REPL_STATE_CONNECTING 2 /* Connecting to master */
-/* --- Handshake states, must be ordered --- */
-#define REPL_STATE_RECEIVE_PONG 3 /* Wait for PING reply */
-#define REPL_STATE_SEND_AUTH 4 /* Send AUTH to master */
-#define REPL_STATE_RECEIVE_AUTH 5 /* Wait for AUTH reply */
-#define REPL_STATE_SEND_PORT 6 /* Send REPLCONF listening-port */
-#define REPL_STATE_RECEIVE_PORT 7 /* Wait for REPLCONF reply */
-#define REPL_STATE_SEND_IP 8 /* Send REPLCONF ip-address */
-#define REPL_STATE_RECEIVE_IP 9 /* Wait for REPLCONF reply */
-#define REPL_STATE_SEND_CAPA 10 /* Send REPLCONF capa */
-#define REPL_STATE_RECEIVE_CAPA 11 /* Wait for REPLCONF reply */
-#define REPL_STATE_SEND_PSYNC 12 /* Send PSYNC */
-#define REPL_STATE_RECEIVE_PSYNC 13 /* Wait for PSYNC reply */
-/* --- End of handshake states --- */
-#define REPL_STATE_TRANSFER 14 /* Receiving .rdb from master */
-#define REPL_STATE_CONNECTED 15 /* Connected to master */
-```
-
----
-
-## 6. 通信逻辑
-
-核心逻辑在这个函数里 `syncWithMaster`。
-
-```c
-int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
-    ...
-    /* Replication cron function -- used to reconnect to master,
-     * detect transfer failures, start background RDB transfers and so forth. */
-    run_with_period(1000) replicationCron();
-    ...
-}
-
-/* Replication cron function, called 1 time per second. */
-void replicationCron(void) {
-    ...
-    /* Check if we should connect to a MASTER */
-    if (server.repl_state == REPL_STATE_CONNECT) {
-        serverLog(LL_NOTICE,"Connecting to MASTER %s:%d",
-            server.masterhost, server.masterport);
-        if (connectWithMaster() == C_OK) {
-            serverLog(LL_NOTICE,"MASTER <-> REPLICA sync started");
-        }
-    }
-    ...
-}
-
-int connectWithMaster(void) {
-    server.repl_transfer_s = server.tls_replication ? connCreateTLS() : connCreateSocket();
-    if (connConnect(server.repl_transfer_s, server.masterhost, server.masterport,
-                NET_FIRST_BIND_ADDR, syncWithMaster) == C_ERR) {
-        serverLog(LL_WARNING,"Unable to connect to MASTER: %s",
-                connGetLastError(server.repl_transfer_s));
-        connClose(server.repl_transfer_s);
-        server.repl_transfer_s = NULL;
-        return C_ERR;
-    }
-
-    server.repl_transfer_lastio = server.unixtime;
-    server.repl_state = REPL_STATE_CONNECTING;
-    return C_OK;
-}
-
-static inline int connConnect(connection *conn, const char *addr, int port, const char *src_addr,
-        ConnectionCallbackFunc connect_handler) {
-    return conn->type->connect(conn, addr, port, src_addr, connect_handler);
-}
-
-// 链接的时候状态是 CONN_STATE_CONNECTING
-static int connSocketConnect(connection *conn, const char *addr, int port, const char *src_addr,
-        ConnectionCallbackFunc connect_handler) {
-    int fd = anetTcpNonBlockBestEffortBindConnect(NULL,addr,port,src_addr);
-    if (fd == -1) {
-        conn->state = CONN_STATE_ERROR;
-        conn->last_errno = errno;
-        return C_ERR;
-    }
-
-    conn->fd = fd;
-    conn->state = CONN_STATE_CONNECTING;
-
-    conn->conn_handler = connect_handler;
-    aeCreateFileEvent(server.el, conn->fd, AE_WRITABLE, conn->type->ae_handler, conn);
-
-    return C_OK;
-}
-
-int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
-        aeFileProc *proc, void *clientData) {
-    if (fd >= eventLoop->setsize) {
-        errno = ERANGE;
-        return AE_ERR;
-    }
-    aeFileEvent *fe = &eventLoop->events[fd];
-
-    if (aeApiAddEvent(eventLoop, fd, mask) == -1)
-        return AE_ERR;
-    fe->mask |= mask;
-    if (mask & AE_READABLE) fe->rfileProc = proc;
-    if (mask & AE_WRITABLE) fe->wfileProc = proc;
-    fe->clientData = clientData;
-    if (fd > eventLoop->maxfd)
-        eventLoop->maxfd = fd;
-    return AE_OK;
-}
-
-// 读写事件处理，如果这个事件是正在链接的，CONN_STATE_CONNECTING，那么这个链接不是错误，就是链接成功了。
-static void connSocketEventHandler(struct aeEventLoop *el, int fd, void *clientData, int mask) {
-    UNUSED(el);
-    UNUSED(fd);
-    connection *conn = clientData;
-
-    if (conn->state == CONN_STATE_CONNECTING &&
-            (mask & AE_WRITABLE) && conn->conn_handler) {
-
-        if (connGetSocketError(conn)) {
-            conn->last_errno = errno;
-            conn->state = CONN_STATE_ERROR;
-        } else {
-            // 先设置链接成功的状态，再调用 conn_handler，也就是 syncWithMaster。
-            conn->state = CONN_STATE_CONNECTED;
-        }
-
-        if (!conn->write_handler) aeDeleteFileEvent(server.el,conn->fd,AE_WRITABLE);
-
-        if (!callHandler(conn, conn->conn_handler)) return;
-        conn->conn_handler = NULL;
-    }
-
-    /* Normally we execute the readable event first, and the writable
-     * event later. This is useful as sometimes we may be able
-     * to serve the reply of a query immediately after processing the
-     * query.
-     *
-     * However if WRITE_BARRIER is set in the mask, our application is
-     * asking us to do the reverse: never fire the writable event
-     * after the readable. In such a case, we invert the calls.
-     * This is useful when, for instance, we want to do things
-     * in the beforeSleep() hook, like fsync'ing a file to disk,
-     * before replying to a client. */
-    int invert = conn->flags & CONN_FLAG_WRITE_BARRIER;
-
-    int call_write = (mask & AE_WRITABLE) && conn->write_handler;
-    int call_read = (mask & AE_READABLE) && conn->read_handler;
-
-    /* Handle normal I/O flows */
-    if (!invert && call_read) {
-        if (!callHandler(conn, conn->read_handler)) return;
-    }
-    /* Fire the writable event. */
-    if (call_write) {
-        if (!callHandler(conn, conn->write_handler)) return;
-    }
-    /* If we have to invert the call, fire the readable event now
-     * after the writable one. */
-    if (invert && call_read) {
-        if (!callHandler(conn, conn->read_handler)) return;
-    }
-}
-
-```
-
-## 7. 其它
-
-* 防止脑裂。
-* 
-
----
-
-## 8. 总结
-
-* 异步逻辑，与同步比较，逻辑不够直观，复杂的回调实现逻辑经常会把人绕晕。
-* 主从全量数据同步，当数据量大的时，同步时间比较长。redis 支持一主多从，并不是 slave 越多越好，如果多个 slave 同时掉线，需要全量同步，肯定会导致系统集群卡顿一段时间。可以考虑多级 slave。
-
----
-
-## 9. question
-
-* 根据测试流程，走读源码。
-* 增量同步。逻辑。
-* slaves chain 逻辑。
-* 断线重连逻辑。
-* 实时通信。
-* 积压缓冲区。
-* 传递过程中有新的命令，怎么同步。
-
----
-
-## 10. 参考
-
-* [Replication](https://redis.io/topics/replication)
-* 《redis 设计与实现》
-* [Codis 与 RedisCluster 的原理详解](https://www.cnblogs.com/pingyeaa/p/11294773.html)
 
 ---
 
