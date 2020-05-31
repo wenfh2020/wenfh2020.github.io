@@ -6,7 +6,7 @@ tags: redis replication
 author: wenfh2020
 ---
 
-熟悉源码前，先熟悉 redis 主从复制的基本知识和操作。
+阅读源码前，先熟悉 redis 主从复制的基本知识和操作。
 
 
 
