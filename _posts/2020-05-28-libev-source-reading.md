@@ -100,7 +100,7 @@ ev_timer_start (struct ev_loop *loop, ev_timer *w)
 
 redis 事件管理 `aeEventLoop` 与 libev 类似。总体来说，libev 要比 redis 功能丰富实用，redis 不用 libev，可能 redis 作者希望源码更可控。
 
-* libev 处理事件类型更那么丰富，`aeEventLoop` 只处理了文件事件和时钟事件。
+* libev 处理事件类型更丰富，`aeEventLoop` 只处理了文件事件和时钟事件。
 * redis `aeEventLoop` 有 `beforesleep` 和 `aftersleep` 等操作处理。
 
 ```c
@@ -115,7 +115,7 @@ void aeMain(aeEventLoop *eventLoop) {
 ```
 
 * libev 很多源码细节做得更好，例如：
-  1. 时钟，redis 用的是列表存储（不优化的原因，目前时钟事件并不多，暂时没有改进的必要），而 libev 用的数组存储时钟事件，通过堆排序，过期策略做得非常高效。
+  1. 时钟，redis 用的是列表存储（不优化的原因，目前时钟事件并不多，暂时没有改进的必要），而 libev 用数组存储时钟事件，通过堆排序，过期策略做得非常高效。
   2. 例如 epoll_ctl 出现重复插入事件错误（EEXIST），libev 会主动进行修改 EPOLL_CTL_MOD。而 redis 这种场景，就直接返回错误，让用户处理了。
 
 ```c
