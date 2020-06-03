@@ -6,7 +6,7 @@ tags: epoll 事件 多路复用
 author: wenfh2020
 ---
 
-从业务逻辑上，了解一下 `epoll` 多路复用 I/O 的工作流程。
+从业务逻辑上，了解一下 `epoll` 多路复用 I/O 的工作流程。这里简单描述一下，epoll 的工作流程，如果有兴趣了解 epoll 源码实现的，可以参考： [[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)
 
 
 
@@ -90,12 +90,13 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 * 处理逻辑过程中需要 `write` 回复客户端，`write` 内容很大，超出了内核缓冲区，没能实时发送完成所有数据，需要下次继续发送；那么 `epoll_ctl` 监控 client_fd 的 `EPOLLOUT` 可写事件，下次触发事件进行发送。下次触发可写事件发送完毕后， `epoll_ctl` 删除 `EPOLLOUT` 事件。
 * 客户端关闭链接，服务端监控客户端 fd，如果 `read == 0`，`close` 关闭对应 fd 从而完成四次挥手。
 
-![epoll 事件逻辑](/images/2020-04-17-10-09-45.png){: data-action="zoom"}
+![epoll 使用流程](/images/2020-05-11-16-57-43.png){:data-action="zoom"}
 
 ---
 
 ## 3. 参考
 
+* [[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)
 * [http://man7.org/linux/man-pages/dir_all_by_section.html](http://man7.org/linux/man-pages/dir_all_by_section.html)
 * [http://man7.org/linux/man-pages/man2/write.2.html](http://man7.org/linux/man-pages/man2/write.2.html)
 * [http://man7.org/linux/man-pages/man2/read.2.html](http://man7.org/linux/man-pages/man2/read.2.html)
