@@ -96,4 +96,4 @@ void merge(int array[], int start, int end) {
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2019/12/09/heap-sort/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2019/11/29/merge-sort/)
