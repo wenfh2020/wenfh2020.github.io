@@ -6,7 +6,7 @@ tags: epoll 事件 多路复用
 author: wenfh2020
 ---
 
-从业务逻辑上，了解一下 `epoll` 多路复用 I/O 的工作流程。这里简单描述一下，epoll 的工作流程，如果有兴趣了解 epoll 源码实现的，可以参考： [[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)
+从业务逻辑上，了解一下 `epoll` 多路复用 I/O 的工作流程。这里简单描述一下，epoll 的工作流程，如果有兴趣了解 epoll 源码实现，可以参考： [[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)
 
 
 
