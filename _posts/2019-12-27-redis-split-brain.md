@@ -77,14 +77,14 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 /* Replication cron function, called 1 time per second. */
 // 复制周期执行的函数，每秒调用1次。
 void replicationCron(void) {
-    // 更新延迟至log小于min-slaves-max-lag的从服务器数量
+    // 更新延迟至 lag 小于 min-slaves-max-lag 的从服务器数量
     refreshGoodSlavesCount();
 }
 
 /* This function counts the number of slaves with lag <= min-slaves-max-lag.
  * If the option is active, the server will prevent writes if there are not
  * enough connected slaves with the specified lag (or less). */
-// 更新延迟至log小于min-slaves-max-lag的从服务器数量
+// 更新延迟至 lag 小 于min-slaves-max-lag 的从服务器数量
 void refreshGoodSlavesCount(void) {
     listIter li;
     listNode *ln;
