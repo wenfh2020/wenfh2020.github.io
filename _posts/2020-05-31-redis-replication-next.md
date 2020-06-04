@@ -8,7 +8,7 @@ author: wenfh2020
 
 redis 主从模式主要作用：读写分离，提高系统的负载能力；集群模式下，保证服务高可用。
 
-承接上一章 [[redis 源码走读] 主从数据复制（上）](https://wenfh2020.com/2020/05/17/redis-replication/)，本章主要走读 redis 6.0 源码 [github](https://github.com/antirez/redis)，理解 redis 主从数据同步流程。
+承接上一章 [[redis 源码走读] 主从数据复制（上）](https://wenfh2020.com/2020/05/17/redis-replication/)，本章主要走读 redis 6.0 源码 [github](https://github.com/antirez/redis)，理解 redis 主从数据复制流程。
 
 
 
@@ -27,8 +27,8 @@ redis 主从模式主要作用：读写分离，提高系统的负载能力；�
 
 其中前两种场景，需要通过 `PSYNC` 命令进行交互。双方复制的方式有两种：
 
-1. 全量数据同步。
-2. 增量数据同步。
+1. 全量数据复制。
+2. 增量数据复制。
 
 ---
 
@@ -185,7 +185,7 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
 
             if (strcmp(new, server.cached_master->replid)) {
                 /* 缓存旧的 replid2 和 second_replid_offset。
-                 * 因为当前 slave 可能有子服务 sub-slave，需要方便它们进行数据同步。*/
+                 * 因为当前 slave 可能有子服务 sub-slave，需要方便它们进行数据复制。*/
                 memcpy(server.replid2,server.cached_master->replid,
                     sizeof(server.replid2));
                 server.second_replid_offset = server.master_repl_offset+1;
@@ -378,7 +378,7 @@ typedef struct client {
     ...
 }
 
-/* 增量同步和正常链接下的数据同步。
+/* 增量同步和正常链接下的数据复制。
  * slave 接收到 master 发送的数据，处理命令后，偏移量增加已处理数据数量
  * （因为 TCP 有可能因为粘包问题，接收数据不是完整的，所以不能全部处理完）。*/
 int processCommandAndResetClient(client *c) {
@@ -615,7 +615,7 @@ struct redisServer {
 | :-------------------- | :----------------------------------------------------------------------------------------------------------------------- |
 | masterhost            | Hostname of master (replicaofCommand \| replicationSetMaster)                                                            |
 | masterport            | Port of master (replicaofCommand \| replicationSetMaster)                                                                |
-| repl_state            | 副本状态，复制双方建立数据同步要经过很多步骤，而这些步骤被进行到哪个环节被记录在 repl_state。                            |
+| repl_state            | 副本状态，复制双方建立数据复制要经过很多步骤，而这些步骤被进行到哪个环节被记录在 repl_state。                            |
 | master                | slave 链接 master 的客户端链接。                                                                                         |
 | cached_master         | slave 与 master 断开链接后，原链接被释放回收。为方便断线重连后数据重复被利用，需要缓存 master 链接数据到 cached_master。 |
 | master_replid         | master 的 replid。                                                                                                       |
