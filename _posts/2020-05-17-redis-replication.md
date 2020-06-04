@@ -30,7 +30,7 @@ author: wenfh2020
 主从复制，数据是由 master 发送到 slave。一般有两种模式：一主多从，链式主从。这两种复制模式各有优缺点：
 
 * A 图，数据同步实时性比较好，但是如果 slave 节点数量多了，master 同步数据量就会增大，特别是全量同步场景。
-* B 图，D，E slave节点数据同步实时性相对差一点，但是能解决多个从节点下，数据同步的压力，能支撑系统更大的负载。
+* B 图，D，E sub-slave 节点数据同步实时性相对差一点，但是能解决多个从节点下，master 数据同步压力，能支撑系统更大的负载。
 
 ![主从复制模式](/images/2020-05-31-12-04-10.png){:data-action="zoom"}
 
@@ -41,13 +41,13 @@ author: wenfh2020
 redis.conf 对应 `REPLICATION` 部分主要配置项内容。
 
 ```shell
-# 服务建立主从关系命令，设置该服务为其它服务的slave。
+# 服务建立主从关系命令，设置该服务为其它服务的 slave。
 replicaof <masterip> <masterport>
 
 # slave是否支持写命令操作。
 replica-read-only yes
 
-# 积压缓冲区大小。缓冲区在master ，slave断线重连后，如果是增量同步，master 就从缓冲区里取出数据同步给slave。
+# 积压缓冲区大小。缓冲区在master ，slave 断线重连后，如果是增量同步，master 就从缓冲区里取出数据同步给 slave。
 repl-backlog-size 1mb
 
 # 防止脑裂设置，对 slave 的链接数量和 slave 同步（保活）时间限制。
@@ -119,7 +119,7 @@ into replication
 
 1. 全量同步，当 slave 第一次与 master 链接或 slave 与 master 断开链接很久，重新链接后，主从数据严重不一致了，需要全部数据进行复制。
 2. 增量同步，slave 因为网络抖动或其它原因，与 master 断开一段时间，重新链接，发现主从数据差异不大，master 只需要同步增加部分数据即可。
-3. 正常链接同步，主从成功链接，在工作过程中，master 数据有变化，异步同步到slave。
+3. 正常链接同步，主从成功链接，在工作过程中，master 数据有变化，异步同步到 slave。
 
 ---
 

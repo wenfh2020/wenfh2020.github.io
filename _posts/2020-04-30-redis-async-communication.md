@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[redis 源码走读] 客户端与服务端异步通信流程-单线程"
+title:  "[redis 源码走读] 异步通信流程-单线程"
 categories: redis
 tags: reids async network
 author: wenfh2020
