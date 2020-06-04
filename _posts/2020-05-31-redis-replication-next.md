@@ -8,7 +8,7 @@ author: wenfh2020
 
 redis 主从模式主要作用：读写分离，提高系统的负载能力；集群模式下，保证服务高可用。
 
-承接上一章 [[redis 源码走读] 主从复制（上）](https://wenfh2020.com/2020/05/17/redis-replication/)，本章主要走读 redis 6.0 源码 [github](https://github.com/antirez/redis)，理解 redis 主从数据同步流程。
+承接上一章 [[redis 源码走读] 主从数据复制（上）](https://wenfh2020.com/2020/05/17/redis-replication/)，本章主要走读 redis 6.0 源码 [github](https://github.com/antirez/redis)，理解 redis 主从数据同步流程。
 
 
 
