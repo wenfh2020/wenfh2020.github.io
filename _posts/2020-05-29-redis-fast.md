@@ -2,12 +2,12 @@
 layout: post
 title:  "redis 为什么这么快"
 categories: redis
-tags: redis aof rdb 区别 difference
+tags: redis fast
 author: wenfh2020
 mathjax: true
 ---
 
-天下武功，为快不破。redis 为什么那么快？redis 单进程并发 10w+ ([hiredis + libev 异步测试](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。我们从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
+天下武功，唯快不破。redis 为什么那么快？redis 单进程并发 10w+ ([hiredis + libev 异步测试](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。我们从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
 
 
 
@@ -18,7 +18,7 @@ mathjax: true
 
 ## 1. 单进程
 
-redis 核心逻辑在单进程里实现。
+redis 核心逻辑在单进程主线程里实现。
 
 ---
 
@@ -39,6 +39,8 @@ redis 核心逻辑在单进程里实现。
 * 非阻塞网络 I/O。
 
   > 主逻辑在单进程，单线程，不能有阻塞的缓慢操作，所以网络通信大部分设置为非阻塞模式。
+
+> 有的人说，单线程节省了锁带来的开销，我认为这也是一个原因，但它不是快的主要原因，单线程实现主逻辑最主要作用是避免了锁带来的复杂度，减少了坑，节省了人力成本。尽管这样，利用多核优势，在多线程中实现 key 粒度的锁，或许是未来 redis 需要优化的一个趋势。
 
 ---
 
