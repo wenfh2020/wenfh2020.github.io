@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[redis 源码走读] 主从复制（下）"
+title:  "[redis 源码走读] 主从数据复制（下）"
 categories: redis
 tags: redis replication
 author: wenfh2020
