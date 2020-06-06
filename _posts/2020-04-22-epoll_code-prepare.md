@@ -8,6 +8,8 @@ author: wenfh2020
 
 epoll 源码涉及到很多知识点：（socket）网络通信，进程调度，等待队列，socket 信号处理，VFS（虚拟文件系统），红黑树算法等等知识点。有些接口的实现，藏得很深，参考了不少网上的帖子，在此整理一下。
 
+> 本文主要为 《[[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)》，提供预备知识。
+
 
 
 * content
@@ -45,8 +47,8 @@ epoll 源码涉及到很多知识点：（socket）网络通信，进程调度�
 | TASK_RUNNING         | 正在运行                           |
 | TASK_INTERRUPTIBLE   | 等待状态。等待状态可被信号解除。   |
 | TASK_UNINTERRUPTIBLE | 等待状态。等待状态不可被信号解除。 |
----
 
+---
 
 ## 3. 等待队列
 

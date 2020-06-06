@@ -657,6 +657,7 @@ typedef struct client {
 * 《redis 设计与实现》—— 第十五章 - 复制。
 * [Codis 与 RedisCluster 的原理详解](https://www.cnblogs.com/pingyeaa/p/11294773.html)
 * [redis系列--主从复制以及redis复制演进](https://www.cnblogs.com/wdliu/p/9407179.html)
+* [Redis Replication 实现原理](https://521-wf.com/archives/414.html)
 
 ---
 

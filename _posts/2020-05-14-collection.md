@@ -71,7 +71,7 @@ author: wenfh2020
 | 类型   | 项目                                                                                               |
 | :----- | :------------------------------------------------------------------------------------------------- |
 | c/c++  | [libev](http://software.schmorp.de/pkg/libev.html) <br/> [redis](https://github.com/antirez/redis) |
-| golang | [codis](https://github.com/CodisLabs/codis)                                                        |
+| golang | [codis](https://github.com/CodisLabs/codis) <br/> [kingshard](https://github.com/flike/kingshard)  |
 
 
 ---
