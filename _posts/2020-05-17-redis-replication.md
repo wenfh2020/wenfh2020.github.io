@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-## 1. 同步模式
+## 1. 复制模式
 
 ```shell
 # Master-Replica replication. Use replicaof to make a Redis instance a copy of
@@ -29,8 +29,8 @@ author: wenfh2020
 
 主从复制，数据是由 master 发送到 slave。一般有两种模式：一主多从，链式主从。这两种复制模式各有优缺点：
 
-* A 图，数据同步实时性比较好，但是如果 slave 节点数量多了，master 同步数据量就会增大，特别是全量同步场景。
-* B 图，D，E sub-slave 节点数据同步实时性相对差一点，但是能解决多个从节点下，master 数据同步压力，能支撑系统更大的负载。
+* A 图，数据复制实时性比较好，但是如果 slave 节点数量多了，master 复制数据量就会增大，特别是全量复制场景。
+* B 图，D，E sub-slave 节点数据复制实时性相对差一点，但是能解决多个从节点下，master 数据复制压力，能支撑系统更大的负载。
 
 ![主从复制模式](/images/2020-05-31-12-04-10.png){:data-action="zoom"}
 
@@ -47,10 +47,10 @@ replicaof <masterip> <masterport>
 # slave是否支持写命令操作。
 replica-read-only yes
 
-# 积压缓冲区大小。缓冲区在master ，slave 断线重连后，如果是增量同步，master 就从缓冲区里取出数据同步给 slave。
+# 积压缓冲区大小。缓冲区在master ，slave 断线重连后，如果是增量复制，master 就从缓冲区里取出数据复制给 slave。
 repl-backlog-size 1mb
 
-# 防止脑裂设置，对 slave 的链接数量和 slave 同步（保活）时间限制。
+# 防止脑裂设置，对 slave 的链接数量和 slave 复制（保活）时间限制。
 min-replicas-to-write 3
 min-replicas-max-lag 10
 ```
@@ -61,7 +61,7 @@ min-replicas-max-lag 10
 
 ### 3.1. replicaof
 
-客户端命令：`replicaof`/`slaveof`，可以使两个 redis 实例实现主从复制关系。
+客户端命令：`replicaof` / `slaveof`，可以使两个 redis 实例实现主从复制关系。
 
 ```shell
 # 建立主从关系。
@@ -111,15 +111,15 @@ into replication
 
 ---
 
-## 4. 主从复制方法
+## 4. 复制
 
 ### 4.1. 复制方式
 
 主从数据复制，有三种方式：
 
-1. 全量同步，当 slave 第一次与 master 链接或 slave 与 master 断开链接很久，重新链接后，主从数据严重不一致了，需要全部数据进行复制。
-2. 增量同步，slave 因为网络抖动或其它原因，与 master 断开一段时间，重新链接，发现主从数据差异不大，master 只需要同步增加部分数据即可。
-3. 正常链接同步，主从成功链接，在工作过程中，master 数据有变化，异步同步到 slave。
+1. 全量数据复制，当 slave 第一次与 master 链接或 slave 与 master 断开链接很久，重新链接后，主从数据严重不一致了，需要全部数据进行复制。
+2. 增量数据复制，slave 因为网络抖动或其它原因，与 master 断开一段时间，重新链接，发现主从数据差异不大，master 只需要复制增加部分数据即可。
+3. 正常链接数据复制，主从成功链接，在工作过程中，master 数据有变化，异步复制到 slave。
 
 ---
 
@@ -128,7 +128,7 @@ into replication
 重点看看 `PSYNC` 主从数据复制流程，slave 数据复制要解决两个问题：
 
 * 向谁要数据，\<repild> 副本 id，master 通过副本 id 标识自己。
-* 要多少数据，\<offset> 数据偏移量，slave 保存的偏移量和 master 保存的偏移量之间的数据差，就是需要同步的增量数据。
+* 要多少数据，\<offset> 数据偏移量，slave 保存的偏移量和 master 保存的偏移量之间的数据差，就是需要复制的增量数据。
 
 所以 slave 保存了一份 master 数据：master 的 \<master_repild> 和 数据偏移量 \<master_offset>。主从数据复制是异步操作，主从数据并非严格一致，有一定延时。当主从断开链接，slave 重新链接 master，需要通过协议，传递 \<replid>  和 \<offset> 给 master。
 
@@ -144,9 +144,9 @@ PSYNC ? -1
 
 ---
 
-## 5. 主从数据同步流程
+## 5. 主从数据复制流程
 
-Linux 平台可以通过 `strace` 抓包，观察主从数据同步工作流程。
+Linux 平台可以通过 `strace` 抓包，观察主从数据复制工作流程。
 
 客户端 client 将 redis-server1 设置成 redis-server2 的副本。
 
@@ -162,7 +162,7 @@ Linux 平台可以通过 `strace` 抓包，观察主从数据同步工作流程�
 replicaof 127.0.0.1 16379
 ```
 
-![redis 全量同步流程](/images/2020-05-31-10-16-02.png){:data-action="zoom"}
+![redis 全量复制流程](/images/2020-05-31-10-16-02.png){:data-action="zoom"}
 
 ---
 
@@ -238,11 +238,11 @@ read(8, "K", 1)                         = 1
 read(8, "\r", 1)                        = 1
 read(8, "\n", 1)                        = 1
 write(1, "19836:S 20 May 2020 06:53:08.514 * Trying a partial resynchronization (request 48f9e4f8d75856f90b65299ce0c6ae57a8a69814:1).\n", 124) = 124
-# 成功握手后，发送命令 psync，（服务 id + 当前数据偏移量）要求 master 进行数据同步工作。
+# 成功握手后，发送命令 psync，（服务 id + 当前数据偏移量）要求 master 进行数据复制工作。
 # slaveTryPartialResynchronization(conn,0)
 write(8, "*3\r\n$5\r\nPSYNC\r\n$40\r\n48f9e4f8d75856f90b65299ce0c6ae57a8a69814\r\n$1\r\n1\r\n", 69) = 69
 epoll_wait(5, [{EPOLLIN, {u32=8, u64=8}}], 10128, 993) = 1
-# master 回复确认 '+FULLRESYNC'，进行全量同步。(+FULLRESYNC <replid> <offset>)
+# master 回复确认 '+FULLRESYNC'，进行全量数据复制。(+FULLRESYNC <replid> <offset>)
 # reply = sendSynchronousCommand(SYNC_CMD_READ,conn,NULL);
 read(8, "+", 1)                         = 1
 read(8, "F", 1)                         = 1
