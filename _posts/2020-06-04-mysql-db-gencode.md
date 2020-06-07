@@ -32,7 +32,7 @@ author: wenfh2020
 * 命令
 
 ```shell
-./db_gencode <sql file name>
+./db_gencode <file_name>
 ```
 
 * 编译源码使用。
