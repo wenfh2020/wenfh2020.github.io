@@ -134,6 +134,7 @@ int processCommand(client *c) {
 
 ## 3. 参考
 
+* [Replication](https://redis.io/topics/replication)
 * [redis 脑裂等极端情况分析](https://www.cnblogs.com/yjmyzz/p/redis-split-brain-analysis.html)
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)
 
