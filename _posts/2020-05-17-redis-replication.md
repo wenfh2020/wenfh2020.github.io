@@ -6,7 +6,10 @@ tags: redis replication
 author: wenfh2020
 ---
 
-阅读源码前，先熟悉 redis 主从复制的基本知识和操作。
+阅读源码前，先了解 redis 主从复制的基本知识。
+
+> 详细源码分析，请参考下一章：[[redis 源码走读] 主从数据复制（下）
+](https://wenfh2020.com/2020/05/31/redis-replication-next/)
 
 
 
@@ -47,7 +50,7 @@ replicaof <masterip> <masterport>
 # slave是否支持写命令操作。
 replica-read-only yes
 
-# 积压缓冲区大小。缓冲区在master ，slave 断线重连后，如果是增量复制，master 就从缓冲区里取出数据复制给 slave。
+# 积压缓冲区大小。缓冲区在 master，slave 断线重连后，如果是增量复制，master 就从缓冲区里取出数据复制给 slave。
 repl-backlog-size 1mb
 
 # 防止脑裂设置，对 slave 的链接数量和 slave 复制（保活）时间限制。
@@ -180,7 +183,7 @@ sed '/gettimeofday/d' /tmp/connect.slave >  /tmp/connect.slave.bak
 
 ```shell
 ...
-# 接收到 client 发送的 replicaof 命令。
+# slave 接收到 client 发送的 replicaof 命令。
 epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 1000) = 1
 read(7, "*3\r\n$9\r\nreplicaof\r\n$9\r\n127.0.0.1\r\n$5\r\n16379\r\n", 16384) = 45
 write(1, "19836:S 20 May 2020 06:53:07.745 * Before turning into a replica, using my own master parameters to synthesize a cached master: I may be able to synchronize with the new master with just a partial transfer.\n", 207) = 207
@@ -453,6 +456,7 @@ write(1, "19831:M 20 May 2020 06:53:08.798 * Synchronization with replica 127.0.
 epoll_wait(5, [{EPOLLOUT, {u32=7, u64=7}}], 10128, 998) = 1
 epoll_ctl(5, EPOLL_CTL_MOD, 7, {EPOLLIN, {u32=7, u64=7}}) = 0
 epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 998) = 1
+# master 接收 slave 的心跳。
 read(7, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n", 16384) = 34
 epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 1000) = 1
 read(7, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n", 16384) = 34
