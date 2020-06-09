@@ -7,7 +7,7 @@ author: wenfh2020
 mathjax: true
 ---
 
-天下武功，唯快不破。redis 为什么那么快？redis 单进程并发 10w+ ([hiredis + libev 异步测试](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。我们从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
+天下武功，唯快不破。redis 为什么那么快？redis 单进程并发 10w+ ([hiredis + libev 异步测试](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本章从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
 
 
 
@@ -91,6 +91,12 @@ redis 有持久化功能：aof 和 rdb 方式。持久化需要将内存数据�
 * redis cluster
 
   > redis 自带集群 cluster 无中心架构，通过 Gossip 协议将多个实例数据分片建立成一个整体。
+
+---
+
+## 总结
+
+* sentinel raft 算法，是分布式系统的重要组成部分。理解它十分重要。
 
 ---
 
