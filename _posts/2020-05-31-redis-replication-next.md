@@ -43,7 +43,7 @@ void syncWithMaster(connection *conn) {
     // slave 处理 PSYNC 命令的回复数据包。
     psync_result = slaveTryPartialResynchronization(conn,1);
     ...
-    /* 增量同步。
+    /* 增量复制。
      * slave 通过 readQueryFromClient 异步接收 master 增量数据。
      * 复制双方链接成功，slave 通过 replicationResurrectCachedMaster
      * 绑定 readQueryFromClient 异步接收复制数据。*/
@@ -138,12 +138,12 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
                  * 所以 slave 的 replid 保存 master 的 replid。*/
                 memcpy(server.replid,new,sizeof(server.replid));
                 /* 更新 master client 对应的 replid。
-                 * 因为增量同步是之前曾经链接成功的，后来断开链接了，需要缓存断开的链接
+                 * 因为增量复制是之前曾经链接成功的，后来断开链接了，需要缓存断开的链接
                  * 方便后续重连操作。所以会将原来 server.master，缓存到 server.cached_master。
                  * 当重连成功后 server.cached_master 会被清空。详看 replicationResurrectCachedMaster()。*/
                 memcpy(server.cached_master->replid,new,sizeof(server.replid));
 
-                // 如果当前 slave 有子服务 sub-slave，断开子服务链接，让它们重新走 PSYNC 同步流程。
+                // 如果当前 slave 有子服务 sub-slave，断开子服务链接，让它们重新走 PSYNC 复制流程。
                 disconnectSlaves();
             }
         }
@@ -242,7 +242,7 @@ int masterTryPartialResynchronization(client *c) {
         buflen = snprintf(buf,sizeof(buf),"+CONTINUE\r\n");
     }
 
-    // 发送 +CONTINUE 增量同步回包。注意这里是同步发送的，避免异步导致新的数据到来破坏当前同步场景。
+    // 发送 +CONTINUE 增量复制回包。注意这里是同步发送的，避免异步导致新的数据到来破坏当前同步场景。
     if (connWrite(c->conn,buf,buflen) != buflen) {
         freeClientAsync(c);
         return C_OK;
@@ -278,7 +278,7 @@ int masterTryPartialResynchronization(client *c) {
         goto need_full_resync;
     }
     ...
-    // 增量同步
+    // 增量复制
     return C_OK; /* The caller can return, no full resync needed. */
 
 // 全量复制
@@ -293,7 +293,7 @@ need_full_resync:
 
 主从服务双方会维护一个复制偏移量（一个数据统计值）。
 
-master 把需要同步给 slave 的数据填充到积压缓冲区，并且更新复制偏移量的值。这样，双方的偏移量可以通过对比，可以知道双方数据相差多少。
+master 把需要数据复制给 slave 的数据填充到积压缓冲区，并且更新复制偏移量的值。这样，双方的偏移量可以通过对比，可以知道双方数据相差多少。
 
 ### 3.1. master
 
@@ -304,7 +304,7 @@ struct redisServer {
     ...
 }
 
-// master 需要同步给 slave 的数据都会调用 feedReplicationBacklog，写入缓冲区并更新复制偏移量。
+// master 需要复制给 slave 的数据都会调用 feedReplicationBacklog，写入缓冲区并更新复制偏移量。
 void feedReplicationBacklog(void *ptr, size_t len) {
     ...
     // master 复制偏移量
@@ -322,7 +322,7 @@ typedef struct client {
     ...
 }
 
-/* 增量同步和正常链接下的数据复制。
+/* 增量复制和正常链接下的数据复制。
  * slave 接收到 master 发送的数据，处理命令后，偏移量增加已处理数据数量
  * （因为 TCP 有可能因为粘包问题，接收数据不是完整的，所以不能全部处理完）。*/
 int processCommandAndResetClient(client *c) {
@@ -338,7 +338,7 @@ int processCommandAndResetClient(client *c) {
     ...
 }
 
-// 断线重连，slave 向 master 发送 PSYNC 命令，确认是增量同步，还是全量复制。
+// 断线重连，slave 向 master 发送 PSYNC 命令，确认是增量复制，还是全量复制。
 int slaveTryPartialResynchronization(connection *conn, int read_reply) {
     ...
     if (!read_reply) {
@@ -419,9 +419,9 @@ int rdbSaveInfoAuxFields(rio *rdb, int rdbflags, rdbSaveInfo *rsi) {
 
 复制积压缓冲区，是一个连续内存空间，被设计成**环形数据结构**。
 
-master 把需要同步到 slave 的数据，填充到积压缓冲区里。当复制双方增量同步时，master 从缓冲区中取增量数据，同步发送给 slave。
+master 把需要复制到 slave 的数据，填充到积压缓冲区里。当复制双方增量复制时，master 从缓冲区中取增量数据，发送给 slave。
 
-> master 淘汰过期数据，也需要同步给 slave。查看函数的实现：replicationFeedSlaves()
+> master 淘汰过期数据，也需要复制给 slave。查看函数的实现：replicationFeedSlaves()
 
 ![数据积压缓冲区](/images/2020-06-03-18-14-30.png){:data-action="zoom"}
 
@@ -543,7 +543,7 @@ struct redisServer {
 | 结构成员             | 描述                                                                                                                                                                                                                             |
 | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | slaves               | slaves 副本链接列表。                                                                                                                                                                                                            |
-| replid               | 副本 id，只有 master 有自己独立的 replid，如果服务是 slave，那么它需要同步 master 的 replid，进行填充。                                                                                                                          |
+| replid               | 副本 id，只有 master 有自己独立的 replid，如果服务是 slave，那么它需要复制 master 的 replid，进行填充。                                                                                                                          |
 | replid2              | master 历史 replid。复制双方断开链接或者故障转移过程中，服务节点角色发生改变，需要缓存旧的 master replid 到 replid2。因为所有 slave 数据到来自 master。复制双方重新建立链接后，通过 `PSYNC <replid> <offset>` 命令进行数据复制。 |
 | master_repl_offset   | master 数据偏移量。复制双方是异步进行的，所以数据并不是严格的数据一致。                                                                                                                                                          |
 | second_replid_offset | 历史数据偏移量。与 replid2 搭配使用。                                                                                                                                                                                            |
@@ -563,7 +563,7 @@ struct redisServer {
 | master                | slave 链接 master 的客户端链接。                                                                                         |
 | cached_master         | slave 与 master 断开链接后，原链接被释放回收。为方便断线重连后数据重复被利用，需要缓存 master 链接数据到 cached_master。 |
 | master_replid         | master 的 replid。                                                                                                       |
-| master_initial_offset | slave 通过命令 PSYNC 向 master 全量同步的 数据偏移量。                                                                   |
+| master_initial_offset | slave 通过命令 PSYNC 向 master 全量复制的数据偏移量。                                                                    |
 
 ---
 
