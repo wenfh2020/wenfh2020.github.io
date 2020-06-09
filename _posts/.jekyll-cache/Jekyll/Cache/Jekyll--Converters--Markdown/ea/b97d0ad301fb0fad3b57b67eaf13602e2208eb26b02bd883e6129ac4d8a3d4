@@ -1,0 +1,185 @@
+I"�U<p>整数集合，是一个有序的数值数组对象，存储的数值不允许重复。源码在 <code class="highlighter-rouge">intset.c</code></p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-数据结构" id="markdown-toc-1-数据结构">1. 数据结构</a></li>
+  <li><a href="#2-接口" id="markdown-toc-2-接口">2. 接口</a>    <ul>
+      <li><a href="#21-数值编码" id="markdown-toc-21-数值编码">2.1. 数值编码</a></li>
+      <li><a href="#22-插入数据" id="markdown-toc-22-插入数据">2.2. 插入数据</a></li>
+      <li><a href="#23-升级" id="markdown-toc-23-升级">2.3. 升级</a></li>
+      <li><a href="#24-搜索" id="markdown-toc-24-搜索">2.4. 搜索</a></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="1-数据结构">1. 数据结构</h2>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Note that these encodings are ordered, so:
+ * INTSET_ENC_INT16 &lt; INTSET_ENC_INT32 &lt; INTSET_ENC_INT64. */</span>
+<span class="cp">#define INTSET_ENC_INT16 (sizeof(int16_t))
+#define INTSET_ENC_INT32 (sizeof(int32_t))
+#define INTSET_ENC_INT64 (sizeof(int64_t))
+</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">intset</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span> <span class="n">encoding</span><span class="p">;</span> <span class="c1">// 编码。</span>
+    <span class="kt">uint32_t</span> <span class="n">length</span><span class="p">;</span>   <span class="c1">// 数组长度。</span>
+    <span class="kt">int8_t</span> <span class="n">contents</span><span class="p">[];</span> <span class="c1">// 整数值数值。</span>
+<span class="p">}</span> <span class="n">intset</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>根据插入数值大小，决定 <code class="highlighter-rouge">contents</code> 数组的<code class="highlighter-rouge">encoding</code>格式。编码格式分别有 <code class="highlighter-rouge">int16_t</code>，<code class="highlighter-rouge">int32_t</code>，<code class="highlighter-rouge">int64_t</code>。以最大的数值为准，如果最大的数值是 <code class="highlighter-rouge">int64_t</code> 那么数组的每个 <code class="highlighter-rouge">item</code> 都是 <code class="highlighter-rouge">int64_t</code>，优点是统一简单，提高数组查找效率——源码实现是通过二分法查找。如果数组不同数值用不同的编码存储，就很难用二分法查找了。
+但是这样做一方面提高了查找效率，另一方面也会导致内存浪费，如果所有数据中，只有一个数据是 <code class="highlighter-rouge">int64_t</code>，其它数据都是 <code class="highlighter-rouge">int16_t</code>，整个数组 <code class="highlighter-rouge">item</code> 都以 <code class="highlighter-rouge">int64_t</code> 存储，显然会造成内存浪费。
+当然 redis 的数据结构是丰富的，连续内存上的数据管理有：字符串对象（sds），压缩列表（ziplist），这里有整数集合（intset），都分别针对不同的应用场景进行应用。</p>
+
+<hr />
+
+<h2 id="2-接口">2. 接口</h2>
+
+<h3 id="21-数值编码">2.1. 数值编码</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define INT8_MAX         127
+#define INT16_MAX        32767
+#define INT32_MAX        2147483647
+#define INT64_MAX        9223372036854775807LL
+</span>
+<span class="cp">#define INT8_MIN          -128
+#define INT16_MIN         -32768
+</span>
+<span class="cm">/* Return the required encoding for the provided value. */</span>
+<span class="k">static</span> <span class="kt">uint8_t</span> <span class="nf">_intsetValueEncoding</span><span class="p">(</span><span class="kt">int64_t</span> <span class="n">v</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="o">&lt;</span> <span class="n">INT32_MIN</span> <span class="o">||</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">INT32_MAX</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">INTSET_ENC_INT64</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="o">&lt;</span> <span class="n">INT16_MIN</span> <span class="o">||</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">INT16_MAX</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">INTSET_ENC_INT32</span><span class="p">;</span>
+    <span class="k">else</span>
+        <span class="k">return</span> <span class="n">INTSET_ENC_INT16</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<h3 id="22-插入数据">2.2. 插入数据</h3>
+
+<p>检查插入数据是否大于当前编码格式，决定是否需要升级</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Insert an integer in the intset */</span>
+<span class="n">intset</span> <span class="o">*</span><span class="nf">intsetAdd</span><span class="p">(</span><span class="n">intset</span> <span class="o">*</span><span class="n">is</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">value</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="o">*</span><span class="n">success</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">uint8_t</span> <span class="n">valenc</span> <span class="o">=</span> <span class="n">_intsetValueEncoding</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+    <span class="kt">uint32_t</span> <span class="n">pos</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">success</span><span class="p">)</span> <span class="o">*</span><span class="n">success</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="cm">/* Upgrade encoding if necessary. If we need to upgrade, we know that
+     * this value should be either appended (if &gt; 0) or prepended (if &lt; 0),
+     * because it lies outside the range of existing values. */</span>
+    <span class="c1">// 如果插入数值大于当前编码，那么需要升级数组</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">valenc</span> <span class="o">&gt;</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">encoding</span><span class="p">))</span> <span class="p">{</span>
+        <span class="cm">/* This always succeeds, so we don't need to curry *success. */</span>
+        <span class="k">return</span> <span class="n">intsetUpgradeAndAdd</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">value</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="cm">/* Abort if the value is already present in the set.
+         * This call will populate "pos" with the right position to insert
+         * the value when it cannot be found. */</span>
+        <span class="c1">// 如果数值已经存在，就不需要插入数据了。*success = 0;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">intsetSearch</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="o">&amp;</span><span class="n">pos</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">success</span><span class="p">)</span> <span class="o">*</span><span class="n">success</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="k">return</span> <span class="n">is</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 数据增长，重新申请内存。</span>
+        <span class="n">is</span> <span class="o">=</span> <span class="n">intsetResize</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pos</span> <span class="o">&lt;</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">))</span> <span class="n">intsetMoveTail</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">pos</span><span class="p">,</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">_intsetSet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">pos</span><span class="p">,</span><span class="n">value</span><span class="p">);</span>
+    <span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">is</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="23-升级">2.3. 升级</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Upgrades the intset to a larger encoding and inserts the given integer. */</span>
+<span class="k">static</span> <span class="n">intset</span> <span class="o">*</span><span class="nf">intsetUpgradeAndAdd</span><span class="p">(</span><span class="n">intset</span> <span class="o">*</span><span class="n">is</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">value</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">uint8_t</span> <span class="n">curenc</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">encoding</span><span class="p">);</span>
+    <span class="kt">uint8_t</span> <span class="n">newenc</span> <span class="o">=</span> <span class="n">_intsetValueEncoding</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">);</span>
+
+    <span class="c1">// 因为插入新的数据，而且数据超出了当前数组所有数值的范围才会升级。</span>
+    <span class="c1">// 超出了负数，或者超出了正数。正数在数组末添加，负数在数组前面添加。</span>
+    <span class="kt">int</span> <span class="n">prepend</span> <span class="o">=</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">?</span> <span class="mi">1</span> <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="cm">/* First set new encoding and resize */</span>
+    <span class="n">is</span><span class="o">-&gt;</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">newenc</span><span class="p">);</span>
+    <span class="n">is</span> <span class="o">=</span> <span class="n">intsetResize</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+
+    <span class="cm">/* Upgrade back-to-front so we don't overwrite values.
+     * Note that the "prepend" variable is used to make sure we have an empty
+     * space at either the beginning or the end of the intset. */</span>
+    <span class="c1">// 扩充内存后，迁移数据。</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">length</span><span class="o">--</span><span class="p">)</span>
+        <span class="n">_intsetSet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">length</span><span class="o">+</span><span class="n">prepend</span><span class="p">,</span><span class="n">_intsetGetEncoded</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">length</span><span class="p">,</span><span class="n">curenc</span><span class="p">));</span>
+
+    <span class="cm">/* Set the value at the beginning or the end. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">prepend</span><span class="p">)</span>
+        <span class="n">_intsetSet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">value</span><span class="p">);</span>
+    <span class="k">else</span>
+        <span class="n">_intsetSet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">),</span><span class="n">value</span><span class="p">);</span>
+    <span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">is</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><img src="/images/2020-02-20-16-39-40.png" alt="升级" data-action="zoom" /></p>
+
+<h3 id="24-搜索">2.4. 搜索</h3>
+
+<p>二分法搜索数组数据。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Search for the position of "value". Return 1 when the value was found and
+ * sets "pos" to the position of the value within the intset. Return 0 when
+ * the value is not present in the intset and sets "pos" to the position
+ * where "value" can be inserted. */</span>
+<span class="k">static</span> <span class="kt">uint8_t</span> <span class="nf">intsetSearch</span><span class="p">(</span><span class="n">intset</span> <span class="o">*</span><span class="n">is</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">value</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="o">*</span><span class="n">pos</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">max</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int64_t</span> <span class="n">cur</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+
+    <span class="cm">/* The value can never be found when the set is empty */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// 检查数值是否大于或小于数组里的所有数值。</span>
+        <span class="cm">/* Check for the case where we know we cannot find the value,
+         * but do know the insert position. */</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;</span> <span class="n">_intsetGet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">max</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="n">intrev32ifbe</span><span class="p">(</span><span class="n">is</span><span class="o">-&gt;</span><span class="n">length</span><span class="p">);</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="n">_intsetGet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 数值如果在存储的数据中间，用二分法查找。</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">max</span> <span class="o">&gt;=</span> <span class="n">min</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">mid</span> <span class="o">=</span> <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="p">)</span><span class="n">min</span> <span class="o">+</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="p">)</span><span class="n">max</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="n">cur</span> <span class="o">=</span> <span class="n">_intsetGet</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="n">mid</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;</span> <span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">min</span> <span class="o">=</span> <span class="n">mid</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">max</span> <span class="o">=</span> <span class="n">mid</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">==</span> <span class="n">cur</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="n">mid</span><span class="p">;</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">*</span><span class="n">pos</span> <span class="o">=</span> <span class="n">min</span><span class="p">;</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+:ET

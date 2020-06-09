@@ -1,0 +1,57 @@
+<p>分布式系统，用户连接到不同的物理设备，在不同的进程里工作。独立进程在处理一些用户关系性比较强的业务时，涉及多个进程交互，逻辑要比单服复杂很多。对于相对较小的分布式系统，我们仍然希望寻求一种简单的功能实现方式。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-解耦" id="markdown-toc-1-解耦">1. 解耦</a></li>
+  <li><a href="#2-架构" id="markdown-toc-2-架构">2. 架构</a></li>
+  <li><a href="#3-session" id="markdown-toc-3-session">3. Session</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-解耦">1. 解耦</h2>
+
+<p>分布式系统，每个服务节点都可以相互通信，我们希望，节点间尽量解耦，显然 B 图的逻辑更加清晰。</p>
+
+<p><img src="/images/2020-05-21-20-02-12.png" alt="通信解耦" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="2-架构">2. 架构</h2>
+
+<p>我们添加 redis 集群进行数据共享，减少节点间的通信。</p>
+
+<p><img src="/images/2020-05-21-20-02-49.png" alt="分布式架构" data-action="zoom" /></p>
+
+<p>架构特点：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">gate</code> 接入服务集群，负责客户端接入和客户端业务协议的路由，（一致性哈希算法）路由到后端逻辑服务进行处理。</li>
+  <li><code class="highlighter-rouge">logic</code> 逻辑服务集群，负责客户端业务功能实现。</li>
+  <li><code class="highlighter-rouge">redis cluster</code> 数据缓存，方便不同类型节点服务共享数据。</li>
+</ul>
+
+<hr />
+
+<p><strong><code class="highlighter-rouge">gate</code> 写数据，<code class="highlighter-rouge">logic</code> 读数据。</strong></p>
+
+<p>用户的实时在线状态被分散保存在多个 <code class="highlighter-rouge">gate</code> 服务上。<code class="highlighter-rouge">gate</code> 服务将用户在线状态实时同步到 redis 集群。</p>
+
+<p>当 <code class="highlighter-rouge">logic</code> 服务处理群聊时，我们需要获得当前群组所有成员的在线状态，这时候我们不需要遍历 <code class="highlighter-rouge">gate</code> 服务进行获取，我们只需要通过 redis 获取即可。</p>
+
+<hr />
+
+<h2 id="3-session">3. Session</h2>
+
+<p>逻辑服务节点直接从 redis 上获取数据，可谓简单粗暴，我们仍然有很多细节问题需要处理。</p>
+
+<p>这样 redis 负载可能会成为一个新的问题。特别是活跃的大群，每次发送消息，都要从 redis 取出大量的用户在线状态数据，这不是一个明智做法。所以我们可以把进程的内存利用起来 —— session。这样虽然不能保证 session 里的数据与 redis 同步，也一定程度上减轻了 redis 的负载。可以根据系统的负载设置 session 的有效时间。</p>
+
+<p>那些原来离线，后面上线的用户，没有实时发送的消息，将被保存为离线消息。并通过其它策略定时对离线消息进行推送。</p>
+
+<p><img src="/images/2020-05-21-20-44-09.png" alt="缓存" data-action="zoom" /></p>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2020/05/20/im-group-user-status-mgr/">wenfh2020.com</a></p>
+</blockquote>

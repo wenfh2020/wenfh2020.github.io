@@ -1,0 +1,429 @@
+I"q<p>主要对旧知识对温习和知识盲点的记录。（部分知识来自网络）</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-基础知识" id="markdown-toc-1-基础知识">1. 基础知识</a>    <ul>
+      <li><a href="#11-变量字节数" id="markdown-toc-11-变量字节数">1.1. 变量字节数</a></li>
+      <li><a href="#12-位运算" id="markdown-toc-12-位运算">1.2. 位运算</a></li>
+      <li><a href="#13-大小端" id="markdown-toc-13-大小端">1.3. 大小端</a></li>
+      <li><a href="#14-static" id="markdown-toc-14-static">1.4. static</a></li>
+      <li><a href="#15-union-共同体" id="markdown-toc-15-union-共同体">1.5. union 共同体</a></li>
+      <li><a href="#16-字节对齐" id="markdown-toc-16-字节对齐">1.6. 字节对齐</a></li>
+      <li><a href="#17-宏" id="markdown-toc-17-宏">1.7. 宏</a></li>
+      <li><a href="#18-volatile" id="markdown-toc-18-volatile">1.8. volatile</a></li>
+    </ul>
+  </li>
+  <li><a href="#2-其它" id="markdown-toc-2-其它">2. 其它</a>    <ul>
+      <li><a href="#21-strcpy-实现" id="markdown-toc-21-strcpy-实现">2.1. strcpy 实现</a></li>
+      <li><a href="#22-glibc-如何管理内存" id="markdown-toc-22-glibc-如何管理内存">2.2. glibc 如何管理内存</a></li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="1-基础知识">1. 基础知识</h2>
+
+<h3 id="11-变量字节数">1.1. 变量字节数</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">有符号</th>
+      <th style="text-align: left">无符号</th>
+      <th style="text-align: left">32位字节数</th>
+      <th style="text-align: left">64位字节数</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">char</td>
+      <td style="text-align: left">unsigned char</td>
+      <td style="text-align: left">1</td>
+      <td style="text-align: left">1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">short</td>
+      <td style="text-align: left">unsigned short</td>
+      <td style="text-align: left">2</td>
+      <td style="text-align: left">2</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">int</td>
+      <td style="text-align: left">unsigned int</td>
+      <td style="text-align: left">4</td>
+      <td style="text-align: left">4</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">long</td>
+      <td style="text-align: left">unsigned long</td>
+      <td style="text-align: left">4</td>
+      <td style="text-align: left">8</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">int32_t</td>
+      <td style="text-align: left">uint32_t</td>
+      <td style="text-align: left">4</td>
+      <td style="text-align: left">4</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">int64_t</td>
+      <td style="text-align: left">uint64_t</td>
+      <td style="text-align: left">8</td>
+      <td style="text-align: left">8</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">char*</td>
+      <td style="text-align: left"> </td>
+      <td style="text-align: left">4</td>
+      <td style="text-align: left">8</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">float</td>
+      <td style="text-align: left"> </td>
+      <td style="text-align: left">4</td>
+      <td style="text-align: left">4</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">double</td>
+      <td style="text-align: left"> </td>
+      <td style="text-align: left">8</td>
+      <td style="text-align: left">8</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h3 id="12-位运算">1.2. <a href="https://www.runoob.com/cprogramming/c-operators.html">位运算</a></h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">符号</th>
+      <th style="text-align: left">描述</th>
+      <th style="text-align: left">应用</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">&amp;</td>
+      <td style="text-align: left">与运算（两个 1 是 1，否则为 0），可以截取一个尾数的后面几位数字</td>
+      <td style="text-align: left">idx = h &amp; d-&gt;ht[table].sizemask; <br /> flags &amp;= ~O_NONBLOCK;</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">|</td>
+      <td style="text-align: left">或运算（有一个为 1，为 1）</td>
+      <td style="text-align: left">flags | = O_NONBLOCK;</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">^</td>
+      <td style="text-align: left">异域运算（相同的两个位是 0，不同 1）</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">~</td>
+      <td style="text-align: left">取反运算</td>
+      <td style="text-align: left">flags &amp;= ~O_NONBLOCK;</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">«</td>
+      <td style="text-align: left">左移运算（左移一位相当于 * 2）</td>
+      <td style="text-align: left">#define ZIP_INT_32B (0xc0 | 1«4)</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">»</td>
+      <td style="text-align: left">右移运算（右移一位相当于 除以 2）</td>
+      <td style="text-align: left">ret = i32»8;</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 可以灵活运用位运算，将多项属性存储在一个变量里。</span>
+<span class="c1">// 二进制，每一位 1 表示一个选项。 ｜ 操作表示添加一项。 &amp; ～ 结合使用去掉一项。</span>
+<span class="n">bool</span> <span class="nf">set_module_key</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">value</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">90</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">m_ull_has_bit</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="mh">0x00000020</span><span class="p">;</span>
+        <span class="n">m_ui_error</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">m_str_module_key</span> <span class="o">=</span> <span class="n">value</span><span class="p">;</span>
+    <span class="n">m_ull_has_bit</span> <span class="o">|=</span> <span class="mh">0x00000020</span><span class="p">;</span>
+    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="13-大小端">1.3. 大小端</h3>
+
+<p><strong>小端</strong>
+特征：数据的低字节保存在内存低地址，高字节保存在内存高地址。
+注意：数据类型 char 和 unsigned char 类型是没有大小端之分的。</p>
+
+<hr />
+<p>网络通信中，终端与服务器的通信需要保证大小端一致才能正常工作。终端和服务端约定一种方式，进行通信即可。</p>
+
+<p>例如约定小端模式。那么终端在数据传输前，要将数据类型进行检测处理。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="n">little</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)(</span><span class="o">&amp;</span><span class="n">little</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"big endian</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"little endian</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<p>测试<a href="https://github.com/wenfh2020/c_test/blob/master/network/endian.cpp">源码</a></p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+</span>
+<span class="kt">unsigned</span> <span class="kt">char</span> <span class="nf">is_little_endian</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="kt">int</span> <span class="n">little</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)(</span><span class="o">&amp;</span><span class="n">little</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">swap</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> <span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">is_little_endian</span><span class="p">())</span> <span class="k">return</span><span class="p">;</span>
+
+    <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">p</span><span class="p">,</span> <span class="n">temp</span><span class="p">;</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+        <span class="n">p</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">i</span><span class="p">];</span>
+        <span class="n">p</span><span class="p">[</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mh">0x12345678</span><span class="p">;</span>
+    <span class="n">swap</span><span class="p">(</span><span class="o">&amp;</span><span class="n">a</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">a</span><span class="p">));</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"a: %x</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="14-static">1.4. static</h3>
+
+<p>static 全局变量和全局变量，static 局部变量和局部变量，static 函数和普通函数区别：</p>
+
+<ol>
+  <li>全局静态变量 ：
+    <ol>
+      <li>在全局数据区内分配内存。</li>
+      <li>如果没有初始化，其默认值为0。</li>
+      <li>该变量在本文件内从定义开始到文件结束可见。</li>
+    </ol>
+  </li>
+  <li>局部静态变量：
+    <ol>
+      <li>该变量在全局数据区分配内存。</li>
+      <li>如果不显示初始化，那么将被隐式初始化为0。</li>
+      <li>它始终驻留在全局数据区，直到程序运行结束。</li>
+      <li>其作用域为局部作用域，当定义它的函数或语句块结束时，其作用域随之结束。</li>
+    </ol>
+  </li>
+  <li>静态函数：
+    <ol>
+      <li>静态函数只能在本源文件中使用。</li>
+      <li>在文件作用域中声明的inline函数默认为static。
+        <blockquote>
+          <p>说明：静态函数只是一个普通的全局函数，只不过受static限制，他只能在文件所在的编译单位内使用，不能在其他编译单位内使用。</p>
+        </blockquote>
+      </li>
+    </ol>
+  </li>
+</ol>
+
+<h3 id="15-union-共同体">1.5. union 共同体</h3>
+<p><a href="https://www.runoob.com/cprogramming/c-unions.html">共同体理解</a>，
+一个数据结构有多个成员数据，但是只能保存一个成员数据。共同体结构的大小，是最大的成员的大小。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">union</span> <span class="n">Data</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">f</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">str</span><span class="p">[</span><span class="mi">20</span><span class="p">];</span>
+<span class="p">}</span> <span class="n">data</span><span class="p">;</span>
+</code></pre></div></div>
+
+<h3 id="16-字节对齐">1.6. 字节对齐</h3>
+
+<p>参考引用文章，理解对齐的规律。
+<img src="/images/2020-02-20-17-15-01.png" alt="理解" data-action="zoom" />
+<a href="https://baijiahao.baidu.com/s?id=1626141749557181338&amp;wfr=spider&amp;for=pc">字节对齐你真明白了么</a>
+<a href="http://www.openedv.com/thread-277386-1-1.html">谈谈内存对齐</a>
+<a href="https://www.cnblogs.com/clover-toeic/p/3853132.html">C语言字节对齐问题详解</a>
+<a href="http://www.openedv.com/thread-277386-1-1.html">谈谈内存对齐一</a></p>
+
+<hr />
+
+<p>nginx 对齐操作</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">u_char</span><span class="p">;</span>
+
+<span class="cp">#define NGX_POOL_ALIGNMENT 16
+#define ngx_align_ptr(p, a)                                                   \
+    (u_char *) (((uintptr_t) (p) + ((uintptr_t) a - 1)) &amp; ~((uintptr_t) a - 1))
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
+    <span class="n">u_char</span> <span class="o">*</span><span class="n">p10</span> <span class="o">=</span> <span class="n">ngx_align_ptr</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+    <span class="n">u_char</span> <span class="o">*</span><span class="n">p11</span> <span class="o">=</span> <span class="n">ngx_align_ptr</span><span class="p">(</span><span class="n">p</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="17-宏">1.7. 宏</h3>
+
+<ul>
+  <li>宏的作用和展开</li>
+</ul>
+
+<ol>
+  <li>C 语言一般用 #define 宏作为常变量；C++里用 const 修饰常变量。</li>
+  <li>宏定义只是做字符替换，不分配内存空间。</li>
+  <li>预编译，编译，汇编器，链接；预编译的时候编译器将宏对应的值替换到代码中去。</li>
+  <li>宏一般只是替换对应的值，对定义不做正确性检查，有一定危险性。</li>
+</ol>
+
+<ul>
+  <li>
+    <p>C 语言编程中以空间换时间(<strong>宏</strong>)
+计算机程序中最大的矛盾是空间和时间的矛盾，那么，从这个角度出发逆向思维来考虑程序的效率问题，我们就有可以利用C语言编程中以空间换时间，使用的时候可以直接用指针来操作。同时我们也可以使用宏函数而不是函数。</p>
+  </li>
+  <li>
+    <p>‘#’ 和 ‘##’ 作用
+使用 # 把宏参数变为一个字符串，用 ## 把两个宏参数贴合在一起</p>
+  </li>
+</ul>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;iostream&gt;
+#include &lt;string&gt;
+</span>
+<span class="cp">#define STR(s) #s
+#define CONV(a, b) (a##e##b)
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">STR</span><span class="p">(</span><span class="mi">12345</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">CONV</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>结果：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>12345
+2000
+</code></pre></div></div>
+
+<ul>
+  <li>宏函数
+函数和宏函数的区别就在于，宏函数占用了大量的空间，而函数占用了时间。大家要知道的是，<strong>函数调用是要使用系统的栈来保存数据的</strong>，如果编译器里有栈检查选项，一般在函数的头会嵌入一些汇编语句对当前栈进行检查；同时，CPU也要在函数调用时保存和恢复当前的现场，进行压栈和弹栈操作，所以，函数调用需要一些CPU时间。而宏函数不存在这个问题。宏函数仅仅作为预先写好的代码嵌入到当前程序，不会产生函数调用，所以仅仅是占用了空间，在频繁调用同一个宏函数的时候，该现象尤其突出。</li>
+</ul>
+
+<hr />
+
+<p>max(++a, b) 这样的操作会隐藏了错误。例如下面这个例子：
+举例：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define max(x, y) (x) &gt; (y) ? (x) : (y)
+</span><span class="kt">void</span> <span class="nf">func</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">)</span> <span class="p">{</span> <span class="n">printf</span><span class="p">(</span><span class="s">"%d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span> <span class="p">}</span>
+<span class="n">func</span><span class="p">(</span><span class="n">max</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">++</span><span class="n">b</span><span class="p">));</span>
+</code></pre></div></div>
+
+<p>==&gt;</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">func</span><span class="p">((</span><span class="n">a</span><span class="p">)</span> <span class="o">&gt;</span> <span class="p">(</span><span class="o">++</span><span class="n">b</span><span class="p">)</span> <span class="o">?</span> <span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">:</span> <span class="p">(</span><span class="o">++</span><span class="n">b</span><span class="p">));</span>
+</code></pre></div></div>
+
+<h3 id="18-volatile">1.8. volatile</h3>
+
+<p>volatile关键字是一种限定符用来声明一个对象在程序中可以被语句外的东西修改，比如操作系统、硬件或并发执行线程。遇到该关键字，编译器不再对该变量的代码进行优化，不再从寄存器中读取变量的值，而是直接从它所在的内存中读取值，即使它前面的指令刚刚从该处读取过数据。而且读取的数据立刻被保存。好，说完了。一句话总结一下，volatile到底有什么用。它的作用就是叫编译器不要偷懒，去内存中去取值。</p>
+
+<ol>
+  <li>易变性。 在汇编层面观察，两条语句，下一条语句不会直接使用上一条语句对应的volatile变量的寄存器内容，而是直接从内存中读取。</li>
+  <li>不可优化性。volatile告诉编译器，不要对我这个变量进行各种激进的优化，甚至将变量直接消除，保证程序员写在代码中的指令，一定会被执行。相对于前面提到的第一个特性：”易变”性，”不可优化”特性可能知晓的人会相对少一些。</li>
+  <li>顺序性。C/C++ Volatile关键词前面提到的两个特性，让Volatile经常被解读为一个为多线程而生的关键词：一个全局变量，会被多线程同时访问/修改，那么线程内部，就不能假设此变量的不变性，并且基于此假设，来做一些程序设计。当然，这样的假设，本身并没有什么问题，多线程编程，并发访问/修改的全局变量，通常都会建议加上Volatile关键词修饰，来防止C/C++编译器进行不必要的优化。变量赋值的时序性在多线程中是很重要的，一般全局变量设置成 Volatile 防止编译器的优化，解决方案，全局共享的数据，在多线程环境下的逻辑需要加锁。</li>
+</ol>
+
+<hr />
+<p><a href="https://blog.csdn.net/wenqiang1208/article/details/71117818">volatile 关键字</a>
+<a href="https://blog.51cto.com/10541559/1771025">volatile关键字与竞态条件和sigchild信号</a>
+<a href="https://www.cnblogs.com/god-of-death/p/7852394.html">Volatile关键词深度剖析</a></p>
+
+<p>可以用 gdb 查看发汇编或者</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>layout <span class="nb">split</span>
+</code></pre></div></div>
+
+<p>或者输出汇编代码查看</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gcc <span class="nt">-S</span> test.cpp <span class="nt">-o</span> test.s
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+</span>
+<span class="k">volatile</span> <span class="kt">int</span> <span class="n">bbbb</span> <span class="o">=</span> <span class="mi">789</span><span class="p">;</span>
+<span class="k">volatile</span> <span class="kt">int</span> <span class="n">aaaa</span> <span class="o">=</span> <span class="mi">123</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">aaaa</span> <span class="o">+=</span> <span class="mi">456</span><span class="p">;</span>
+    <span class="n">bbbb</span> <span class="o">=</span> <span class="n">aaaa</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gdb server <span class="nt">-tui</span>
+layout regs
+<span class="nb">set </span>disassemble-next-line on
+</code></pre></div></div>
+
+<p><a href="https://juejin.im/entry/5b3111e151882574d1345496">GDB 单步调试汇编</a>
+<a href="https://www.dllhook.com/post/51.html">lldb 命令</a></p>
+
+<hr />
+
+<h2 id="2-其它">2. 其它</h2>
+
+<h3 id="21-strcpy-实现">2.1. strcpy 实现</h3>
+
+<p>参考<a href="https://github.com/torvalds/linux/blob/master/lib/string.c">内核实现</a></p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+</span>
+<span class="kt">char</span> <span class="o">*</span><span class="nf">_strcpy</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">dest</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">src</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">tmp</span> <span class="o">=</span> <span class="n">dest</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">((</span><span class="o">*</span><span class="n">dest</span><span class="o">++</span> <span class="o">=</span> <span class="o">*</span><span class="n">src</span><span class="o">++</span><span class="p">)</span> <span class="o">!=</span> <span class="sc">'\0'</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">tmp</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">dest</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">src</span> <span class="o">=</span> <span class="s">"1234567890"</span><span class="p">;</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"return: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">_strcpy</span><span class="p">(</span><span class="n">dest</span><span class="p">,</span> <span class="n">src</span><span class="p">));</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="22-glibc-如何管理内存">2.2. glibc 如何管理内存</h3>
+
+<blockquote>
+  <p>slab 内存管理机制理解
+《深入理解计算机系统》第九章 虚拟内存，9.9 动态内存分配
+nignx 内存池</p>
+</blockquote>
+
+<p>glibc 是GNU发布的libc库，即c运行库。glibc是linux系统中最底层的api，几乎其它任何运行库都会依赖于glibc。glibc除了封装linux操作系统所提供的系统服务外，它本身也提供了许多其它一些必要功能服务的实现。由于 glibc 囊括了几乎所有的 UNIX 通行的标准。</p>
+
+<p>glibc 通过预分配大块内存来解决内存申请效率，大块内存切成小块方式进行分配，小块内存回收后，空闲链表维护空闲内存块供后续的内存申请，空闲内存块或被合并空闲块。
+问题：glibc 内存管理容易造成内存碎片，导致内存泄漏。</p>
+:ET

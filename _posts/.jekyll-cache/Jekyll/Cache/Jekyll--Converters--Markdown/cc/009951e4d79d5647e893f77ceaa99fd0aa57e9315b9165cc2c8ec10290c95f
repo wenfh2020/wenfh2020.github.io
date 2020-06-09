@@ -1,0 +1,190 @@
+I"<p>常用知识整理和收藏，方便查阅。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-常用查询" id="markdown-toc-1-常用查询">1. 常用查询</a></li>
+  <li><a href="#2-常看博客" id="markdown-toc-2-常看博客">2. 常看博客</a></li>
+  <li><a href="#3-书籍" id="markdown-toc-3-书籍">3. 书籍</a></li>
+  <li><a href="#4-收藏" id="markdown-toc-4-收藏">4. 收藏</a></li>
+  <li><a href="#5-开源" id="markdown-toc-5-开源">5. 开源</a></li>
+  <li><a href="#6-其它" id="markdown-toc-6-其它">6. 其它</a></li>
+</ul>
+
+<hr />
+
+<p><strong>图难于其易，为大于其细，天下难事，必作于易，天下大事，必作于细。</strong> – 《道德经》</p>
+
+<h2 id="1-常用查询">1. 常用查询</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">选项</th>
+      <th style="text-align: left">链接</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">Redis</td>
+      <td style="text-align: left"><a href="https://redis.io/">Redis 官网</a><br /><a href="http://www.redis.cn/">Redis 中文官方网站</a><br /><a href="https://www.runoob.com/redis/redis-tutorial.html">Redis 教程</a> <br /><a href="http://antirez.com/">Redis 作者博客</a> <br /> <a href="https://github.com/antirez/redis/tree/unstable">Redis 源码</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">C/C++</td>
+      <td style="text-align: left"><a href="https://www.runoob.com/cprogramming/c-tutorial.html">C 语言教程</a> <br /> <a href="http://www.cplusplus.com/">C++ 官网</a> <br /> <a href="https://zh.cppreference.com/">C++ 参考手册</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">Linux</td>
+      <td style="text-align: left"><a href="https://www.runoob.com/linux/linux-command-manual.html">Linux 命令大全</a><br /><a href="https://www.cnblogs.com/tolimit/default.html?page=1">Linux 内核源码分析</a><br /><a href="http://man7.org/linux/man-pages/">Linux man pages online</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">Go</td>
+      <td style="text-align: left"><a href="https://golang.google.cn/">Golang 官网</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">asm</td>
+      <td style="text-align: left"><a href="https://blog.csdn.net/qq_36982160/article/details/82950848">汇编常用指令</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">shell</td>
+      <td style="text-align: left"><a href="https://www.runoob.com/linux/linux-shell.html">Shell 教程 | 菜鸟教程</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">html/css</td>
+      <td style="text-align: left"><a href="http://caibaojian.com/w3c/html/">HTML 教程</a><br /><a href="http://caibaojian.com/w3c/css/">CSS 教程</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="2-常看博客">2. 常看博客</h2>
+
+<ul>
+  <li><a href="https://blog.codingnow.com/">云风的 BLOG</a></li>
+  <li><a href="http://xiaorui.cc/">峰云就她了</a></li>
+</ul>
+
+<hr />
+
+<h2 id="3-书籍">3. 书籍</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">类型</th>
+      <th style="text-align: left">名称</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">C/C++</td>
+      <td style="text-align: left">《C++ Primer》 <br />《Effect C++》 <br />《More Effect++》<br />《STL 源码剖析》<br />《跟我一起学 Makefile》</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">Go</td>
+      <td style="text-align: left">《go 语言编程》</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">Python</td>
+      <td style="text-align: left">《The Django Book 2.0 中文译本》</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">Linux</td>
+      <td style="text-align: left">《深入理解计算机系统》<br />《UNIX环境高级编程》<br />《鸟哥的 Linux 私房菜》系列 <br />《程序员的自我修养》<br />《跟老男孩学 Linux 运维》<br /> 《Linux 内核设计与实现》</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">Network</td>
+      <td style="text-align: left">《Linux 高性能服务器编程》     <br /> 《TCP/IP 详解》系列</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">DataBase</td>
+      <td style="text-align: left">《Redis 设计与实现》<br /> 《MySQL性能调优与架构设计》</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">算法</td>
+      <td style="text-align: left">《算法导论》</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">面试</td>
+      <td style="text-align: left">《剑指offer》</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="4-收藏">4. 收藏</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">类型</th>
+      <th style="text-align: left">链接</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">系统</td>
+      <td style="text-align: left"><a href="https://www.solves.com.cn/news/hlw/2020-03-15/13907.html">「图文结合」Linux 进程、线程、文件描述符的底层原理</a> <br /> <a href="https://www.ibm.com/developerworks/cn/linux/l-linux-slab-allocator/index.html">Linux slab 分配器剖析</a> <br /> <a href="https://www.solves.com.cn/news/hlw/2020-03-15/13907.html">用户空间_内核空间以及内存映射</a> <br /> <a href="https://www.cnblogs.com/LoyenWang/p/12386281.html">Linux进程调度器-进程切换</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">c/c++</td>
+      <td style="text-align: left"><a href="https://www.kancloud.cn/digest/stl-sources/">STL 源码剖析</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">redis</td>
+      <td style="text-align: left"><a href="https://github.com/junegunn/redis-stat">redis-stat</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">管理</td>
+      <td style="text-align: left"><a href="http://www.uml.org.cn/oobject/201104212.asp">UML类图与类的关系详解</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ebook</td>
+      <td style="text-align: left"><a href="https://evanli.github.io/programming-book/Git/">book1</a> <br /> <a href="https://github.com/wenfh2020/books">book2</a> <br /> <a href="https://github.com/hello2dj/Books-1">book3</a>   <br /> <a href="https://github.com/yuebaii/books">book4</a>     <br /> <a href="https://github.com/lancetw/ebook-1">book5</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">素材</td>
+      <td style="text-align: left"><a href="http://www.iconarchive.com/">iconarchive</a> <br /> <a href="https://en.savefrom.net/11/">download video from url</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="5-开源">5. 开源</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">类型</th>
+      <th style="text-align: left">项目</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">c/c++</td>
+      <td style="text-align: left"><a href="http://software.schmorp.de/pkg/libev.html">libev</a> <br /> <a href="https://github.com/antirez/redis">redis</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">golang</td>
+      <td style="text-align: left"><a href="https://github.com/CodisLabs/codis">codis</a> <br /> <a href="https://github.com/flike/kingshard">kingshard</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="6-其它">6. 其它</h2>
+
+<ul>
+  <li><a href="https://github.com/Gaohaoyang/gaohaoyang.github.io">github + jekyll 博客</a>
+<a href="https://wenfh2020.com/2020/02/17/make-blog/">本博客</a>主要采用这个模版搭建。搭建框架，请参考<a href="https://github.com/wonderseen/wonderseen.github.io">这个文档</a>的搭建流程。</li>
+  <li><a href="https://www.gnu.org/software/libc/">The GNU C Library (glibc)</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2020/05/14/collection/">wenfh2020.com</a></p>
+</blockquote>
+:ET

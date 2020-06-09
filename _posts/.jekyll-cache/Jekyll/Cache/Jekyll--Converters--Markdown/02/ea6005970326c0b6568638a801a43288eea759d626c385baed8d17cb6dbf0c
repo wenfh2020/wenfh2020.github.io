@@ -1,0 +1,376 @@
+I"C�<p>rdb 文件是一个经过压缩的二进制文件，上一章讲了 <a href="https://wenfh2020.com/2020/03/19/redis-rdb-application/">rdb 持久化 - 应用场景</a>，本章主要讲述 rdb 文件的结构组成包含了哪些数据。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-rdb-临时文件" id="markdown-toc-1-rdb-临时文件">1. rdb 临时文件</a></li>
+  <li><a href="#2-逐步持久化" id="markdown-toc-2-逐步持久化">2. 逐步持久化</a></li>
+  <li><a href="#3-结构" id="markdown-toc-3-结构">3. 结构</a>    <ul>
+      <li><a href="#31-数据保存时序" id="markdown-toc-31-数据保存时序">3.1. 数据保存时序</a></li>
+      <li><a href="#32-保存集群复制信息" id="markdown-toc-32-保存集群复制信息">3.2. 保存集群复制信息</a></li>
+      <li><a href="#33-保存属性信息" id="markdown-toc-33-保存属性信息">3.3. 保存属性信息</a></li>
+      <li><a href="#34-保存-key-value" id="markdown-toc-34-保存-key-value">3.4. 保存 key-value</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-参考" id="markdown-toc-4-参考">4. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-rdb-临时文件">1. rdb 临时文件</h2>
+
+<p>redis 内存数据异步落地到临时 rdb 文件，成功存储后，临时文件覆盖原有文件。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* flags on the purpose of rdb save or load */</span>
+<span class="cp">#define RDBFLAGS_NONE 0
+#define RDBFLAGS_AOF_PREAMBLE (1&lt;&lt;0)
+#define RDBFLAGS_REPLICATION (1&lt;&lt;1)
+#define REDIS_AUTOSYNC_BYTES (1024*1024*32) </span><span class="cm">/* fdatasync every 32MB */</span><span class="cp">
+</span>
+<span class="c1">// 主进程 fork 子进程存盘</span>
+<span class="kt">int</span> <span class="nf">rdbSaveBackground</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">,</span> <span class="n">rdbSaveInfo</span> <span class="o">*</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">childpid</span> <span class="o">=</span> <span class="n">redisFork</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="cm">/* Child */</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="n">rdbSave</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="n">rsi</span><span class="p">);</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 内存数据 -&gt; 临时 rdb 文件 -&gt; 覆盖原 rdb 文件</span>
+<span class="kt">int</span> <span class="nf">rdbSave</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">,</span> <span class="n">rdbSaveInfo</span> <span class="o">*</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 初始化 rdb 文件结构</span>
+    <span class="n">rioInitWithFile</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rdb</span><span class="p">,</span><span class="n">fp</span><span class="p">);</span>
+    <span class="n">startSaving</span><span class="p">(</span><span class="n">RDBFLAGS_NONE</span><span class="p">);</span>
+
+    <span class="c1">// 写文件缓存，缓存满 REDIS_AUTOSYNC_BYTES，缓存刷新到磁盘。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_save_incremental_fsync</span><span class="p">)</span>
+        <span class="n">rioSetAutoSync</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rdb</span><span class="p">,</span><span class="n">REDIS_AUTOSYNC_BYTES</span><span class="p">);</span>
+
+    <span class="c1">// 将内存数据写入 rio 文件</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveRio</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rdb</span><span class="p">,</span><span class="o">&amp;</span><span class="n">error</span><span class="p">,</span><span class="n">RDBFLAGS_NONE</span><span class="p">,</span><span class="n">rsi</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_ERR</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">errno</span> <span class="o">=</span> <span class="n">error</span><span class="p">;</span>
+        <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="cm">/* fflush 是 libc 提供的方法，调用 write 函数写到磁盘[其实是写到内核的缓冲区]。
+     * fsync 是系统提供的系统调用，把内核缓冲刷到磁盘上。*/</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fflush</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span> <span class="o">==</span> <span class="n">EOF</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fsync</span><span class="p">(</span><span class="n">fileno</span><span class="p">(</span><span class="n">fp</span><span class="p">))</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fclose</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span> <span class="o">==</span> <span class="n">EOF</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rename</span><span class="p">(</span><span class="n">tmpfile</span><span class="p">,</span><span class="n">filename</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{...}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-逐步持久化">2. 逐步持久化</h2>
+
+<p>内存可以逐步持久化到磁盘，缓存满 REDIS_AUTOSYNC_BYTES （32MB），缓存刷新到磁盘。这样将大数据分散开来，减少系统压力，避免一次写盘带来的问题。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+rdb-save-incremental-fsync <span class="nb">yes</span>
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">rioSetAutoSync</span><span class="p">(</span><span class="n">rio</span> <span class="o">*</span><span class="n">r</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">bytes</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">r</span><span class="o">-&gt;</span><span class="n">write</span> <span class="o">!=</span> <span class="n">rioFileIO</span><span class="p">.</span><span class="n">write</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+    <span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">autosync</span> <span class="o">=</span> <span class="n">bytes</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">size_t</span> <span class="nf">rioFileWrite</span><span class="p">(</span><span class="n">rio</span> <span class="o">*</span><span class="n">r</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">size_t</span> <span class="n">retval</span><span class="p">;</span>
+
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">fwrite</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="n">len</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">fp</span><span class="p">);</span>
+    <span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">buffered</span> <span class="o">+=</span> <span class="n">len</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">autosync</span> <span class="o">&amp;&amp;</span>
+        <span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">buffered</span> <span class="o">&gt;=</span> <span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">autosync</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fflush</span><span class="p">(</span><span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">fp</span><span class="p">);</span>
+        <span class="n">redis_fsync</span><span class="p">(</span><span class="n">fileno</span><span class="p">(</span><span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">fp</span><span class="p">));</span>
+        <span class="n">r</span><span class="o">-&gt;</span><span class="n">io</span><span class="p">.</span><span class="n">file</span><span class="p">.</span><span class="n">buffered</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">retval</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-结构">3. 结构</h2>
+
+<p>粗略将 rdb 文件的结构元素添加到图表，可以看作是“伪代码”吧，有些元素是建立在一定条件下才会添加进去。</p>
+
+<p><img src="/images/2020-03-19-13-57-01.png" alt="rdb 文件结构" data-action="zoom" /></p>
+
+<blockquote>
+  <p>有兴趣的朋友，可以参考我的帖子：<a href="https://wenfh2020.com/2020/01/05/redis-gdb/">用 gdb 调试 redis</a>，下个断点，走一下 redis 保存和加载 rdb 文件的工作流程。</p>
+</blockquote>
+
+<hr />
+
+<h3 id="31-数据保存时序">3.1. 数据保存时序</h3>
+
+<p>从上图我们可以看到 rdb 文件的结构。整个文件是由不同类型的数据单元组成的(<code class="highlighter-rouge">type + value</code>) 。内存持久化为 rdb 文件，我们可以参考 <code class="highlighter-rouge">rdbSaveRio</code>。</p>
+
+<blockquote>
+  <p>redis 加载 rdb 文件时（<code class="highlighter-rouge">rdbLoadRio</code>），也是先读出数据类型 (<code class="highlighter-rouge">type</code>)，再根据数据类型，加载对应的数据——这样顺序将 rdb 文件数据加载到内存。</p>
+</blockquote>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Produces a dump of the database in RDB format sending it to the specified
+ * Redis I/O channel. */</span>
+<span class="kt">int</span> <span class="nf">rdbSaveRio</span><span class="p">(</span><span class="n">rio</span> <span class="o">*</span><span class="n">rdb</span><span class="p">,</span> <span class="kt">int</span> <span class="o">*</span><span class="n">error</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rdbflags</span><span class="p">,</span> <span class="n">rdbSaveInfo</span> <span class="o">*</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">snprintf</span><span class="p">(</span><span class="n">magic</span><span class="p">,</span><span class="k">sizeof</span><span class="p">(</span><span class="n">magic</span><span class="p">),</span><span class="s">"REDIS%04d"</span><span class="p">,</span><span class="n">RDB_VERSION</span><span class="p">);</span>
+    <span class="c1">// 写入 rdb 版本号</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbWriteRaw</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">magic</span><span class="p">,</span><span class="mi">9</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="c1">// 写入 redis 属性信息</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveInfoAuxFields</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">rdbflags</span><span class="p">,</span><span class="n">rsi</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="c1">// 写入扩展插件‘before’数据</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveModulesAux</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span> <span class="n">REDISMODULE_AUX_BEFORE_RDB</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+    <span class="c1">// 遍历数据库，落地数据。</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">server</span><span class="p">.</span><span class="n">dbnum</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">redisDb</span> <span class="o">*</span><span class="n">db</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">db</span><span class="o">+</span><span class="n">j</span><span class="p">;</span>
+        <span class="n">dict</span> <span class="o">*</span><span class="n">d</span> <span class="o">=</span> <span class="n">db</span><span class="o">-&gt;</span><span class="n">dict</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">dictSize</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span>
+        <span class="n">di</span> <span class="o">=</span> <span class="n">dictGetSafeIterator</span><span class="p">(</span><span class="n">d</span><span class="p">);</span>
+
+        <span class="c1">// 保存数据库 id</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveType</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">RDB_OPCODE_SELECTDB</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveLen</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+        <span class="c1">// 保存数据库字典大小（db-&gt;dict），过期字典大小（db-&gt;expires）。</span>
+        <span class="kt">uint64_t</span> <span class="n">db_size</span><span class="p">,</span> <span class="n">expires_size</span><span class="p">;</span>
+        <span class="n">db_size</span> <span class="o">=</span> <span class="n">dictSize</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">dict</span><span class="p">);</span>
+        <span class="n">expires_size</span> <span class="o">=</span> <span class="n">dictSize</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveType</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">RDB_OPCODE_RESIZEDB</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveLen</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">db_size</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveLen</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">expires_size</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+        <span class="c1">// 遍历数据库数据。</span>
+        <span class="k">while</span><span class="p">((</span><span class="n">de</span> <span class="o">=</span> <span class="n">dictNext</span><span class="p">(</span><span class="n">di</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">sds</span> <span class="n">keystr</span> <span class="o">=</span> <span class="n">dictGetKey</span><span class="p">(</span><span class="n">de</span><span class="p">);</span>
+            <span class="n">robj</span> <span class="n">key</span><span class="p">,</span> <span class="o">*</span><span class="n">o</span> <span class="o">=</span> <span class="n">dictGetVal</span><span class="p">(</span><span class="n">de</span><span class="p">);</span>
+            <span class="kt">long</span> <span class="kt">long</span> <span class="n">expire</span><span class="p">;</span>
+
+            <span class="n">initStaticStringObject</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="n">keystr</span><span class="p">);</span>
+            <span class="n">expire</span> <span class="o">=</span> <span class="n">getExpire</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="o">&amp;</span><span class="n">key</span><span class="p">);</span>
+            <span class="c1">// 保存 key，value，expire。</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveKeyValuePair</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="o">&amp;</span><span class="n">key</span><span class="p">,</span><span class="n">o</span><span class="p">,</span><span class="n">expire</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+            <span class="cm">/* When this RDB is produced as part of an AOF rewrite, move
+             * accumulated diff from parent to child while rewriting in
+             * order to have a smaller final write. */</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">rdbflags</span> <span class="o">&amp;</span> <span class="n">RDBFLAGS_AOF_PREAMBLE</span> <span class="o">&amp;&amp;</span>
+                <span class="n">rdb</span><span class="o">-&gt;</span><span class="n">processed_bytes</span> <span class="o">&gt;</span> <span class="n">processed</span><span class="o">+</span><span class="n">AOF_READ_DIFF_INTERVAL_BYTES</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">processed</span> <span class="o">=</span> <span class="n">rdb</span><span class="o">-&gt;</span><span class="n">processed_bytes</span><span class="p">;</span>
+                <span class="n">aofReadDiffFromParent</span><span class="p">();</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">dictReleaseIterator</span><span class="p">(</span><span class="n">di</span><span class="p">);</span>
+        <span class="n">di</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span> <span class="cm">/* So that we don't release it again on error. */</span>
+    <span class="p">}</span>
+
+    <span class="cm">/* If we are storing the replication information on disk, persist
+     * the script cache as well: on successful PSYNC after a restart, we need
+     * to be able to process any EVALSHA inside the replication backlog the
+     * master will send us. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rsi</span> <span class="o">&amp;&amp;</span> <span class="n">dictSize</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">lua_scripts</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">di</span> <span class="o">=</span> <span class="n">dictGetIterator</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">lua_scripts</span><span class="p">);</span>
+        <span class="k">while</span><span class="p">((</span><span class="n">de</span> <span class="o">=</span> <span class="n">dictNext</span><span class="p">(</span><span class="n">di</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">robj</span> <span class="o">*</span><span class="n">body</span> <span class="o">=</span> <span class="n">dictGetVal</span><span class="p">(</span><span class="n">de</span><span class="p">);</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxField</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"lua"</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="n">body</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">body</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">))</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">dictReleaseIterator</span><span class="p">(</span><span class="n">di</span><span class="p">);</span>
+        <span class="n">di</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span> <span class="cm">/* So that we don't release it again on error. */</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 写入扩展插件‘after’数据。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveModulesAux</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span> <span class="n">REDISMODULE_AUX_AFTER_RDB</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+    <span class="c1">// 保存 rdb 文件结束符。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveType</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">RDB_OPCODE_EOF</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+    <span class="c1">// 写入 crc64 检验码。</span>
+    <span class="n">cksum</span> <span class="o">=</span> <span class="n">rdb</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="p">;</span>
+    <span class="n">memrev64ifbe</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cksum</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rioWrite</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="o">&amp;</span><span class="n">cksum</span><span class="p">,</span><span class="mi">8</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">C_OK</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="32-保存集群复制信息">3.2. 保存集群复制信息</h3>
+
+<p>rdb 实现附加功能，保存服务数据复制的相关信息。当服务在某些数据复制场景下，需要 redis 进程的内存复制 id，复制位置，可以直接保存在 rdb 中，即便redis 服务重启或者服务角色发生转移(由主服务变成从服务)，也可以从 rdb 文件中，获得相应的复制数据信息，不至于什么信息都没有，需要重新全量同步。</p>
+
+<hr />
+
+<p>可以参考 redis 这两个源码改动：</p>
+
+<ul>
+  <li><a href="https://github.com/antirez/redis/commit/28c96d73b2e157a37465560bc421280d17005708?diff=unified">PSYNC2: Save replication ID/offset on RDB file.</a></li>
+  <li><a href="https://github.com/antirez/redis/commit/2669fb8364c4c4080b7b75809ca94fc8022151de?diff=unified">PSYNC2: different improvements to Redis replication.</a></li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* This structure can be optionally passed to RDB save/load functions in
+ * order to implement additional functionalities, by storing and loading
+ * metadata to the RDB file.
+ *
+ * Currently the only use is to select a DB at load time, useful in
+ * replication in order to make sure that chained slaves (slaves of slaves)
+ * select the correct DB and are able to accept the stream coming from the
+ * top-level master. */</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">rdbSaveInfo</span> <span class="p">{</span>
+    <span class="cm">/* Used saving and loading. */</span>
+    <span class="kt">int</span> <span class="n">repl_stream_db</span><span class="p">;</span>  <span class="cm">/* DB to select in server.master client. */</span>
+
+    <span class="cm">/* Used only loading. */</span>
+    <span class="kt">int</span> <span class="n">repl_id_is_set</span><span class="p">;</span>  <span class="cm">/* True if repl_id field is set. */</span>
+    <span class="kt">char</span> <span class="n">repl_id</span><span class="p">[</span><span class="n">CONFIG_RUN_ID_SIZE</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>     <span class="cm">/* Replication ID. */</span>
+    <span class="kt">long</span> <span class="kt">long</span> <span class="n">repl_offset</span><span class="p">;</span>                  <span class="cm">/* Replication offset. */</span>
+<span class="p">}</span> <span class="n">rdbSaveInfo</span><span class="p">;</span>
+
+<span class="c1">// 保存复制副本相关信息。</span>
+<span class="kt">int</span> <span class="nf">rdbSaveInfoAuxFields</span><span class="p">(</span><span class="n">rio</span> <span class="o">*</span><span class="n">rdb</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rdbflags</span><span class="p">,</span> <span class="n">rdbSaveInfo</span> <span class="o">*</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"repl-stream-db"</span><span class="p">,</span><span class="n">rsi</span><span class="o">-&gt;</span><span class="n">repl_stream_db</span><span class="p">)</span>
+            <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrStr</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"repl-id"</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">replid</span><span class="p">)</span>
+            <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"repl-offset"</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">master_repl_offset</span><span class="p">)</span>
+            <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="33-保存属性信息">3.3. 保存属性信息</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 写入 redis 属性信息</span>
+<span class="kt">int</span> <span class="nf">rdbSaveInfoAuxFields</span><span class="p">(</span><span class="n">rio</span> <span class="o">*</span><span class="n">rdb</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rdbflags</span><span class="p">,</span> <span class="n">rdbSaveInfo</span> <span class="o">*</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">redis_bits</span> <span class="o">=</span> <span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span><span class="p">)</span> <span class="o">?</span> <span class="mi">64</span> <span class="o">:</span> <span class="mi">32</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">aof_preamble</span> <span class="o">=</span> <span class="p">(</span><span class="n">rdbflags</span> <span class="o">&amp;</span> <span class="n">RDBFLAGS_AOF_PREAMBLE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="cm">/* Add a few fields about the state when the RDB was created. */</span>
+    <span class="c1">// 写入 redis 版本号</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrStr</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"redis-ver"</span><span class="p">,</span><span class="n">REDIS_VERSION</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="c1">// 写入redis 工作的机器多少位。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"redis-bits"</span><span class="p">,</span><span class="n">redis_bits</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="c1">// rdb 写入数据时间</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"ctime"</span><span class="p">,</span><span class="n">time</span><span class="p">(</span><span class="nb">NULL</span><span class="p">))</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="c1">// 当前使用内存大小</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"used-mem"</span><span class="p">,</span><span class="n">zmalloc_used_memory</span><span class="p">())</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+
+    <span class="c1">// 存储从库信息，方便 (slaves of slaves) 数据同步</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"repl-stream-db"</span><span class="p">,</span><span class="n">rsi</span><span class="o">-&gt;</span><span class="n">repl_stream_db</span><span class="p">)</span>
+            <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrStr</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"repl-id"</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">replid</span><span class="p">)</span>
+            <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"repl-offset"</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">master_repl_offset</span><span class="p">)</span>
+            <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"aof-preamble"</span><span class="p">,</span><span class="n">aof_preamble</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="34-保存-key-value">3.4. 保存 key-value</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define RDB_OPCODE_IDLE          248   </span><span class="cm">/* LRU idle time. */</span><span class="cp">
+#define RDB_OPCODE_FREQ          249   </span><span class="cm">/* LFU frequency. */</span><span class="cp">
+#define RDB_OPCODE_AUX           250   </span><span class="cm">/* RDB aux field. */</span><span class="cp">
+#define RDB_OPCODE_EXPIRETIME_MS 252   </span><span class="cm">/* Expire time in milliseconds. */</span><span class="cp">
+</span>
+
+<span class="cm">/* Save a key-value pair, with expire time, type, key, value.
+ * On error -1 is returned.
+ * On success if the key was actually saved 1 is returned, otherwise 0
+ * is returned (the key was already expired). */</span>
+<span class="kt">int</span> <span class="nf">rdbSaveKeyValuePair</span><span class="p">(</span><span class="n">rio</span> <span class="o">*</span><span class="n">rdb</span><span class="p">,</span> <span class="n">robj</span> <span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="n">robj</span> <span class="o">*</span><span class="n">val</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">expiretime</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">savelru</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">maxmemory_policy</span> <span class="o">&amp;</span> <span class="n">MAXMEMORY_FLAG_LRU</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">savelfu</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">maxmemory_policy</span> <span class="o">&amp;</span> <span class="n">MAXMEMORY_FLAG_LFU</span><span class="p">;</span>
+
+    <span class="c1">// 保存数据到期时间。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">expiretime</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveType</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">RDB_OPCODE_EXPIRETIME_MS</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveMillisecondTime</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">expiretime</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 保存数据 lru 时间，精度是秒，这样可以减少存储的空间。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">savelru</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">uint64_t</span> <span class="n">idletime</span> <span class="o">=</span> <span class="n">estimateObjectIdleTime</span><span class="p">(</span><span class="n">val</span><span class="p">);</span>
+        <span class="n">idletime</span> <span class="o">/=</span> <span class="mi">1000</span><span class="p">;</span> <span class="cm">/* Using seconds is enough and requires less space.*/</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveType</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">RDB_OPCODE_IDLE</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveLen</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">idletime</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 保存数据使用频率信息。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">savelfu</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">uint8_t</span> <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+        <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">LFUDecrAndReturn</span><span class="p">(</span><span class="n">val</span><span class="p">);</span>
+        <span class="c1">// 使用频率是一个 0 - 255 的计数，只用一个字节保存即可。</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveType</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">RDB_OPCODE_FREQ</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbWriteRaw</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">buf</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 保存数据类型。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveObjectType</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="c1">// 保存键数据。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveStringObject</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">key</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="c1">// 保存键对应数据信息。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveObject</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="n">val</span><span class="p">,</span><span class="n">key</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 数据对象，根据不同的结构类型，进行保存。</span>
+<span class="kt">ssize_t</span> <span class="nf">rdbSaveObject</span><span class="p">(</span><span class="n">rio</span> <span class="o">*</span><span class="n">rdb</span><span class="p">,</span> <span class="n">robj</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="n">robj</span> <span class="o">*</span><span class="n">key</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">==</span> <span class="n">OBJ_STRING</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">==</span> <span class="n">OBJ_LIST</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">==</span> <span class="n">OBJ_SET</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">==</span> <span class="n">OBJ_ZSET</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">==</span> <span class="n">OBJ_HASH</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">==</span> <span class="n">OBJ_STREAM</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">==</span> <span class="n">OBJ_MODULE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-参考">4. 参考</h2>
+
+<ul>
+  <li><a href="https://github.com/menwengit/redis_source_annotation">redis 3.2.8 的源码注释</a></li>
+  <li><a href="https://blog.csdn.net/mishifangxiangdefeng/article/details/50032357">redis配置文件样例(二)</a></li>
+  <li><a href="https://github.com/sripathikrishnan/redis-rdb-tools/wiki/Redis-RDB-Dump-File-Format">Redis RDB Dump File Format</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

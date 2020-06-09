@@ -1,0 +1,146 @@
+<p>主要对旧知识对温习和知识盲点的记录。（部分知识来自网络）</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-set" id="markdown-toc-1-set">1. set</a></li>
+  <li><a href="#2-map" id="markdown-toc-2-map">2. map</a></li>
+  <li><a href="#3-vector" id="markdown-toc-3-vector">3. vector</a></li>
+  <li><a href="#4-参考" id="markdown-toc-4-参考">4. 参考</a></li>
+</ul>
+
+<h2 id="1-set">1. set</h2>
+
+<ul>
+  <li>遍历</li>
+</ul>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">s</span><span class="p">;</span>
+<span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">it</span> <span class="o">=</span> <span class="n">s</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span>
+<span class="k">for</span> <span class="p">(;</span> <span class="n">it</span> <span class="o">!=</span> <span class="n">s</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">it</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">it</span> <span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-map">2. map</h2>
+
+<ul>
+  <li>插入数据</li>
+</ul>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="kt">long</span> <span class="kt">long</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">_map</span><span class="p">;</span>
+<span class="n">_map</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">long</span> <span class="kt">long</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">));</span>
+</code></pre></div></div>
+
+<ul>
+  <li>反向遍历</li>
+</ul>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="kt">long</span> <span class="kt">long</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">_map</span><span class="p">;</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="kt">long</span> <span class="kt">long</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;::</span><span class="n">reverse_iterator</span> <span class="n">itr</span> <span class="o">=</span> <span class="n">_map</span><span class="p">.</span><span class="n">rbegin</span><span class="p">();</span>
+<span class="k">for</span> <span class="p">(;</span> <span class="n">itr</span> <span class="o">!=</span> <span class="n">_map</span><span class="p">.</span><span class="n">rend</span><span class="p">();</span> <span class="n">itr</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"%p: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">itr</span><span class="o">-&gt;</span><span class="n">first</span><span class="p">,</span> <span class="n">itr</span><span class="o">-&gt;</span><span class="n">second</span><span class="p">.</span><span class="n">c_str</span><span class="p">());</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-vector">3. vector</h2>
+
+<blockquote>
+  <p>stl 的 map，vector 实现原理，内存管理，排序，优缺点。</p>
+</blockquote>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">接口</th>
+      <th style="text-align: left">解析</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">capacity</td>
+      <td style="text-align: left">当前容器容量，capacity 增长的策略不同的平台下，情况不一样，mac 和 centos 就不一样。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">size</td>
+      <td style="text-align: left">当前数据长度</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">reserve</td>
+      <td style="text-align: left">根据目标数据告诉容器应该预留多少个元素的存储空间，影响 capacity</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">resize</td>
+      <td style="text-align: left">调整当前数据大小，对数据有初始化功能；小于那么 capc 不变，大于capc 要改变，当resize 大小有改变且大于当前 capacity，那么 capacity 会加倍增长</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>vector 容器自增长，数组内存都是连续的，为了增加数组的使用效率，会对内存进行预分配。
+vector 不得不重新分配新的内存时以<strong>加倍当前容量</strong>的分配策略实现重新分配
+==&gt; 因为动态内存分配数组，数组内部会根据内容输入的容量增长，不断重新分配内存，如果数组要连续输入数量比较多的内容，可以通过 reserve （或者 resize）接口为目标数据预分配足够的空间，这样，数组在操作过程中，就不会频繁进行内存的重新分配，导致效率低下。</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;iostream&gt;
+#include &lt;vector&gt;
+</span>
+<span class="k">const</span> <span class="kt">int</span> <span class="n">g_array_len</span> <span class="o">=</span> <span class="mi">612</span><span class="p">;</span>
+<span class="k">using</span> <span class="k">namespace</span> <span class="n">std</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">traversal</span><span class="p">(</span><span class="kt">int</span> <span class="n">len</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">len</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"data: %d, size: %lu, capc: %lu</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">capacity</span><span class="p">());</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">reserve</span><span class="p">(</span><span class="kt">int</span> <span class="n">len</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+    <span class="n">v</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">len</span><span class="p">);</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">len</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"data: %d, size: %lu, capc: %lu</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">capacity</span><span class="p">());</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">resize</span><span class="p">(</span><span class="kt">int</span> <span class="n">len</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+    <span class="n">v</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">len</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"vector size: %lu, capc: %lu</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">capacity</span><span class="p">());</span>
+    <span class="n">v</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">len</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"vector size: %lu, capc: %lu</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">capacity</span><span class="p">());</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"v[%d] = %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">len</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="n">len</span><span class="o">+</span><span class="mi">1</span><span class="p">]);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// 可以通过遍历数据，观察 vector 内部的内存分配情况。</span>
+    <span class="c1">// traversal(g_array_len);</span>
+
+    <span class="c1">// 预分配容器容量，观察容器内部的内存分配情况。</span>
+    <span class="c1">// reserve(g_array_len);</span>
+
+    <span class="c1">// 预分配容器容量，目标数据超出容量，观察容器内部的内存分配情况。</span>
+    <span class="c1">// reserve(g_array_len + 1);</span>
+
+    <span class="n">resize</span><span class="p">(</span><span class="n">g_array_len</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-参考">4. 参考</h2>
+
+<ul>
+  <li><a href="https://zh.cppreference.com/w/cpp/container/set/begin">文档</a></li>
+  <li><a href="https://www.jianshu.com/u/88ad4f76eb79">多线程</a></li>
+  <li><a href="http://www.cplusplus.com/">c++ 官网</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2018/02/12/stl/">wenfh2020.com</a></p>
+</blockquote>

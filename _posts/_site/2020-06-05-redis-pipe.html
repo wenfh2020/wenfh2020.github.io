@@ -1,0 +1,50 @@
+<p>redis 父子进程间通过匿名管道进行通信。redis aof 持久化，重写功能，通过子进程实现，子进程重写 aof 文件过程中，如果父进程需要更新数据，那么父子进程通过匿名管道传输新数据到子进程进行更新。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-单进程" id="markdown-toc-1-单进程">1. 单进程</a></li>
+  <li><a href="#2-参考" id="markdown-toc-2-参考">2. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-单进程">1. 单进程</h2>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">feedAppendOnlyFile</span><span class="p">(</span><span class="k">struct</span> <span class="n">redisCommand</span> <span class="o">*</span><span class="n">cmd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">dictid</span><span class="p">,</span> <span class="n">robj</span> <span class="o">**</span><span class="n">argv</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 如果有子进程正在重写，父进程将新的数据发送给正在重写的子进程，使得重写文件数据更完备。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">aofRewriteBufferAppend</span><span class="p">((</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">buf</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 将数据保存到重写缓冲区链表。然后通过父子进程管道进行数据传输</span>
+<span class="kt">void</span> <span class="nf">aofRewriteBufferAppend</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">len</span><span class="p">)</span> <span class="p">{}</span>
+
+<span class="c1">// 父进程通过管道把重写缓冲区数据，发送到子进程</span>
+<span class="kt">void</span> <span class="nf">aofChildWriteDiffData</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">el</span><span class="p">,</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">privdata</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mask</span><span class="p">)</span> <span class="p">{}</span>
+
+<span class="c1">// 子进程读取父进程发送的数据。</span>
+<span class="kt">ssize_t</span> <span class="nf">aofReadDiffFromParent</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{...}</span>
+
+<span class="c1">// 创建父子进程通信管道</span>
+<span class="kt">int</span> <span class="nf">aofCreatePipes</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{...}</span>
+
+<span class="c1">// 父子结束通信</span>
+<span class="kt">void</span> <span class="nf">aofChildPipeReadable</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">el</span><span class="p">,</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">privdata</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mask</span><span class="p">)</span> <span class="p">{}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-参考">2. 参考</h2>
+
+<ul>
+  <li><a href="https://blog.csdn.net/d_guco/article/details/53524854">共享内存，管道，socket等进程间通信方式的优缺点</a></li>
+  <li><a href="https://blog.csdn.net/weixin_40039738/article/details/81095013">socketpair的用法和理解</a></li>
+  <li><a href="https://blog.csdn.net/W_J_F_/article/details/83789819">Linux：进程间通信（匿名管道命名管道）（共享内存，消息队列，信号量）</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

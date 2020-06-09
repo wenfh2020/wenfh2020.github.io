@@ -1,0 +1,103 @@
+I"�#<p>学习 《算法导论》2.3.1 分治法。测试源码在 (<a href="https://github.com/wenfh2020/c_test/blob/master/algorithms/sort.h">github</a>)</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-时间复杂度" id="markdown-toc-1-时间复杂度">1. 时间复杂度</a></li>
+  <li><a href="#2-算法" id="markdown-toc-2-算法">2. 算法</a></li>
+  <li><a href="#3-实现" id="markdown-toc-3-实现">3. 实现</a></li>
+  <li><a href="#4-实现流程" id="markdown-toc-4-实现流程">4. 实现流程</a></li>
+  <li><a href="#5-参考" id="markdown-toc-5-参考">5. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-时间复杂度">1. 时间复杂度</h2>
+
+<p>归并排序采用了分治法的递归排序。分治法：分解子问题，解决子问题，合并子结果。</p>
+
+<ul>
+  <li>分解：分解待排序的 $n$ 个元素的序列各成 $\frac{n}{2}$ 个元素的子列。</li>
+  <li>解决：使用归并排序递å归地排序两个子序列。</li>
+  <li>合并：合并两个已排序的子序列以产生已排序的答案。</li>
+</ul>
+
+<p>因为排序数组会被 $\frac{n}{2}$ 拆开，归并排序时间复杂度稳定的 $nlgn$。</p>
+
+<p><img src="/images/2020-06-03-06-53-58.png" alt="算法深度" data-action="zoom" /></p>
+
+<p>相对于其它的 $nlgn$ 排序，它需要额外的临时空间辅助，有一定的资源损耗。小数量级（百万级别）的排序，要比快速排序慢。但是大数量级数据（千万级别），因为归并排序树深最小，排序比快速排序快。</p>
+<blockquote>
+  <p>快速排序，最优算法复杂度，数组会被 $\frac{n}{2}$ 拆开。实际操作中数据很难达到最优。而归并一直都是通过 $\frac{n}{2}$ 进行拆分。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="2-算法">2. 算法</h2>
+
+<p>算法导论实现思想：</p>
+
+<ol>
+  <li>拆分左右两个临时数组，临时数组最后是一个∞无穷大的数字。</li>
+  <li>两个子数组进行比较，小的数值会拷贝到原数组。</li>
+</ol>
+
+<p><img src="/images/2020-06-03-06-54-21.png" alt="算法" data-action="zoom" /></p>
+
+<p><img src="/images/2020-06-03-06-54-38.png" alt="归并" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="3-实现">3. 实现</h2>
+
+<p>实际实现，通过一个辅助数组进行实现(<a href="https://github.com/wenfh2020/c_test/blob/master/algorithms/main.cpp">源码</a>)。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">merge_sort</span><span class="p">(</span><span class="kt">int</span> <span class="n">array</span><span class="p">[],</span> <span class="kt">int</span> <span class="n">start</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">end</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">low</span> <span class="o">=</span> <span class="n">start</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">high</span> <span class="o">=</span> <span class="n">mid</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span><span class="o">*</span> <span class="n">temp</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">));</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">low</span> <span class="o">&lt;=</span> <span class="n">mid</span> <span class="o">&amp;&amp;</span> <span class="n">high</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">(</span><span class="n">array</span><span class="p">[</span><span class="n">low</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">array</span><span class="p">[</span><span class="n">high</span><span class="p">])</span> <span class="o">?</span> <span class="n">temp</span><span class="p">[</span><span class="n">k</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="n">low</span><span class="o">++</span><span class="p">]</span>
+                                   <span class="o">:</span> <span class="n">temp</span><span class="p">[</span><span class="n">k</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="n">high</span><span class="o">++</span><span class="p">];</span>
+    <span class="p">}</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">high</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="p">)</span> <span class="n">temp</span><span class="p">[</span><span class="n">k</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="n">high</span><span class="o">++</span><span class="p">];</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">low</span> <span class="o">&lt;=</span> <span class="n">mid</span><span class="p">)</span> <span class="n">temp</span><span class="p">[</span><span class="n">k</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="n">low</span><span class="o">++</span><span class="p">];</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="n">array</span><span class="p">[</span><span class="n">start</span> <span class="o">+</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+    <span class="n">free</span><span class="p">(</span><span class="n">temp</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">merge</span><span class="p">(</span><span class="kt">int</span> <span class="n">array</span><span class="p">[],</span> <span class="kt">int</span> <span class="n">start</span><span class="p">,</span> <span class="kt">int</span> <span class="n">end</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">start</span> <span class="o">&gt;=</span> <span class="n">end</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="n">merge</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">mid</span><span class="p">);</span>
+    <span class="n">merge</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">mid</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">end</span><span class="p">);</span>
+    <span class="n">merge_sort</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">mid</span><span class="p">,</span> <span class="n">end</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="4-实现流程">4. 实现流程</h2>
+
+<p>数组 A = {5, 2,4,7, 1, 3, 2, 6} 子数组最后一次合并排序流程。</p>
+
+<p><img src="/images/2020-06-03-06-55-17.png" alt="实现流程" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="5-参考">5. 参考</h2>
+
+<ul>
+  <li><a href="https://www.cnblogs.com/yu-chao/p/4324485.html">快速排序、归并排序、堆排序三种算法性能比较</a></li>
+  <li>《算法导论》（第三版）</li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2019/11/29/merge-sort/">wenfh2020.com</a></p>
+</blockquote>
+:ET

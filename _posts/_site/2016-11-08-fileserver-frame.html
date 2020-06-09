@@ -1,0 +1,85 @@
+<p>客户端 &lt;–&gt; 文件服务器代理 &lt;–&gt; FDFS</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-概述" id="markdown-toc-1-概述">1. 概述</a></li>
+  <li><a href="#2-架构" id="markdown-toc-2-架构">2. 架构</a></li>
+  <li><a href="#3-逻辑时序" id="markdown-toc-3-逻辑时序">3. 逻辑时序</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-概述">1. 概述</h2>
+
+<p>文件服务器是 FDFS（FastDFS）文件存储系统的一个代理。</p>
+
+<p>客户端在上传文件前，需要计算文件 <code class="highlighter-rouge">md5</code> 指纹，客户端通过指纹与服务器交互，如果指纹已在服务器存库，那说明该文件曾经上传过，无需重复上传，也就是秒传。因为文件内容不保存文件名，所以文件服务器也只保存文件内容，并不保存文件名，文件名和文件目录由其它业务服务进行维护。所以文件服务器只保存文件数据，与其它业务系统没有耦合关系。</p>
+
+<ul>
+  <li>支持 HTTP/TCP 协议。</li>
+  <li>支持小文件上传，下载，续传，秒传等基本功能。</li>
+  <li>支持本地文件缓存，针对热点文件上传下载。</li>
+  <li>不支持文件加密，文件目录等逻辑功能。</li>
+</ul>
+
+<blockquote>
+  <ol>
+    <li>文件信息需要建立与业务信息建立关系，请客户端上传或者下载成功文件后，再向相关的业务服务器添加关联的存储记录。</li>
+    <li>文件服务只支持小文件存储，大文件可以在客户端进行切割成小文件。</li>
+  </ol>
+</blockquote>
+
+<hr />
+
+<h2 id="2-架构">2. 架构</h2>
+
+<p><img src="/images/2020-02-24-09-14-59.png" alt="文件服务器架构" data-action="zoom" /></p>
+
+<!-- <div align=center><img src="/images/2020-02-24-09-14-59.png"/></div> -->
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">对象</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">client</td>
+      <td style="text-align: left">客户端</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">lvs</td>
+      <td style="text-align: left">服务器集群系统负载均衡</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">file server</td>
+      <td style="text-align: left">文件服务器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">file</td>
+      <td style="text-align: left">存储磁盘文件</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">mysql</td>
+      <td style="text-align: left">文件服务器记录文件信息以及 fdfs 对应的文件索引信息。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">fdfs</td>
+      <td style="text-align: left">FastDFS是一个开源的轻量级分布式文件系统。</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="3-逻辑时序">3. 逻辑时序</h2>
+
+<p><img src="/images/2020-02-24-09-16-08.png" alt="逻辑时序" data-action="zoom" />
+<!-- <div align=center><img src="/images/2020-02-24-09-16-08.png"/></div> --></p>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

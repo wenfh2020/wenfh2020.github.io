@@ -1,0 +1,86 @@
+I"d<p>项目中，无论客户端还是服务端，日志都是必不可少的，一般的日志格式具备下面几个要素：</p>
+
+<p>时间，日志等级，源码文件，源码行数，日志字符串格式化内容。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-日志事例" id="markdown-toc-1-日志事例">1. 日志事例</a></li>
+  <li><a href="#2-日志宏定义" id="markdown-toc-2-日志宏定义">2. 日志宏定义</a>    <ul>
+      <li><a href="#21-windows" id="markdown-toc-21-windows">2.1. windows</a></li>
+      <li><a href="#22-linux" id="markdown-toc-22-linux">2.2. linux</a></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="1-日志事例">1. 日志事例</h2>
+
+<ul>
+  <li>事例代码：</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>LOG_ERR<span class="o">(</span><span class="s2">"check file failed, task id = %d, error = %d"</span>, iTaskID, iErrCode<span class="o">)</span><span class="p">;</span>
+</code></pre></div></div>
+
+<ul>
+  <li>内容：</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>2017-10-28 19:40:01][ERROR][uploadclient.cpp][380] check file failed, task <span class="nb">id</span> <span class="o">=</span> 6, error <span class="o">=</span> 23
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-日志宏定义">2. 日志宏定义</h2>
+
+<p>字符串格式化数据如何作为参数传递，研究了不少时间~ 为啥要将日志函数定义为宏呢，主要是因为 <strong>FILE</strong> 和 <strong>LINE</strong> 这两个参数，只有通过宏，才能正确记录哪个文件，哪一行的日志。</p>
+
+<hr />
+
+<h3 id="21-windows">2.1. windows</h3>
+
+<ul>
+  <li>宏</li>
+</ul>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define LOG_TRACE(x, ...)     LogTrace(__FILE__, __LINE__, x, ##__VA_ARGS__);
+#define LOG_DEBUG(x, ...)     LogDebug(__FILE__, __LINE__, x, ##__VA_ARGS__);
+#define LOG_INFO(x, ...)      LogInfo(__FILE__, __LINE__, x, ##__VA_ARGS__);
+#define LOG_IMPORTANT(x, ...) LogImportant(__FILE__, __LINE__, x, ##__VA_ARGS__);
+#define LOG_ERR(x, ...)       LogError(__FILE__, __LINE__, x, ##__VA_ARGS__);  
+</span></code></pre></div></div>
+
+<ul>
+  <li>函数</li>
+</ul>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">LogData</span><span class="p">(</span><span class="n">LPCTSTR</span> <span class="n">pFile</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iLine</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iType</span><span class="p">,</span> <span class="n">LPCTSTR</span> <span class="n">lpInfo</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">LogTrace</span><span class="p">(</span><span class="n">LPCTSTR</span> <span class="n">pFile</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iLine</span><span class="p">,</span> <span class="n">LPCTSTR</span> <span class="n">lpszFormat</span><span class="p">,</span> <span class="p">...);</span>
+<span class="kt">void</span> <span class="nf">LogDebug</span><span class="p">(</span><span class="n">LPCTSTR</span> <span class="n">pFile</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iLine</span><span class="p">,</span> <span class="n">LPCTSTR</span> <span class="n">lpszFormat</span><span class="p">,</span> <span class="p">...);</span>
+<span class="kt">void</span> <span class="nf">LogInfo</span><span class="p">(</span><span class="n">LPCTSTR</span> <span class="n">pFile</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iLine</span><span class="p">,</span> <span class="n">LPCTSTR</span> <span class="n">lpszFormat</span><span class="p">,</span> <span class="p">...);</span>
+<span class="kt">void</span> <span class="nf">LogImportant</span><span class="p">(</span><span class="n">LPCTSTR</span> <span class="n">pFile</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iLine</span><span class="p">,</span> <span class="n">LPCTSTR</span> <span class="n">lpszFormat</span><span class="p">,</span> <span class="p">...);</span>
+<span class="kt">void</span> <span class="nf">LogError</span><span class="p">(</span><span class="n">LPCTSTR</span> <span class="n">pFile</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iLine</span><span class="p">,</span> <span class="n">LPCTSTR</span> <span class="n">lpszFormat</span><span class="p">,</span> <span class="p">...);</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="22-linux">2.2. linux</h3>
+
+<ul>
+  <li>log4cplus</li>
+</ul>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define LOG4_FATAL(args...) LOG4CPLUS_FATAL_FMT(GetLogger(), ##args)
+#define LOG4_ERROR(args...) LOG4CPLUS_ERROR_FMT(GetLogger(), ##args)
+#define LOG4_WARN(args...)  LOG4CPLUS_WARN_FMT(GetLogger(), ##args)
+#define LOG4_INFO(args...)  LOG4CPLUS_INFO_FMT(GetLogger(), ##args)
+#define LOG4_DEBUG(args...) LOG4CPLUS_DEBUG_FMT(GetLogger(), ##args)
+#define LOG4_TRACE(args...) LOG4CPLUS_TRACE_FMT(GetLogger(), ##args)
+</span></code></pre></div></div>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

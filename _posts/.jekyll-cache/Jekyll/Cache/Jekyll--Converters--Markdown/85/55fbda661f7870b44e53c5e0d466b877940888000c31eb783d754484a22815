@@ -1,0 +1,498 @@
+I"��<p>文章重点讲述 aof 持久化的应用场景。aof 持久化，拆分上下为两章，可以先读上一章： <a href="https://wenfh2020.com/2020/03/29/redis-aof-prev/">[redis 源码走读] aof 持久化 (上)</a>。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-应用场景" id="markdown-toc-1-应用场景">1. 应用场景</a>    <ul>
+      <li><a href="#11-启动加载" id="markdown-toc-11-启动加载">1.1. 启动加载</a></li>
+      <li><a href="#12-写命令执行流程" id="markdown-toc-12-写命令执行流程">1.2. 写命令执行流程</a></li>
+      <li><a href="#13-定时保存" id="markdown-toc-13-定时保存">1.3. 定时保存</a></li>
+      <li><a href="#14-重写" id="markdown-toc-14-重写">1.4. 重写</a>        <ul>
+          <li><a href="#141-重写方式" id="markdown-toc-141-重写方式">1.4.1. 重写方式</a></li>
+          <li><a href="#142-重写实现" id="markdown-toc-142-重写实现">1.4.2. 重写实现</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><a href="#2-调试" id="markdown-toc-2-调试">2. 调试</a></li>
+  <li><a href="#3-总结" id="markdown-toc-3-总结">3. 总结</a></li>
+  <li><a href="#4-参考" id="markdown-toc-4-参考">4. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-应用场景">1. 应用场景</h2>
+
+<p><img src="/images/2020-03-29-19-03-42.png" alt="应用场景" data-action="zoom" /></p>
+
+<h3 id="11-启动加载">1.1. 启动加载</h3>
+
+<p>redis 启动，程序会模拟一个客户端加载从 aof 文件读出的命令。</p>
+
+<blockquote>
+  <p>aof 持久化支持 aof 和 rdb 混合模式，参考上面的 <code class="highlighter-rouge">aof 和 rdb 混合结构</code></p>
+</blockquote>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">loadDataFromDisk</span><span class="p">();</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">loadDataFromDisk</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_state</span> <span class="o">==</span> <span class="n">AOF_ON</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">loadAppendOnlyFile</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_filename</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span>
+            <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_NOTICE</span><span class="p">,</span><span class="s">"DB loaded from append only file: %.3f seconds"</span><span class="p">,(</span><span class="kt">float</span><span class="p">)(</span><span class="n">ustime</span><span class="p">()</span><span class="o">-</span><span class="n">start</span><span class="p">)</span><span class="o">/</span><span class="mi">1000000</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">loadAppendOnlyFile</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 程序模拟一个客户端执行从 aof 文件读出的命令。</span>
+    <span class="n">fakeClient</span> <span class="o">=</span> <span class="n">createAOFClient</span><span class="p">();</span>
+    <span class="p">...</span>
+    <span class="c1">// 检查 aof 文件读取数据方式。</span>
+    <span class="kt">char</span> <span class="n">sig</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fread</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="n">fp</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">5</span> <span class="o">||</span> <span class="n">memcmp</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span><span class="s">"REDIS"</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 通过 aof 方式加载数据。</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">fseek</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">SEEK_SET</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">readerr</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="c1">// 通过 rdb 方式加载数据。</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbLoadRio</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rdb</span><span class="p">,</span><span class="n">RDBFLAGS_AOF_PREAMBLE</span><span class="p">,</span><span class="nb">NULL</span><span class="p">)</span> <span class="o">!=</span> <span class="n">C_OK</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span><span class="s">"Error reading the RDB preamble of the AOF file, AOF loading aborted"</span><span class="p">);</span>
+            <span class="k">goto</span> <span class="n">readerr</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="cm">/* Read the actual AOF file, in REPL format, command by command. */</span>
+    <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 根据 aof 文件数据结构，取出数据回写内存。</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="12-写命令执行流程">1.2. 写命令执行流程</h3>
+
+<ol>
+  <li>client 向 redis 服务发送写命令。</li>
+  <li>redis 服务接收命令，进行业务处理。</li>
+  <li>redis 服务将新的写命令追加到 aof 数据缓冲区。</li>
+  <li>redis 服务会通过时钟，（<code class="highlighter-rouge">eventloop</code>）事件处理前(<code class="highlighter-rouge">beforeSleep</code>)等方法将 aof 数据缓冲区落地，然后清空 aof 缓冲区。</li>
+</ol>
+
+<ul>
+  <li>流程</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">call</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span> <span class="n">c</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">wenfh2020</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">server</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">3266</span><span class="p">)</span>
+<span class="n">processCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span> <span class="n">c</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">wenfh2020</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">server</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">3552</span><span class="p">)</span>
+<span class="p">...</span>
+<span class="n">aeProcessEvents</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span> <span class="n">eventLoop</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">wenfh2020</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">ae</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">457</span><span class="p">)</span>
+<span class="n">aeMain</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span> <span class="n">eventLoop</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">wenfh2020</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">ae</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">515</span><span class="p">)</span>
+<span class="n">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">wenfh2020</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">server</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">5054</span><span class="p">)</span>
+</code></pre></div></div>
+
+<ul>
+  <li>执行命令，填充 aof 数据缓冲区</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Command propagation flags, see propagate() function
+   + PROPAGATE_NONE (no propagation of command at all)
+   + PROPAGATE_AOF (propagate into the AOF file if is enabled)
+   + PROPAGATE_REPL (propagate into the replication link)
+*/</span>
+
+<span class="cp">#define PROPAGATE_NONE 0
+#define PROPAGATE_AOF 1
+#define PROPAGATE_REPL 2
+</span>
+<span class="kt">void</span> <span class="nf">call</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">c</span><span class="o">-&gt;</span><span class="n">cmd</span><span class="o">-&gt;</span><span class="n">proc</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">propagate_flags</span> <span class="o">!=</span> <span class="n">PROPAGATE_NONE</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">cmd</span><span class="o">-&gt;</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CMD_MODULE</span><span class="p">))</span>
+        <span class="n">propagate</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">cmd</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argc</span><span class="p">,</span><span class="n">propagate_flags</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">propagate</span><span class="p">(</span><span class="k">struct</span> <span class="n">redisCommand</span> <span class="o">*</span><span class="n">cmd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">dbid</span><span class="p">,</span> <span class="n">robj</span> <span class="o">**</span><span class="n">argv</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_state</span> <span class="o">!=</span> <span class="n">AOF_OFF</span> <span class="o">&amp;&amp;</span> <span class="n">flags</span> <span class="o">&amp;</span> <span class="n">PROPAGATE_AOF</span><span class="p">)</span>
+        <span class="n">feedAppendOnlyFile</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span><span class="n">dbid</span><span class="p">,</span><span class="n">argv</span><span class="p">,</span><span class="n">argc</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// aof 缓冲区</span>
+<span class="k">struct</span> <span class="n">redisServer</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">sds</span> <span class="n">aof_buf</span><span class="p">;</span>      <span class="cm">/* AOF buffer, written before entering the event loop */</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 追加内容到 aof 文件</span>
+<span class="kt">void</span> <span class="nf">feedAppendOnlyFile</span><span class="p">(</span><span class="k">struct</span> <span class="n">redisCommand</span> <span class="o">*</span><span class="n">cmd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">dictid</span><span class="p">,</span> <span class="n">robj</span> <span class="o">**</span><span class="n">argv</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">sds</span> <span class="n">buf</span> <span class="o">=</span> <span class="n">sdsempty</span><span class="p">();</span>
+    <span class="n">robj</span> <span class="o">*</span><span class="n">tmpargv</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
+
+    <span class="c1">// 命令执行，需要指定到对应数据库。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">dictid</span> <span class="o">!=</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_selected_db</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">char</span> <span class="n">seldb</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+
+        <span class="n">snprintf</span><span class="p">(</span><span class="n">seldb</span><span class="p">,</span><span class="k">sizeof</span><span class="p">(</span><span class="n">seldb</span><span class="p">),</span><span class="s">"%d"</span><span class="p">,</span><span class="n">dictid</span><span class="p">);</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="n">sdscatprintf</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="s">"*2</span><span class="se">\r\n</span><span class="s">$6</span><span class="se">\r\n</span><span class="s">SELECT</span><span class="se">\r\n</span><span class="s">$%lu</span><span class="se">\r\n</span><span class="s">%s</span><span class="se">\r\n</span><span class="s">"</span><span class="p">,</span>
+            <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)</span><span class="n">strlen</span><span class="p">(</span><span class="n">seldb</span><span class="p">),</span><span class="n">seldb</span><span class="p">);</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_selected_db</span> <span class="o">=</span> <span class="n">dictid</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+    <span class="c1">// 将命令格式化为 redis 命令格式，然后追加到 aof 数据缓冲区。</span>
+    <span class="n">buf</span> <span class="o">=</span> <span class="n">catAppendOnlyGenericCommand</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="n">argc</span><span class="p">,</span><span class="n">argv</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_state</span> <span class="o">==</span> <span class="n">AOF_ON</span><span class="p">)</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span> <span class="o">=</span> <span class="n">sdscatlen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">,</span><span class="n">buf</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
+
+    <span class="c1">// 如果有子进程正在重写，父进程将新的数据发送给正在重写的子进程，使得重写文件数据更完备。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">aofRewriteBufferAppend</span><span class="p">((</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">buf</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>重写过程中，父进程接收到新的命令，父进程发送给子进程，对重写数据进行追加。</p>
+
+    <blockquote>
+      <p>父子进程通过管道进行通信交互。</p>
+    </blockquote>
+  </li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">feedAppendOnlyFile</span><span class="p">(</span><span class="k">struct</span> <span class="n">redisCommand</span> <span class="o">*</span><span class="n">cmd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">dictid</span><span class="p">,</span> <span class="n">robj</span> <span class="o">**</span><span class="n">argv</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 如果有子进程正在重写，父进程将新的数据发送给正在重写的子进程，使得重写文件数据更完备。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">aofRewriteBufferAppend</span><span class="p">((</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">buf</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 将数据保存到重写缓冲区链表。然后通过父子进程管道进行数据传输</span>
+<span class="kt">void</span> <span class="nf">aofRewriteBufferAppend</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">len</span><span class="p">)</span> <span class="p">{}</span>
+
+<span class="c1">// 父进程通过管道把重写缓冲区数据，发送到子进程</span>
+<span class="kt">void</span> <span class="nf">aofChildWriteDiffData</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">el</span><span class="p">,</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">privdata</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mask</span><span class="p">)</span> <span class="p">{}</span>
+
+<span class="c1">// 子进程读取父进程发送的数据。</span>
+<span class="kt">ssize_t</span> <span class="nf">aofReadDiffFromParent</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{...}</span>
+
+<span class="c1">// 创建父子进程通信管道</span>
+<span class="kt">int</span> <span class="nf">aofCreatePipes</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{...}</span>
+
+<span class="c1">// 父子结束通信</span>
+<span class="kt">void</span> <span class="nf">aofChildPipeReadable</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">el</span><span class="p">,</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">privdata</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mask</span><span class="p">)</span> <span class="p">{}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="13-定时保存">1.3. 定时保存</h3>
+
+<p>主要对延时刷新和写磁盘出现错误回写的检查刷新。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Using the following macro you can run code inside serverCron() with the
+ * specified period, specified in milliseconds.
+ * The actual resolution depends on server.hz. */</span>
+<span class="cp">#define run_with_period(_ms_)         \
+    if ((_ms_ &lt;= 1000 / server.hz) || \
+        !(cronloops % ((_ms_) / (1000 / server.hz))))
+</span>
+<span class="kt">int</span> <span class="nf">serverCron</span><span class="p">(</span><span class="k">struct</span> <span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">id</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">clientData</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 如果有延时任务，定时检查刷新。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_flush_postponed_start</span><span class="p">)</span> <span class="n">flushAppendOnlyFile</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+
+    <span class="c1">// 刷新缓存到磁盘出现错误（例如：磁盘满了），定时检查回写。</span>
+    <span class="c1">// hz 频率为 10 ，这里一般每十次时钟检查一次。</span>
+    <span class="n">run_with_period</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_last_write_status</span> <span class="o">==</span> <span class="n">C_ERR</span><span class="p">)</span>
+            <span class="n">flushAppendOnlyFile</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">cronloops</span><span class="o">++</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">1000</span><span class="o">/</span><span class="n">server</span><span class="p">.</span><span class="n">hz</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="14-重写">1.4. 重写</h3>
+
+<p>服务器接收到写入操作命令会追加到 aof 文件，那么 aof 文件相当于一个流水文件。随着时间推移，文件将会越来越大。然而 aof 文件主要目的是为了持久化，并不是为了记录服务器流水。这些流水命令有可能很多是冗余的，需要重新整理——通过<strong>重写</strong>来减小 aof 文件体积。</p>
+
+<p>例如下面 4 条命令，会追加记录到 aof 文件，因为对同一个 key 操作，内存里最终数据 key1 对应的数据是 4，这样前面 3 条历史命令是冗余的，通过重写功能，aof 文件只留下 key 对应的最新的 value。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">set </span>key1 1
+<span class="nb">set </span>key1 2
+<span class="nb">set </span>key1 3
+<span class="nb">set </span>key1 4
+</code></pre></div></div>
+
+<hr />
+
+<h4 id="141-重写方式">1.4.1. 重写方式</h4>
+
+<ul>
+  <li>通过命令 <a href="https://redis.io/commands/bgrewriteaof"><code class="highlighter-rouge">BGREWRITEAOF</code></a> 重写。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">bgrewriteaofCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 当重写正在进行时，返回错误。</span>
+        <span class="n">addReplyError</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">"Background append only file rewriting already in progress"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">hasActiveChildProcess</span><span class="p">())</span> <span class="p">{</span>
+        <span class="c1">// 当有其它子进程正在进行工作时，延后执行。</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_rewrite_scheduled</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="n">addReplyStatus</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">"Background append only file rewriting scheduled"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">rewriteAppendOnlyFileBackground</span><span class="p">()</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 异步执行重写</span>
+        <span class="n">addReplyStatus</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">"Background append only file rewriting started"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// 重写操作失败，检查原因。</span>
+        <span class="n">addReplyError</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">"Can't execute an AOF background rewriting. "</span>
+                        <span class="s">"Please check the server logs for more information."</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>时钟定期检查 redis 使用内存大小，当超过配置的阈值，触发自动重写。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+
+<span class="c"># 当前增加的内存超过上一次重写后的内存百分比，才会触发自动重写。</span>
+auto-aof-rewrite-percentage 100
+
+<span class="c"># 内存重写下限</span>
+auto-aof-rewrite-min-size 64mb
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">serverCron</span><span class="p">(</span><span class="k">struct</span> <span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">id</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">clientData</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="cm">/* Trigger an AOF rewrite if needed. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_state</span> <span class="o">==</span> <span class="n">AOF_ON</span> <span class="o">&amp;&amp;</span>
+        <span class="o">!</span><span class="n">hasActiveChildProcess</span><span class="p">()</span> <span class="o">&amp;&amp;</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_rewrite_perc</span> <span class="o">&amp;&amp;</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span> <span class="o">&gt;</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_rewrite_min_size</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kt">long</span> <span class="kt">long</span> <span class="n">base</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_rewrite_base_size</span> <span class="o">?</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">aof_rewrite_base_size</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="kt">long</span> <span class="n">growth</span> <span class="o">=</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span><span class="o">*</span><span class="mi">100</span><span class="o">/</span><span class="n">base</span><span class="p">)</span> <span class="o">-</span> <span class="mi">100</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">growth</span> <span class="o">&gt;=</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_rewrite_perc</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_NOTICE</span><span class="p">,</span><span class="s">"Starting automatic rewriting of AOF on %lld%% growth"</span><span class="p">,</span><span class="n">growth</span><span class="p">);</span>
+            <span class="n">rewriteAppendOnlyFileBackground</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h4 id="142-重写实现">1.4.2. 重写实现</h4>
+
+<ol>
+  <li>父进程 fork 子进程实现重写逻辑。</li>
+  <li>子进程创建 aof 临时文件存储重写子进程<code class="highlighter-rouge">fork-on-write</code> 内存到 aof 文件。</li>
+  <li>子进程重写完成 fork 内存数据内容后，追加在重写过程中父进程发送的新的内容。</li>
+  <li>子进程结束父子进程管道通信。</li>
+  <li>更新临时文件覆盖旧的文件。</li>
+</ol>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 父进程 fork 子进程进行 aof 重写</span>
+<span class="kt">int</span> <span class="nf">rewriteAppendOnlyFileBackground</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">childpid</span> <span class="o">=</span> <span class="n">redisFork</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rewriteAppendOnlyFile</span><span class="p">(</span><span class="n">tmpfile</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">sendChildCOWInfo</span><span class="p">(</span><span class="n">CHILD_INFO_TYPE_AOF</span><span class="p">,</span> <span class="s">"AOF rewrite"</span><span class="p">);</span>
+            <span class="n">exitFromChild</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">exitFromChild</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="cm">/* Parent */</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">C_OK</span><span class="p">;</span> <span class="cm">/* unreached */</span>
+<span class="p">}</span>
+
+<span class="c1">// 重写 aof 实现逻辑</span>
+<span class="kt">int</span> <span class="nf">rewriteAppendOnlyFile</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">rio</span> <span class="n">aof</span><span class="p">;</span>
+    <span class="kt">FILE</span> <span class="o">*</span><span class="n">fp</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">tmpfile</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+    <span class="kt">char</span> <span class="n">byte</span><span class="p">;</span>
+
+    <span class="c1">// 创建 aof 临时文件。</span>
+    <span class="n">snprintf</span><span class="p">(</span><span class="n">tmpfile</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="s">"temp-rewriteaof-%d.aof"</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span> <span class="n">getpid</span><span class="p">());</span>
+    <span class="n">fp</span> <span class="o">=</span> <span class="n">fopen</span><span class="p">(</span><span class="n">tmpfile</span><span class="p">,</span><span class="s">"w"</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">fp</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span> <span class="s">"Opening the temp file for AOF rewrite in rewriteAppendOnlyFile(): %s"</span><span class="p">,</span> <span class="n">strerror</span><span class="p">(</span><span class="n">errno</span><span class="p">));</span>
+        <span class="k">return</span> <span class="n">C_ERR</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">server</span><span class="p">.</span><span class="n">aof_child_diff</span> <span class="o">=</span> <span class="n">sdsempty</span><span class="p">();</span>
+    <span class="n">rioInitWithFile</span><span class="p">(</span><span class="o">&amp;</span><span class="n">aof</span><span class="p">,</span><span class="n">fp</span><span class="p">);</span>
+
+    <span class="c1">// 逐步将文件缓存刷新到磁盘。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_rewrite_incremental_fsync</span><span class="p">)</span>
+        <span class="n">rioSetAutoSync</span><span class="p">(</span><span class="o">&amp;</span><span class="n">aof</span><span class="p">,</span><span class="n">REDIS_AUTOSYNC_BYTES</span><span class="p">);</span>
+
+    <span class="n">startSaving</span><span class="p">(</span><span class="n">RDBFLAGS_AOF_PREAMBLE</span><span class="p">);</span>
+
+    <span class="c1">// 根据配置，重写文件内容方式，rdb 或者 aof，aof 存储方式支持 rdb 和 aof 内容兼容在同一个 aof 文件。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_use_rdb_preamble</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveRio</span><span class="p">(</span><span class="o">&amp;</span><span class="n">aof</span><span class="p">,</span><span class="o">&amp;</span><span class="n">error</span><span class="p">,</span><span class="n">RDBFLAGS_AOF_PREAMBLE</span><span class="p">,</span><span class="nb">NULL</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_ERR</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">errno</span> <span class="o">=</span> <span class="n">error</span><span class="p">;</span>
+            <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rewriteAppendOnlyFileRio</span><span class="p">(</span><span class="o">&amp;</span><span class="n">aof</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_ERR</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 进程内存更新完毕，刷新文件到磁盘。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fflush</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span> <span class="o">==</span> <span class="n">EOF</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fsync</span><span class="p">(</span><span class="n">fileno</span><span class="p">(</span><span class="n">fp</span><span class="p">))</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+    <span class="c1">// 子进程接收父进程发送的新数据。</span>
+    <span class="kt">int</span> <span class="n">nodata</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">mstime_t</span> <span class="n">start</span> <span class="o">=</span> <span class="n">mstime</span><span class="p">();</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">mstime</span><span class="p">()</span><span class="o">-</span><span class="n">start</span> <span class="o">&lt;</span> <span class="mi">1000</span> <span class="o">&amp;&amp;</span> <span class="n">nodata</span> <span class="o">&lt;</span> <span class="mi">20</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">aeWait</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_pipe_read_data_from_parent</span><span class="p">,</span> <span class="n">AE_READABLE</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">nodata</span><span class="o">++</span><span class="p">;</span>
+            <span class="k">continue</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">nodata</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="cm">/* Start counting from zero, we stop on N *contiguous*
+                       timeouts. */</span>
+        <span class="n">aofReadDiffFromParent</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 子进程通知父进程不要发新的数据了。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">write</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_pipe_write_ack_to_parent</span><span class="p">,</span><span class="s">"!"</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">anetNonBlock</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">aof_pipe_read_ack_from_parent</span><span class="p">)</span> <span class="o">!=</span> <span class="n">ANET_OK</span><span class="p">)</span>
+        <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+    <span class="c1">// 父进程收到子进程的结束通知，发送确认给子进程。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">syncRead</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_pipe_read_ack_from_parent</span><span class="p">,</span><span class="o">&amp;</span><span class="n">byte</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">5000</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span> <span class="o">||</span>
+        <span class="n">byte</span> <span class="o">!=</span> <span class="sc">'!'</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_NOTICE</span><span class="p">,</span><span class="s">"Parent agreed to stop sending diffs. Finalizing AOF..."</span><span class="p">);</span>
+
+    <span class="cm">/* Read the final diff if any. */</span>
+    <span class="n">aofReadDiffFromParent</span><span class="p">();</span>
+
+    <span class="c1">// 子进程接收父进程发送的内容缓存在缓冲区，将缓冲区内容追加到重写 aof 文件后。</span>
+    <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_NOTICE</span><span class="p">,</span>
+        <span class="s">"Concatenating %.2f MB of AOF diff received from parent."</span><span class="p">,</span>
+        <span class="p">(</span><span class="kt">double</span><span class="p">)</span> <span class="n">sdslen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_child_diff</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="p">));</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rioWrite</span><span class="p">(</span><span class="o">&amp;</span><span class="n">aof</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">aof_child_diff</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_child_diff</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+    <span class="c1">// 内容写入文件完毕，刷新文件缓存到磁盘。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fflush</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span> <span class="o">==</span> <span class="n">EOF</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fsync</span><span class="p">(</span><span class="n">fileno</span><span class="p">(</span><span class="n">fp</span><span class="p">))</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fclose</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span> <span class="o">==</span> <span class="n">EOF</span><span class="p">)</span> <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+
+    <span class="c1">// 新的重写 aof 文件，覆盖旧的文件。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rename</span><span class="p">(</span><span class="n">tmpfile</span><span class="p">,</span><span class="n">filename</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span><span class="s">"Error moving temp append only file on the final destination: %s"</span><span class="p">,</span> <span class="n">strerror</span><span class="p">(</span><span class="n">errno</span><span class="p">));</span>
+        <span class="n">unlink</span><span class="p">(</span><span class="n">tmpfile</span><span class="p">);</span>
+        <span class="n">stopSaving</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">C_ERR</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_NOTICE</span><span class="p">,</span><span class="s">"SYNC append only file rewrite performed"</span><span class="p">);</span>
+    <span class="n">stopSaving</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">C_OK</span><span class="p">;</span>
+
+<span class="nl">werr:</span>
+    <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span><span class="s">"Write error writing append only file on disk: %s"</span><span class="p">,</span> <span class="n">strerror</span><span class="p">(</span><span class="n">errno</span><span class="p">));</span>
+    <span class="n">fclose</span><span class="p">(</span><span class="n">fp</span><span class="p">);</span>
+    <span class="n">unlink</span><span class="p">(</span><span class="n">tmpfile</span><span class="p">);</span>
+    <span class="n">stopSaving</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">C_ERR</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-调试">2. 调试</h2>
+
+<p>我一直认为：看文档和结合源码调试是理解一个项目的最好方法。</p>
+
+<ul>
+  <li>
+    <p>gdb 调试，在自己感兴趣的地方设下断点，通过调试熟悉 redis aof 持久化工作流程。</p>
+
+    <blockquote>
+      <p>调试方法可以参考我的帖子： <a href="https://wenfh2020.com/2020/01/05/redis-gdb/">用 gdb 调试 redis</a></p>
+    </blockquote>
+  </li>
+</ul>
+
+<p><img src="/images/2020-03-25-16-40-24.png" alt="调试走流程" data-action="zoom" /></p>
+
+<ul>
+  <li>开启日志</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+
+<span class="c"># Specify the server verbosity level.</span>
+<span class="c"># This can be one of:</span>
+<span class="c"># debug (a lot of information, useful for development/testing)</span>
+<span class="c"># verbose (many rarely useful info, but not a mess like the debug level)</span>
+<span class="c"># notice (moderately verbose, what you want in production probably)</span>
+<span class="c"># warning (only very important / critical messages are logged)</span>
+loglevel notice
+
+<span class="c"># Specify the log file name. Also the empty string can be used to force</span>
+<span class="c"># Redis to log on the standard output. Note that if you use standard</span>
+<span class="c"># output for logging but daemonize, logs will be sent to /dev/null</span>
+logfile <span class="s2">"redis.log"</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-总结">3. 总结</h2>
+
+<ul>
+  <li>aof 文件存储 RESP 命令，新数据追加到文件末。</li>
+  <li>aof 存储为了避免冗余，需要设置重写处理。</li>
+  <li>aof 有三种存储策略，默认每秒存盘一次。根据自己的使用场景，选择存储策略。</li>
+  <li>每秒存盘策略和重写功能通过多线程异步处理，保证主线程高性能。</li>
+  <li>关注 redis 的博客，多看 redis.conf 配置项，里面有很多信息量。</li>
+  <li>aof 持久化文件支持 aof 和 rdb 方式混合存储，可以快速重写，并且减少 aof 体积。</li>
+  <li>aof 与 rdb 相比文件体积大，但是容灾能力强，出现问题丢失数据少。</li>
+</ul>
+
+<h2 id="4-参考">4. 参考</h2>
+
+<ul>
+  <li><a href="https://wenfh2020.com/2020/03/19/redis-rdb-struct/">[redis 源码走读] rdb 持久化 - 文件结构</a></li>
+  <li><a href="https://wenfh2020.com/2020/03/19/redis-rdb-application/">[redis 源码走读] rdb 持久化 - 应用场景</a></li>
+  <li><a href="http://oldblog.antirez.com/post/redis-persistence-demystified.html">Redis persistence demystified</a></li>
+  <li><a href="https://redis.io/topics/persistence#how-durable-is-the-append-only-file">Redis Persistence</a></li>
+  <li><a href="https://blog.csdn.net/ybxuwei/article/details/22727565">read/write/fsync与fread/fwrite/fflush的关系和区别</a></li>
+  <li>《redis 设计与实现》</li>
+  <li>《UNINX 环境高级编程》</li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2020/03/29/redis-aof-next/">wenfh2020.com</a></p>
+</blockquote>
+:ET

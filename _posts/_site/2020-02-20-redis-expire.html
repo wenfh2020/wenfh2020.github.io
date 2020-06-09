@@ -1,0 +1,652 @@
+<p>redis 可能存在大量过期数据，一次性遍历检查不太现实。redis 有丰富的数据结构，<code class="highlighter-rouge">key-value</code>， <code class="highlighter-rouge">value</code> 数据结构对象(<code class="highlighter-rouge">redisObj</code>)可能存储大量数据，<code class="highlighter-rouge">key</code> 过期了，<code class="highlighter-rouge">value</code> 也不建议在进程中实时回收。为了保证系统高性能，每次处理一点点，逐渐完成大任务，“分而治之”这是 redis 处理大任务的一贯作风。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-流程" id="markdown-toc-1-流程">1. 流程</a></li>
+  <li><a href="#2-策略概述" id="markdown-toc-2-策略概述">2. 策略概述</a>    <ul>
+      <li><a href="#21-过期检查" id="markdown-toc-21-过期检查">2.1. 过期检查</a></li>
+      <li><a href="#22-数据回收" id="markdown-toc-22-数据回收">2.2. 数据回收</a>        <ul>
+          <li><a href="#221-同步" id="markdown-toc-221-同步">2.2.1. 同步</a></li>
+          <li><a href="#222-异步" id="markdown-toc-222-异步">2.2.2. 异步</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><a href="#3-检查具体策略" id="markdown-toc-3-检查具体策略">3. 检查具体策略</a>    <ul>
+      <li><a href="#31-访问检查" id="markdown-toc-31-访问检查">3.1. 访问检查</a>        <ul>
+          <li><a href="#311-expireifneeded" id="markdown-toc-311-expireifneeded">3.1.1. expireIfNeeded</a></li>
+          <li><a href="#312-修改删除过期-key" id="markdown-toc-312-修改删除过期-key">3.1.2. 修改/删除过期 key</a></li>
+          <li><a href="#313-maxmemory-淘汰" id="markdown-toc-313-maxmemory-淘汰">3.1.3. maxmemory 淘汰</a></li>
+        </ul>
+      </li>
+      <li><a href="#32-事件触发" id="markdown-toc-32-事件触发">3.2. 事件触发</a></li>
+      <li><a href="#33-定期检查" id="markdown-toc-33-定期检查">3.3. 定期检查</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-总结" id="markdown-toc-4-总结">4. 总结</a></li>
+  <li><a href="#5-参考" id="markdown-toc-5-参考">5. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-流程">1. 流程</h2>
+
+<p>主服务检查过期/删除过期逻辑 -&gt; 删除过期键值 -&gt; 异步/同步删除数据 -&gt; 主从同步。</p>
+
+<p><img src="/images/2020-02-29-11-37-42.png" alt="流程" data-action="zoom" /></p>
+
+<p>redis 数据库，数据内容和过期时间是分开保存。<code class="highlighter-rouge">expires</code> 保存了键值对应的过期时间。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="n">redisDb</span> <span class="p">{</span>
+    <span class="n">dict</span> <span class="o">*</span><span class="n">dict</span><span class="p">;</span>                 <span class="cm">/* The keyspace for this DB */</span>
+    <span class="n">dict</span> <span class="o">*</span><span class="n">expires</span><span class="p">;</span>              <span class="cm">/* Timeout of keys with a timeout set */</span>
+    <span class="p">...</span>
+<span class="p">}</span> <span class="n">redisDb</span><span class="p">;</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-策略概述">2. 策略概述</h2>
+
+<h3 id="21-过期检查">2.1. 过期检查</h3>
+
+<p>过期数据检查有三个策略：</p>
+
+<ol>
+  <li>访问键值触发检查。访问包括外部读写命令，内部逻辑调用。
+    <blockquote>
+      <p>不可能每个过期键都能实时被访问触发，所以要结合其它策略。</p>
+    </blockquote>
+  </li>
+  <li>事件驱动处理事件前触发快速检查。
+    <blockquote>
+      <p>将过期检查负载一点点分摊到每个事件处理中。</p>
+    </blockquote>
+  </li>
+  <li>时钟定期慢速检查。</li>
+</ol>
+
+<hr />
+
+<h3 id="22-数据回收">2.2. 数据回收</h3>
+
+<p>数据回收有同步和异步两种方式，配置文件可以设置，一般默认异步回收数据。</p>
+
+<p>异步数据回收有两个策略：</p>
+
+<ol>
+  <li>小数据实时回收。</li>
+  <li>大数据放到任务队列，后台线程处理任务队列异步回收内存。
+    <blockquote>
+      <p>可以看看 <code class="highlighter-rouge">bio.c</code> 的实现。</p>
+    </blockquote>
+  </li>
+</ol>
+
+<h4 id="221-同步">2.2.1. 同步</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">dbSyncDelete</span><span class="p">(</span><span class="n">redisDb</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="n">robj</span> <span class="o">*</span><span class="n">key</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/* Deleting an entry from the expires dict will not free the sds of
+     * the key, because it is shared with the main dictionary. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">dictSize</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">dictDelete</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="p">,</span> <span class="n">key</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">dictDelete</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">dict</span><span class="p">,</span> <span class="n">key</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">)</span> <span class="o">==</span> <span class="n">DICT_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">cluster_enabled</span><span class="p">)</span>
+            <span class="n">slotToKeyDel</span><span class="p">(</span><span class="n">key</span><span class="p">);</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="222-异步">2.2.2. 异步</h4>
+
+<p>unlink 逻辑删除 key，数据放在 bio 线程异步删除。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define LAZYFREE_THRESHOLD 64
+</span>
+<span class="kt">int</span> <span class="nf">dbAsyncDelete</span><span class="p">(</span><span class="n">redisDb</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="n">robj</span> <span class="o">*</span><span class="n">key</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">dictSize</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">dictDelete</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="p">,</span><span class="n">key</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">);</span>
+
+    <span class="n">dictEntry</span> <span class="o">*</span><span class="n">de</span> <span class="o">=</span> <span class="n">dictUnlink</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">dict</span><span class="p">,</span><span class="n">key</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">de</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">robj</span> <span class="o">*</span><span class="n">val</span> <span class="o">=</span> <span class="n">dictGetVal</span><span class="p">(</span><span class="n">de</span><span class="p">);</span>
+        <span class="kt">size_t</span> <span class="n">free_effort</span> <span class="o">=</span> <span class="n">lazyfreeGetFreeEffort</span><span class="p">(</span><span class="n">val</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">free_effort</span> <span class="o">&gt;</span> <span class="n">LAZYFREE_THRESHOLD</span> <span class="o">&amp;&amp;</span> <span class="n">val</span><span class="o">-&gt;</span><span class="n">refcount</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">atomicIncr</span><span class="p">(</span><span class="n">lazyfree_objects</span><span class="p">,</span><span class="mi">1</span><span class="p">);</span>
+            <span class="c1">// 删除数据对象，要注意对象计数，decrRefCount 删除。</span>
+            <span class="n">bioCreateBackgroundJob</span><span class="p">(</span><span class="n">BIO_LAZY_FREE</span><span class="p">,</span><span class="n">val</span><span class="p">,</span><span class="nb">NULL</span><span class="p">,</span><span class="nb">NULL</span><span class="p">);</span>
+            <span class="n">dictSetVal</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">dict</span><span class="p">,</span><span class="n">de</span><span class="p">,</span><span class="nb">NULL</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">de</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">dictFreeUnlinkedEntry</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">dict</span><span class="p">,</span><span class="n">de</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">cluster_enabled</span><span class="p">)</span> <span class="n">slotToKeyDel</span><span class="p">(</span><span class="n">key</span><span class="p">);</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-检查具体策略">3. 检查具体策略</h2>
+
+<h3 id="31-访问检查">3.1. 访问检查</h3>
+
+<h4 id="311-expireifneeded">3.1.1. expireIfNeeded</h4>
+
+<p>外部读写命令/内部逻辑调用，基本所有的键值读写操作都会触发 <code class="highlighter-rouge">expireIfNeeded</code> 过期检查。</p>
+
+<p><code class="highlighter-rouge">db.c</code></p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">expireIfNeeded</span><span class="p">(</span><span class="n">redisDb</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="n">robj</span> <span class="o">*</span><span class="n">key</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">keyIsExpired</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="n">key</span><span class="p">))</span> <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">masterhost</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="n">server</span><span class="p">.</span><span class="n">stat_expiredkeys</span><span class="o">++</span><span class="p">;</span>
+    <span class="c1">// 传播数据更新，传播到集群中去，如果数据库是 `aof` 格式存储，更新落地 `aof` 文件。</span>
+    <span class="n">propagateExpire</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">lazyfree_lazy_expire</span><span class="p">);</span>
+    <span class="n">notifyKeyspaceEvent</span><span class="p">(</span><span class="n">NOTIFY_EXPIRED</span><span class="p">,</span> <span class="s">"expired"</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">server</span><span class="p">.</span><span class="n">lazyfree_lazy_expire</span> <span class="o">?</span> <span class="n">dbAsyncDelete</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="n">key</span><span class="p">)</span> <span class="o">:</span>
+                                         <span class="n">dbSyncDelete</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="n">key</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">propagateExpire</span><span class="p">(</span><span class="n">redisDb</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="n">robj</span> <span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="kt">int</span> <span class="n">lazy</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">robj</span> <span class="o">*</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+
+    <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">lazy</span> <span class="o">?</span> <span class="n">shared</span><span class="p">.</span><span class="n">unlink</span> <span class="o">:</span> <span class="n">shared</span><span class="p">.</span><span class="n">del</span><span class="p">;</span>
+    <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">key</span><span class="p">;</span>
+    <span class="n">incrRefCount</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="n">incrRefCount</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+
+    <span class="c1">// aof 存储，del/unlink 命令入库</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_state</span> <span class="o">!=</span> <span class="n">AOF_OFF</span><span class="p">)</span>
+        <span class="n">feedAppendOnlyFile</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">delCommand</span><span class="p">,</span> <span class="n">db</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">,</span> <span class="n">argv</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+    <span class="c1">// 同步 del/unlink 命令到从库</span>
+    <span class="n">replicationFeedSlaves</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">slaves</span><span class="p">,</span> <span class="n">db</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">,</span> <span class="n">argv</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+
+    <span class="n">decrRefCount</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="n">decrRefCount</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="312-修改删除过期-key">3.1.2. 修改/删除过期 key</h4>
+
+<p>部分命令会修改或删除过期时间。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">命令</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">del</td>
+      <td style="text-align: left">删除指定 key 。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">unlink</td>
+      <td style="text-align: left">逻辑删除指定 key，数据在线程异步删除。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">set</td>
+      <td style="text-align: left">设置一个键的值，ex 选项可以设置过期时间</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">persist</td>
+      <td style="text-align: left">移除 key 的过期时间</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">rename</td>
+      <td style="text-align: left">重命名 key，会删除原来 key 的过期时间。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">flushdb</td>
+      <td style="text-align: left">清空当前数据库。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">flushall</td>
+      <td style="text-align: left">清空所有数据。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">expire</td>
+      <td style="text-align: left">设置 key 的过期时间秒数。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">expireat</td>
+      <td style="text-align: left">设置一个 UNIX 时间戳的过期时间。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">pexpireat</td>
+      <td style="text-align: left">设置key到期 UNIX 时间戳，以毫秒为单位。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="313-maxmemory-淘汰">3.1.3. maxmemory 淘汰</h4>
+
+<p>超出最大内存 <code class="highlighter-rouge">maxmemory</code>，触发数据淘汰。淘汰合适的数据，可以参考<a href="https://wenfh2020.com/2020/03/06/max-memory/">[redis 源码走读] maxmemory 数据淘汰策略
+</a>。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="n">redisObject</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="kt">unsigned</span> <span class="n">lru</span><span class="o">:</span><span class="n">LRU_BITS</span><span class="p">;</span> <span class="cm">/* LRU time (relative to global lru_clock) or
+                            * LFU data (least significant 8 bits frequency
+                            * and most significant 16 bits access time). */</span>
+    <span class="p">...</span>
+<span class="p">}</span> <span class="n">robj</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="nf">processCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">maxmemory</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">server</span><span class="p">.</span><span class="n">lua_timedout</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">int</span> <span class="n">out_of_memory</span> <span class="o">=</span> <span class="n">freeMemoryIfNeededAndSafe</span><span class="p">()</span> <span class="o">==</span> <span class="n">C_ERR</span><span class="p">;</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">freeMemoryIfNeededAndSafe</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">lua_timedout</span> <span class="o">||</span> <span class="n">server</span><span class="p">.</span><span class="n">loading</span><span class="p">)</span> <span class="k">return</span> <span class="n">C_OK</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">freeMemoryIfNeeded</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="32-事件触发">3.2. 事件触发</h3>
+
+<p>在事件模型中，处理事件前，触发快速检查。将过期检查负载分散到各个事件中去。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">aeSetBeforeSleepProc</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">el</span><span class="p">,</span><span class="n">beforeSleep</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="n">aeMain</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">el</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">aeMain</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">stop</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">stop</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">beforesleep</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+            <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">beforesleep</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">);</span>
+        <span class="n">aeProcessEvents</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">,</span> <span class="n">AE_ALL_EVENTS</span><span class="o">|</span><span class="n">AE_CALL_AFTER_SLEEP</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">beforeSleep</span><span class="p">(</span><span class="k">struct</span> <span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">active_expire_enabled</span> <span class="o">&amp;&amp;</span> <span class="n">server</span><span class="p">.</span><span class="n">masterhost</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+        <span class="n">activeExpireCycle</span><span class="p">(</span><span class="n">ACTIVE_EXPIRE_CYCLE_FAST</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="33-定期检查">3.3. 定期检查</h3>
+
+<p>通过时钟实现，定期检查过期键值。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">initServer</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 创建时钟事件</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">aeCreateTimeEvent</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">el</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">serverCron</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">==</span> <span class="n">AE_ERR</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">serverPanic</span><span class="p">(</span><span class="s">"Can't create event loop timers."</span><span class="p">);</span>
+        <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">serverCron</span><span class="p">(</span><span class="k">struct</span> <span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">id</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">clientData</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">databasesCron</span><span class="p">();</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 主库中检查即可，主库会同步结果到从库。</span>
+<span class="kt">void</span> <span class="nf">databasesCron</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">active_expire_enabled</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">masterhost</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 主库慢速检查</span>
+            <span class="n">activeExpireCycle</span><span class="p">(</span><span class="n">ACTIVE_EXPIRE_CYCLE_SLOW</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="c1">// 从库如果设置了可写功能。</span>
+            <span class="n">expireSlaveKeys</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<p>redis 主逻辑在单进程主线程中实现，要保证不能影响主业务前提下，检查过期数据，不能太影响系统性能。主要三方面进行限制：</p>
+
+<ol>
+  <li>检查时间限制。</li>
+  <li>过期数据检查数量限制。</li>
+  <li>过期数据是否达到可接受比例。</li>
+</ol>
+
+<p>被检查的数据到期了，系统会把该键值从字典中逻辑删除，切断数据与主逻辑联系。键值对应的数据，放到线程队列，后台线程进行异步回收（如果配置设置了异步回收）。</p>
+
+<hr />
+
+<p><code class="highlighter-rouge">activeExpireCycle</code> 检查有“快速”和“慢速”两种，时钟定期检查属于慢速类型。慢速检查被分配更多的检查时间。在一个时间范围内，到期数据最好不要太密集，因为系统发现到期数据很多，会迫切希望尽快处理掉这些过期数据，所以每次检查都要耗尽分配的时间片，直到到期数据到达一个可接受的密度比例。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define CRON_DBS_PER_CALL 16 </span><span class="cm">/* 每次检查的数据库个数 */</span><span class="cp">
+</span>
+<span class="cp">#define ACTIVE_EXPIRE_CYCLE_KEYS_PER_LOOP 20 </span><span class="cm">/* Keys for each DB loop. */</span><span class="cp">
+#define ACTIVE_EXPIRE_CYCLE_FAST_DURATION 1000 </span><span class="cm">/* Microseconds. */</span><span class="cp">
+#define ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC 25 </span><span class="cm">/* Max % of CPU to use. */</span><span class="cp">
+#define ACTIVE_EXPIRE_CYCLE_ACCEPTABLE_STALE 10 </span><span class="cm">/* % of stale keys after which
+                                                   we do extra efforts. */</span><span class="cp">
+</span>
+<span class="kt">void</span> <span class="nf">activeExpireCycle</span><span class="p">(</span><span class="kt">int</span> <span class="n">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/* Adjust the running parameters according to the configured expire
+     * effort. The default effort is 1, and the maximum configurable effort
+     * is 10. */</span>
+    <span class="kt">unsigned</span> <span class="kt">long</span>
+    <span class="c1">// 努力力度，默认 1，也就是遍历过期字典的力度，力度越大，遍历数量越多，但是性能损耗更多。</span>
+    <span class="n">effort</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">active_expire_effort</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="cm">/* Rescale from 0 to 9. */</span>
+    <span class="c1">// 每次循环遍历键值个数。力度越大，遍历个数越多。</span>
+    <span class="n">config_keys_per_loop</span> <span class="o">=</span> <span class="n">ACTIVE_EXPIRE_CYCLE_KEYS_PER_LOOP</span> <span class="o">+</span>
+                           <span class="n">ACTIVE_EXPIRE_CYCLE_KEYS_PER_LOOP</span><span class="o">/</span><span class="mi">4</span><span class="o">*</span><span class="n">effort</span><span class="p">,</span>
+    <span class="c1">// 快速遍历时间范围，力度越大，给予遍历时间越多。</span>
+    <span class="n">config_cycle_fast_duration</span> <span class="o">=</span> <span class="n">ACTIVE_EXPIRE_CYCLE_FAST_DURATION</span> <span class="o">+</span>
+                                 <span class="n">ACTIVE_EXPIRE_CYCLE_FAST_DURATION</span><span class="o">/</span><span class="mi">4</span><span class="o">*</span><span class="n">effort</span><span class="p">,</span>
+    <span class="c1">// 慢速遍历检查时间片</span>
+    <span class="n">config_cycle_slow_time_perc</span> <span class="o">=</span> <span class="n">ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC</span> <span class="o">+</span>
+                                  <span class="mi">2</span><span class="o">*</span><span class="n">effort</span><span class="p">,</span>
+    <span class="c1">// 已经到期数据 / 检查数据 比例。达到可以接受的比例。</span>
+    <span class="n">config_cycle_acceptable_stale</span> <span class="o">=</span> <span class="n">ACTIVE_EXPIRE_CYCLE_ACCEPTABLE_STALE</span><span class="o">-</span>
+                                    <span class="n">effort</span><span class="p">;</span>
+
+    <span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">current_db</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="cm">/* Last DB tested. */</span>
+    <span class="c1">// 检查是否已经超时。</span>
+    <span class="k">static</span> <span class="kt">int</span> <span class="n">timelimit_exit</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>      <span class="cm">/* Time limit hit in previous call? */</span>
+    <span class="c1">// 上一次快速检查数据起始时间。</span>
+    <span class="k">static</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">last_fast_cycle</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="cm">/* When last fast cycle ran. */</span>
+
+    <span class="c1">// iteration 迭代检查个数，每 16 次循环遍历，确认一下是否检查超时。</span>
+    <span class="kt">int</span> <span class="n">j</span><span class="p">,</span> <span class="n">iteration</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="c1">// 每次周期检查的数据库个数。redis 默认有 16 个库。</span>
+    <span class="kt">int</span> <span class="n">dbs_per_call</span> <span class="o">=</span> <span class="n">CRON_DBS_PER_CALL</span><span class="p">;</span>
+    <span class="kt">long</span> <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="n">ustime</span><span class="p">(),</span> <span class="n">timelimit</span><span class="p">,</span> <span class="n">elapsed</span><span class="p">;</span>
+
+    <span class="cm">/* 如果链接已经停止了，那么要保留现场，不允许修改数据，也不允许到期淘汰数据。
+     * 使用命令 ‘pause’ 暂停 redis 工作或者主服务正在进行从服务的故障转移。*/</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">clientsArePaused</span><span class="p">())</span> <span class="k">return</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">type</span> <span class="o">==</span> <span class="n">ACTIVE_EXPIRE_CYCLE_FAST</span><span class="p">)</span> <span class="p">{</span>
+        <span class="cm">/* 检查还没超时，但是到期数据密集度已经达到了可以接受的范围，不要快速检查了，
+           毕竟它是快速的，留给其它方式的检查。*/</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">timelimit_exit</span> <span class="o">&amp;&amp;</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">stat_expired_stale_perc</span> <span class="o">&lt;</span> <span class="n">config_cycle_acceptable_stale</span><span class="p">)</span>
+            <span class="k">return</span><span class="p">;</span>
+
+        <span class="cm">/* 限制快速检查频次，在两个 config_cycle_fast_duration 内，只能执行一次快速检查。 */</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">start</span> <span class="o">&lt;</span> <span class="n">last_fast_cycle</span> <span class="o">+</span> <span class="p">(</span><span class="kt">long</span> <span class="kt">long</span><span class="p">)</span><span class="n">config_cycle_fast_duration</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">return</span><span class="p">;</span>
+
+        <span class="n">last_fast_cycle</span> <span class="o">=</span> <span class="n">start</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">dbs_per_call</span> <span class="o">&gt;</span> <span class="n">server</span><span class="p">.</span><span class="n">dbnum</span> <span class="o">||</span> <span class="n">timelimit_exit</span><span class="p">)</span>
+        <span class="n">dbs_per_call</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">dbnum</span><span class="p">;</span>
+
+    <span class="cm">/* 检查过期数据，但是不能太损耗资源，得有个限制。server.hz 默认为 10
+       hz 是执行后台任务的频率，越大表明执行的次数越频繁，一般用默认值 10 */</span>
+    <span class="n">timelimit</span> <span class="o">=</span> <span class="n">config_cycle_slow_time_perc</span><span class="o">*</span><span class="mi">1000000</span><span class="o">/</span><span class="n">server</span><span class="p">.</span><span class="n">hz</span><span class="o">/</span><span class="mi">100</span><span class="p">;</span>
+    <span class="n">timelimit_exit</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">timelimit</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="n">timelimit</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="c1">// 如果是快速模式，更改检查周期时间。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">type</span> <span class="o">==</span> <span class="n">ACTIVE_EXPIRE_CYCLE_FAST</span><span class="p">)</span>
+        <span class="n">timelimit</span> <span class="o">=</span> <span class="n">config_cycle_fast_duration</span><span class="p">;</span> <span class="cm">/* in microseconds. */</span>
+
+    <span class="cm">/* 过期数据一般是异步方式，检查到过期数据，都是从字典中移除键值信息，
+     * 避免再次使用，但是数据回收放在后台回收，不是实时的，有数据有可能还存在数据库里。*/</span>
+
+    <span class="c1">// 检查数据个数。</span>
+    <span class="kt">long</span> <span class="n">total_sampled</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="c1">// 检查数据，数据已经过期的个数。</span>
+    <span class="kt">long</span> <span class="n">total_expired</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">dbs_per_call</span> <span class="o">&amp;&amp;</span> <span class="n">timelimit_exit</span> <span class="o">==</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">expired</span><span class="p">,</span> <span class="n">sampled</span><span class="p">;</span>
+        <span class="n">redisDb</span> <span class="o">*</span><span class="n">db</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">db</span><span class="o">+</span><span class="p">(</span><span class="n">current_db</span> <span class="o">%</span> <span class="n">server</span><span class="p">.</span><span class="n">dbnum</span><span class="p">);</span>
+        <span class="n">current_db</span><span class="o">++</span><span class="p">;</span>
+
+        <span class="c1">// 遍历数据库检查过期数据，直到超出检查周期时间，或者过期数据比例已经很少了。</span>
+        <span class="k">do</span> <span class="p">{</span>
+            <span class="c1">// num 数据量，slots 哈希表大小（字典数据如果正在迁移，双表大小）</span>
+            <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">num</span><span class="p">,</span> <span class="n">slots</span><span class="p">;</span>
+            <span class="kt">long</span> <span class="kt">long</span> <span class="n">now</span><span class="p">,</span> <span class="n">ttl_sum</span><span class="p">;</span>
+            <span class="kt">int</span> <span class="n">ttl_samples</span><span class="p">;</span>
+            <span class="n">iteration</span><span class="o">++</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">((</span><span class="n">num</span> <span class="o">=</span> <span class="n">dictSize</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">db</span><span class="o">-&gt;</span><span class="n">avg_ttl</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="n">slots</span> <span class="o">=</span> <span class="n">dictSlots</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="p">);</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">mstime</span><span class="p">();</span>
+
+            <span class="cm">/* 过期存储数据结构是字典，数据经过处理后，字典存储的数据可能已经很少，
+             * 但是字典还是大字典，这样遍历数据有效命中率会很低，处理起来会浪费资源，
+             * 后面的访问会很快触发字典的缩容，缩容后再进行处理效率更高。*/</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">num</span> <span class="o">&amp;&amp;</span> <span class="n">slots</span> <span class="o">&gt;</span> <span class="n">DICT_HT_INITIAL_SIZE</span> <span class="o">&amp;&amp;</span>
+                <span class="p">(</span><span class="n">num</span><span class="o">*</span><span class="mi">100</span><span class="o">/</span><span class="n">slots</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">))</span> <span class="k">break</span><span class="p">;</span>
+
+            <span class="c1">// 过期的数据个数。</span>
+            <span class="n">expired</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="c1">// 检查的数据个数。</span>
+            <span class="n">sampled</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="c1">// 没有过期的数据时间差之和。</span>
+            <span class="n">ttl_sum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="c1">// 没有过期的数据个数。</span>
+            <span class="n">ttl_samples</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+            <span class="c1">// 每次检查的数据限制。</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">num</span> <span class="o">&gt;</span> <span class="n">config_keys_per_loop</span><span class="p">)</span>
+                <span class="n">num</span> <span class="o">=</span> <span class="n">config_keys_per_loop</span><span class="p">;</span>
+
+            <span class="cm">/* 哈希表本质上是一个数组，可能有键值碰撞的数据，用链表将碰撞数据串联起来，
+             * 放在一个数组下标下，也就是放在哈希表的一个桶里。max_buckets 是最大能检查的桶个数。
+             * 跳过空桶，不处理。*/</span>
+            <span class="kt">long</span> <span class="n">max_buckets</span> <span class="o">=</span> <span class="n">num</span><span class="o">*</span><span class="mi">20</span><span class="p">;</span>
+            <span class="c1">// 当前已经检查哈希表桶的个数。</span>
+            <span class="kt">long</span> <span class="n">checked_buckets</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+            <span class="c1">// 一个桶上有可能有多个数据。所以检查从两方面限制：一个是数据量，一个是桶的数量。</span>
+            <span class="k">while</span> <span class="p">(</span><span class="n">sampled</span> <span class="o">&lt;</span> <span class="n">num</span> <span class="o">&amp;&amp;</span> <span class="n">checked_buckets</span> <span class="o">&lt;</span> <span class="n">max_buckets</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">table</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">table</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">;</span> <span class="n">table</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="c1">// 如果 dict 没有正在进行扩容，不需要检查它的第二张表了。</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">table</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">dictIsRehashing</span><span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="p">))</span> <span class="k">break</span><span class="p">;</span>
+
+                    <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">idx</span> <span class="o">=</span> <span class="n">db</span><span class="o">-&gt;</span><span class="n">expires_cursor</span><span class="p">;</span>
+                    <span class="n">idx</span> <span class="o">&amp;=</span> <span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="o">-&gt;</span><span class="n">ht</span><span class="p">[</span><span class="n">table</span><span class="p">].</span><span class="n">sizemask</span><span class="p">;</span>
+                    <span class="n">dictEntry</span> <span class="o">*</span><span class="n">de</span> <span class="o">=</span> <span class="n">db</span><span class="o">-&gt;</span><span class="n">expires</span><span class="o">-&gt;</span><span class="n">ht</span><span class="p">[</span><span class="n">table</span><span class="p">].</span><span class="n">table</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+                    <span class="kt">long</span> <span class="kt">long</span> <span class="n">ttl</span><span class="p">;</span>
+
+                    <span class="n">checked_buckets</span><span class="o">++</span><span class="p">;</span>
+                    <span class="k">while</span><span class="p">(</span><span class="n">de</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="n">dictEntry</span> <span class="o">*</span><span class="n">e</span> <span class="o">=</span> <span class="n">de</span><span class="p">;</span>
+                        <span class="n">de</span> <span class="o">=</span> <span class="n">de</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span>
+
+                        <span class="c1">// 检查数据是否已经超时。</span>
+                        <span class="n">ttl</span> <span class="o">=</span> <span class="n">dictGetSignedIntegerVal</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">-</span><span class="n">now</span><span class="p">;</span>
+
+                        <span class="c1">// 如果数据过期了，进行回收处理。</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="n">activeExpireCycleTryExpire</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="n">e</span><span class="p">,</span><span class="n">now</span><span class="p">))</span> <span class="n">expired</span><span class="o">++</span><span class="p">;</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="n">ttl</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+                            <span class="cm">/* We want the average TTL of keys yet
+                             * not expired. */</span>
+                            <span class="n">ttl_sum</span> <span class="o">+=</span> <span class="n">ttl</span><span class="p">;</span>
+                            <span class="n">ttl_samples</span><span class="o">++</span><span class="p">;</span>
+                        <span class="p">}</span>
+                        <span class="n">sampled</span><span class="o">++</span><span class="p">;</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="n">db</span><span class="o">-&gt;</span><span class="n">expires_cursor</span><span class="o">++</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="n">total_expired</span> <span class="o">+=</span> <span class="n">expired</span><span class="p">;</span>
+            <span class="n">total_sampled</span> <span class="o">+=</span> <span class="n">sampled</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">ttl_samples</span><span class="p">)</span> <span class="p">{</span>
+                <span class="kt">long</span> <span class="kt">long</span> <span class="n">avg_ttl</span> <span class="o">=</span> <span class="n">ttl_sum</span><span class="o">/</span><span class="n">ttl_samples</span><span class="p">;</span>
+
+                <span class="cm">/* Do a simple running average with a few samples.
+                 * We just use the current estimate with a weight of 2%
+                 * and the previous estimate with a weight of 98%. */</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">avg_ttl</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="n">db</span><span class="o">-&gt;</span><span class="n">avg_ttl</span> <span class="o">=</span> <span class="n">avg_ttl</span><span class="p">;</span>
+                <span class="c1">// 对没过期的数据，平均过期时间进行采样，上一次统计的平均时间占 98 %，本次占 2%。</span>
+                <span class="n">db</span><span class="o">-&gt;</span><span class="n">avg_ttl</span> <span class="o">=</span> <span class="p">(</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">avg_ttl</span><span class="o">/</span><span class="mi">50</span><span class="p">)</span><span class="o">*</span><span class="mi">49</span> <span class="o">+</span> <span class="p">(</span><span class="n">avg_ttl</span><span class="o">/</span><span class="mi">50</span><span class="p">);</span>
+            <span class="p">}</span>
+
+            <span class="cm">/* 避免检查周期太长，当前数据库每 16 次循环迭代检查，检查是否超时，超时退出。*/</span>
+            <span class="k">if</span> <span class="p">((</span><span class="n">iteration</span> <span class="o">&amp;</span> <span class="mh">0xf</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span> <span class="cm">/* check once every 16 iterations. */</span>
+                <span class="n">elapsed</span> <span class="o">=</span> <span class="n">ustime</span><span class="p">()</span><span class="o">-</span><span class="n">start</span><span class="p">;</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">elapsed</span> <span class="o">&gt;</span> <span class="n">timelimit</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="n">timelimit_exit</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+                    <span class="n">server</span><span class="p">.</span><span class="n">stat_expired_time_cap_reached_count</span><span class="o">++</span><span class="p">;</span>
+                    <span class="k">break</span><span class="p">;</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+
+            <span class="cm">/* 当前数据库，如果没有检查到数据，或者过期数据已经达到可接受比例
+             * 就退出该数据库检查，进入到下一个数据库检查。*/</span>
+        <span class="p">}</span> <span class="k">while</span> <span class="p">(</span><span class="n">sampled</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span>
+                 <span class="p">(</span><span class="n">expired</span><span class="o">*</span><span class="mi">100</span><span class="o">/</span><span class="n">sampled</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">config_cycle_acceptable_stale</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 添加统计信息</span>
+    <span class="n">elapsed</span> <span class="o">=</span> <span class="n">ustime</span><span class="p">()</span><span class="o">-</span><span class="n">start</span><span class="p">;</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">stat_expire_cycle_time_used</span> <span class="o">+=</span> <span class="n">elapsed</span><span class="p">;</span>
+    <span class="n">latencyAddSampleIfNeeded</span><span class="p">(</span><span class="s">"expire-cycle"</span><span class="p">,</span><span class="n">elapsed</span><span class="o">/</span><span class="mi">1000</span><span class="p">);</span>
+
+    <span class="kt">double</span> <span class="n">current_perc</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">total_sampled</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">current_perc</span> <span class="o">=</span> <span class="p">(</span><span class="kt">double</span><span class="p">)</span><span class="n">total_expired</span><span class="o">/</span><span class="n">total_sampled</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span>
+        <span class="n">current_perc</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// 通过累加每次检查的过期概率影响，保存过期数据占数据比例。</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">stat_expired_stale_perc</span> <span class="o">=</span> <span class="p">(</span><span class="n">current_perc</span><span class="o">*</span><span class="mi">0</span><span class="p">.</span><span class="mo">05</span><span class="p">)</span><span class="o">+</span>
+                                     <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">stat_expired_stale_perc</span><span class="o">*</span><span class="mi">0</span><span class="p">.</span><span class="mi">95</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>删除过期数据</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">activeExpireCycleTryExpire</span><span class="p">(</span><span class="n">redisDb</span> <span class="o">*</span><span class="n">db</span><span class="p">,</span> <span class="n">dictEntry</span> <span class="o">*</span><span class="n">de</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">now</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">long</span> <span class="kt">long</span> <span class="n">t</span> <span class="o">=</span> <span class="n">dictGetSignedIntegerVal</span><span class="p">(</span><span class="n">de</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">now</span> <span class="o">&gt;</span> <span class="n">t</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">sds</span> <span class="n">key</span> <span class="o">=</span> <span class="n">dictGetKey</span><span class="p">(</span><span class="n">de</span><span class="p">);</span>
+        <span class="n">robj</span> <span class="o">*</span><span class="n">keyobj</span> <span class="o">=</span> <span class="n">createStringObject</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">key</span><span class="p">));</span>
+
+        <span class="n">propagateExpire</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="n">keyobj</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">lazyfree_lazy_expire</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">lazyfree_lazy_expire</span><span class="p">)</span>
+            <span class="n">dbAsyncDelete</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="n">keyobj</span><span class="p">);</span>
+        <span class="k">else</span>
+            <span class="n">dbSyncDelete</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="n">keyobj</span><span class="p">);</span>
+        <span class="n">notifyKeyspaceEvent</span><span class="p">(</span><span class="n">NOTIFY_EXPIRED</span><span class="p">,</span> <span class="s">"expired"</span><span class="p">,</span> <span class="n">keyobj</span><span class="p">,</span> <span class="n">db</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">);</span>
+        <span class="n">trackingInvalidateKey</span><span class="p">(</span><span class="n">keyobj</span><span class="p">);</span>
+        <span class="n">decrRefCount</span><span class="p">(</span><span class="n">keyobj</span><span class="p">);</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">stat_expiredkeys</span><span class="o">++</span><span class="p">;</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-总结">4. 总结</h2>
+
+<ul>
+  <li>要熟悉字典 <code class="highlighter-rouge">dict</code> 的实现原理，<code class="highlighter-rouge">dict</code> 是 redis 常用的几个基础数据结构之一。</li>
+  <li>看了几天源码，大致理解了键值过期处理策略。很多细节，感觉理解还是不够深刻，以后还是要结合实战多思考。</li>
+  <li>redis 为了保证系统的高性能，采取了很多巧妙的“分治策略”，例如键值过期检查。过期数据检查和处理流程看，它不是一个实时的操作，有一定的延时，这样系统不能很好地保证数据一致性。有得必有失。</li>
+  <li>从定期回收策略的慢速检查中，我们可以看到，redis 处理到期数据，通过采样，判断到期数据的密集度。到期数据越密集，处理时间越多。我们使用中，不应该把大量数据设置在同一个时间段到期。</li>
+  <li><code class="highlighter-rouge">redis.conf</code> 配置里面有比较详细的过期键处理策略描述。很多细节，可以参考源码注释和文档。文档极其详细，redis 作者的耐心，在开源项目中，是比较少见的 👍。例如：</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">############################# LAZY FREEING ####################################</span>
+
+<span class="c"># Redis has two primitives to delete keys. One is called DEL and is a blocking</span>
+<span class="c"># deletion of the object. It means that the server stops processing new commands</span>
+<span class="c"># in order to reclaim all the memory associated with an object in a synchronous</span>
+<span class="c"># way. If the key deleted is associated with a small object, the time needed</span>
+<span class="c"># in order to execute the DEL command is very small and comparable to most other</span>
+<span class="c"># O(1) or O(log_N) commands in Redis. However if the key is associated with an</span>
+<span class="c"># aggregated value containing millions of elements, the server can block for</span>
+<span class="c"># a long time (even seconds) in order to complete the operation.</span>
+<span class="c">#</span>
+<span class="c"># For the above reasons Redis also offers non blocking deletion primitives</span>
+<span class="c"># such as UNLINK (non blocking DEL) and the ASYNC option of FLUSHALL and</span>
+<span class="c"># FLUSHDB commands, in order to reclaim memory in background. Those commands</span>
+<span class="c"># are executed in constant time. Another thread will incrementally free the</span>
+<span class="c"># object in the background as fast as possible.</span>
+<span class="c">#</span>
+<span class="c"># DEL, UNLINK and ASYNC option of FLUSHALL and FLUSHDB are user-controlled.</span>
+<span class="c"># It's up to the design of the application to understand when it is a good</span>
+<span class="c"># idea to use one or the other. However the Redis server sometimes has to</span>
+<span class="c"># delete keys or flush the whole database as a side effect of other operations.</span>
+<span class="c"># Specifically Redis deletes objects independently of a user call in the</span>
+<span class="c"># following scenarios:</span>
+<span class="c">#</span>
+<span class="c"># 1) On eviction, because of the maxmemory and maxmemory policy configurations,</span>
+<span class="c">#    in order to make room for new data, without going over the specified</span>
+<span class="c">#    memory limit.</span>
+<span class="c"># 2) Because of expire: when a key with an associated time to live (see the</span>
+<span class="c">#    EXPIRE command) must be deleted from memory.</span>
+<span class="c"># 3) Because of a side effect of a command that stores data on a key that may</span>
+<span class="c">#    already exist. For example the RENAME command may delete the old key</span>
+<span class="c">#    content when it is replaced with another one. Similarly SUNIONSTORE</span>
+<span class="c">#    or SORT with STORE option may delete existing keys. The SET command</span>
+<span class="c">#    itself removes any old content of the specified key in order to replace</span>
+<span class="c">#    it with the specified string.</span>
+<span class="c"># 4) During replication, when a replica performs a full resynchronization with</span>
+<span class="c">#    its master, the content of the whole database is removed in order to</span>
+<span class="c">#    load the RDB file just transferred.</span>
+<span class="c">#</span>
+<span class="c"># In all the above cases the default is to delete objects in a blocking way,</span>
+<span class="c"># like if DEL was called. However you can configure each case specifically</span>
+<span class="c"># in order to instead release memory in a non-blocking way like if UNLINK</span>
+<span class="c"># was called, using the following configuration directives:</span>
+
+lazyfree-lazy-eviction no
+lazyfree-lazy-expire no
+lazyfree-lazy-server-del no
+replica-lazy-flush no
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="5-参考">5. 参考</h2>
+
+<ul>
+  <li><a href="https://wenfh2020.com/2020/01/12/redis-dict/">[redis 源码走读] 字典(dict)</a></li>
+  <li>《redis 设计与实现》</li>
+  <li><a href="https://blog.csdn.net/alex_xfboy/article/details/88959647">redis 过期策略及内存回收机制</a></li>
+  <li><a href="https://www.zhangshengrong.com/p/Z9a28xkVXV/">redis3.2配置文件redis.conf详细说明</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

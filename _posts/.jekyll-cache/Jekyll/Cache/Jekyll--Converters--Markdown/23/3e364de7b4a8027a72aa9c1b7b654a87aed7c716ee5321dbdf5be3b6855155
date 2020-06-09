@@ -1,0 +1,479 @@
+I"!S<p>系统通过虚拟内存方式管理进程内存，我们测试一下程序中的变量分别分布在虚拟内存哪些区域。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-进程虚拟内存" id="markdown-toc-1-进程虚拟内存">1. 进程虚拟内存</a></li>
+  <li><a href="#2-内存分布" id="markdown-toc-2-内存分布">2. 内存分布</a></li>
+  <li><a href="#3-测试" id="markdown-toc-3-测试">3. 测试</a>    <ul>
+      <li><a href="#31-系统" id="markdown-toc-31-系统">3.1. 系统</a></li>
+      <li><a href="#32-源码" id="markdown-toc-32-源码">3.2. 源码</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-elf-格式头" id="markdown-toc-4-elf-格式头">4. elf 格式头</a></li>
+  <li><a href="#5-objdump-工具" id="markdown-toc-5-objdump-工具">5. objdump 工具</a></li>
+  <li><a href="#6-参考" id="markdown-toc-6-参考">6. 参考</a></li>
+</ul>
+
+<h2 id="1-进程虚拟内存">1. 进程虚拟内存</h2>
+
+<p>系统通过虚拟内存方式管理进程内存。</p>
+
+<p><img src="/images/2020-02-20-14-22-08.png" alt="进程地址空间" data-action="zoom" /></p>
+
+<blockquote>
+  <p>图片来源 《深入理解计算机系统》8.2.3 私有地址空间</p>
+</blockquote>
+
+<hr />
+
+<h2 id="2-内存分布">2. 内存分布</h2>
+
+<p>程序源码通过编译，产生可执行的 elf 文件。源码对应的变量，有的在执行前已经在虚拟内存中分配好内存空间，有的需要在程序运行起来才会分配。</p>
+
+<ul>
+  <li>
+    <p>数据分区</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align: left">区域</th>
+          <th style="text-align: left">描述</th>
+          <th style="text-align: left">变量类型</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: left"><code class="highlighter-rouge">stack</code></td>
+          <td style="text-align: left">栈区</td>
+          <td style="text-align: left">临时变量</td>
+        </tr>
+        <tr>
+          <td style="text-align: left"><code class="highlighter-rouge">heap</code></td>
+          <td style="text-align: left">堆区</td>
+          <td style="text-align: left">malloc  分配空间的变量</td>
+        </tr>
+        <tr>
+          <td style="text-align: left"><code class="highlighter-rouge">.data</code>，<code class="highlighter-rouge">.bss</code></td>
+          <td style="text-align: left">全局数据区</td>
+          <td style="text-align: left">全局变量/静态变量</td>
+        </tr>
+        <tr>
+          <td style="text-align: left"><code class="highlighter-rouge">.rodata</code></td>
+          <td style="text-align: left">文字常量区</td>
+          <td style="text-align: left">只读数据，常量等</td>
+        </tr>
+        <tr>
+          <td style="text-align: left"><code class="highlighter-rouge">.text</code></td>
+          <td style="text-align: left">程序代码区</td>
+          <td style="text-align: left">程序代码</td>
+        </tr>
+      </tbody>
+    </table>
+  </li>
+</ul>
+
+<hr />
+
+<ul>
+  <li>
+    <p>内存分布特点：</p>
+
+    <ol>
+      <li>内存从低地址到高地址分配情况：<code class="highlighter-rouge">.text</code>，<code class="highlighter-rouge">.rodata</code>，<code class="highlighter-rouge">.data</code>，<code class="highlighter-rouge">.bss</code>，<code class="highlighter-rouge">heap</code>，<code class="highlighter-rouge">stack</code>。</li>
+      <li>全局数据初始化的放在 <code class="highlighter-rouge">.data</code> 区，没有初始化的放在 <code class="highlighter-rouge">.bss</code>。</li>
+      <li>栈空间从高地址向低地址分配。</li>
+      <li>堆空间从低地址到高地址分配。</li>
+    </ol>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="3-测试">3. 测试</h2>
+
+<h3 id="31-系统">3.1. 系统</h3>
+
+<p>CentOS Linux release 7.4.1708 (Core)</p>
+
+<hr />
+
+<h3 id="32-源码">3.2. 源码</h3>
+
+<ul>
+  <li>测试源码 (<a href="https://github.com/wenfh2020/c_test/tree/master/normal/address.cpp">github</a>)</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 测试静态变量</span>
+<span class="kt">void</span> <span class="nf">test_static</span><span class="p">();</span>
+<span class="c1">// 测试全局变量</span>
+<span class="kt">void</span> <span class="nf">test_global</span><span class="p">();</span>
+<span class="c1">// 测试堆栈</span>
+<span class="kt">void</span> <span class="nf">test_stack</span><span class="p">();</span>
+<span class="c1">// 测试堆</span>
+<span class="kt">void</span> <span class="nf">test_heap</span><span class="p">();</span>
+<span class="c1">// 测试函数源码</span>
+<span class="kt">void</span> <span class="nf">test_code</span><span class="p">();</span>
+<span class="c1">// 从低地址到高地址打印地址对应的变量</span>
+<span class="kt">void</span> <span class="nf">print_sort_ret</span><span class="p">();</span>
+
+<span class="p">...</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">test_code</span><span class="p">();</span>
+    <span class="n">test_static</span><span class="p">();</span>
+    <span class="n">test_global</span><span class="p">();</span>
+    <span class="n">test_stack</span><span class="p">();</span>
+    <span class="n">test_heap</span><span class="p">();</span>
+    <span class="n">print_sort_ret</span><span class="p">();</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>源码运行结果</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># g++ -g address.cpp -o address</span>
+<span class="c"># file address</span>
+address: ELF 64-bit LSB executable, x86-64, version 1 <span class="o">(</span>SYSV<span class="o">)</span>, dynamically linked <span class="o">(</span>uses shared libs<span class="o">)</span>
+
+<span class="c"># ./address</span>
+           stack_int_not_init : 0x7ffc7e778a8c
+                  stack_int_0 : 0x7ffc7e778a88
+                  stack_int_1 : 0x7ffc7e778a84
+                  stack_int_2 : 0x7ffc7e778a80
+                  stack_int_3 : 0x7ffc7e778a7c
+                        heap3 :      0x222a670
+                        heap2 :      0x222a260
+                        heap1 :      0x2229e50
+           static_stack_int_0 :       0x6061c0
+    static_stack_int_not_init :       0x6061bc
+          global_static_int_0 :       0x6061b8
+   global_static_int_not_init :       0x6061b4
+                 global_int_0 :       0x606164
+          global_int_not_init :       0x606160
+           static_stack_int_4 :       0x606134
+           static_stack_int_3 :       0x606130
+           static_stack_int_2 :       0x60612c
+           static_stack_int_1 :       0x606128
+          global_static_int_2 :       0x606110
+          global_static_int_1 :       0x60610c
+                 global_int_3 :       0x606108
+                 global_int_2 :       0x606104
+                 global_int_1 :       0x606100
+        global_const_string_2 :       0x403cb8
+        global_const_string_1 :       0x403cb0
+                         main :       0x402d0b
+               print_sort_ret :       0x402c5f
+                   test_stack :       0x40279b
+                    test_heap :       0x4024a0
+                  test_static :       0x401b89
+                  test_global :       0x40143d
+                    test_code :       0x400ded
+      global_pointer_not_init :          <span class="o">(</span>nil<span class="o">)</span>
+</code></pre></div></div>
+
+<ul>
+  <li>测试源码变量内存分布情况（上面是高地址，下面是低地址）：</li>
+</ul>
+
+<table class="table-striped">
+  <thead>
+    <tr>
+      <th style="text-align: left">虚拟内存分布</th>
+      <th style="text-align: left">变量</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">stack</td>
+      <td style="text-align: left">stack_int_not_init</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">stack</td>
+      <td style="text-align: left">stack_int_init_0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">stack</td>
+      <td style="text-align: left">stack_int_1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">stack</td>
+      <td style="text-align: left">stack_int_2</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">stack</td>
+      <td style="text-align: left">stack_int_3</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">heap</td>
+      <td style="text-align: left">heap3</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">heap</td>
+      <td style="text-align: left">heap2</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">heap</td>
+      <td style="text-align: left">heap1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.bss</td>
+      <td style="text-align: left">global_static_int_0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.bss</td>
+      <td style="text-align: left">global_static_int_not_init</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.bss</td>
+      <td style="text-align: left">static_stack_int_0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.bss</td>
+      <td style="text-align: left">static_stack_int_not_init</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.bss</td>
+      <td style="text-align: left">global_int_init_0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.bss</td>
+      <td style="text-align: left">global_int_not_init</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">global_pointer_not_init</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">global_static_int_2</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">global_static_int_1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">static_stack_int_4</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">static_stack_int_3</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">static_stack_int_2</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">static_stack_int_1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">global_int_3</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">global_int_2</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">global_int_1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.rodata</td>
+      <td style="text-align: left">global_const_string_2</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.rodata</td>
+      <td style="text-align: left">global_const_string_1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.text</td>
+      <td style="text-align: left">print_sort_ret</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.text</td>
+      <td style="text-align: left">test_heap</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.text</td>
+      <td style="text-align: left">test_stack</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.text</td>
+      <td style="text-align: left">test_global</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.text</td>
+      <td style="text-align: left">test_static</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.text</td>
+      <td style="text-align: left">main</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.text</td>
+      <td style="text-align: left">test_code</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="4-elf-格式头">4. elf 格式头</h2>
+
+<p><code class="highlighter-rouge">.text</code>， <code class="highlighter-rouge">.data</code>，<code class="highlighter-rouge">bss</code>，<code class="highlighter-rouge">.rodata</code> 数据区是程序运行前，编译器分配好的，并不是程序载入内存后进行分配的，可以通过 <code class="highlighter-rouge">objdump</code> 工具查询。</p>
+
+<p>ELF 可重定位目标文件的格式头：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">头</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">.bss</td>
+      <td style="text-align: left">未初始化段全局和静态变量。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.rodata</td>
+      <td style="text-align: left">只读数据，常量等。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.data</td>
+      <td style="text-align: left">已初始化段全局和静态变量。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">.text</td>
+      <td style="text-align: left">已编译程序段机器代码。</td>
+    </tr>
+  </tbody>
+</table>
+
+<blockquote>
+  <p>《深入理解计算机系统》7.4 可重定位目标文件</p>
+</blockquote>
+
+<hr />
+
+<h2 id="5-objdump-工具">5. objdump 工具</h2>
+
+<ul>
+  <li>通过 objdump 工具查询程序部分变量在 elf 文件中分配在虚拟内存哪个区。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># objdump -j .rodata -S address</span>
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>address:     file format elf64-x86-64
+
+
+Disassembly of section .rodata:
+
+0000000000403ca0 &lt;_IO_stdin_used&gt;:
+  403ca0:       01 00 02 00 00 00 00 00                             ........
+
+0000000000403ca8 &lt;__dso_handle&gt;:
+        ...
+  403cb0:       68 65 6c 6c 6f 5f 31 00 68 65 6c 6c 6f 5f 32 00     hello_1.hello_2.
+  403cc0:       63 6f 64 65 20 6c 6f 63 61 74 69 6f 6e 3a 0a 2d     code location:.-
+  403cd0:       2d 2d 2d 0a 6d 61 69 6e 20 20 20 20 20 20 20 20     <span class="nt">---</span>.main
+  403ce0:       3a 20 25 70 0a 74 65 73 74 5f 73 74 61 74 69 63     : %p.test_static
+  403cf0:       20 3a 20 25 70 0a 74 65 73 74 5f 67 6c 6f 62 61      : %p.test_globa
+  403d00:       6c 20 3a 20 25 70 0a 74 65 73 74 5f 73 74 61 63     l : %p.test_stac
+  403d10:       6b 20 20 3a 20 25 70 0a 74 65 73 74 5f 68 65 61     k  : %p.test_hea
+  403d20:       70 20 20 20 3a 20 25 70 0a 74 65 73 74 5f 63 6f     p   : %p.test_co
+  403d30:       64 65 20 20 20 3a 20 25 70 0a 70 72 69 6e 74 5f     de   : %p.print_
+  403d40:       73 6f 72 74 5f 72 65 74 20 20 20 3a 20 25 70 0a     sort_ret   : %p.
+</code></pre></div></div>
+
+<p>可见常量字符串 “hello” 和 printf(…) 里面的字符串都是保存在 <code class="highlighter-rouge">.rodata</code> 这个区。</p>
+
+<hr />
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># objdump -x address | grep '\.bss'</span>
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0000000000606140 l     d .bss   0000000000000000              .bss
+0000000000606140 l     O .bss   0000000000000001              completed.6354
+00000000006061b0 l     O .bss   0000000000000001              _ZStL8__ioinit
+00000000006061b4 l     O .bss   0000000000000004              _ZL26global_static_int_not_init
+00000000006061b8 l     O .bss   0000000000000004              _ZL19global_static_int_0
+00000000006061c0 l     O .bss   0000000000000004              _ZZ11test_staticvE18static_stack_int_0
+00000000006061bc l     O .bss   0000000000000004              _ZZ11test_staticvE25static_stack_int_not_init
+0000000000606168 g     O .bss   0000000000000008              global_pointer_not_init
+0000000000606130 g       .bss   0000000000000000              __bss_start
+0000000000606160 g     O .bss   0000000000000004              global_int_not_init
+00000000006061c8 g       .bss   0000000000000000              _end
+0000000000606180 g     O .bss   0000000000000030              g_map
+0000000000606164 g     O .bss   0000000000000004              global_int_0
+</code></pre></div></div>
+
+<ul>
+  <li>工具使用参数</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># objdump --help</span>
+
+Usage: objdump &lt;option<span class="o">(</span>s<span class="o">)&gt;</span> &lt;file<span class="o">(</span>s<span class="o">)&gt;</span>
+ Display information from object &lt;file<span class="o">(</span>s<span class="o">)&gt;</span><span class="nb">.</span>
+ At least one of the following switches must be given:
+  <span class="nt">-a</span>, <span class="nt">--archive-headers</span>    Display archive header information
+  <span class="nt">-f</span>, <span class="nt">--file-headers</span>       Display the contents of the overall file header
+  <span class="nt">-p</span>, <span class="nt">--private-headers</span>    Display object format specific file header contents
+  <span class="nt">-P</span>, <span class="nt">--private</span><span class="o">=</span>OPT,OPT... Display object format specific contents
+  <span class="nt">-h</span>, <span class="nt">--</span><span class="o">[</span>section-]headers  Display the contents of the section headers
+  <span class="nt">-x</span>, <span class="nt">--all-headers</span>        Display the contents of all headers
+  <span class="nt">-d</span>, <span class="nt">--disassemble</span>        Display assembler contents of executable sections
+  <span class="nt">-D</span>, <span class="nt">--disassemble-all</span>    Display assembler contents of all sections
+  <span class="nt">-S</span>, <span class="nt">--source</span>             Intermix <span class="nb">source </span>code with disassembly
+  <span class="nt">-s</span>, <span class="nt">--full-contents</span>      Display the full contents of all sections requested
+  <span class="nt">-g</span>, <span class="nt">--debugging</span>          Display debug information <span class="k">in </span>object file
+  <span class="nt">-e</span>, <span class="nt">--debugging-tags</span>     Display debug information using ctags style
+  <span class="nt">-G</span>, <span class="nt">--stabs</span>              Display <span class="o">(</span><span class="k">in </span>raw form<span class="o">)</span> any STABS info <span class="k">in </span>the file
+  <span class="nt">-W</span><span class="o">[</span>lLiaprmfFsoRt] or
+  <span class="nt">--dwarf</span><span class="o">[=</span>rawline,<span class="o">=</span>decodedline,<span class="o">=</span>info,<span class="o">=</span>abbrev,<span class="o">=</span>pubnames,<span class="o">=</span>aranges,<span class="o">=</span>macro,<span class="o">=</span>frames,
+          <span class="o">=</span>frames-interp,<span class="o">=</span>str,<span class="o">=</span>loc,<span class="o">=</span>Ranges,<span class="o">=</span>pubtypes,
+          <span class="o">=</span>gdb_index,<span class="o">=</span>trace_info,<span class="o">=</span>trace_abbrev,<span class="o">=</span>trace_aranges,
+          <span class="o">=</span>addr,<span class="o">=</span>cu_index]
+                           Display DWARF info <span class="k">in </span>the file
+  <span class="nt">-t</span>, <span class="nt">--syms</span>               Display the contents of the symbol table<span class="o">(</span>s<span class="o">)</span>
+  <span class="nt">-T</span>, <span class="nt">--dynamic-syms</span>       Display the contents of the dynamic symbol table
+  <span class="nt">-r</span>, <span class="nt">--reloc</span>              Display the relocation entries <span class="k">in </span>the file
+  <span class="nt">-R</span>, <span class="nt">--dynamic-reloc</span>      Display the dynamic relocation entries <span class="k">in </span>the file
+  @&lt;file&gt;                  Read options from &lt;file&gt;
+  <span class="nt">-v</span>, <span class="nt">--version</span>            Display this program<span class="s1">'s version number
+  -i, --info               List object formats and architectures supported
+  -H, --help               Display this information
+
+The following switches are optional:
+  -b, --target=BFDNAME           Specify the target object format as BFDNAME
+  -m, --architecture=MACHINE     Specify the target architecture as MACHINE
+  -j, --section=NAME             Only display information for section NAME
+  -M, --disassembler-options=OPT Pass text OPT on to the disassembler
+  ...
+</span></code></pre></div></div>
+
+<hr />
+
+<h2 id="6-参考">6. 参考</h2>
+
+<ul>
+  <li><a href="https://www.cnblogs.com/coolYuan/p/9228739.html">进程内存分配</a></li>
+  <li>《深入理解计算机系统》</li>
+  <li>《UNIX 环境高级编程》</li>
+  <li>《程序员的自我修养》</li>
+  <li><a href="https://blog.csdn.net/keyeagle/article/details/6708077">C语言中的static 详细分析</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

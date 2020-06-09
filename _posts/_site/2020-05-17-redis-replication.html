@@ -1,0 +1,486 @@
+<p>阅读源码前，先了解 redis 主从复制的基本知识。</p>
+
+<blockquote>
+  <p>详细源码分析，请参考下一章：<a href="https://wenfh2020.com/2020/05/31/redis-replication-next/">[redis 源码走读] 主从数据复制（下）
+</a></p>
+</blockquote>
+
+<ul id="markdown-toc">
+  <li><a href="#1-复制模式" id="markdown-toc-1-复制模式">1. 复制模式</a></li>
+  <li><a href="#2-配置" id="markdown-toc-2-配置">2. 配置</a></li>
+  <li><a href="#3-客户端命令" id="markdown-toc-3-客户端命令">3. 客户端命令</a>    <ul>
+      <li><a href="#31-replicaof" id="markdown-toc-31-replicaof">3.1. replicaof</a></li>
+      <li><a href="#32-info" id="markdown-toc-32-info">3.2. info</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-复制" id="markdown-toc-4-复制">4. 复制</a>    <ul>
+      <li><a href="#41-复制方式" id="markdown-toc-41-复制方式">4.1. 复制方式</a></li>
+      <li><a href="#42-请求复制参数" id="markdown-toc-42-请求复制参数">4.2. 请求复制参数</a></li>
+    </ul>
+  </li>
+  <li><a href="#5-主从数据复制流程" id="markdown-toc-5-主从数据复制流程">5. 主从数据复制流程</a>    <ul>
+      <li><a href="#51-slave-1270016379" id="markdown-toc-51-slave-1270016379">5.1. slave (127.0.0.1:6379)</a></li>
+      <li><a href="#52-master-12700116379" id="markdown-toc-52-master-12700116379">5.2. master (127.0.0.1:16379)</a></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="1-复制模式">1. 复制模式</h2>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Master-Replica replication. Use replicaof to make a Redis instance a copy of</span>
+<span class="c"># another Redis server. A few things to understand ASAP about Redis replication.</span>
+<span class="c">#</span>
+<span class="c">#   +------------------+      +---------------+</span>
+<span class="c">#   |      Master      | ---&gt; |    Replica    |</span>
+<span class="c">#   | (receive writes) |      |  (exact copy) |</span>
+<span class="c">#   +------------------+      +---------------+</span>
+</code></pre></div></div>
+
+<p>主从复制，数据是由 master 发送到 slave。一般有两种模式：一主多从，链式主从。这两种复制模式各有优缺点：</p>
+
+<ul>
+  <li>A 图，数据复制实时性比较好，但是如果 slave 节点数量多了，master 复制数据量就会增大，特别是全量复制场景。</li>
+  <li>B 图，D，E sub-slave 节点数据复制实时性相对差一点，但是能解决多个从节点下，master 数据复制压力，能支撑系统更大的负载。</li>
+</ul>
+
+<p><img src="/images/2020-05-31-12-04-10.png" alt="主从复制模式" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="2-配置">2. 配置</h2>
+
+<p>redis.conf 对应 <code class="highlighter-rouge">REPLICATION</code> 部分主要配置项内容。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 服务建立主从关系命令，设置该服务为其它服务的 slave。</span>
+replicaof &lt;masterip&gt; &lt;masterport&gt;
+
+<span class="c"># slave是否支持写命令操作。</span>
+replica-read-only <span class="nb">yes</span>
+
+<span class="c"># 积压缓冲区大小。缓冲区在 master，slave 断线重连后，如果是增量复制，master 就从缓冲区里取出数据复制给 slave。</span>
+repl-backlog-size 1mb
+
+<span class="c"># 防止脑裂设置，对 slave 的链接数量和 slave 复制（保活）时间限制。</span>
+min-replicas-to-write 3
+min-replicas-max-lag 10
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-客户端命令">3. 客户端命令</h2>
+
+<h3 id="31-replicaof">3.1. replicaof</h3>
+
+<p>客户端命令：<code class="highlighter-rouge">replicaof</code> / <code class="highlighter-rouge">slaveof</code>，可以使两个 redis 实例实现主从复制关系。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 建立主从关系。</span>
+replicaof &lt;masterip&gt; &lt;masterport&gt;
+
+<span class="c"># 取消主从关系。</span>
+replicaof no one
+</code></pre></div></div>
+
+<hr />
+
+<p><a href="https://redis.io/commands/replicaof">replicaof</a> 和 <a href="https://redis.io/commands/slaveof">slaveof</a> 命令实现方法相同，但是不支持 redis <code class="highlighter-rouge">cluster</code> 集群模式下使用。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// replicaof 和 slaveof 命令功能实现相同。</span>
+<span class="k">struct</span> <span class="n">redisCommand</span> <span class="n">redisCommandTable</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="p">{</span><span class="s">"slaveof"</span><span class="p">,</span><span class="n">replicaofCommand</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span>
+     <span class="s">"admin no-script ok-stale"</span><span class="p">,</span>
+     <span class="mi">0</span><span class="p">,</span><span class="nb">NULL</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span>
+
+    <span class="p">{</span><span class="s">"replicaof"</span><span class="p">,</span><span class="n">replicaofCommand</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span>
+     <span class="s">"admin no-script ok-stale"</span><span class="p">,</span>
+     <span class="mi">0</span><span class="p">,</span><span class="nb">NULL</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 不支持 cluster 集群模式。</span>
+<span class="kt">void</span> <span class="nf">replicaofCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">cluster_enabled</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">addReplyError</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">"REPLICAOF not allowed in cluster mode."</span><span class="p">);</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="32-info">3.2. info</h3>
+
+<p><a href="https://redis.io/commands/info">info</a> 命令可以查询主从副本的相关属性信息。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>into replication
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-复制">4. 复制</h2>
+
+<h3 id="41-复制方式">4.1. 复制方式</h3>
+
+<p>主从数据复制，有三种方式：</p>
+
+<ol>
+  <li>全量数据复制，当 slave 第一次与 master 链接或 slave 与 master 断开链接很久，重新链接后，主从数据严重不一致了，需要全部数据进行复制。</li>
+  <li>增量数据复制，slave 因为网络抖动或其它原因，与 master 断开一段时间，重新链接，发现主从数据差异不大，master 只需要复制增加部分数据即可。</li>
+  <li>正常链接数据复制，主从成功链接，在工作过程中，master 数据有变化，异步复制到 slave。</li>
+</ol>
+
+<hr />
+
+<h3 id="42-请求复制参数">4.2. 请求复制参数</h3>
+
+<p>重点看看 <code class="highlighter-rouge">PSYNC</code> 主从数据复制流程，slave 数据复制要解决两个问题：</p>
+
+<ul>
+  <li>向谁要数据，&lt;repild&gt; 副本 id，master 通过副本 id 标识自己。</li>
+  <li>要多少数据，&lt;offset&gt; 数据偏移量，slave 保存的偏移量和 master 保存的偏移量之间的数据差，就是需要复制的增量数据。</li>
+</ul>
+
+<p>所以 slave 保存了一份 master 数据：master 的 &lt;master_repild&gt; 和 数据偏移量 &lt;master_offset&gt;。主从数据复制是异步操作，主从数据并非严格一致，有一定延时。当主从断开链接，slave 重新链接 master，需要通过协议，传递 &lt;replid&gt;  和 &lt;offset&gt; 给 master。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>PSYNC &lt;master_replid&gt; &lt;master_offset&gt;
+</code></pre></div></div>
+
+<p>第一次链接，slave 还没有 master 的数据。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>PSYNC ? <span class="nt">-1</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="5-主从数据复制流程">5. 主从数据复制流程</h2>
+
+<p>Linux 平台可以通过 <code class="highlighter-rouge">strace</code> 抓包，观察主从数据复制工作流程。</p>
+
+<p>客户端 client 将 redis-server1 设置成 redis-server2 的副本。</p>
+
+<ul>
+  <li>(<strong>slave</strong>) redis-server1: 端口 6379</li>
+  <li>(<strong>master</strong>) redis-server2: 端口 16379</li>
+  <li>client</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 链接 6379 端口服务。</span>
+./src/redis-cli <span class="nt">-h</span> 127.0.0.1 <span class="nt">-p</span> 6379
+
+<span class="c"># 设置主从关系。</span>
+replicaof 127.0.0.1 16379
+</code></pre></div></div>
+
+<p><img src="/images/2020-05-31-10-16-02.png" alt="redis 全量复制流程" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="51-slave-1270016379">5.1. slave (127.0.0.1:6379)</h3>
+
+<ul>
+  <li>strace 查看底层通信流程。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># strace 抓取底层通信接口的调用。</span>
+strace <span class="nt">-p</span> 19836 <span class="nt">-s</span> 512 <span class="nt">-o</span> /tmp/connect.slave
+
+<span class="c"># 太多时间接口调用了。可以通过 sed 过滤这些数据。</span>
+<span class="nb">sed</span> <span class="s1">'/gettimeofday/d'</span> /tmp/connect.slave <span class="o">&gt;</span>  /tmp/connect.slave.bak
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<span class="c"># slave 接收到 client 发送的 replicaof 命令。</span>
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 1000<span class="o">)</span> <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$9</span><span class="se">\r\n</span><span class="s2">replicaof</span><span class="se">\r\n</span><span class="nv">$9</span><span class="se">\r\n</span><span class="s2">127.0.0.1</span><span class="se">\r\n</span><span class="nv">$5</span><span class="se">\r\n</span><span class="s2">16379</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 45
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:07.745 * Before turning into a replica, using my own master parameters to synthesize a cached master: I may be able to synchronize with the new master with just a partial transfer.</span><span class="se">\n</span><span class="s2">"</span>, 207<span class="o">)</span> <span class="o">=</span> 207
+getpeername<span class="o">(</span>7, <span class="o">{</span><span class="nv">sa_family</span><span class="o">=</span>AF_INET, <span class="nv">sin_port</span><span class="o">=</span>htons<span class="o">(</span>13832<span class="o">)</span>, <span class="nv">sin_addr</span><span class="o">=</span>inet_addr<span class="o">(</span><span class="s2">"127.0.0.1"</span><span class="o">)}</span>, <span class="o">[</span>16]<span class="o">)</span> <span class="o">=</span> 0
+<span class="c"># 给客户端返回 ack，服务开始与 master 进行通信连接。</span>
+write<span class="o">(</span>7, <span class="s2">"+OK</span><span class="se">\r\n</span><span class="s2">"</span>, 5<span class="o">)</span>                  <span class="o">=</span> 5
+<span class="c"># -------------------------------------------</span>
+epoll_wait<span class="o">(</span>5, <span class="o">[]</span>, 10128, 757<span class="o">)</span>           <span class="o">=</span> 0
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.507 * Connecting to MASTER 127.0.0.1:16379</span><span class="se">\n</span><span class="s2">"</span>, 72<span class="o">)</span> <span class="o">=</span> 72
+<span class="c"># 创建非阻塞 socket。</span>
+socket<span class="o">(</span>AF_INET, SOCK_STREAM, IPPROTO_TCP<span class="o">)</span> <span class="o">=</span> 8
+setsockopt<span class="o">(</span>8, SOL_SOCKET, SO_REUSEADDR, <span class="o">[</span>1], 4<span class="o">)</span> <span class="o">=</span> 0
+fcntl<span class="o">(</span>8, F_GETFL<span class="o">)</span>                       <span class="o">=</span> 0x2 <span class="o">(</span>flags O_RDWR<span class="o">)</span>
+fcntl<span class="o">(</span>8, F_SETFL, O_RDWR|O_NONBLOCK<span class="o">)</span>    <span class="o">=</span> 0
+<span class="nb">bind</span><span class="o">(</span>8, <span class="o">{</span><span class="nv">sa_family</span><span class="o">=</span>AF_INET, <span class="nv">sin_port</span><span class="o">=</span>htons<span class="o">(</span>0<span class="o">)</span>, <span class="nv">sin_addr</span><span class="o">=</span>inet_addr<span class="o">(</span><span class="s2">"127.0.0.1"</span><span class="o">)}</span>, 16<span class="o">)</span> <span class="o">=</span> 0
+<span class="c"># 连接 master。</span>
+connect<span class="o">(</span>8, <span class="o">{</span><span class="nv">sa_family</span><span class="o">=</span>AF_INET, <span class="nv">sin_port</span><span class="o">=</span>htons<span class="o">(</span>16379<span class="o">)</span>, <span class="nv">sin_addr</span><span class="o">=</span>inet_addr<span class="o">(</span><span class="s2">"127.0.0.1"</span><span class="o">)}</span>, 16<span class="o">)</span> <span class="o">=</span> <span class="nt">-1</span> EINPROGRESS <span class="o">(</span>Operation now <span class="k">in </span>progress<span class="o">)</span>
+<span class="c"># 连接成功后发送数据。</span>
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_ADD, 8, <span class="o">{</span>EPOLLOUT, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}})</span> <span class="o">=</span> 0
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.508 * MASTER &lt;-&gt; REPLICA sync started</span><span class="se">\n</span><span class="s2">"</span>, 67<span class="o">)</span> <span class="o">=</span> 67
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLOUT, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}}]</span>, 10128, 1000<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># ？</span>
+getsockopt<span class="o">(</span>8, SOL_SOCKET, SO_ERROR, <span class="o">[</span>0], <span class="o">[</span>4]<span class="o">)</span> <span class="o">=</span> 0
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_DEL, 8, 0x7fff69ce0c24<span class="o">)</span> <span class="o">=</span> 0
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.508 * Non blocking connect for SYNC fired the event.</span><span class="se">\n</span><span class="s2">"</span>, 82<span class="o">)</span> <span class="o">=</span> 82
+<span class="c"># 监听连接是否有可读数据。master 回复的数据。</span>
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_ADD, 8, <span class="o">{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}})</span> <span class="o">=</span> 0
+<span class="c"># 连接成功后，走握手流程。发送 'PING'。</span>
+write<span class="o">(</span>8, <span class="s2">"*1</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">PING</span><span class="se">\r\n</span><span class="s2">"</span>, 14<span class="o">)</span>    <span class="o">=</span> 14
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}}]</span>, 10128, 1000<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># master 回复 '+PONG'。</span>
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"+"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"P"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"O"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"N"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"G"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\r</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.511 * Master replied to PING, replication can continue...</span><span class="se">\n</span><span class="s2">"</span>, 87<span class="o">)</span> <span class="o">=</span> 87
+<span class="c"># 回复 master 本服务监听的端口。</span>
+write<span class="o">(</span>8, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$14</span><span class="se">\r\n</span><span class="s2">listening-port</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">6379</span><span class="se">\r\n</span><span class="s2">"</span>, 49<span class="o">)</span> <span class="o">=</span> 49
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}}]</span>, 10128, 996<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># master 回复确认。</span>
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"+"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"O"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"K"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\r</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+<span class="c"># REPLCONF CAPA is used in order to notify masters that a slave is able to understand the new +CONTINUE reply.</span>
+write<span class="o">(</span>8, <span class="s2">"*5</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">capa</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">eof</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">capa</span><span class="se">\r\n</span><span class="nv">$6</span><span class="se">\r\n</span><span class="s2">psync2</span><span class="se">\r\n</span><span class="s2">"</span>, 59<span class="o">)</span> <span class="o">=</span> 59
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}}]</span>, 10128, 995<span class="o">)</span> <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"+"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"O"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"K"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\r</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.514 * Trying a partial resynchronization (request 48f9e4f8d75856f90b65299ce0c6ae57a8a69814:1).</span><span class="se">\n</span><span class="s2">"</span>, 124<span class="o">)</span> <span class="o">=</span> 124
+<span class="c"># 成功握手后，发送命令 psync，（服务 id + 当前数据偏移量）要求 master 进行数据复制工作。</span>
+<span class="c"># slaveTryPartialResynchronization(conn,0)</span>
+write<span class="o">(</span>8, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$5</span><span class="se">\r\n</span><span class="s2">PSYNC</span><span class="se">\r\n</span><span class="nv">$40</span><span class="se">\r\n</span><span class="s2">48f9e4f8d75856f90b65299ce0c6ae57a8a69814</span><span class="se">\r\n</span><span class="nv">$1</span><span class="se">\r\n</span><span class="s2">1</span><span class="se">\r\n</span><span class="s2">"</span>, 69<span class="o">)</span> <span class="o">=</span> 69
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}}]</span>, 10128, 993<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># master 回复确认 '+FULLRESYNC'，进行全量数据复制。(+FULLRESYNC &lt;replid&gt; &lt;offset&gt;)</span>
+<span class="c"># reply = sendSynchronousCommand(SYNC_CMD_READ,conn,NULL);</span>
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"+"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"F"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"U"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"L"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"L"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"R"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"E"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"S"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"Y"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"N"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"C"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">" "</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"d"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"2"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"8"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"b"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"d"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"8"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"0"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"8"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"c"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"0"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"9"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"2"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"2"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"b"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"5"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"6"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"7"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"9"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"0"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"3"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"9"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"d"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"b"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"9"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"8"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"a"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"7"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"4"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"9"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"3"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"f"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"7"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"6"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"6"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"8"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"9"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"0"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"8"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"4"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"e"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">" "</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"0"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\r</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+<span class="c"># connSetReadHandler(conn, NULL);</span>
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_DEL, 8, 0x7fff69ce0a74<span class="o">)</span> <span class="o">=</span> 0
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.531 * Full resync from master: d28bd808c0922b5679039db98a7493f76689084e:0</span><span class="se">\n</span><span class="s2">"</span>, 103<span class="o">)</span> <span class="o">=</span> 103
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.532 * Discarding previously cached master state.</span><span class="se">\n</span><span class="s2">"</span>, 78<span class="o">)</span> <span class="o">=</span> 78
+<span class="c"># 创建临时文件接收数据。</span>
+open<span class="o">(</span><span class="s2">"temp-1589928788.19836.rdb"</span>, O_WRONLY|O_CREAT|O_EXCL, 0644<span class="o">)</span> <span class="o">=</span> 9
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_ADD, 8, <span class="o">{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}})</span> <span class="o">=</span> 0
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}}]</span>, 10128, 976<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># 接收数据长度。</span>
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"$"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"2"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"7"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"6"</span>, 1<span class="o">)</span>                         <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\r</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>, 1<span class="o">)</span>                        <span class="o">=</span> 1
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.799 * MASTER &lt;-&gt; REPLICA sync: receiving 276 bytes from master to disk</span><span class="se">\n</span><span class="s2">"</span>, 100<span class="o">)</span> <span class="o">=</span> 100
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}}]</span>, 10128, 709<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># slave 接收 master 发送的数据。</span>
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"REDIS0009</span><span class="se">\3</span><span class="s2">72</span><span class="se">\t</span><span class="s2">redis-ver</span><span class="se">\0</span><span class="s2">075.9.104</span><span class="se">\3</span><span class="s2">72</span><span class="se">\n</span><span class="s2">redis-bits</span><span class="se">\3</span><span class="s2">00@</span><span class="se">\3</span><span class="s2">72</span><span class="se">\5</span><span class="s2">ctime</span><span class="se">\3</span><span class="s2">02Tc</span><span class="se">\3</span><span class="s2">04^</span><span class="se">\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">0used-mem</span><span class="se">\3</span><span class="s2">02</span><span class="se">\2</span><span class="s2">704</span><span class="se">\3</span><span class="s2">5</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">6repl-stream-db</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\7</span><span class="s2">repl-id(d28bd808c0922b5679039db98a7493f76689084e</span><span class="se">\3</span><span class="s2">72</span><span class="se">\v</span><span class="s2">repl-offset</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\f</span><span class="s2">aof-preamble</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">76</span><span class="se">\0\3</span><span class="s2">73</span><span class="se">\6\0\0\7</span><span class="s2">fsddf3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\0\3</span><span class="s2">fsf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\4</span><span class="s2">fsdf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\5</span><span class="s2">fsdf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\6</span><span class="s2">fsddf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\t</span><span class="s2">fsd44df3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\3</span><span class="s2">77Q</span><span class="se">\2</span><span class="s2">11</span><span class="se">\2</span><span class="s2">40</span><span class="se">\2</span><span class="s2">11</span><span class="se">\3</span><span class="s2">06</span><span class="se">\2</span><span class="s2">70</span><span class="se">\r</span><span class="s2">$"</span>, 276<span class="o">)</span> <span class="o">=</span> 276
+<span class="c"># 保存在本地临时 rdb 文件。</span>
+write<span class="o">(</span>9, <span class="s2">"REDIS0009</span><span class="se">\3</span><span class="s2">72</span><span class="se">\t</span><span class="s2">redis-ver</span><span class="se">\0</span><span class="s2">075.9.104</span><span class="se">\3</span><span class="s2">72</span><span class="se">\n</span><span class="s2">redis-bits</span><span class="se">\3</span><span class="s2">00@</span><span class="se">\3</span><span class="s2">72</span><span class="se">\5</span><span class="s2">ctime</span><span class="se">\3</span><span class="s2">02Tc</span><span class="se">\3</span><span class="s2">04^</span><span class="se">\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">0used-mem</span><span class="se">\3</span><span class="s2">02</span><span class="se">\2</span><span class="s2">704</span><span class="se">\3</span><span class="s2">5</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">6repl-stream-db</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\7</span><span class="s2">repl-id(d28bd808c0922b5679039db98a7493f76689084e</span><span class="se">\3</span><span class="s2">72</span><span class="se">\v</span><span class="s2">repl-offset</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\f</span><span class="s2">aof-preamble</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">76</span><span class="se">\0\3</span><span class="s2">73</span><span class="se">\6\0\0\7</span><span class="s2">fsddf3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\0\3</span><span class="s2">fsf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\4</span><span class="s2">fsdf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\5</span><span class="s2">fsdf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\6</span><span class="s2">fsddf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\t</span><span class="s2">fsd44df3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\3</span><span class="s2">77Q</span><span class="se">\2</span><span class="s2">11</span><span class="se">\2</span><span class="s2">40</span><span class="se">\2</span><span class="s2">11</span><span class="se">\3</span><span class="s2">06</span><span class="se">\2</span><span class="s2">70</span><span class="se">\r</span><span class="s2">$"</span>, 276<span class="o">)</span> <span class="o">=</span> 276
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.800 * MASTER &lt;-&gt; REPLICA sync: Flushing old data</span><span class="se">\n</span><span class="s2">"</span>, 78<span class="o">)</span> <span class="o">=</span> 78
+<span class="c"># 在导入数据前，先删除 fd 读事件，避免事件触发异步回调，导致递归重复处理逻辑。</span>
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_DEL, 8, 0x7fff69cdcb24<span class="o">)</span> <span class="o">=</span> 0
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.800 * MASTER &lt;-&gt; REPLICA sync: Loading DB in memory</span><span class="se">\n</span><span class="s2">"</span>, 81<span class="o">)</span> <span class="o">=</span> 81
+open<span class="o">(</span><span class="s2">"dump.rdb"</span>, O_RDONLY|O_NONBLOCK<span class="o">)</span>   <span class="o">=</span> 10
+<span class="c"># 新文件覆盖旧文件。</span>
+rename<span class="o">(</span><span class="s2">"temp-1589928788.19836.rdb"</span>, <span class="s2">"dump.rdb"</span><span class="o">)</span> <span class="o">=</span> 0
+futex<span class="o">(</span>0x7ac164, FUTEX_WAKE_OP_PRIVATE, 1, 1, 0x7ac160, <span class="o">{</span>FUTEX_OP_SET, 0, FUTEX_OP_CMP_GT, 1<span class="o">})</span> <span class="o">=</span> 1
+futex<span class="o">(</span>0x7ac200, FUTEX_WAKE_PRIVATE, 1<span class="o">)</span>  <span class="o">=</span> 1
+open<span class="o">(</span><span class="s2">"dump.rdb"</span>, O_RDONLY<span class="o">)</span>              <span class="o">=</span> 10
+fstat<span class="o">(</span>10, <span class="o">{</span><span class="nv">st_mode</span><span class="o">=</span>S_IFREG|0644, <span class="nv">st_size</span><span class="o">=</span>276, ...<span class="o">})</span> <span class="o">=</span> 0
+fstat<span class="o">(</span>10, <span class="o">{</span><span class="nv">st_mode</span><span class="o">=</span>S_IFREG|0644, <span class="nv">st_size</span><span class="o">=</span>276, ...<span class="o">})</span> <span class="o">=</span> 0
+mmap<span class="o">(</span>NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, <span class="nt">-1</span>, 0<span class="o">)</span> <span class="o">=</span> 0x7f80929da000
+<span class="c"># 读数据加载进入内存。</span>
+<span class="nb">read</span><span class="o">(</span>10, <span class="s2">"REDIS0009</span><span class="se">\3</span><span class="s2">72</span><span class="se">\t</span><span class="s2">redis-ver</span><span class="se">\0</span><span class="s2">075.9.104</span><span class="se">\3</span><span class="s2">72</span><span class="se">\n</span><span class="s2">redis-bits</span><span class="se">\3</span><span class="s2">00@</span><span class="se">\3</span><span class="s2">72</span><span class="se">\5</span><span class="s2">ctime</span><span class="se">\3</span><span class="s2">02Tc</span><span class="se">\3</span><span class="s2">04^</span><span class="se">\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">0used-mem</span><span class="se">\3</span><span class="s2">02</span><span class="se">\2</span><span class="s2">704</span><span class="se">\3</span><span class="s2">5</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">6repl-stream-db</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\7</span><span class="s2">repl-id(d28bd808c0922b5679039db98a7493f76689084e</span><span class="se">\3</span><span class="s2">72</span><span class="se">\v</span><span class="s2">repl-offset</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\f</span><span class="s2">aof-preamble</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">76</span><span class="se">\0\3</span><span class="s2">73</span><span class="se">\6\0\0\7</span><span class="s2">fsddf3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\0\3</span><span class="s2">fsf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\4</span><span class="s2">fsdf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\5</span><span class="s2">fsdf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\6</span><span class="s2">fsddf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\t</span><span class="s2">fsd44df3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\3</span><span class="s2">77Q</span><span class="se">\2</span><span class="s2">11</span><span class="se">\2</span><span class="s2">40</span><span class="se">\2</span><span class="s2">11</span><span class="se">\3</span><span class="s2">06</span><span class="se">\2</span><span class="s2">70</span><span class="se">\r</span><span class="s2">$"</span>, 4096<span class="o">)</span> <span class="o">=</span> 276
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.801 * Loading RDB produced by version 5.9.104</span><span class="se">\n</span><span class="s2">"</span>, 75<span class="o">)</span> <span class="o">=</span> 75
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.802 * RDB age 0 seconds</span><span class="se">\n</span><span class="s2">"</span>, 53<span class="o">)</span> <span class="o">=</span> 53
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.802 * RDB memory usage when created 1.83 Mb</span><span class="se">\n</span><span class="s2">"</span>, 73<span class="o">)</span> <span class="o">=</span> 73
+close<span class="o">(</span>10<span class="o">)</span>                               <span class="o">=</span> 0
+munmap<span class="o">(</span>0x7f80929da000, 4096<span class="o">)</span>            <span class="o">=</span> 0
+close<span class="o">(</span>9<span class="o">)</span>                                <span class="o">=</span> 0
+<span class="c"># rdb 文件加载进内存完成，slave 创建 master 的链接对象。 replicationCreateMasterClient</span>
+fcntl<span class="o">(</span>8, F_GETFL<span class="o">)</span>                       <span class="o">=</span> 0x802 <span class="o">(</span>flags O_RDWR|O_NONBLOCK<span class="o">)</span>
+fcntl<span class="o">(</span>8, F_SETFL, O_RDWR|O_NONBLOCK<span class="o">)</span>    <span class="o">=</span> 0
+setsockopt<span class="o">(</span>8, SOL_TCP, TCP_NODELAY, <span class="o">[</span>1], 4<span class="o">)</span> <span class="o">=</span> 0
+setsockopt<span class="o">(</span>8, SOL_SOCKET, SO_KEEPALIVE, <span class="o">[</span>1], 4<span class="o">)</span> <span class="o">=</span> 0
+setsockopt<span class="o">(</span>8, SOL_TCP, TCP_KEEPIDLE, <span class="o">[</span>300], 4<span class="o">)</span> <span class="o">=</span> 0
+setsockopt<span class="o">(</span>8, SOL_TCP, TCP_KEEPINTVL, <span class="o">[</span>100], 4<span class="o">)</span> <span class="o">=</span> 0
+setsockopt<span class="o">(</span>8, SOL_TCP, TCP_KEEPCNT, <span class="o">[</span>3], 4<span class="o">)</span> <span class="o">=</span> 0
+<span class="c"># connSetReadHandler(server.master-&gt;conn, readQueryFromClient);</span>
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_ADD, 8, <span class="o">{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}})</span> <span class="o">=</span> 0
+write<span class="o">(</span>1, <span class="s2">"19836:S 20 May 2020 06:53:08.804 * MASTER &lt;-&gt; REPLICA sync: Finished with success</span><span class="se">\n</span><span class="s2">"</span>, 82<span class="o">)</span> <span class="o">=</span> 82
+epoll_wait<span class="o">(</span>5, <span class="o">[]</span>, 10128, 703<span class="o">)</span>           <span class="o">=</span> 0
+<span class="c"># 通知 master 数据更新完毕。</span>
+write<span class="o">(</span>8, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$1</span><span class="se">\r\n</span><span class="s2">0</span><span class="se">\r\n</span><span class="s2">"</span>, 34<span class="o">)</span> <span class="o">=</span> 34
+write<span class="o">(</span>8, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$1</span><span class="se">\r\n</span><span class="s2">0</span><span class="se">\r\n</span><span class="s2">"</span>, 34<span class="o">)</span> <span class="o">=</span> 34
+epoll_wait<span class="o">(</span>5, <span class="o">[]</span>, 10128, 999<span class="o">)</span>           <span class="o">=</span> 0
+write<span class="o">(</span>8, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$1</span><span class="se">\r\n</span><span class="s2">0</span><span class="se">\r\n</span><span class="s2">"</span>, 34<span class="o">)</span> <span class="o">=</span> 34
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>8, <span class="nv">u64</span><span class="o">=</span>8<span class="o">}}]</span>, 10128, 999<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># 双方链接通过心跳保活。</span>
+<span class="c"># master 发送 ‘PING’</span>
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"*1</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">PING</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span>  <span class="o">=</span> 14
+<span class="c"># 回复 'ACK'。</span>
+write<span class="o">(</span>8, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$2</span><span class="se">\r\n</span><span class="s2">14</span><span class="se">\r\n</span><span class="s2">"</span>, 35<span class="o">)</span> <span class="o">=</span> 35
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="52-master-12700116379">5.2. master (127.0.0.1:16379)</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>strace <span class="nt">-p</span> 19831 <span class="nt">-s</span> 512 <span class="nt">-o</span> /tmp/connect.master
+<span class="nb">sed</span> <span class="s1">'/gettimeofday/d'</span> /tmp/connect.master <span class="o">&gt;</span>  /tmp/connect.master.bak
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<span class="c"># 监听 socket 接收到 slave 的 connect。</span>
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>6, <span class="nv">u64</span><span class="o">=</span>6<span class="o">}}]</span>, 10128, 1000<span class="o">)</span> <span class="o">=</span> 1
+accept<span class="o">(</span>6, <span class="o">{</span><span class="nv">sa_family</span><span class="o">=</span>AF_INET, <span class="nv">sin_port</span><span class="o">=</span>htons<span class="o">(</span>32795<span class="o">)</span>, <span class="nv">sin_addr</span><span class="o">=</span>inet_addr<span class="o">(</span><span class="s2">"127.0.0.1"</span><span class="o">)}</span>, <span class="o">[</span>16]<span class="o">)</span> <span class="o">=</span> 7
+fcntl<span class="o">(</span>7, F_GETFL<span class="o">)</span>                       <span class="o">=</span> 0x2 <span class="o">(</span>flags O_RDWR<span class="o">)</span>
+fcntl<span class="o">(</span>7, F_SETFL, O_RDWR|O_NONBLOCK<span class="o">)</span>    <span class="o">=</span> 0
+<span class="c"># 设置异步通信和保活。</span>
+setsockopt<span class="o">(</span>7, SOL_TCP, TCP_NODELAY, <span class="o">[</span>1], 4<span class="o">)</span> <span class="o">=</span> 0
+setsockopt<span class="o">(</span>7, SOL_SOCKET, SO_KEEPALIVE, <span class="o">[</span>1], 4<span class="o">)</span> <span class="o">=</span> 0
+setsockopt<span class="o">(</span>7, SOL_TCP, TCP_KEEPIDLE, <span class="o">[</span>300], 4<span class="o">)</span> <span class="o">=</span> 0
+setsockopt<span class="o">(</span>7, SOL_TCP, TCP_KEEPINTVL, <span class="o">[</span>100], 4<span class="o">)</span> <span class="o">=</span> 0
+setsockopt<span class="o">(</span>7, SOL_TCP, TCP_KEEPCNT, <span class="o">[</span>3], 4<span class="o">)</span> <span class="o">=</span> 0
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_ADD, 7, <span class="o">{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}})</span> <span class="o">=</span> 0
+accept<span class="o">(</span>6, 0x7ffeac017080, 0x7ffeac01707c<span class="o">)</span> <span class="o">=</span> <span class="nt">-1</span> EAGAIN <span class="o">(</span>Resource temporarily unavailable<span class="o">)</span>
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 284<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># 接收到 slave 的 'PING'</span>
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*1</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">PING</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span>  <span class="o">=</span> 14
+<span class="c"># 回复 'PONG'</span>
+write<span class="o">(</span>7, <span class="s2">"+PONG</span><span class="se">\r\n</span><span class="s2">"</span>, 7<span class="o">)</span>                <span class="o">=</span> 7
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 283<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># replconfCommand。</span>
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$14</span><span class="se">\r\n</span><span class="s2">listening-port</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">6379</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 49
+<span class="c"># 回复。</span>
+write<span class="o">(</span>7, <span class="s2">"+OK</span><span class="se">\r\n</span><span class="s2">"</span>, 5<span class="o">)</span>                  <span class="o">=</span> 5
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 281<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># slave 回复，支持新协议。(REPLCONF CAPA is used in order to notify masters that a slave is able to understand the new +CONTINUE reply.)</span>
+<span class="c"># replconfCommand</span>
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*5</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">capa</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">eof</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">capa</span><span class="se">\r\n</span><span class="nv">$6</span><span class="se">\r\n</span><span class="s2">psync2</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 59
+write<span class="o">(</span>7, <span class="s2">"+OK</span><span class="se">\r\n</span><span class="s2">"</span>, 5<span class="o">)</span>                  <span class="o">=</span> 5
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 280<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># 接收 slave 的 'PSYNC' 命令。</span>
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$5</span><span class="se">\r\n</span><span class="s2">PSYNC</span><span class="se">\r\n</span><span class="nv">$40</span><span class="se">\r\n</span><span class="s2">48f9e4f8d75856f90b65299ce0c6ae57a8a69814</span><span class="se">\r\n</span><span class="nv">$1</span><span class="se">\r\n</span><span class="s2">1</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 69
+getpeername<span class="o">(</span>7, <span class="o">{</span><span class="nv">sa_family</span><span class="o">=</span>AF_INET, <span class="nv">sin_port</span><span class="o">=</span>htons<span class="o">(</span>32795<span class="o">)</span>, <span class="nv">sin_addr</span><span class="o">=</span>inet_addr<span class="o">(</span><span class="s2">"127.0.0.1"</span><span class="o">)}</span>, <span class="o">[</span>16]<span class="o">)</span> <span class="o">=</span> 0
+write<span class="o">(</span>1, <span class="s2">"19831:M 20 May 2020 06:53:08.515 * Replica 127.0.0.1:6379 asks for synchronization</span><span class="se">\n</span><span class="s2">"</span>, 83<span class="o">)</span> <span class="o">=</span> 83
+write<span class="o">(</span>1, <span class="s2">"19831:M 20 May 2020 06:53:08.516 * Partial resynchronization not accepted: Replication ID mismatch (Replica asked for '48f9e4f8d75856f90b65299ce0c6ae57a8a69814', my replication IDs are '667662257ed2a295ae15f5a3b92c93fb535ece50' and '0000000000000000000000000000000000000000')</span><span class="se">\n</span><span class="s2">"</span>, 276<span class="o">)</span> <span class="o">=</span> 276
+mmap<span class="o">(</span>NULL, 2621440, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, <span class="nt">-1</span>, 0<span class="o">)</span> <span class="o">=</span> 0x7fe7db452000
+write<span class="o">(</span>1, <span class="s2">"19831:M 20 May 2020 06:53:08.516 * Starting BGSAVE for SYNC with target: disk</span><span class="se">\n</span><span class="s2">"</span>, 78<span class="o">)</span> <span class="o">=</span> 78
+pipe<span class="o">([</span>8, 9]<span class="o">)</span>                            <span class="o">=</span> 0
+fcntl<span class="o">(</span>8, F_GETFL<span class="o">)</span>                       <span class="o">=</span> 0 <span class="o">(</span>flags O_RDONLY<span class="o">)</span>
+fcntl<span class="o">(</span>8, F_SETFL, O_RDONLY|O_NONBLOCK<span class="o">)</span>  <span class="o">=</span> 0
+<span class="c"># fork 子进程进行异步存储 rdb 快照。</span>
+clone<span class="o">(</span><span class="nv">child_stack</span><span class="o">=</span>0, <span class="nv">flags</span><span class="o">=</span>CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, <span class="nv">child_tidptr</span><span class="o">=</span>0x7fe7e5346250<span class="o">)</span> <span class="o">=</span> 19934
+write<span class="o">(</span>1, <span class="s2">"19831:M 20 May 2020 06:53:08.518 * Background saving started by pid 19934</span><span class="se">\n</span><span class="s2">"</span>, 74<span class="o">)</span> <span class="o">=</span> 74
+<span class="c"># 回复全量发送。</span>
+write<span class="o">(</span>7, <span class="s2">"+FULLRESYNC d28bd808c0922b5679039db98a7493f76689084e 0</span><span class="se">\r\n</span><span class="s2">"</span>, 56<span class="o">)</span> <span class="o">=</span> 56
+epoll_wait<span class="o">(</span>5, 0x7fe7e4127d80, 10128, 274<span class="o">)</span> <span class="o">=</span> <span class="nt">-1</span> EINTR <span class="o">(</span>Interrupted system call<span class="o">)</span>
+<span class="nt">---</span> SIGCHLD <span class="o">{</span><span class="nv">si_signo</span><span class="o">=</span>SIGCHLD, <span class="nv">si_code</span><span class="o">=</span>CLD_EXITED, <span class="nv">si_pid</span><span class="o">=</span>19934, <span class="nv">si_uid</span><span class="o">=</span>0, <span class="nv">si_status</span><span class="o">=</span>0, <span class="nv">si_utime</span><span class="o">=</span>0, <span class="nv">si_stime</span><span class="o">=</span>0<span class="o">}</span> <span class="nt">---</span>
+futex<span class="o">(</span>0x7fe7e420738c, FUTEX_WAKE_OP_PRIVATE, 1, 1, 0x7fe7e4207388, <span class="o">{</span>FUTEX_OP_SET, 0, FUTEX_OP_CMP_GT, 1<span class="o">})</span> <span class="o">=</span> 1
+futex<span class="o">(</span>0x7fe7e42073f8, FUTEX_WAKE_PRIVATE, 1<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># fork 进程存储 rdb 快照完成。关闭子进程。</span>
+wait4<span class="o">(</span><span class="nt">-1</span>, <span class="o">[{</span>WIFEXITED<span class="o">(</span>s<span class="o">)</span> <span class="o">&amp;&amp;</span> WEXITSTATUS<span class="o">(</span>s<span class="o">)</span> <span class="o">==</span> 0<span class="o">}]</span>, WNOHANG, NULL<span class="o">)</span> <span class="o">=</span> 19934
+write<span class="o">(</span>1, <span class="s2">"19831:M 20 May 2020 06:53:08.795 * Background saving terminated with success</span><span class="se">\n</span><span class="s2">"</span>, 77<span class="o">)</span> <span class="o">=</span> 77
+<span class="c"># 打开 rdb 文件，读取数据。</span>
+open<span class="o">(</span><span class="s2">"dump.rdb"</span>, O_RDONLY<span class="o">)</span>              <span class="o">=</span> 10
+<span class="c"># 读取文件大小为 276 byte。</span>
+fstat<span class="o">(</span>10, <span class="o">{</span><span class="nv">st_mode</span><span class="o">=</span>S_IFREG|0644, <span class="nv">st_size</span><span class="o">=</span>276, ...<span class="o">})</span> <span class="o">=</span> 0
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_MOD, 7, <span class="o">{</span>EPOLLIN|EPOLLOUT, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}})</span> <span class="o">=</span> 0
+<span class="nb">read</span><span class="o">(</span>8, <span class="s2">"</span><span class="se">\0\0\0\0\0\0\0\0\0</span><span class="s2">@</span><span class="se">\4\0\0\0\0\0</span><span class="s2">xV4</span><span class="se">\2</span><span class="s2">2z</span><span class="se">\3</span><span class="s2">32}</span><span class="se">\3</span><span class="s2">01"</span>, 24<span class="o">)</span> <span class="o">=</span> 24
+close<span class="o">(</span>8<span class="o">)</span>                                <span class="o">=</span> 0
+close<span class="o">(</span>9<span class="o">)</span>                                <span class="o">=</span> 0
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLOUT, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 999<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># 先发送文件长度，在发送数据。</span>
+write<span class="o">(</span>7, <span class="s2">"</span><span class="nv">$276</span><span class="se">\r\n</span><span class="s2">"</span>, 6<span class="o">)</span>                 <span class="o">=</span> 6
+lseek<span class="o">(</span>10, 0, SEEK_SET<span class="o">)</span>                  <span class="o">=</span> 0
+<span class="c"># 从 rdb 文件中读数据进行发送。</span>
+<span class="nb">read</span><span class="o">(</span>10, <span class="s2">"REDIS0009</span><span class="se">\3</span><span class="s2">72</span><span class="se">\t</span><span class="s2">redis-ver</span><span class="se">\0</span><span class="s2">075.9.104</span><span class="se">\3</span><span class="s2">72</span><span class="se">\n</span><span class="s2">redis-bits</span><span class="se">\3</span><span class="s2">00@</span><span class="se">\3</span><span class="s2">72</span><span class="se">\5</span><span class="s2">ctime</span><span class="se">\3</span><span class="s2">02Tc</span><span class="se">\3</span><span class="s2">04^</span><span class="se">\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">0used-mem</span><span class="se">\3</span><span class="s2">02</span><span class="se">\2</span><span class="s2">704</span><span class="se">\3</span><span class="s2">5</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">6repl-stream-db</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\7</span><span class="s2">repl-id(d28bd808c0922b5679039db98a7493f76689084e</span><span class="se">\3</span><span class="s2">72</span><span class="se">\v</span><span class="s2">repl-offset</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\f</span><span class="s2">aof-preamble</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">76</span><span class="se">\0\3</span><span class="s2">73</span><span class="se">\6\0\0\7</span><span class="s2">fsddf3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\0\3</span><span class="s2">fsf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\4</span><span class="s2">fsdf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\5</span><span class="s2">fsdf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\6</span><span class="s2">fsddf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\t</span><span class="s2">fsd44df3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\3</span><span class="s2">77Q</span><span class="se">\2</span><span class="s2">11</span><span class="se">\2</span><span class="s2">40</span><span class="se">\2</span><span class="s2">11</span><span class="se">\3</span><span class="s2">06</span><span class="se">\2</span><span class="s2">70</span><span class="se">\r</span><span class="s2">$"</span>, 16384<span class="o">)</span> <span class="o">=</span> 276
+<span class="c"># 发送数据给 slave。</span>
+write<span class="o">(</span>7, <span class="s2">"REDIS0009</span><span class="se">\3</span><span class="s2">72</span><span class="se">\t</span><span class="s2">redis-ver</span><span class="se">\0</span><span class="s2">075.9.104</span><span class="se">\3</span><span class="s2">72</span><span class="se">\n</span><span class="s2">redis-bits</span><span class="se">\3</span><span class="s2">00@</span><span class="se">\3</span><span class="s2">72</span><span class="se">\5</span><span class="s2">ctime</span><span class="se">\3</span><span class="s2">02Tc</span><span class="se">\3</span><span class="s2">04^</span><span class="se">\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">0used-mem</span><span class="se">\3</span><span class="s2">02</span><span class="se">\2</span><span class="s2">704</span><span class="se">\3</span><span class="s2">5</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\1</span><span class="s2">6repl-stream-db</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\7</span><span class="s2">repl-id(d28bd808c0922b5679039db98a7493f76689084e</span><span class="se">\3</span><span class="s2">72</span><span class="se">\v</span><span class="s2">repl-offset</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">72</span><span class="se">\f</span><span class="s2">aof-preamble</span><span class="se">\3</span><span class="s2">00</span><span class="se">\0\3</span><span class="s2">76</span><span class="se">\0\3</span><span class="s2">73</span><span class="se">\6\0\0\7</span><span class="s2">fsddf3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\0\3</span><span class="s2">fsf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\4</span><span class="s2">fsdf</span><span class="se">\4</span><span class="s2">fdsf</span><span class="se">\0\5</span><span class="s2">fsdf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\6</span><span class="s2">fsddf3</span><span class="se">\1</span><span class="s2">0fdsffdsf</span><span class="se">\0\t</span><span class="s2">fsd44df3a</span><span class="se">\t</span><span class="s2">fddsffdsf</span><span class="se">\3</span><span class="s2">77Q</span><span class="se">\2</span><span class="s2">11</span><span class="se">\2</span><span class="s2">40</span><span class="se">\2</span><span class="s2">11</span><span class="se">\3</span><span class="s2">06</span><span class="se">\2</span><span class="s2">70</span><span class="se">\r</span><span class="s2">$"</span>, 276<span class="o">)</span> <span class="o">=</span> 276
+close<span class="o">(</span>10<span class="o">)</span>                               <span class="o">=</span> 0
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_MOD, 7, <span class="o">{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}})</span> <span class="o">=</span> 0
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_MOD, 7, <span class="o">{</span>EPOLLIN|EPOLLOUT, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}})</span> <span class="o">=</span> 0
+getpeername<span class="o">(</span>7, <span class="o">{</span><span class="nv">sa_family</span><span class="o">=</span>AF_INET, <span class="nv">sin_port</span><span class="o">=</span>htons<span class="o">(</span>32795<span class="o">)</span>, <span class="nv">sin_addr</span><span class="o">=</span>inet_addr<span class="o">(</span><span class="s2">"127.0.0.1"</span><span class="o">)}</span>, <span class="o">[</span>16]<span class="o">)</span> <span class="o">=</span> 0
+write<span class="o">(</span>1, <span class="s2">"19831:M 20 May 2020 06:53:08.798 * Synchronization with replica 127.0.0.1:6379 succeeded</span><span class="se">\n</span><span class="s2">"</span>, 89<span class="o">)</span> <span class="o">=</span> 89
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLOUT, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 998<span class="o">)</span> <span class="o">=</span> 1
+epoll_ctl<span class="o">(</span>5, EPOLL_CTL_MOD, 7, <span class="o">{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}})</span> <span class="o">=</span> 0
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 998<span class="o">)</span> <span class="o">=</span> 1
+<span class="c"># master 接收 slave 的心跳。</span>
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$1</span><span class="se">\r\n</span><span class="s2">0</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 34
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 1000<span class="o">)</span> <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$1</span><span class="se">\r\n</span><span class="s2">0</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 34
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 1000<span class="o">)</span> <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$1</span><span class="se">\r\n</span><span class="s2">0</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 34
+write<span class="o">(</span>7, <span class="s2">"*1</span><span class="se">\r\n</span><span class="nv">$4</span><span class="se">\r\n</span><span class="s2">PING</span><span class="se">\r\n</span><span class="s2">"</span>, 14<span class="o">)</span>    <span class="o">=</span> 14
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 1000<span class="o">)</span> <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$2</span><span class="se">\r\n</span><span class="s2">14</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 35
+epoll_wait<span class="o">(</span>5, <span class="o">[{</span>EPOLLIN, <span class="o">{</span><span class="nv">u32</span><span class="o">=</span>7, <span class="nv">u64</span><span class="o">=</span>7<span class="o">}}]</span>, 10128, 999<span class="o">)</span> <span class="o">=</span> 1
+<span class="nb">read</span><span class="o">(</span>7, <span class="s2">"*3</span><span class="se">\r\n</span><span class="nv">$8</span><span class="se">\r\n</span><span class="s2">REPLCONF</span><span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="s2">ACK</span><span class="se">\r\n</span><span class="nv">$2</span><span class="se">\r\n</span><span class="s2">14</span><span class="se">\r\n</span><span class="s2">"</span>, 16384<span class="o">)</span> <span class="o">=</span> 35
+...
+</code></pre></div></div>
+
+<p>上面主要通过 <code class="highlighter-rouge">strace</code> 抓包，描述了全量复制的流程。其它场景也一样可以通过这个方法，熟悉它们的工作流程。</p>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2020/05/17/redis-replication/">wenfh2020.com</a></p>
+</blockquote>

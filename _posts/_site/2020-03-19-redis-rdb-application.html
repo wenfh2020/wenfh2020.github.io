@@ -1,0 +1,519 @@
+<p>rdb 文件是一个经过压缩的二进制文件，是 redis 持久化方式之一。本章主要讲 rdb 应用场景。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-配置" id="markdown-toc-1-配置">1. 配置</a></li>
+  <li><a href="#2-异步持久化" id="markdown-toc-2-异步持久化">2. 异步持久化</a></li>
+  <li><a href="#3-应用场景" id="markdown-toc-3-应用场景">3. 应用场景</a>    <ul>
+      <li><a href="#31-服务启动加载数据" id="markdown-toc-31-服务启动加载数据">3.1. 服务启动加载数据</a></li>
+      <li><a href="#32-命令" id="markdown-toc-32-命令">3.2. 命令</a></li>
+      <li><a href="#33-数据定期持久化" id="markdown-toc-33-数据定期持久化">3.3. 数据定期持久化</a></li>
+      <li><a href="#34-重写-aof-文件" id="markdown-toc-34-重写-aof-文件">3.4. 重写 aof 文件</a></li>
+      <li><a href="#35-信号终止进程" id="markdown-toc-35-信号终止进程">3.5. 信号终止进程</a></li>
+      <li><a href="#36-主从复制" id="markdown-toc-36-主从复制">3.6. 主从复制</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-总结" id="markdown-toc-4-总结">4. 总结</a></li>
+  <li><a href="#5-参考" id="markdown-toc-5-参考">5. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-配置">1. 配置</h2>
+
+<p>redis 有两种持久化方式，分别为：aof 和 rdb，默认开启 rdb，本章重点讲 rdb。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+appendonly no
+</code></pre></div></div>
+
+<hr />
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">standardConfig</span> <span class="n">configs</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">...</span>
+   <span class="n">createBoolConfig</span><span class="p">(</span><span class="s">"appendonly"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">MODIFIABLE_CONFIG</span><span class="p">,</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_enabled</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">updateAppendonly</span><span class="p">),</span>
+   <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">initServer</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">aof_state</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_enabled</span> <span class="o">?</span> <span class="n">AOF_ON</span> <span class="o">:</span> <span class="n">AOF_OFF</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-异步持久化">2. 异步持久化</h2>
+
+<p>redis 主逻辑是在单进程，单线程里实现的。像持久化这种耗大量性能的操作，主进程一般会通过 fork 子进程异步进行。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 主进程 fork 子进程存盘</span>
+<span class="kt">int</span> <span class="nf">rdbSaveBackground</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">,</span> <span class="n">rdbSaveInfo</span> <span class="o">*</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">childpid</span> <span class="o">=</span> <span class="n">redisFork</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="cm">/* Child */</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="n">rdbSave</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="n">rsi</span><span class="p">);</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-应用场景">3. 应用场景</h2>
+
+<p><img src="/images/2020-03-19-13-08-31.png" alt="快照应用场景" data-action="zoom" /></p>
+
+<h3 id="31-服务启动加载数据">3.1. 服务启动加载数据</h3>
+
+<p>redis 程序启动，从磁盘 rdb 文件加载数据到内存。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">server</span><span class="p">.</span><span class="n">sentinel_mode</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">loadDataFromDisk</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="cm">/* flags on the purpose of rdb save or load */</span>
+<span class="cp">#define RDBFLAGS_NONE 0
+#define RDBFLAGS_AOF_PREAMBLE (1&lt;&lt;0)
+#define RDBFLAGS_REPLICATION (1&lt;&lt;1)
+</span>
+<span class="cm">/* Function called at startup to load RDB or AOF file in memory. */</span>
+<span class="kt">void</span> <span class="nf">loadDataFromDisk</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">long</span> <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="n">ustime</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_state</span> <span class="o">==</span> <span class="n">AOF_ON</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">loadAppendOnlyFile</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_filename</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span>
+            <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">rdbSaveInfo</span> <span class="n">rsi</span> <span class="o">=</span> <span class="n">RDB_SAVE_INFO_INIT</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbLoad</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_filename</span><span class="p">,</span><span class="o">&amp;</span><span class="n">rsi</span><span class="p">,</span><span class="n">RDBFLAGS_NONE</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span> <span class="p">{</span>
+            <span class="p">...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="32-命令">3.2. 命令</h3>
+
+<ul>
+  <li><code class="highlighter-rouge">SAVE</code> 命令同步存盘。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">saveCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSave</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_filename</span><span class="p">,</span><span class="n">rsiptr</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">addReply</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">shared</span><span class="p">.</span><span class="n">ok</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">addReply</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">shared</span><span class="p">.</span><span class="n">err</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li><code class="highlighter-rouge">BGSAVE</code> 命令，主进程通过 <code class="highlighter-rouge">fork</code> 子进程进行异步存盘。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">bgsaveCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">addReplyError</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">"Background save already in progress"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">hasActiveChildProcess</span><span class="p">())</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">schedule</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">rdb_bgsave_scheduled</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+            <span class="n">addReplyStatus</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">"Background saving scheduled"</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="p">...</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveBackground</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_filename</span><span class="p">,</span><span class="n">rsiptr</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">addReplyStatus</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">"Background saving started"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li><code class="highlighter-rouge">FLUSHALL</code> 清空数据库后存盘。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">flushallCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">flushAllDataAndResetRDB</span><span class="p">(</span><span class="n">flags</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="cm">/* Flushes the whole server data set. */</span>
+<span class="kt">void</span> <span class="nf">flushAllDataAndResetRDB</span><span class="p">(</span><span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">dirty</span> <span class="o">+=</span> <span class="n">emptyDb</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">flags</span><span class="p">,</span><span class="nb">NULL</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="n">killRDBChild</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">saveparamslen</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="cm">/* Normally rdbSave() will reset dirty, but we don't want this here
+         * as otherwise FLUSHALL will not be replicated nor put into the AOF. */</span>
+        <span class="kt">int</span> <span class="n">saved_dirty</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">dirty</span><span class="p">;</span>
+        <span class="n">rdbSaveInfo</span> <span class="n">rsi</span><span class="p">,</span> <span class="o">*</span><span class="n">rsiptr</span><span class="p">;</span>
+        <span class="n">rsiptr</span> <span class="o">=</span> <span class="n">rdbPopulateSaveInfo</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rsi</span><span class="p">);</span>
+        <span class="n">rdbSave</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_filename</span><span class="p">,</span><span class="n">rsiptr</span><span class="p">);</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">dirty</span> <span class="o">=</span> <span class="n">saved_dirty</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">dirty</span><span class="o">++</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li><code class="highlighter-rouge">SHUTDOWN</code> 命令关闭服务。
+服务运行过程中，一般情况是通过定期策略对内存数据进行持久化，内存数据和持久化文件数据不同步的，所以当服务正常退出或者重启，需要将内存数据进行持久化。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">shutdownCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">prepareForShutdown</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span> <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">prepareForShutdown</span><span class="p">(</span><span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="cm">/* Create a new RDB file before exiting. */</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">server</span><span class="p">.</span><span class="n">saveparamslen</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">nosave</span><span class="p">)</span> <span class="o">||</span> <span class="n">save</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="n">rdbSaveInfo</span> <span class="n">rsi</span><span class="p">,</span> <span class="o">*</span><span class="n">rsiptr</span><span class="p">;</span>
+        <span class="n">rsiptr</span> <span class="o">=</span> <span class="n">rdbPopulateSaveInfo</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rsi</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSave</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_filename</span><span class="p">,</span><span class="n">rsiptr</span><span class="p">)</span> <span class="o">!=</span> <span class="n">C_OK</span><span class="p">)</span> <span class="p">{</span>
+            <span class="p">...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="33-数据定期持久化">3.3. 数据定期持久化</h3>
+
+<p>rdb 持久化是有条件限制的：</p>
+
+<ol>
+  <li>数据修改个数。</li>
+  <li>存盘时间间隔。</li>
+</ol>
+
+<ul>
+  <li>默认配置
+从默认配置看，rdb 持久化不是实时的。时间间隔，最大 900 秒（15 分钟），最小 60 秒（1分钟），所以用 rdb 做持久化丢失数据风险比较大。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+<span class="c">################################ SNAPSHOTTING  ################################</span>
+<span class="c">#</span>
+<span class="c"># Save the DB on disk:</span>
+<span class="c">#</span>
+<span class="c">#   save &lt;seconds&gt; &lt;changes&gt;</span>
+<span class="c">#</span>
+<span class="c">#   Will save the DB if both the given number of seconds and the given</span>
+<span class="c">#   number of write operations against the DB occurred.</span>
+<span class="c">#</span>
+<span class="c">#   In the example below the behaviour will be to save:</span>
+<span class="c">#   after 900 sec (15 min) if at least 1 key changed</span>
+<span class="c">#   after 300 sec (5 min) if at least 10 keys changed</span>
+<span class="c">#   after 60 sec if at least 10000 keys changed</span>
+<span class="c">#</span>
+<span class="c">#   Note: you can disable saving completely by commenting out all "save" lines.</span>
+<span class="c">#</span>
+<span class="c">#   It is also possible to remove all the previously configured save</span>
+<span class="c">#   points by adding a save directive with a single empty string argument</span>
+<span class="c">#   like in the following example:</span>
+<span class="c">#</span>
+<span class="c">#   save ""</span>
+
+save 900 1
+save 300 10
+save 60 10000
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// rdb 定期存盘参数</span>
+<span class="k">struct</span> <span class="n">saveparam</span> <span class="p">{</span>
+    <span class="kt">time_t</span> <span class="n">seconds</span><span class="p">;</span> <span class="c1">// 时间间隔</span>
+    <span class="kt">int</span> <span class="n">changes</span><span class="p">;</span>    <span class="c1">// 修改次数</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<ul>
+  <li>时钟定期检查将内存数据进行 rdb 持久化。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define CONFIG_BGSAVE_RETRY_DELAY 5 </span><span class="cm">/* Wait a few secs before trying again. */</span><span class="cp">
+</span>
+<span class="k">struct</span> <span class="n">redisServer</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="kt">long</span> <span class="kt">long</span> <span class="n">dirty</span><span class="p">;</span>                <span class="cm">/* Changes to DB from the last save */</span>
+    <span class="kt">time_t</span> <span class="n">lastsave</span><span class="p">;</span>                <span class="cm">/* Unix time of last successful save */</span>
+    <span class="kt">time_t</span> <span class="n">lastbgsave_try</span><span class="p">;</span>          <span class="cm">/* Unix time of last attempted bgsave */</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">hasActiveChildProcess</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">server</span><span class="p">.</span><span class="n">rdb_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">||</span>
+           <span class="n">server</span><span class="p">.</span><span class="n">aof_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">||</span>
+           <span class="n">server</span><span class="p">.</span><span class="n">module_child_pid</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">serverCron</span><span class="p">(</span><span class="k">struct</span> <span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">id</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">clientData</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">hasActiveChildProcess</span><span class="p">()</span> <span class="o">||</span> <span class="n">ldbPendingChildren</span><span class="p">())</span> <span class="p">{</span>
+        <span class="c1">// 如果后台有子进程正在进行活动，检查进程是否已经终止。</span>
+        <span class="n">checkChildrenDone</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">server</span><span class="p">.</span><span class="n">saveparamslen</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">struct</span> <span class="n">saveparam</span> <span class="o">*</span><span class="n">sp</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">saveparams</span><span class="o">+</span><span class="n">j</span><span class="p">;</span>
+
+            <span class="c1">// 需要满足默认数据保存频率条件。</span>
+            <span class="c1">// 如果上次存盘失败后，需要延时 CONFIG_BGSAVE_RETRY_DELAY 再进行操作。</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">dirty</span> <span class="o">&gt;=</span> <span class="n">sp</span><span class="o">-&gt;</span><span class="n">changes</span> <span class="o">&amp;&amp;</span>
+                <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span><span class="o">-</span><span class="n">server</span><span class="p">.</span><span class="n">lastsave</span> <span class="o">&gt;</span> <span class="n">sp</span><span class="o">-&gt;</span><span class="n">seconds</span> <span class="o">&amp;&amp;</span>
+                <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">unixtime</span><span class="o">-</span><span class="n">server</span><span class="p">.</span><span class="n">lastbgsave_try</span> <span class="o">&gt;</span>
+                 <span class="n">CONFIG_BGSAVE_RETRY_DELAY</span> <span class="o">||</span>
+                 <span class="n">server</span><span class="p">.</span><span class="n">lastbgsave_status</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">))</span>
+            <span class="p">{</span>
+                <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_NOTICE</span><span class="p">,</span><span class="s">"%d changes in %d seconds. Saving..."</span><span class="p">,</span>
+                    <span class="n">sp</span><span class="o">-&gt;</span><span class="n">changes</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">sp</span><span class="o">-&gt;</span><span class="n">seconds</span><span class="p">);</span>
+                <span class="n">rdbSaveInfo</span> <span class="n">rsi</span><span class="p">,</span> <span class="o">*</span><span class="n">rsiptr</span><span class="p">;</span>
+                <span class="n">rsiptr</span> <span class="o">=</span> <span class="n">rdbPopulateSaveInfo</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rsi</span><span class="p">);</span>
+                <span class="n">rdbSaveBackground</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_filename</span><span class="p">,</span><span class="n">rsiptr</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+    <span class="c1">// 我们在执行 BGSAVE 命令时，当时有其它子进程正在进行工作，所以该命令被安排延后处理。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">hasActiveChildProcess</span><span class="p">()</span> <span class="o">&amp;&amp;</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">rdb_bgsave_scheduled</span> <span class="o">&amp;&amp;</span>
+        <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">unixtime</span><span class="o">-</span><span class="n">server</span><span class="p">.</span><span class="n">lastbgsave_try</span> <span class="o">&gt;</span> <span class="n">CONFIG_BGSAVE_RETRY_DELAY</span> <span class="o">||</span>
+         <span class="n">server</span><span class="p">.</span><span class="n">lastbgsave_status</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="n">rdbSaveInfo</span> <span class="n">rsi</span><span class="p">,</span> <span class="o">*</span><span class="n">rsiptr</span><span class="p">;</span>
+        <span class="n">rsiptr</span> <span class="o">=</span> <span class="n">rdbPopulateSaveInfo</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rsi</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveBackground</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_filename</span><span class="p">,</span><span class="n">rsiptr</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">rdb_bgsave_scheduled</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="34-重写-aof-文件">3.4. 重写 aof 文件</h3>
+
+<p>aof 文件在重写过程中，为了快速将数据落地，也会将文件保存成 rdb 文件，rdb 文件里会保存 aof 标识进行识别。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+<span class="c">#</span>
+<span class="c"># When rewriting the AOF file, Redis is able to use an RDB preamble in the</span>
+<span class="c"># AOF file for faster rewrites and recoveries. When this option is turned</span>
+<span class="c"># on the rewritten AOF file is composed of two different stanzas:</span>
+<span class="c">#</span>
+<span class="c">#   [RDB file][AOF tail]</span>
+<span class="c">#</span>
+<span class="c"># When loading Redis recognizes that the AOF file starts with the "REDIS"</span>
+<span class="c"># string and loads the prefixed RDB file, and continues loading the AOF</span>
+<span class="c"># tail.</span>
+aof-use-rdb-preamble <span class="nb">yes</span>
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 重写 aof 文件</span>
+<span class="kt">int</span> <span class="nf">rewriteAppendOnlyFile</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">startSaving</span><span class="p">(</span><span class="n">RDBFLAGS_AOF_PREAMBLE</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_use_rdb_preamble</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveRio</span><span class="p">(</span><span class="o">&amp;</span><span class="n">aof</span><span class="p">,</span><span class="o">&amp;</span><span class="n">error</span><span class="p">,</span><span class="n">RDBFLAGS_AOF_PREAMBLE</span><span class="p">,</span><span class="nb">NULL</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_ERR</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">errno</span> <span class="o">=</span> <span class="n">error</span><span class="p">;</span>
+            <span class="k">goto</span> <span class="n">werr</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 加载 aof 文件</span>
+<span class="kt">int</span> <span class="nf">loadAppendOnlyFile</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="kt">char</span> <span class="n">sig</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span> <span class="cm">/* "REDIS" */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fread</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="n">fp</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">5</span> <span class="o">||</span> <span class="n">memcmp</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span><span class="s">"REDIS"</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="cm">/* No RDB preamble, seek back at 0 offset. */</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">fseek</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">SEEK_SET</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">goto</span> <span class="n">readerr</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="c1">// 从 rdb 文件加载 aof 需要的数据。</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rdbLoadRio</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rdb</span><span class="p">,</span><span class="n">RDBFLAGS_AOF_PREAMBLE</span><span class="p">,</span><span class="nb">NULL</span><span class="p">)</span> <span class="o">!=</span> <span class="n">C_OK</span><span class="p">)</span> <span class="p">{</span>
+            <span class="p">...</span>
+        <span class="p">}</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="35-信号终止进程">3.5. 信号终止进程</h3>
+
+<p>服务运行过程中，一般情况是通过定期策略对内存数据进行持久化，内存数据和持久化文件数据不同步的，所以当服务正常退出或者重启，需要将内存数据进行持久化。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">initServer</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">setupSignalHandlers</span><span class="p">();</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="cp">#define SIGINT  2       </span><span class="cm">/* interrupt */</span><span class="cp">
+#define SIGTERM 15      </span><span class="cm">/* software termination signal from kill */</span><span class="cp">
+</span>
+<span class="kt">void</span> <span class="nf">setupSignalHandlers</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">sigaction</span> <span class="n">act</span><span class="p">;</span>
+
+    <span class="cm">/* When the SA_SIGINFO flag is set in sa_flags then sa_sigaction is used.
+     * Otherwise, sa_handler is used. */</span>
+    <span class="n">sigemptyset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">act</span><span class="p">.</span><span class="n">sa_mask</span><span class="p">);</span>
+    <span class="n">act</span><span class="p">.</span><span class="n">sa_flags</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">act</span><span class="p">.</span><span class="n">sa_handler</span> <span class="o">=</span> <span class="n">sigShutdownHandler</span><span class="p">;</span>
+    <span class="n">sigaction</span><span class="p">(</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">act</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">sigaction</span><span class="p">(</span><span class="n">SIGINT</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">act</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">sigShutdownHandler</span><span class="p">(</span><span class="kt">int</span> <span class="n">sig</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">shutdown_asap</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">serverCron</span><span class="p">(</span><span class="k">struct</span> <span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">id</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">clientData</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="cm">/* We received a SIGTERM, shutting down here in a safe way, as it is
+     * not ok doing so inside the signal handler. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">shutdown_asap</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">prepareForShutdown</span><span class="p">(</span><span class="n">SHUTDOWN_NOFLAGS</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span> <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+        <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span><span class="s">"SIGTERM received but errors trying to shut down the server, check the logs for more information"</span><span class="p">);</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">shutdown_asap</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="36-主从复制">3.6. 主从复制</h3>
+
+<p>主从复制，全量同步数据，可以通过 rdb 文件传输。rdb 文件可以采用硬盘备份方式；也可以无盘备份，数据不存盘，直接通过 socket 发送给其它服务。</p>
+
+<p>从服务刚启动或因网络原因，与主服务长时间断开，重连后发现主从数据已经严重不匹配了，主服务需要将内存数据保存成 rdb 二进制压缩文件，传送给这些重新链接的服务。</p>
+
+<blockquote>
+  <p>一主多从架构，如果出现网络问题，极端情况，主服务要给多个从服务发送 rdb 文件数据，数据量大的话，可能会造成网络拥堵，所以从服务尽量少吧。如果应用场景确实需要，可以启用多级从服务（chained slaves (slaves of slaves)），避免主服务出现过载问题。</p>
+</blockquote>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* State of slaves from the POV of the master. Used in client-&gt;replstate.
+ * In SEND_BULK and ONLINE state the slave receives new updates
+ * in its output queue. In the WAIT_BGSAVE states instead the server is waiting
+ * to start the next background saving in order to send updates to it. */</span>
+<span class="cp">#define SLAVE_STATE_WAIT_BGSAVE_START 6 </span><span class="cm">/* We need to produce a new RDB file. */</span><span class="cp">
+#define SLAVE_STATE_WAIT_BGSAVE_END 7 </span><span class="cm">/* Waiting RDB file creation to finish. */</span><span class="cp">
+#define SLAVE_STATE_SEND_BULK 8 </span><span class="cm">/* Sending RDB file to slave. */</span><span class="cp">
+#define SLAVE_STATE_ONLINE 9 </span><span class="cm">/* RDB file transmitted, sending just updates. */</span><span class="cp">
+</span>
+<span class="kt">void</span> <span class="nf">syncCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="cm">/* Setup the slave as one waiting for BGSAVE to start. The following code
+     * paths will change the state if we handle the slave differently. */</span>
+    <span class="n">c</span><span class="o">-&gt;</span><span class="n">replstate</span> <span class="o">=</span> <span class="n">SLAVE_STATE_WAIT_BGSAVE_START</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">replicationCron</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="cm">/* 如果使用无硬盘备份，主服务会在开始传送前等待一段时间（repl_diskless_sync_delay），
+    这过程中可能有多个服务链接上来需要全量同步数据的，那么一起同步。*/</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">hasActiveChildProcess</span><span class="p">())</span> <span class="p">{</span>
+        <span class="kt">time_t</span> <span class="n">idle</span><span class="p">,</span> <span class="n">max_idle</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">slaves_waiting</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">mincapa</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="n">listNode</span> <span class="o">*</span><span class="n">ln</span><span class="p">;</span>
+        <span class="n">listIter</span> <span class="n">li</span><span class="p">;</span>
+
+        <span class="c1">// 遍历从服务，确认是否需要主从复制。</span>
+        <span class="n">listRewind</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">slaves</span><span class="p">,</span><span class="o">&amp;</span><span class="n">li</span><span class="p">);</span>
+        <span class="k">while</span><span class="p">((</span><span class="n">ln</span> <span class="o">=</span> <span class="n">listNext</span><span class="p">(</span><span class="o">&amp;</span><span class="n">li</span><span class="p">)))</span> <span class="p">{</span>
+            <span class="n">client</span> <span class="o">*</span><span class="n">slave</span> <span class="o">=</span> <span class="n">ln</span><span class="o">-&gt;</span><span class="n">value</span><span class="p">;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">slave</span><span class="o">-&gt;</span><span class="n">replstate</span> <span class="o">==</span> <span class="n">SLAVE_STATE_WAIT_BGSAVE_START</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">idle</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span> <span class="o">-</span> <span class="n">slave</span><span class="o">-&gt;</span><span class="n">lastinteraction</span><span class="p">;</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">idle</span> <span class="o">&gt;</span> <span class="n">max_idle</span><span class="p">)</span> <span class="n">max_idle</span> <span class="o">=</span> <span class="n">idle</span><span class="p">;</span>
+                <span class="n">slaves_waiting</span><span class="o">++</span><span class="p">;</span>
+                <span class="n">mincapa</span> <span class="o">=</span> <span class="p">(</span><span class="n">mincapa</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">?</span> <span class="n">slave</span><span class="o">-&gt;</span><span class="n">slave_capa</span> <span class="o">:</span>
+                                            <span class="p">(</span><span class="n">mincapa</span> <span class="o">&amp;</span> <span class="n">slave</span><span class="o">-&gt;</span><span class="n">slave_capa</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">slaves_waiting</span> <span class="o">&amp;&amp;</span>
+            <span class="p">(</span><span class="o">!</span><span class="n">server</span><span class="p">.</span><span class="n">repl_diskless_sync</span> <span class="o">||</span>
+             <span class="n">max_idle</span> <span class="o">&gt;</span> <span class="n">server</span><span class="p">.</span><span class="n">repl_diskless_sync_delay</span><span class="p">))</span> <span class="p">{</span>
+            <span class="n">startBgsaveForReplication</span><span class="p">(</span><span class="n">mincapa</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">startBgsaveForReplication</span><span class="p">(</span><span class="kt">int</span> <span class="n">mincapa</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rsiptr</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">socket_target</span><span class="p">)</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="n">rdbSaveToSlavesSockets</span><span class="p">(</span><span class="n">rsiptr</span><span class="p">);</span>
+        <span class="k">else</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="n">rdbSaveBackground</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">rdb_filename</span><span class="p">,</span><span class="n">rsiptr</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-总结">4. 总结</h2>
+
+<p>rdb 作为持久化方式的一种，它是一种经过压缩的二进制数据。</p>
+
+<ul>
+  <li>
+    <p>优点：持久化过程中，速度快，文件体积小。方便数据快速落地，或者通过网络传输数据。</p>
+  </li>
+  <li>
+    <p>缺点：</p>
+    <ol>
+      <li>redis 只是将 rdb 文件作为一个备份文件而已，功能简单，并不能从文件中做一些数据查询功能操作。</li>
+      <li>备份常用方式是通过时钟控制，不是实时的，异常情况丢失数据会比较多。如果把它作为一个数据库来应用，这显然是不能接受的。</li>
+    </ol>
+  </li>
+</ul>
+
+<hr />
+
+<p>rdb 这一块内容挺多的，一章节太长了，所以分开了两章，本章主要讲应用场景，文件结构请参考下一章 <a href="https://wenfh2020.com/2020/03/19/redis-rdb-struct/">rdb 持久化 - 文件结构</a></p>
+
+<hr />
+
+<h2 id="5-参考">5. 参考</h2>
+
+<ul>
+  <li><a href="https://github.com/menwengit/redis_source_annotation">redis 3.2.8 的源码注释</a></li>
+  <li><a href="https://blog.csdn.net/mishifangxiangdefeng/article/details/50032357">redis配置文件样例(二)</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

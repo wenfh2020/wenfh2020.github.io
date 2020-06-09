@@ -1,0 +1,21 @@
+I"�<p>买了个低配的阿里云，1cpu, 2g 内存。基本能满足公网环境正常的功能测试，但是对于复杂的 c++ 项目编译显得有点费劲。</p>
+
+<p>ccache 是个好东西，缓存了编译过的项，第一次编译源码有点慢，再次编译速度就飞快了（提升5-10倍的速度）。</p>
+
+<p>Centos 下安装也很简单，执行命令 <code class="highlighter-rouge">yum install ccache</code> 即可。</p>
+
+<p>Makefile 里 C++ 编译项要替换一下 :</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CXX <span class="o">=</span> g++
+
+<span class="o">==&gt;</span>
+
+CXX <span class="o">=</span> <span class="si">$(</span>shell <span class="nb">command</span> <span class="nt">-v</span> ccache <span class="o">&gt;</span>/dev/null 2&gt;&amp;1 <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"ccache g++"</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s2">"g++"</span><span class="si">)</span>
+</code></pre></div></div>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

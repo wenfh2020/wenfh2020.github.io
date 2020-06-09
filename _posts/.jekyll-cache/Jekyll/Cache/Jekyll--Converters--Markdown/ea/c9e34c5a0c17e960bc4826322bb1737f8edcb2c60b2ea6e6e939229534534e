@@ -1,0 +1,245 @@
+I"�;<p>通过 gdb 查看程序的汇编代码，理解宏函数和函数的工作原理。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-程序" id="markdown-toc-1-程序">1. 程序</a></li>
+  <li><a href="#2-汇编知识" id="markdown-toc-2-汇编知识">2. 汇编知识</a>    <ul>
+      <li><a href="#21-寄存器" id="markdown-toc-21-寄存器">2.1. 寄存器</a></li>
+      <li><a href="#22-汇编指令" id="markdown-toc-22-汇编指令">2.2. 汇编指令</a></li>
+    </ul>
+  </li>
+  <li><a href="#3-参考" id="markdown-toc-3-参考">3. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-程序">1. 程序</h2>
+
+<p><img src="/images/2020-02-20-15-05-17.png" alt="源码反汇编" data-action="zoom" /></p>
+
+<p>例子中的最大值实现，宏函数和函数逻辑基本相同。宏在源码预编译阶段，被替换为代码，增加了代码的体积；而函数调用多了参数传递，函数进栈和出栈等逻辑，自然资源消耗要比宏多。</p>
+
+<ul>
+  <li>测试代码</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define _max(x, y) (x) &gt; (y) ? (x) : (y)
+</span>
+<span class="kt">int</span> <span class="nf">max_func</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="n">y</span> <span class="o">?</span> <span class="n">x</span> <span class="o">:</span> <span class="n">y</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">,</span> <span class="n">ccc</span><span class="p">,</span> <span class="n">ddd</span><span class="p">,</span> <span class="n">eee</span><span class="p">,</span> <span class="n">mmm</span><span class="p">;</span>
+
+    <span class="n">aaa</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">bbb</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="n">eee</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
+    <span class="n">mmm</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="n">ccc</span> <span class="o">=</span> <span class="n">max_func</span><span class="p">(</span><span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">);</span>
+    <span class="n">ddd</span> <span class="o">=</span> <span class="n">_max</span><span class="p">(</span><span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">);</span>
+    <span class="n">eee</span> <span class="o">=</span> <span class="n">ddd</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>预编译后，宏被替换为源码。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gcc <span class="nt">-E</span> test.cpp <span class="nt">-o</span> test.i
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">max_func</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="n">y</span> <span class="o">?</span> <span class="n">x</span> <span class="o">:</span> <span class="n">y</span><span class="p">;</span> <span class="p">}</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">,</span> <span class="n">ccc</span><span class="p">,</span> <span class="n">ddd</span><span class="p">,</span> <span class="n">eee</span><span class="p">,</span> <span class="n">mmm</span><span class="p">;</span>
+
+    <span class="n">aaa</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">bbb</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="n">eee</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
+    <span class="n">mmm</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="n">ccc</span> <span class="o">=</span> <span class="n">max_func</span><span class="p">(</span><span class="n">aaa</span><span class="p">,</span> <span class="n">bbb</span><span class="p">);</span>
+    <span class="n">ddd</span> <span class="o">=</span> <span class="p">(</span><span class="n">aaa</span><span class="p">)</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">bbb</span><span class="p">)</span> <span class="o">?</span> <span class="p">(</span><span class="n">aaa</span><span class="p">)</span> <span class="o">:</span> <span class="p">(</span><span class="n">bbb</span><span class="p">);</span>
+    <span class="n">eee</span> <span class="o">=</span> <span class="n">ddd</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>编译源码为 elf 文件进行 gdb 调试</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gcc <span class="nt">-g</span> test.cpp <span class="nt">-o</span> <span class="nb">test</span>
+</code></pre></div></div>
+
+<ul>
+  <li>通过 gdb 命令查看程序汇编代码</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>layout asm
+</code></pre></div></div>
+<hr />
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0x4004ed &lt;max_func<span class="o">(</span>int, int<span class="o">)&gt;</span>           push   %rbp
+0x4004ee &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+1&gt;         mov    %rsp,%rbp
+0x4004f1 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+4&gt;         mov    %edi,-0x4<span class="o">(</span>%rbp<span class="o">)</span>
+0x4004f4 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+7&gt;         mov    %esi,-0x8<span class="o">(</span>%rbp<span class="o">)</span>
+0x4004f7 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+10&gt;        mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x4004fa &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+13&gt;        cmp    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x4004fd &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+16&gt;        jle    0x400504 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+23&gt;
+0x4004ff &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+18&gt;        mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400502 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+21&gt;        jmp    0x400507 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+26&gt;
+0x400504 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+23&gt;        mov    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400507 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+26&gt;        pop    %rbp
+0x400508 &lt;max_func<span class="o">(</span>int, int<span class="o">)</span>+27&gt;        retq
+0x400509 &lt;main<span class="o">()&gt;</span>                       push   %rbp
+0x40050a &lt;main<span class="o">()</span>+1&gt;                     mov    %rsp,%rbp
+0x40050d &lt;main<span class="o">()</span>+4&gt;                     sub    <span class="nv">$0x20</span>,%rsp
+0x400511 &lt;main<span class="o">()</span>+8&gt;                     movl   <span class="nv">$0x1</span>,-0x4<span class="o">(</span>%rbp<span class="o">)</span>
+0x400518 &lt;main<span class="o">()</span>+15&gt;                    movl   <span class="nv">$0x2</span>,-0x8<span class="o">(</span>%rbp<span class="o">)</span>
+0x40051f &lt;main<span class="o">()</span>+22&gt;                    movl   <span class="nv">$0x3</span>,-0xc<span class="o">(</span>%rbp<span class="o">)</span>
+0x400526 &lt;main<span class="o">()</span>+29&gt;                    movl   <span class="nv">$0x4</span>,-0x10<span class="o">(</span>%rbp<span class="o">)</span>
+0x40052d &lt;main<span class="o">()</span>+36&gt;                    mov    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%edx
+0x400530 &lt;main<span class="o">()</span>+39&gt;                    mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400533 &lt;main<span class="o">()</span>+42&gt;                    mov    %edx,%esi
+0x400535 &lt;main<span class="o">()</span>+44&gt;                    mov    %eax,%edi
+0x400537 &lt;main<span class="o">()</span>+46&gt;                    callq  0x4004ed &lt;max_func<span class="o">(</span>int, int<span class="o">)&gt;</span>
+0x40053c &lt;main<span class="o">()</span>+51&gt;                    mov    %eax,-0x14<span class="o">(</span>%rbp<span class="o">)</span>
+0x40053f &lt;main<span class="o">()</span>+54&gt;                    mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400542 &lt;main<span class="o">()</span>+57&gt;                    cmp    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400545 &lt;main<span class="o">()</span>+60&gt;                    jle    0x40054c &lt;main<span class="o">()</span>+67&gt;
+0x400547 &lt;main<span class="o">()</span>+62&gt;                    mov    <span class="nt">-0x4</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x40054a &lt;main<span class="o">()</span>+65&gt;                    jmp    0x40054f &lt;main<span class="o">()</span>+70&gt;
+0x40054c &lt;main<span class="o">()</span>+67&gt;                    mov    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x40054f &lt;main<span class="o">()</span>+70&gt;                    mov    %eax,-0x18<span class="o">(</span>%rbp<span class="o">)</span>
+0x400552 &lt;main<span class="o">()</span>+73&gt;                    mov    <span class="nt">-0x18</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+0x400555 &lt;main<span class="o">()</span>+76&gt;                    mov    %eax,-0xc<span class="o">(</span>%rbp<span class="o">)</span>
+0x400558 &lt;main<span class="o">()</span>+79&gt;                    mov    <span class="nv">$0x0</span>,%eax
+0x40055d &lt;main<span class="o">()</span>+84&gt;                    leaveq
+0x40055e &lt;main<span class="o">()</span>+85&gt;                    retq
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-汇编知识">2. 汇编知识</h2>
+
+<p>测试中出现的汇编知识。</p>
+
+<h3 id="21-寄存器">2.1. 寄存器</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">寄存器</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">rbp</td>
+      <td style="text-align: left">64 bit 栈基址寄存器—指向栈底顶</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ebp</td>
+      <td style="text-align: left">32 bit 栈基址寄存器—指向栈底</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">bp</td>
+      <td style="text-align: left">16 bit 栈基址寄存器—指向栈底</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">rsp</td>
+      <td style="text-align: left">64 bit 栈寄存器—指向栈顶</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">esp</td>
+      <td style="text-align: left">32 bit 栈寄存器—指向栈顶</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sp</td>
+      <td style="text-align: left">16 bit 栈寄存器—指向栈顶</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">eax</td>
+      <td style="text-align: left">32 bit 通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">rip</td>
+      <td style="text-align: left">64 bit 地址偏移寄存器</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="22-汇编指令">2.2. 汇编指令</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">命令</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">jmp</td>
+      <td style="text-align: left">无条件段内直接转移指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">sub</td>
+      <td style="text-align: left">减法指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">jle</td>
+      <td style="text-align: left"><a href="https://zhidao.baidu.com/question/284101534.html">条件转移指令</a></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">mov</td>
+      <td style="text-align: left">传送指令  (movl 32位, movw 16位, movb 8位)</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">cmp</td>
+      <td style="text-align: left">比较指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">push</td>
+      <td style="text-align: left">进栈指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">pop</td>
+      <td style="text-align: left">出栈指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ret</td>
+      <td style="text-align: left">段内过程返回指令，使子程序结束，继续执行主程序</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">callq</td>
+      <td style="text-align: left">相当于 pushq %rip；   jmpq addr</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">leaveq</td>
+      <td style="text-align: left">相当于 movq %rbp；    %rsp popq %rbp</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">retq</td>
+      <td style="text-align: left">相当于 popq %rip</td>
+    </tr>
+  </tbody>
+</table>
+
+<blockquote>
+  <p>callq，leaveq，retq 中的q是指64位操作数</p>
+</blockquote>
+
+<hr />
+
+<h2 id="3-参考">3. 参考</h2>
+
+<ul>
+  <li><a href="https://blog.csdn.net/linuxheik/article/details/49277041?t=1488286725179">hook leaveq retq</a></li>
+  <li><a href="https://github.com/zhangyachen/zhangyachen.github.io/issues/134">GDB 单步调试汇编</a></li>
+  <li><a href="https://blog.csdn.net/qq_36982160/article/details/82950848">汇编常用指令</a></li>
+  <li><a href="https://www.cnblogs.com/daryl-blog/p/11369588.html">通用32位CPU 常用寄存器及其作用</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

@@ -1,0 +1,63 @@
+I"*<p>快捷登录阿里云效果</p>
+
+<p><img src="/images/2020-02-20-17-22-08.png" alt="效果" data-action="zoom" /></p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-机器" id="markdown-toc-1-机器">1. 机器</a></li>
+  <li><a href="#2-配置" id="markdown-toc-2-配置">2. 配置</a></li>
+  <li><a href="#3-参考" id="markdown-toc-3-参考">3. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-机器">1. 机器</h2>
+
+<p>本地机器：macOS</p>
+
+<p>远程机器：120.25.83.123</p>
+
+<hr />
+
+<h2 id="2-配置">2. 配置</h2>
+
+<ul>
+  <li>本地配置</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 创建密匙</span>
+ssh-keygen <span class="nt">-t</span> rsa
+
+<span class="c"># 拷贝密匙到远程机器</span>
+scp ~/.ssh/id_rsa.pub root@120.25.83.123:~/.ssh/id_rsa.pub.mac
+</code></pre></div></div>
+
+<ul>
+  <li>远程配置</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~/.ssh
+<span class="nb">cat </span>id_rsa.pub.mac <span class="o">&gt;&gt;</span> authorized_keys
+</code></pre></div></div>
+
+<ul>
+  <li>本地快捷登录设置</li>
+</ul>
+
+<blockquote>
+  <p>我本地使用的默认 shell 是 zsh</p>
+</blockquote>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 添加 alias 别名快捷命令</span>
+<span class="nb">echo</span> <span class="s2">"alias sgx='ssh root@120.25.83.123'"</span> <span class="o">&gt;&gt;</span> ~/.zshrc
+<span class="c"># 配置生效</span>
+<span class="nb">source</span> ~/.zshrc
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-参考">3. 参考</h2>
+
+<ul>
+  <li><a href="https://www.cnblogs.com/bingoli/p/10567734.html">ssh免密码快速登录配置</a></li>
+</ul>
+:ET

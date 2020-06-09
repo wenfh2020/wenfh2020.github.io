@@ -1,0 +1,145 @@
+I"�<p>一般来说，一个新东西的产生总是为了解决某一个现有的问题的。那么，slab 是为了解决什么问题呢？我们知道，在 Linux 内核中的内存管理是使用伙伴系统 (Buddy System)，但是这个系统有一个问题就是，它的最小单位是页，即 PAGE_SIZE ，在 x86 架构中这个常数一般是 4k 。但是很多情况下我们要分配的单元大小是远远小于 4k 的，如果使用伙伴系统的话，必定是会产生很大的浪费的。所以，一个粒度更加小的分配器呼之欲出，SLAB 就是为了解决这个小粒度内存分配的问题的。</p>
+
+<p>slab 接口是怎么样的。先知道怎么用</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-概述" id="markdown-toc-1-概述">1. 概述</a></li>
+  <li><a href="#2-接口" id="markdown-toc-2-接口">2. 接口</a>    <ul>
+      <li><a href="#slab-接口" id="markdown-toc-slab-接口">slab 接口</a></li>
+    </ul>
+  </li>
+  <li><a href="#linux-内存层次接口" id="markdown-toc-linux-内存层次接口">linux 内存层次接口</a></li>
+  <li><a href="#3-question" id="markdown-toc-3-question">3. question</a></li>
+  <li><a href="#4-参考" id="markdown-toc-4-参考">4. 参考</a></li>
+  <li><a href="#malloc-的实现原理-内存池-mmap-sbrk-链表" id="markdown-toc-malloc-的实现原理-内存池-mmap-sbrk-链表">malloc 的实现原理 内存池 mmap sbrk 链表</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-概述">1. 概述</h2>
+
+<p>slab 内存分配原理。
+buddy 内存分配原理。
+内存分配流程。
+mmap</p>
+
+<p>app -&gt; malloc -&gt; slab -&gt; buddy -&gt; vm -&gt; ram</p>
+
+<p>算法导论 mmap 内存管理。</p>
+
+<p><img src="/images/2020-04-24-14-49-22.png" alt="结构" /></p>
+
+<ul>
+  <li>是什么，连续内存管理算法，减少内存碎片。</li>
+  <li>接口。使用。</li>
+  <li>内部数据结构实现。</li>
+  <li>管理碎片逻辑。</li>
+  <li>与 nignx 内存池对比。</li>
+  <li>它与虚拟列表的关系。</li>
+  <li>glibc 例子。</li>
+  <li>slab 对象是怎么管理的。</li>
+  <li>slab_common.c</li>
+</ul>
+
+<p><img src="/images/2020-04-29-08-43-09.png" alt="" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="2-接口">2. 接口</h2>
+
+<h3 id="slab-接口">slab 接口</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">接口</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">kmem_cache_init()</td>
+      <td style="text-align: left">初始化</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">kmem_cache_create()</td>
+      <td style="text-align: left">创建管理结构头</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">kmem_cache_alloc()</td>
+      <td style="text-align: left">分配内存</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">kmem_cache_free()</td>
+      <td style="text-align: left">释放内存</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">kmem_cache_destroy()</td>
+      <td style="text-align: left">销毁内存</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="linux-内存层次接口">linux 内存层次接口</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">单位</th>
+      <th style="text-align: left">接口</th>
+      <th style="text-align: left">算法</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">动态大小</td>
+      <td style="text-align: left">kmalloc/kfree/krealloc/kcalloc</td>
+      <td style="text-align: left">按大小组织的缓存数组</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">固定大小</td>
+      <td style="text-align: left">kmem_cache_create/kmem_cache_destroy <br /> kmem_cache_alloc/kmem_cache_free</td>
+      <td style="text-align: left">slab</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">$2^n$ 页</td>
+      <td style="text-align: left">alloc_pages/free_pages  <br /> __get_free_pages/__free_pages</td>
+      <td style="text-align: left">伙伴算法</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="3-question">3. question</h2>
+
+<ul>
+  <li>比较 nginx 内存池</li>
+  <li>redis 的动态内存。</li>
+</ul>
+
+<hr />
+
+<h2 id="4-参考">4. 参考</h2>
+
+<ul>
+  <li>《深入理解计算机系统》第三版</li>
+  <li><a href="https://blog.csdn.net/bullbat/article/details/7311955">内核怎样管理你的内存</a></li>
+  <li><a href="https://blog.csdn.net/smartzzm/article/details/50254375">kmalloc VS kmem_cache_alloc</a></li>
+  <li><a href="http://kernel.meizu.com/slab-allocator-and-kmalloc.html">SLAB 分配器和 kmalloc</a></li>
+  <li><a href="https://blog.csdn.net/songchuwang1868/article/details/89521003">伙伴系统、slab、malloc辨析</a></li>
+  <li><a href="https://blog.csdn.net/mrpre/article/details/79115523">调用malloc时发生了什么（2） - sys_brk函数</a></li>
+  <li><a href="https://blog.csdn.net/mrpre/article/details/79053794">调用malloc时发生了什么（1） - brk与sbrk</a></li>
+  <li><a href="https://blog.csdn.net/mrpre/article/details/83659537">调用malloc时发生了什么（3） - 缺页中断</a></li>
+  <li><a href="https://zhuanlan.zhihu.com/p/26137521">十问 Linux 虚拟内存管理 (glibc) (一)</a></li>
+  <li>
+    <h2 id="malloc-的实现原理-内存池-mmap-sbrk-链表"><a href="https://zhuanlan.zhihu.com/p/57863097">malloc 的实现原理 内存池 mmap sbrk 链表</a></h2>
+  </li>
+</ul>
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

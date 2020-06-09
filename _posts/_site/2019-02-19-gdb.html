@@ -1,0 +1,280 @@
+<p>Gdb 常用命令方法。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-gdb" id="markdown-toc-1-gdb">1. gdb</a>    <ul>
+      <li><a href="#11-基础命令" id="markdown-toc-11-基础命令">1.1. 基础命令</a></li>
+      <li><a href="#12-内存命令" id="markdown-toc-12-内存命令">1.2. 内存命令</a></li>
+      <li><a href="#13-tui" id="markdown-toc-13-tui">1.3. tui</a></li>
+    </ul>
+  </li>
+  <li><a href="#2-参考" id="markdown-toc-2-参考">2. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-gdb">1. gdb</h2>
+
+<h3 id="11-基础命令">1.1. 基础命令</h3>
+
+<p><a href="http://www.skywind.me/blog/archives/2036">GDB 从裸奔到穿戴整齐</a>
+<img src="/images/2020-02-20-19-40-56.png" alt="命令" data-action="zoom" /></p>
+
+<p>详细文档通过命令查看</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>man gdb
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>命令</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>r</td>
+      <td>运行调试</td>
+    </tr>
+    <tr>
+      <td>n</td>
+      <td>下一步</td>
+    </tr>
+    <tr>
+      <td>c</td>
+      <td>继续运行</td>
+    </tr>
+    <tr>
+      <td>ctrl + c</td>
+      <td>中断信号</td>
+    </tr>
+    <tr>
+      <td>c/continue</td>
+      <td>中断后继续运行</td>
+    </tr>
+    <tr>
+      <td>s</td>
+      <td>进入一个函数</td>
+    </tr>
+    <tr>
+      <td>finish</td>
+      <td>退出函数</td>
+    </tr>
+    <tr>
+      <td>l</td>
+      <td>列出代码行</td>
+    </tr>
+    <tr>
+      <td>b</td>
+      <td>断点<br />显示断点列表 info b<br />删除断点 delete <number><br />清除断点 clear</number></td>
+    </tr>
+    <tr>
+      <td>n</td>
+      <td>下一步</td>
+    </tr>
+    <tr>
+      <td>until</td>
+      <td>跳至行号<br />until number</td>
+    </tr>
+    <tr>
+      <td>p</td>
+      <td>打印<br />打印数组信息 p *array@len<br />p/x 按十六进制格式显示变量</td>
+    </tr>
+    <tr>
+      <td>bt/backtrace</td>
+      <td>堆栈bt &lt;-n&gt;<br />-n表一个负整数，表示只打印栈底下n层的栈信息。</td>
+    </tr>
+    <tr>
+      <td>f/frame</td>
+      <td>进入指定堆栈层<br /> f number</td>
+    </tr>
+    <tr>
+      <td>thread apply all bt</td>
+      <td>显示线程所有堆栈</td>
+    </tr>
+    <tr>
+      <td>attach</td>
+      <td>绑定进程调试<br />attach -p pid</td>
+    </tr>
+    <tr>
+      <td>detach</td>
+      <td>取消绑定调试进程</td>
+    </tr>
+    <tr>
+      <td>disassemble</td>
+      <td>看二进制数据<br />disassemble func</td>
+    </tr>
+    <tr>
+      <td>x</td>
+      <td>查看内存</td>
+    </tr>
+    <tr>
+      <td>focus</td>
+      <td>显示源码界面</td>
+    </tr>
+    <tr>
+      <td>display</td>
+      <td>显示变量</td>
+    </tr>
+    <tr>
+      <td>info registers</td>
+      <td>查看寄存器</td>
+    </tr>
+    <tr>
+      <td>info win</td>
+      <td>窗口切换<br />fs cmd<br />fs src</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h3 id="12-内存命令">1.2. 内存命令</h3>
+
+<p>可以用 <code class="highlighter-rouge">examine</code> 命令(简写 <code class="highlighter-rouge">x</code> ) 来查看内存地址中的值，<code class="highlighter-rouge">x</code> 命令语法：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>x/&lt;n/f/u&gt; &lt;addr&gt;
+</code></pre></div></div>
+
+<p>n/f/u三个参数可以一起使用</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">命令</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">n</td>
+      <td style="text-align: left">正整数，内存的长度</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">f</td>
+      <td style="text-align: left">表示显示的格式，如果地址所指的是字符串，那么格式可以是 <code class="highlighter-rouge">s</code>，地址是指令地址，格式是 <code class="highlighter-rouge">i</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: left">u</td>
+      <td style="text-align: left">从当前地址往后请求的字节数，GDB默认是4个bytes。u 参数可以用下面的字符来代替，<strong>b表示单字节，h表示双字节，w表示四字 节，g表示八字节</strong>。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>格式</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">命令</th>
+      <th style="text-align: left">操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">x</td>
+      <td style="text-align: left">按十六进制格式显示变量</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">d</td>
+      <td style="text-align: left">按十进制格式显示变量</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">u</td>
+      <td style="text-align: left">按十六进制格式显示无符号整型</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">o</td>
+      <td style="text-align: left">按八进制格式显示变量</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">t</td>
+      <td style="text-align: left">按二进制格式显示变量</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">a</td>
+      <td style="text-align: left">按十六进制格式显示变量</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">c</td>
+      <td style="text-align: left">按字符格式显示变量</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">f</td>
+      <td style="text-align: left">按浮点数格式显示变量</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h3 id="13-tui">1.3. tui</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>info win
+</code></pre></div></div>
+
+<p>gdb 可视化，<code class="highlighter-rouge">layout</code> 用于窗口操作</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> <span class="nb">help </span>layout
+Change the layout of windows.
+Usage: layout prev | next | LAYOUT-NAME
+Layout names are:
+   src   : Displays <span class="nb">source </span>and <span class="nb">command </span>windows.
+   asm   : Displays disassembly and <span class="nb">command </span>windows.
+   <span class="nb">split</span> : Displays <span class="nb">source</span>, disassembly and <span class="nb">command </span>windows.
+   regs  : Displays register window. If existing layout
+           is <span class="nb">source</span>/command or assembly/command, the
+           register window is displayed. If the
+           <span class="nb">source</span>/assembly/command <span class="o">(</span><span class="nb">split</span><span class="o">)</span> is displayed,
+           the register window is displayed with
+           the window that has current logical focus.
+</code></pre></div></div>
+
+<ul>
+  <li>查看具体窗口</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">命令</th>
+      <th style="text-align: left">操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">layout src</td>
+      <td style="text-align: left">显示源代码窗口</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">layout asm</td>
+      <td style="text-align: left">显示汇编窗口</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">layout regs</td>
+      <td style="text-align: left">显示源代码/汇编和寄存器窗口</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">layout split</td>
+      <td style="text-align: left">显示源代码和汇编窗口</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">layout next</td>
+      <td style="text-align: left">显示下一个layout</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">layout prev</td>
+      <td style="text-align: left">显示上一个layout</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="2-参考">2. 参考</h2>
+
+<ul>
+  <li><a href="https://blog.csdn.net/men_wen/article/details/75220102">gdb 调试工具 — 使用方法浅析</a></li>
+  <li><a href="https://blog.csdn.net/suxinpingtao51/article/details/12072559">Linux中gdb 查看core堆栈信息</a></li>
+  <li><a href="https://blog.csdn.net/zhangjs0322/article/details/10152279">gdb调试的layout使用</a></li>
+</ul>

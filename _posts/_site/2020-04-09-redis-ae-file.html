@@ -1,0 +1,367 @@
+<p>redis 服务底层采用了<code class="highlighter-rouge">异步事件</code>管理（<code class="highlighter-rouge">aeEventLoop</code>）：管理时间事件和文件事件。对于大量网络文件描述符（fd）的事件管理，redis 建立在安装系统对应的事件驱动基础上（例如 Linux 的 <code class="highlighter-rouge">epoll</code>）。</p>
+
+<blockquote>
+  <ul>
+    <li>关于事件驱动，本章主要讲述 Linux 系统的 epoll 事件驱动。</li>
+    <li>关于事件处理，本章主要讲述文件事件，时间事件可以参考帖子 <a href="https://wenfh2020.com/2020/04/06/ae-timer/">[redis 源码走读] 事件 - 定时器</a>。</li>
+  </ul>
+</blockquote>
+
+<ul id="markdown-toc">
+  <li><a href="#1-事件驱动" id="markdown-toc-1-事件驱动">1. 事件驱动</a></li>
+  <li><a href="#2-异步事件管理" id="markdown-toc-2-异步事件管理">2. 异步事件管理</a>    <ul>
+      <li><a href="#21-数据结构" id="markdown-toc-21-数据结构">2.1. 数据结构</a></li>
+      <li><a href="#22-创建事件管理对象" id="markdown-toc-22-创建事件管理对象">2.2. 创建事件管理对象</a></li>
+      <li><a href="#23-事件处理流程" id="markdown-toc-23-事件处理流程">2.3. 事件处理流程</a></li>
+      <li><a href="#24-事件处理逻辑" id="markdown-toc-24-事件处理逻辑">2.4. 事件处理逻辑</a></li>
+      <li><a href="#25-获取待处理事件" id="markdown-toc-25-获取待处理事件">2.5. 获取待处理事件</a></li>
+    </ul>
+  </li>
+  <li><a href="#3-总结" id="markdown-toc-3-总结">3. 总结</a></li>
+  <li><a href="#4-参考" id="markdown-toc-4-参考">4. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-事件驱动">1. 事件驱动</h2>
+
+<p>redis 根据安装系统选择对应的事件驱动。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// ae.c</span>
+<span class="cm">/* Include the best multiplexing layer supported by this system.
+ * The following should be ordered by performances, descending. */</span>
+<span class="cp">#ifdef HAVE_EVPORT
+#include "ae_evport.c"
+#else
+</span>    <span class="cp">#ifdef HAVE_EPOLL
+</span>    <span class="cp">#include "ae_epoll.c"
+</span>    <span class="cp">#else
+</span>        <span class="cp">#ifdef HAVE_KQUEUE
+</span>        <span class="cp">#include "ae_kqueue.c"
+</span>        <span class="cp">#else
+</span>        <span class="cp">#include "ae_select.c"
+</span>        <span class="cp">#endif
+</span>    <span class="cp">#endif
+#endif
+</span></code></pre></div></div>
+
+<hr />
+
+<h2 id="2-异步事件管理">2. 异步事件管理</h2>
+
+<p><code class="highlighter-rouge">epoll</code> 是异步事件驱动，上层逻辑操作和下层事件驱动要通过 fd 文件描述符串联起来。异步事件管理（<code class="highlighter-rouge">aeEventLoop</code>），对 epoll 做了一些封装，方便异步事件回调处理。</p>
+
+<blockquote>
+  <p>有关 epoll 工作流程，可以参考我的帖子：<a href="https://wenfh2020.com/2020/04/14/epoll-workflow/">epoll 多路复用 I/O工作流程</a></p>
+</blockquote>
+
+<p><img src="/images/2020-04-09-22-04-00.png" alt="redis 文件事件封装" data-action="zoom" /></p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">层次</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">ae.c</td>
+      <td style="text-align: left">关联异步业务事件和 epoll 接口，处理 fd 对应事件逻辑。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ae_epoll.c</td>
+      <td style="text-align: left">对 epoll 接口进行封装，方便上层操作。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">epoll</td>
+      <td style="text-align: left">Linux 内核多路复用 I/O 模型，主要为了高效处理大批量文件描述符事件。</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h3 id="21-数据结构">2.1. 数据结构</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// ae.c</span>
+
+<span class="c1">// 文件事件结构</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">aeFileEvent</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">mask</span><span class="p">;</span> <span class="c1">// 事件类型组合（one of AE_(READABLE|WRITABLE|BARRIER)）</span>
+    <span class="n">aeFileProc</span> <span class="o">*</span><span class="n">rfileProc</span><span class="p">;</span> <span class="c1">// 读事件回调操作。</span>
+    <span class="n">aeFileProc</span> <span class="o">*</span><span class="n">wfileProc</span><span class="p">;</span> <span class="c1">// 写事件回调操作。</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">clientData</span><span class="p">;</span>      <span class="c1">// 业务传入的私有数据。方便回调使用。</span>
+<span class="p">}</span> <span class="n">aeFileEvent</span><span class="p">;</span>
+
+<span class="c1">// 就绪事件</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">aeFiredEvent</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">fd</span><span class="p">;</span>   <span class="c1">// 文件描述符。</span>
+    <span class="kt">int</span> <span class="n">mask</span><span class="p">;</span> <span class="c1">// 事件类型组合。</span>
+<span class="p">}</span> <span class="n">aeFiredEvent</span><span class="p">;</span>
+
+<span class="c1">// 事件管理结构</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">aeEventLoop</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">maxfd</span><span class="p">;</span>   <span class="c1">// 监控的最大文件描述符。</span>
+    <span class="kt">int</span> <span class="n">setsize</span><span class="p">;</span> <span class="c1">// 处理文件描述符个数。</span>
+    <span class="p">...</span>
+    <span class="n">aeFileEvent</span> <span class="o">*</span><span class="n">events</span><span class="p">;</span> <span class="c1">// 根据 fd 监听事件。</span>
+    <span class="n">aeFiredEvent</span> <span class="o">*</span><span class="n">fired</span><span class="p">;</span> <span class="c1">// 从内核取出的就绪事件。</span>
+    <span class="p">...</span>
+<span class="p">}</span> <span class="n">aeEventLoop</span><span class="p">;</span>
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">结构</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">aeEventLoop</td>
+      <td style="text-align: left">文件事件和时间事件管理。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">aeFileEvent</td>
+      <td style="text-align: left">文件事件结构，方便异步回调逻辑调用。aeEventLoop 会创建一个 aeFileEvent 数组，数组下标是 fd，fd 对应 aeFileEvent 数据结构。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">aeFiredEvent</td>
+      <td style="text-align: left">从内核获取的就绪事件。（例如 Linux 系统通过 epoll_wait 接口获取就绪事件，每个事件分别存储在 aeFiredEvent 数组中）</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h3 id="22-创建事件管理对象">2.2. 创建事件管理对象</h3>
+
+<p>创建事件管理对象，对监控的文件数量设置了上限。</p>
+
+<ul>
+  <li>文件监控上限配置。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+<span class="c">#</span>
+<span class="c"># Set the max number of connected clients at the same time. By default</span>
+<span class="c"># this limit is set to 10000 clients, however if the Redis server is not</span>
+<span class="c"># able to configure the process file limit to allow for the specified limit</span>
+<span class="c"># the max number of allowed clients is set to the current file limit</span>
+<span class="c"># minus 32 (as Redis reserves a few file descriptors for internal uses).</span>
+<span class="c">#</span>
+<span class="c"># Once the limit is reached Redis will close all the new connections sending</span>
+<span class="c"># an error 'max number of clients reached'.</span>
+<span class="c">#</span>
+<span class="c"># maxclients 10000</span>
+</code></pre></div></div>
+
+<ul>
+  <li>创建事件管理对象。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define CONFIG_MIN_RESERVED_FDS 32
+#define CONFIG_FDSET_INCR (CONFIG_MIN_RESERVED_FDS+96)
+</span>
+<span class="c1">// server.c</span>
+<span class="kt">void</span> <span class="nf">initServer</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">el</span> <span class="o">=</span> <span class="n">aeCreateEventLoop</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">maxclients</span><span class="o">+</span><span class="n">CONFIG_FDSET_INCR</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">initServer</span><span class="p">();</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="23-事件处理流程">2.3. 事件处理流程</h3>
+
+<ul>
+  <li>循环处理事件</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// server.c</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">aeMain</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">el</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// ae.c</span>
+<span class="c1">// 循环处理事件</span>
+<span class="kt">void</span> <span class="nf">aeMain</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">stop</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">stop</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">beforesleep</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+            <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">beforesleep</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">);</span>
+        <span class="n">aeProcessEvents</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">,</span> <span class="n">AE_ALL_EVENTS</span><span class="o">|</span><span class="n">AE_CALL_AFTER_SLEEP</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>添加事件，关联 fd 事件与异步回调相关信息。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">aeCreateFileEvent</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mask</span><span class="p">,</span>
+        <span class="n">aeFileProc</span> <span class="o">*</span><span class="n">proc</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">clientData</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fd</span> <span class="o">&gt;=</span> <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">setsize</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">errno</span> <span class="o">=</span> <span class="n">ERANGE</span><span class="p">;</span>
+        <span class="k">return</span> <span class="n">AE_ERR</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">aeFileEvent</span> <span class="o">*</span><span class="n">fe</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">events</span><span class="p">[</span><span class="n">fd</span><span class="p">];</span>
+
+    <span class="c1">// 调用底层 epoll_ctl 注册事件。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">aeApiAddEvent</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">AE_ERR</span><span class="p">;</span>
+    <span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">|=</span> <span class="n">mask</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">AE_READABLE</span><span class="p">)</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">rfileProc</span> <span class="o">=</span> <span class="n">proc</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">AE_WRITABLE</span><span class="p">)</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">wfileProc</span> <span class="o">=</span> <span class="n">proc</span><span class="p">;</span>
+    <span class="n">fe</span><span class="o">-&gt;</span><span class="n">clientData</span> <span class="o">=</span> <span class="n">clientData</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fd</span> <span class="o">&gt;</span> <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">maxfd</span><span class="p">)</span>
+        <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">maxfd</span> <span class="o">=</span> <span class="n">fd</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">AE_OK</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>删除事件，删除对应 fd 的事件。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">aeDeleteFileEvent</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mask</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fd</span> <span class="o">&gt;=</span> <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">setsize</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+    <span class="n">aeFileEvent</span> <span class="o">*</span><span class="n">fe</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">events</span><span class="p">[</span><span class="n">fd</span><span class="p">];</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">==</span> <span class="n">AE_NONE</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+
+    <span class="c1">// 如果删除的是写事件，要把写事件优先处理的事件也去掉，恢复优先处理读事件，再处理写事件逻辑。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">AE_WRITABLE</span><span class="p">)</span> <span class="n">mask</span> <span class="o">|=</span> <span class="n">AE_BARRIER</span><span class="p">;</span>
+
+    <span class="c1">// 调用底层 epoll_ctl 修改删除事件。</span>
+    <span class="n">aeApiDelEvent</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">mask</span><span class="p">);</span>
+    <span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">=</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="o">~</span><span class="n">mask</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fd</span> <span class="o">==</span> <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">maxfd</span> <span class="o">&amp;&amp;</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">==</span> <span class="n">AE_NONE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="cm">/* Update the max fd */</span>
+        <span class="kt">int</span> <span class="n">j</span><span class="p">;</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">maxfd</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span><span class="o">--</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">events</span><span class="p">[</span><span class="n">j</span><span class="p">].</span><span class="n">mask</span> <span class="o">!=</span> <span class="n">AE_NONE</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+        <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">maxfd</span> <span class="o">=</span> <span class="n">j</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="24-事件处理逻辑">2.4. 事件处理逻辑</h3>
+
+<p>文件事件处理逻辑，从内核取出就绪事件，根据事件的读写类型，分别进行回调处理相关业务逻辑。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// ae.c</span>
+<span class="kt">int</span> <span class="nf">aeProcessEvents</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 多路复用接口，从内核取出就绪事件。</span>
+    <span class="n">numevents</span> <span class="o">=</span> <span class="n">aeApiPoll</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">,</span> <span class="n">tvp</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">numevents</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 根据就绪事件 fd，取出对应的异步文件事件进行逻辑处理。</span>
+        <span class="n">aeFileEvent</span> <span class="o">*</span><span class="n">fe</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">events</span><span class="p">[</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">fired</span><span class="p">[</span><span class="n">j</span><span class="p">].</span><span class="n">fd</span><span class="p">];</span>
+        <span class="kt">int</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">fired</span><span class="p">[</span><span class="n">j</span><span class="p">].</span><span class="n">mask</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">fd</span> <span class="o">=</span> <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">fired</span><span class="p">[</span><span class="n">j</span><span class="p">].</span><span class="n">fd</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">fired</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="cm">/* Number of events fired for current fd. */</span>
+
+        <span class="cm">/* AE_BARRIER 表示优先可写事件。正常情况，一般先读后写。
+         * AE_BARRIER 使用场景，有兴趣的朋友，可以查找源码关键字：CONN_FLAG_WRITE_BARRIER
+         * 理解这部分的逻辑。 */</span>
+        <span class="kt">int</span> <span class="n">invert</span> <span class="o">=</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">AE_BARRIER</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">invert</span> <span class="o">&amp;&amp;</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="n">AE_READABLE</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">fe</span><span class="o">-&gt;</span><span class="n">rfileProc</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">,</span><span class="n">fd</span><span class="p">,</span><span class="n">fe</span><span class="o">-&gt;</span><span class="n">clientData</span><span class="p">,</span><span class="n">mask</span><span class="p">);</span>
+            <span class="n">fired</span><span class="o">++</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="n">AE_WRITABLE</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">fired</span> <span class="o">||</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">wfileProc</span> <span class="o">!=</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">rfileProc</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">fe</span><span class="o">-&gt;</span><span class="n">wfileProc</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">,</span><span class="n">fd</span><span class="p">,</span><span class="n">fe</span><span class="o">-&gt;</span><span class="n">clientData</span><span class="p">,</span><span class="n">mask</span><span class="p">);</span>
+                <span class="n">fired</span><span class="o">++</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">invert</span> <span class="o">&amp;&amp;</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="n">AE_READABLE</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">fired</span> <span class="o">||</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">wfileProc</span> <span class="o">!=</span> <span class="n">fe</span><span class="o">-&gt;</span><span class="n">rfileProc</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">fe</span><span class="o">-&gt;</span><span class="n">rfileProc</span><span class="p">(</span><span class="n">eventLoop</span><span class="p">,</span><span class="n">fd</span><span class="p">,</span><span class="n">fe</span><span class="o">-&gt;</span><span class="n">clientData</span><span class="p">,</span><span class="n">mask</span><span class="p">);</span>
+                <span class="n">fired</span><span class="o">++</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="25-获取待处理事件">2.5. 获取待处理事件</h3>
+
+<p>通过 <code class="highlighter-rouge">epoll_wait</code> 从系统内核取出就绪文件事件进行处理。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// ae_epoll.c</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">aeApiPoll</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="k">struct</span> <span class="n">timeval</span> <span class="o">*</span><span class="n">tvp</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">aeApiState</span> <span class="o">*</span><span class="n">state</span> <span class="o">=</span> <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">apidata</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">retval</span><span class="p">,</span> <span class="n">numevents</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// 从内核取出就绪文件事件进行处理。</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">epoll_wait</span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">epfd</span><span class="p">,</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">events</span><span class="p">,</span><span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">setsize</span><span class="p">,</span>
+            <span class="n">tvp</span> <span class="o">?</span> <span class="p">(</span><span class="n">tvp</span><span class="o">-&gt;</span><span class="n">tv_sec</span><span class="o">*</span><span class="mi">1000</span> <span class="o">+</span> <span class="n">tvp</span><span class="o">-&gt;</span><span class="n">tv_usec</span><span class="o">/</span><span class="mi">1000</span><span class="p">)</span> <span class="o">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">retval</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">int</span> <span class="n">j</span><span class="p">;</span>
+
+        <span class="n">numevents</span> <span class="o">=</span> <span class="n">retval</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">numevents</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kt">int</span> <span class="n">mask</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="k">struct</span> <span class="n">epoll_event</span> <span class="o">*</span><span class="n">e</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">events</span><span class="o">+</span><span class="n">j</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">events</span> <span class="o">&amp;</span> <span class="n">EPOLLIN</span><span class="p">)</span> <span class="n">mask</span> <span class="o">|=</span> <span class="n">AE_READABLE</span><span class="p">;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">events</span> <span class="o">&amp;</span> <span class="n">EPOLLOUT</span><span class="p">)</span> <span class="n">mask</span> <span class="o">|=</span> <span class="n">AE_WRITABLE</span><span class="p">;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">events</span> <span class="o">&amp;</span> <span class="n">EPOLLERR</span><span class="p">)</span> <span class="n">mask</span> <span class="o">|=</span> <span class="n">AE_WRITABLE</span><span class="o">|</span><span class="n">AE_READABLE</span><span class="p">;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">events</span> <span class="o">&amp;</span> <span class="n">EPOLLHUP</span><span class="p">)</span> <span class="n">mask</span> <span class="o">|=</span> <span class="n">AE_WRITABLE</span><span class="o">|</span><span class="n">AE_READABLE</span><span class="p">;</span>
+
+            <span class="c1">// 就绪事件和fd保存到 fired。</span>
+            <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">fired</span><span class="p">[</span><span class="n">j</span><span class="p">].</span><span class="n">fd</span> <span class="o">=</span> <span class="n">e</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">.</span><span class="n">fd</span><span class="p">;</span>
+            <span class="n">eventLoop</span><span class="o">-&gt;</span><span class="n">fired</span><span class="p">[</span><span class="n">j</span><span class="p">].</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">numevents</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-总结">3. 总结</h2>
+
+<ul>
+  <li>redis 没有使用第三方库，实现跨平台的异步事件驱动。对文件事件驱动封装也比较简洁高效。</li>
+</ul>
+
+<hr />
+
+<h2 id="4-参考">4. 参考</h2>
+
+<ul>
+  <li><a href="https://wenfh2020.com/2020/01/05/redis-gdb/">用 gdb 调试 redis</a></li>
+  <li><a href="http://www.uml.org.cn/oobject/201104212.asp">UML类图与类的关系详解</a></li>
+  <li>《redis 设计与实现》</li>
+  <li><a href="https://ruby-china.org/topics/38957">Redis 多线程的 Redis</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2020/04/09/redis-ae-file/">wenfh2020.com</a></p>
+</blockquote>

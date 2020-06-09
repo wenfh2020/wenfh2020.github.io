@@ -8,14 +8,13 @@
 # note:    nohup ./refresh.sh >> /tmp/blog_log.txt 2>&1 &
 # -------------------------------------------------------------------------------
 
-cd `dirname $0`
-work_path=`pwd`
+cd $(dirname $0)
+work_path=$(pwd)
 cd $work_path
 
 # find and kill
-_pids=`ps -ef | grep 'jekyll serve' | grep -v grep | awk '{print $2}'`
-for p in $_pids
-do
+_pids=$(ps -ef | grep 'jekyll serve' | grep -v grep | awk '{print $2}')
+for p in $_pids; do
     echo "kill pid=$p"
     kill -9 $p
 done

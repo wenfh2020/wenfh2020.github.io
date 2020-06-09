@@ -1,0 +1,143 @@
+<p>测试一下看看，Linux 环境下，这三个函数（<code class="highlighter-rouge">strcpy</code>, <code class="highlighter-rouge">strncpy</code>, <code class="highlighter-rouge">snprintf</code>）哪个比较安全。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-测试代码" id="markdown-toc-1-测试代码">1. 测试代码</a></li>
+  <li><a href="#2-看源码探究原因" id="markdown-toc-2-看源码探究原因">2. 看源码，探究原因</a></li>
+  <li><a href="#3-总结" id="markdown-toc-3-总结">3. 总结</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-测试代码">1. 测试代码</h2>
+
+<p>数据拷贝，当目标内存很小，源数据很大时，从测试结果看：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">snprintf</code> 结果正常，达到预期。</li>
+  <li><code class="highlighter-rouge">strcpy</code> 拷贝的数据打印出来有点问题，不知道是否正常。</li>
+  <li><code class="highlighter-rouge">strncpy</code> 崩溃了。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// test.c</span>
+<span class="cp">#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">test</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+    <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">p</span> <span class="o">=</span> <span class="s">"hello world"</span><span class="p">;</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">"%s"</span><span class="p">,</span> <span class="s">"snprintf: "</span><span class="p">);</span>
+    <span class="n">snprintf</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">test</span><span class="p">),</span> <span class="s">"%s"</span><span class="p">,</span> <span class="n">p</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"%s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">test</span><span class="p">);</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">"%s"</span><span class="p">,</span> <span class="s">"strcpy: "</span><span class="p">);</span>
+    <span class="n">strcpy</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">p</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"%s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">test</span><span class="p">);</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">"%s"</span><span class="p">,</span> <span class="s">"strncpy: "</span><span class="p">);</span>
+    <span class="n">strncpy</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">test</span><span class="p">));</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"%s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">test</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># gcc -g test.c -o test &amp;&amp; ./test</span>
+snprintf: h
+strcpy: hello world
+<span class="o">[</span>1]    18785 segmentation fault <span class="o">(</span>core dumped<span class="o">)</span>  ./test
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-看源码探究原因">2. 看源码，探究原因</h2>
+
+<ul>
+  <li>
+    <p>strcpy</p>
+
+    <p>从源码看，字符串拷贝是寻找 ‘\0’ 结束符，从上面的测试场景看，这个函数是不安全的。</p>
+  </li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// https://github.com/torvalds/linux/blob/master/lib/string.c</span>
+<span class="kt">char</span> <span class="o">*</span><span class="nf">strcpy</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">dest</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">src</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">tmp</span> <span class="o">=</span> <span class="n">dest</span><span class="p">;</span>
+    <span class="k">while</span> <span class="p">((</span><span class="o">*</span><span class="n">dest</span><span class="o">++</span> <span class="o">=</span> <span class="o">*</span><span class="n">src</span><span class="o">++</span><span class="p">)</span> <span class="o">!=</span> <span class="sc">'\0'</span><span class="p">)</span>
+        <span class="cm">/* nothing */</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">tmp</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>strncpy</p>
+
+    <p>从源码看，字符串拷贝也是寻找 ‘\0’ 结束符，而且有数据大小限制。上面测试场景，数据拷贝是安全的，但是 printf 出问题了，因为 printf 在打印字符串时，也是在找字符串的 ‘\0’ 结束符。而 strncpy 不会自动在字符串末尾填充 ‘\0’。</p>
+
+    <blockquote>
+      <p>关于 printf，详细可以参考下我的帖子 <a href="https://wenfh2020.com/2020/03/01/c-printf/">printf 从现象到本质</a></p>
+    </blockquote>
+  </li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// https://github.com/torvalds/linux/blob/master/lib/string.c</span>
+<span class="kt">char</span> <span class="o">*</span><span class="nf">strncpy</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">dest</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">tmp</span> <span class="o">=</span> <span class="n">dest</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">((</span><span class="o">*</span><span class="n">tmp</span> <span class="o">=</span> <span class="o">*</span><span class="n">src</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">src</span><span class="o">++</span><span class="p">;</span>
+        <span class="n">tmp</span><span class="o">++</span><span class="p">;</span>
+        <span class="n">count</span><span class="o">--</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">dest</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>sprintf</p>
+
+    <p>代码有点长，没仔细看完，从测试场景上看，是正常的。。。（不严谨啊。^_^!）</p>
+  </li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// https://github.com/torvalds/linux/blob/master/lib/vsprintf.c</span>
+<span class="kt">int</span> <span class="nf">snprintf</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">fmt</span><span class="p">,</span> <span class="p">...)</span> <span class="p">{</span>
+    <span class="kt">va_list</span> <span class="n">args</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+
+    <span class="n">va_start</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">fmt</span><span class="p">);</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">vsnprintf</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">fmt</span><span class="p">,</span> <span class="n">args</span><span class="p">);</span>
+    <span class="n">va_end</span><span class="p">(</span><span class="n">args</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="n">i</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">vsnprintf</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">fmt</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-总结">3. 总结</h2>
+
+<p>从测试结果看：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">snprintf</code> 比较安全。</li>
+  <li><code class="highlighter-rouge">strcpy</code> 不安全。</li>
+  <li><code class="highlighter-rouge">strncpy</code> 当目标内存很小时，拷贝完成后不会在末位填充 ‘\0’ ，拷贝操作后，目标字符串在使用中可能会有问题。</li>
+</ul>
+
+<hr />
+
+<p>内存越界是 c/c++ 一个坑，有时候要解决这类型的偶发问题，只能看缘分。所以平时使用，须要形成良好的编码习惯。</p>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

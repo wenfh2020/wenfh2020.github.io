@@ -1,0 +1,146 @@
+I"?W<p>Linux 环境下，用 <code class="highlighter-rouge">tcpdump</code> 抓包分析 tcp 三次握手和四次挥手/三次挥手。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-工具" id="markdown-toc-1-工具">1. 工具</a></li>
+  <li><a href="#2-抓包分析" id="markdown-toc-2-抓包分析">2. 抓包分析</a></li>
+  <li><a href="#3-tcp-状态变迁" id="markdown-toc-3-tcp-状态变迁">3. tcp 状态变迁</a></li>
+  <li><a href="#4-其它" id="markdown-toc-4-其它">4. 其它</a></li>
+  <li><a href="#5-参考" id="markdown-toc-5-参考">5. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-工具">1. 工具</h2>
+
+<ul>
+  <li>tcpdump</li>
+  <li>wireshark</li>
+  <li>telnet</li>
+</ul>
+
+<hr />
+
+<h2 id="2-抓包分析">2. 抓包分析</h2>
+
+<ul>
+  <li>服务端口 <code class="highlighter-rouge">12456</code>。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tcpdump <span class="nt">-i</span> lo <span class="nt">-vvn</span> port 12456 <span class="nt">-w</span> /tmp/tcpdump.cap
+</code></pre></div></div>
+
+<ul>
+  <li>客户端 <code class="highlighter-rouge">telnet</code>：</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>telnet 127.0.0.1 12456
+</code></pre></div></div>
+
+<ul>
+  <li>三次握手，四次挥手抓包内容：</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp"># tcpdump -r /tmp/tcpdump.cap
+</span><span class="o">---</span> <span class="n">handshakes</span>
+<span class="mo">02</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mo">03</span><span class="p">.</span><span class="mi">518594</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">S</span><span class="p">],</span> <span class="n">seq</span> <span class="mi">1527358664</span><span class="p">,</span> <span class="n">win</span> <span class="mi">43690</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">mss</span> <span class="mi">65495</span><span class="p">,</span><span class="n">sackOK</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102124122</span> <span class="n">ecr</span> <span class="mi">0</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">wscale</span> <span class="mi">11</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mi">22</span><span class="o">:</span><span class="mi">49</span><span class="o">:</span><span class="mi">27</span><span class="p">.</span><span class="mi">762588</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">S</span><span class="p">.],</span> <span class="n">seq</span> <span class="mi">2031984515</span><span class="p">,</span> <span class="n">ack</span> <span class="mi">1527358665</span><span class="p">,</span> <span class="n">win</span> <span class="mi">43690</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">mss</span> <span class="mi">65495</span><span class="p">,</span><span class="n">sackOK</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102124122</span> <span class="n">ecr</span> <span class="mi">102124122</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">wscale</span> <span class="mi">11</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mo">02</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mo">03</span><span class="p">.</span><span class="mi">518636</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[.],</span> <span class="n">ack</span> <span class="mi">1</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102124122</span> <span class="n">ecr</span> <span class="mi">102124122</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="o">---</span> <span class="n">send</span> <span class="n">msg</span>
+<span class="mo">02</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mo">05</span><span class="p">.</span><span class="mi">472290</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">P</span><span class="p">.],</span> <span class="n">seq</span> <span class="mi">1</span><span class="o">:</span><span class="mi">4</span><span class="p">,</span> <span class="n">ack</span> <span class="mi">1</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102126076</span> <span class="n">ecr</span> <span class="mi">102124122</span><span class="p">],</span> <span class="n">length</span> <span class="mi">3</span>
+<span class="mo">02</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mo">05</span><span class="p">.</span><span class="mi">472304</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[.],</span> <span class="n">ack</span> <span class="mi">4</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102126076</span> <span class="n">ecr</span> <span class="mi">102126076</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="o">---</span> <span class="n">waves</span>
+<span class="mo">02</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mi">15</span><span class="p">.</span><span class="mi">614921</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">F</span><span class="p">.],</span> <span class="n">seq</span> <span class="mi">4</span><span class="p">,</span> <span class="n">ack</span> <span class="mi">1</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102136219</span> <span class="n">ecr</span> <span class="mi">102126076</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mo">02</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mi">15</span><span class="p">.</span><span class="mi">654843</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[.],</span> <span class="n">ack</span> <span class="mi">5</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102136259</span> <span class="n">ecr</span> <span class="mi">102136219</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mo">02</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mi">25</span><span class="p">.</span><span class="mi">615242</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">F</span><span class="p">.],</span> <span class="n">seq</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ack</span> <span class="mi">5</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102146219</span> <span class="n">ecr</span> <span class="mi">102136219</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mo">02</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mi">25</span><span class="p">.</span><span class="mi">615276</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">27749</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[.],</span> <span class="n">ack</span> <span class="mi">2</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">102146219</span> <span class="n">ecr</span> <span class="mi">102146219</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+</code></pre></div></div>
+
+<ul>
+  <li>用神器 <code class="highlighter-rouge">wireshark</code> 打开 <code class="highlighter-rouge">*.cap</code> 文件。</li>
+</ul>
+
+<p><img src="/images/2020-04-13-09-46-38.png" alt="wireshark" data-action="zoom" /></p>
+
+<ul>
+  <li>流程</li>
+</ul>
+
+<p>从上面抓包数据看，我们可以描述一下 tcp 握手挥手工作流程。</p>
+
+<p><img src="/images/2020-04-13-13-20-03.png" alt="握手挥手流程" data-action="zoom" /></p>
+
+<ul>
+  <li>
+    <p>三次握手，三次挥手。</p>
+
+    <p>在本地进行简单测试，抓到的挥手包，多数只有三个，而不是四个。那为什么会出现三个挥手包呢？当客户端主动 close 关闭链接，服务端收到 FIN 后，发现已经没有新的数据要发送给客户端了，那么 ACK 和 FIN 会合成一个包下发，这样就节省了一次挥手。否则还是四次挥手。</p>
+    <blockquote>
+      <p>当服务端发现客户端断开后 (read () == 0)，sleep 一下，再调用 close，那么将会抓到 4 个挥手包。</p>
+    </blockquote>
+  </li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp"># tcpdump -r /tmp/tcpdump.cap
+</span><span class="o">---</span> <span class="n">handshakes</span>
+<span class="mi">13</span><span class="o">:</span><span class="mi">15</span><span class="o">:</span><span class="mi">40</span><span class="p">.</span><span class="mi">439590</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">25541</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">S</span><span class="p">],</span> <span class="n">seq</span> <span class="mi">2751955316</span><span class="p">,</span> <span class="n">win</span> <span class="mi">43690</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">mss</span> <span class="mi">65495</span><span class="p">,</span><span class="n">sackOK</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">54821043</span> <span class="n">ecr</span> <span class="mi">0</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">wscale</span> <span class="mi">11</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mi">12</span><span class="o">:</span><span class="mo">03</span><span class="o">:</span><span class="mi">10</span><span class="p">.</span><span class="mi">399044</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">25541</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">S</span><span class="p">.],</span> <span class="n">seq</span> <span class="mi">2140744854</span><span class="p">,</span> <span class="n">ack</span> <span class="mi">2751955317</span><span class="p">,</span> <span class="n">win</span> <span class="mi">43690</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">mss</span> <span class="mi">65495</span><span class="p">,</span><span class="n">sackOK</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">54821043</span> <span class="n">ecr</span> <span class="mi">54821043</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">wscale</span> <span class="mi">11</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mi">13</span><span class="o">:</span><span class="mi">15</span><span class="o">:</span><span class="mi">40</span><span class="p">.</span><span class="mi">439616</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">25541</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[.],</span> <span class="n">ack</span> <span class="mi">1</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">54821043</span> <span class="n">ecr</span> <span class="mi">54821043</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="o">---</span> <span class="n">waves</span>
+<span class="mi">13</span><span class="o">:</span><span class="mi">15</span><span class="o">:</span><span class="mi">57</span><span class="p">.</span><span class="mi">601816</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">25541</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">F</span><span class="p">.],</span> <span class="n">seq</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ack</span> <span class="mi">1</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">54838205</span> <span class="n">ecr</span> <span class="mi">54821043</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mi">13</span><span class="o">:</span><span class="mi">15</span><span class="o">:</span><span class="mi">57</span><span class="p">.</span><span class="mi">602406</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">25541</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[</span><span class="n">F</span><span class="p">.],</span> <span class="n">seq</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ack</span> <span class="mi">2</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">54838206</span> <span class="n">ecr</span> <span class="mi">54838205</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+<span class="mi">13</span><span class="o">:</span><span class="mi">15</span><span class="o">:</span><span class="mi">57</span><span class="p">.</span><span class="mi">602425</span> <span class="n">IP</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">12456</span> <span class="o">&gt;</span> <span class="n">localhost</span><span class="p">.</span><span class="mi">25541</span><span class="o">:</span> <span class="n">Flags</span> <span class="p">[.],</span> <span class="n">ack</span> <span class="mi">2</span><span class="p">,</span> <span class="n">win</span> <span class="mi">22</span><span class="p">,</span> <span class="n">options</span> <span class="p">[</span><span class="n">nop</span><span class="p">,</span><span class="n">nop</span><span class="p">,</span><span class="n">TS</span> <span class="n">val</span> <span class="mi">54838206</span> <span class="n">ecr</span> <span class="mi">54838206</span><span class="p">],</span> <span class="n">length</span> <span class="mi">0</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-tcp-状态变迁">3. tcp 状态变迁</h2>
+
+<blockquote>
+  <p>图片来源：《TCP/IP 详解卷 1：协议》 – 18.6 tcp 的状态变迁图</p>
+</blockquote>
+
+<p><img src="/images/2020-04-13-13-14-49.png" alt="tcp 状态变迁" data-action="zoom" /></p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// tcp_states.h</span>
+<span class="k">enum</span> <span class="p">{</span>
+    <span class="n">TCP_ESTABLISHED</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">TCP_SYN_SENT</span><span class="p">,</span>
+    <span class="n">TCP_SYN_RECV</span><span class="p">,</span>
+    <span class="n">TCP_FIN_WAIT1</span><span class="p">,</span>
+    <span class="n">TCP_FIN_WAIT2</span><span class="p">,</span>
+    <span class="n">TCP_TIME_WAIT</span><span class="p">,</span>
+    <span class="n">TCP_CLOSE</span><span class="p">,</span>
+    <span class="n">TCP_CLOSE_WAIT</span><span class="p">,</span>
+    <span class="n">TCP_LAST_ACK</span><span class="p">,</span>
+    <span class="n">TCP_LISTEN</span><span class="p">,</span>
+    <span class="n">TCP_CLOSING</span><span class="p">,</span>    <span class="cm">/* Now a valid state */</span>
+    <span class="n">TCP_NEW_SYN_RECV</span><span class="p">,</span>
+
+    <span class="n">TCP_MAX_STATES</span>    <span class="cm">/* Leave at the end! */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-其它">4. 其它</h2>
+
+<ul>
+  <li>客户端主动 connect 服务端，三次握手是在服务端 accept 前完成的。服务端 accept 前面添加 sleep 再抓下包看看。</li>
+</ul>
+
+<hr />
+
+<h2 id="5-参考">5. 参考</h2>
+
+<ul>
+  <li><a href="https://www.zhihu.com/question/55890292">为什么tcp 连接断开只有3个包？</a></li>
+  <li><a href="https://wiki.wireshark.org/TCP_Relative_Sequence_Numbers">TCP_Relative_Sequence_Numbers</a></li>
+  <li>《TCP/IP 详解卷 1：协议》</li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

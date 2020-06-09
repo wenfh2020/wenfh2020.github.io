@@ -237,7 +237,7 @@ void fd_install(unsigned int fd, struct file *file) {
 
 ## 4. 服务数据结构
 
-redis 的异步逻辑挺多细节的，结合上图，重点理解一下下列数据结构的一些成员。
+redis 的异步逻辑挺多细节的，结合上图，重点理解下列数据结构的一些成员。
 
 ### 4.1. 服务端结构
 

@@ -1,0 +1,62 @@
+<p>商品秒杀场景比较常见，例如 12306 抢票等等。是高并发和分布式系统处理的经典案例。个人没做过秒杀项目，仅仅对这个问题感兴趣，研究了一下。个人认为秒杀场景主要有两个核心问题：到点抢购负载和商品超量。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-负载问题" id="markdown-toc-1-负载问题">1. 负载问题</a></li>
+  <li><a href="#2-商品超量问题" id="markdown-toc-2-商品超量问题">2. 商品超量问题</a></li>
+  <li><a href="#3-总结" id="markdown-toc-3-总结">3. 总结</a></li>
+  <li><a href="#4-参考" id="markdown-toc-4-参考">4. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-负载问题">1. 负载问题</h2>
+
+<p>秒杀活动开始，终端请求洪水般涌入服务器。请求包经过去重处理（uid/ip/other），放进消息队列，排队等待消费处理。</p>
+
+<p><img src="/images/2020-03-23-02-49-14.png" alt="消息队列处理负载" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="2-商品超量问题">2. 商品超量问题</h2>
+
+<p>用户抢购流程：终端点击抢购按钮进入抢购页面 -&gt; 填单 -&gt; 提交订单。</p>
+
+<p>思路：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">logic server</code> 消费处理抢购请求。</li>
+  <li><code class="highlighter-rouge">num server</code> 维护商品数量。</li>
+  <li><code class="highlighter-rouge">logic server</code> 在处理抢购请求前先扣量，抢购请求处理失败或提交订单操作超时补量。</li>
+  <li><code class="highlighter-rouge">logic server</code> 扣量补量与 <code class="highlighter-rouge">num server</code> 交互。</li>
+  <li><code class="highlighter-rouge">logic server</code> 请求根据商品 id 为因子，通过一致性哈希，将同一个商品的量操作发送到相同的 <code class="highlighter-rouge">num server</code> 进行处理。</li>
+  <li><code class="highlighter-rouge">num server</code> 商品数量落地 MySQL，用悲观锁，主库上操作保证数据一致性。</li>
+  <li><code class="highlighter-rouge">num server</code> 为减少数据库的读写频率，从 MySQL 扣除一批次的量，放进进程内存。<strong>批次数据要进行记录</strong>，每次处理完毕，再进行下一批次数据的申请。批次处理类似于代理和厂家关系，代理卖完一批商品，再从厂家进货。</li>
+  <li><code class="highlighter-rouge">num server</code> 定时监控商品数据量变化，如果长时间不访问，内存中没分派完的量要回写 MySQL。</li>
+  <li><code class="highlighter-rouge">num server</code> 异常退出，重启或新节点启动需要检查上一批次是否完成，如果没完成需要统计该批次的量分发情况，把没有分发的量统计回收（每个分派出去的量，都通过 kafka 记录流水）。</li>
+</ul>
+
+<p><img src="/images/2020-03-23-15-37-46.png" alt="商品超量处理" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="3-总结">3. 总结</h2>
+
+<ul>
+  <li>系统将复杂的商品量维护逻辑都交给 <code class="highlighter-rouge">num server</code> 了，减少了业务复杂度的耦合。其它业务服务只需通过简单接口进行扣量和补量即可。</li>
+  <li><code class="highlighter-rouge">num server</code> 批次扣量操作，减少了业务对数据库的读写频率，提高了业务逻辑的并发。</li>
+  <li><code class="highlighter-rouge">num server</code> 每个分派的量，都需要通过 <code class="highlighter-rouge">kafka</code> 记录流水，方便异常统计，也相当于数据埋点。</li>
+  <li>这个秒杀处理方案，在分布式集群中添加了 <code class="highlighter-rouge">ketama</code> 一致性哈希算法，<code class="highlighter-rouge">logic server</code> 将同一个商品量的维护集中到一个 <code class="highlighter-rouge">num server</code> 节点中处理，减少了多节点处理，要增加全局加锁的问题。当然这增加了一些复杂度，<code class="highlighter-rouge">num server</code> 当单节点 <code class="highlighter-rouge">failover</code> 处理过程中，要处理好上一次处理的状态。</li>
+  <li><code class="highlighter-rouge">num server</code> 只是一个商品量的维护，同理，也可以通用到其它的一些 id 分配。</li>
+</ul>
+
+<h2 id="4-参考">4. 参考</h2>
+
+<ul>
+  <li><a href="https://blog.csdn.net/koastal/article/details/78995885">商品秒杀问题的解决方案</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

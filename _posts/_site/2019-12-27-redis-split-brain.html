@@ -1,0 +1,141 @@
+<p>由于网络问题，集群节点失去联系。主从节点数据不同步；重新平衡选举，产生多个主服务，导致数据不一致。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-解决方案" id="markdown-toc-1-解决方案">1. 解决方案</a></li>
+  <li><a href="#2-实现流程" id="markdown-toc-2-实现流程">2. 实现流程</a></li>
+  <li><a href="#3-参考" id="markdown-toc-3-参考">3. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-解决方案">1. 解决方案</h2>
+
+<p>比较简单的方案，修改 redis 配置 <a href="https://github.com/antirez/redis/blob/unstable/redis.conf">redis.conf</a> :</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># master 至少有 N 个副本连接。</span>
+min-slaves-to-write 3
+<span class="c"># 数据复制和同步的延迟不能超过 M 秒。</span>
+min-slaves-max-lag 10
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>注意：高版本 redis 已经修改这个两个选项</strong></p>
+
+  <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># min-replicas-to-write 3</span>
+<span class="c"># min-replicas-max-lag 10</span>
+</code></pre></div>  </div>
+</blockquote>
+
+<hr />
+
+<p>redis.conf 相关解析</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># It is possible for a master to stop accepting writes if there are less than</span>
+<span class="c"># N slaves connected, having a lag less or equal than M seconds.</span>
+<span class="c">#</span>
+<span class="c"># The N slaves need to be in "online" state.</span>
+<span class="c">#</span>
+<span class="c"># The lag in seconds, that must be &lt;= the specified value, is calculated from</span>
+<span class="c"># the last ping received from the slave, that is usually sent every second.</span>
+<span class="c">#</span>
+<span class="c"># This option does not GUARANTEE that N replicas will accept the write, but</span>
+<span class="c"># will limit the window of exposure for lost writes in case not enough slaves</span>
+<span class="c"># are available, to the specified number of seconds.</span>
+<span class="c">#</span>
+<span class="c"># For example to require at least 3 slaves with a lag &lt;= 10 seconds use:</span>
+<span class="c">#</span>
+<span class="c"># min-slaves-to-write 3</span>
+<span class="c"># min-slaves-max-lag 10</span>
+<span class="c">#</span>
+<span class="c"># Setting one or the other to 0 disables the feature.</span>
+<span class="c">#</span>
+<span class="c"># By default min-slaves-to-write is set to 0 (feature disabled) and</span>
+<span class="c"># min-slaves-max-lag is set to 10.</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-实现流程">2. 实现流程</h2>
+
+<ul>
+  <li>时钟定期检查副本链接健康情况。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define run_with_period(_ms_) if ((_ms_ &lt;= 1000/server.hz) || !(server.cronloops%((_ms_)/(1000/server.hz))))
+</span>
+<span class="kt">int</span> <span class="nf">serverCron</span><span class="p">(</span><span class="k">struct</span> <span class="n">aeEventLoop</span> <span class="o">*</span><span class="n">eventLoop</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">id</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">clientData</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">run_with_period</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span> <span class="n">replicationCron</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="cm">/* Replication cron function, called 1 time per second. */</span>
+<span class="c1">// 复制周期执行的函数，每秒调用1次。</span>
+<span class="kt">void</span> <span class="nf">replicationCron</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// 更新延迟至 lag 小于 min-slaves-max-lag 的从服务器数量</span>
+    <span class="n">refreshGoodSlavesCount</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="cm">/* This function counts the number of slaves with lag &lt;= min-slaves-max-lag.
+ * If the option is active, the server will prevent writes if there are not
+ * enough connected slaves with the specified lag (or less). */</span>
+<span class="c1">// 更新延迟至 lag 小 于min-slaves-max-lag 的从服务器数量</span>
+<span class="kt">void</span> <span class="nf">refreshGoodSlavesCount</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">listIter</span> <span class="n">li</span><span class="p">;</span>
+    <span class="n">listNode</span> <span class="o">*</span><span class="n">ln</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">good</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// 没设置限制则返回。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">server</span><span class="p">.</span><span class="n">repl_min_slaves_to_write</span> <span class="o">||</span>
+        <span class="o">!</span><span class="n">server</span><span class="p">.</span><span class="n">repl_min_slaves_max_lag</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+
+    <span class="n">listRewind</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">slaves</span><span class="p">,</span><span class="o">&amp;</span><span class="n">li</span><span class="p">);</span>
+    <span class="c1">// 遍历所有的从节点 client。</span>
+    <span class="k">while</span><span class="p">((</span><span class="n">ln</span> <span class="o">=</span> <span class="n">listNext</span><span class="p">(</span><span class="o">&amp;</span><span class="n">li</span><span class="p">)))</span> <span class="p">{</span>
+        <span class="n">client</span> <span class="o">*</span><span class="n">slave</span> <span class="o">=</span> <span class="n">ln</span><span class="o">-&gt;</span><span class="n">value</span><span class="p">;</span>
+        <span class="c1">// 计算延迟值</span>
+        <span class="kt">time_t</span> <span class="n">lag</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span> <span class="o">-</span> <span class="n">slave</span><span class="o">-&gt;</span><span class="n">repl_ack_time</span><span class="p">;</span>
+
+        <span class="c1">// 计数小于延迟限制的个数。</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">slave</span><span class="o">-&gt;</span><span class="n">replstate</span> <span class="o">==</span> <span class="n">SLAVE_STATE_ONLINE</span> <span class="o">&amp;&amp;</span>
+            <span class="n">lag</span> <span class="o">&lt;=</span> <span class="n">server</span><span class="p">.</span><span class="n">repl_min_slaves_max_lag</span><span class="p">)</span> <span class="n">good</span><span class="o">++</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">repl_good_slaves_count</span> <span class="o">=</span> <span class="n">good</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>超出配置范围，master 禁止写命令。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">processCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="cm">/* Don't accept write commands if there are not enough good slaves and
+     * user configured the min-slaves-to-write option. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">masterhost</span> <span class="o">==</span> <span class="nb">NULL</span> <span class="o">&amp;&amp;</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">repl_min_slaves_to_write</span> <span class="o">&amp;&amp;</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">repl_min_slaves_max_lag</span> <span class="o">&amp;&amp;</span>
+        <span class="n">c</span><span class="o">-&gt;</span><span class="n">cmd</span><span class="o">-&gt;</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CMD_WRITE</span> <span class="o">&amp;&amp;</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">repl_good_slaves_count</span> <span class="o">&lt;</span> <span class="n">server</span><span class="p">.</span><span class="n">repl_min_slaves_to_write</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">flagTransaction</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+        <span class="n">addReply</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">shared</span><span class="p">.</span><span class="n">noreplicaserr</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">C_OK</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-参考">3. 参考</h2>
+
+<ul>
+  <li><a href="https://redis.io/topics/replication">Replication</a></li>
+  <li><a href="https://www.cnblogs.com/yjmyzz/p/redis-split-brain-analysis.html">redis 脑裂等极端情况分析</a></li>
+  <li><a href="https://github.com/menwengit/redis_source_annotation">redis 3.2.8 的源码注释</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2019/12/27/redis-split-brain/">wenfh2020.com</a></p>
+</blockquote>

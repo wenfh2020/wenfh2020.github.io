@@ -1,0 +1,45 @@
+<p>Linux 文件权限属性，比较基础的知识，在这记录一下。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-权限" id="markdown-toc-1-权限">1. 权限</a></li>
+  <li><a href="#2-修改权限" id="markdown-toc-2-修改权限">2. 修改权限</a></li>
+  <li><a href="#3-参考" id="markdown-toc-3-参考">3. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-权限">1. 权限</h2>
+
+<p>我们用 <code class="highlighter-rouge">ls -l</code> 来看看目录下文件的属性。第一列是文件属性权限。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># ls -l</span>
+<span class="nt">-rw-r--r--</span>  1 wenfh2020  staff   803B 12  8 05:33 common.cpp
+<span class="nt">-rw-r--r--</span>  1 wenfh2020  staff   659B 12  8 08:00 common.h
+drwxr-xr-x  7 wenfh2020  staff   224B  3 13 14:51 lru
+<span class="nt">-rwxr-xr-x</span>  1 wenfh2020  staff    32K  3 11 18:00 main
+<span class="nt">-rw-r--r--</span>  1 wenfh2020  staff   2.7K 12 30 05:59 main.cpp
+</code></pre></div></div>
+
+<p><img src="/images/2020-03-17-11-00-14.png" alt="linux 权限属性" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="2-修改权限">2. 修改权限</h2>
+
+<p>可以用 <code class="highlighter-rouge">chmod</code> 命令进行修改。命令相关操作可以参考<a href="https://www.runoob.com/linux/linux-comm-chmod.html">Linux chmod命令</a></p>
+
+<hr />
+
+<h2 id="3-参考">3. 参考</h2>
+
+<ul>
+  <li>《鸟哥私房菜》</li>
+  <li><a href="https://www.runoob.com/linux/linux-file-attr-permission.html">Linux 文件基本属性</a></li>
+  <li><a href="https://www.cnblogs.com/ccw869476711/p/9213398.html">Linux文件和目录的777、755、644权限解释</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

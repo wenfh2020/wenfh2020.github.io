@@ -1,0 +1,50 @@
+<p>redis 的链表实现不是很复杂，从 <code class="highlighter-rouge">listNode</code> 可以知道，<code class="highlighter-rouge">list</code> 是一个双向链表，支持从链表首尾两边开始遍历结点。同时提供了 <code class="highlighter-rouge">listIter</code> 迭代器，方便前后方向迭代遍历。其它应该就是链表增删改查的一些常规操作了。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-文件" id="markdown-toc-1-文件">1. 文件</a></li>
+  <li><a href="#2-数据结构" id="markdown-toc-2-数据结构">2. 数据结构</a>    <ul>
+      <li><a href="#21-链表结点" id="markdown-toc-21-链表结点">2.1. 链表结点</a></li>
+      <li><a href="#22-链表迭代器" id="markdown-toc-22-链表迭代器">2.2. 链表迭代器</a></li>
+      <li><a href="#23-链表" id="markdown-toc-23-链表">2.3. 链表</a></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="1-文件">1. 文件</h2>
+
+<blockquote>
+  <p>adlist.h, adlist.c</p>
+</blockquote>
+
+<h2 id="2-数据结构">2. 数据结构</h2>
+
+<h3 id="21-链表结点">2.1. 链表结点</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="n">listNode</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">listNode</span> <span class="o">*</span><span class="n">prev</span><span class="p">;</span>
+    <span class="k">struct</span> <span class="n">listNode</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">value</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">listNode</span><span class="p">;</span>
+</code></pre></div></div>
+
+<h3 id="22-链表迭代器">2.2. 链表迭代器</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="n">listIter</span> <span class="p">{</span>
+    <span class="n">listNode</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">direction</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">listIter</span><span class="p">;</span>
+</code></pre></div></div>
+
+<h3 id="23-链表">2.3. 链表</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="n">list</span> <span class="p">{</span>
+    <span class="n">listNode</span> <span class="o">*</span><span class="n">head</span><span class="p">;</span>
+    <span class="n">listNode</span> <span class="o">*</span><span class="n">tail</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">dup</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">free</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">match</span><span class="p">)(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">key</span><span class="p">);</span>
+    <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">list</span><span class="p">;</span>
+</code></pre></div></div>

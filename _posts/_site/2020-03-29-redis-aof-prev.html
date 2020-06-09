@@ -1,0 +1,545 @@
+<p>aof (Append Only File) 是 redis 持久化的其中一种方式。</p>
+
+<p>服务器接收的每个写入操作命令，都会追加记录到 aof 文件末尾，当服务器重新启动时，记录的命令会重新载入到服务器内存还原数据。这一章我们走读一下源码，看看 aof 持久化的数据结构和应用场景是怎样的。</p>
+
+<blockquote>
+  <p>主要源码逻辑在 <code class="highlighter-rouge">aof.c</code> 文件中。</p>
+</blockquote>
+
+<ul id="markdown-toc">
+  <li><a href="#1-开启-aof-持久化模式" id="markdown-toc-1-开启-aof-持久化模式">1. 开启 aof 持久化模式</a></li>
+  <li><a href="#2-结构" id="markdown-toc-2-结构">2. 结构</a>    <ul>
+      <li><a href="#21-aof-文件结构" id="markdown-toc-21-aof-文件结构">2.1. aof 文件结构</a></li>
+      <li><a href="#22-aof-和-rdb-混合结构" id="markdown-toc-22-aof-和-rdb-混合结构">2.2. aof 和 rdb 混合结构</a></li>
+    </ul>
+  </li>
+  <li><a href="#3-持久化策略" id="markdown-toc-3-持久化策略">3. 持久化策略</a>    <ul>
+      <li><a href="#31-策略" id="markdown-toc-31-策略">3.1. 策略</a></li>
+      <li><a href="#32-流程原理" id="markdown-toc-32-流程原理">3.2. 流程原理</a></li>
+      <li><a href="#33-策略实现" id="markdown-toc-33-策略实现">3.3. 策略实现</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-异步持久化" id="markdown-toc-4-异步持久化">4. 异步持久化</a></li>
+</ul>
+
+<hr />
+
+<p>在了解 redis 持久化功能前，可以先看看 redis 作者这两篇文章：</p>
+
+<ul>
+  <li><a href="https://redis.io/topics/persistence#how-durable-is-the-append-only-file">Redis Persistence</a></li>
+  <li><a href="http://oldblog.antirez.com/post/redis-persistence-demystified.html">Redis persistence demystified</a></li>
+</ul>
+
+<blockquote>
+  <p>链接可能被墙，可以用国内搜索引擎搜索下对应的文章题目。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="1-开启-aof-持久化模式">1. 开启 aof 持久化模式</h2>
+
+<p>可以看一下 <a href="https://github.com/antirez/redis/blob/unstable/redis.conf">redis.conf</a> 有关 aof 持久化配置，有redis 作者丰富的注释内容。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 持久化方式 (yes - aof) / (no - rdb)</span>
+appendonly <span class="nb">yes</span>
+
+<span class="c"># aof 文件名，默认 "appendonly.aof"</span>
+appendfilename <span class="s2">"appendonly.aof"</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-结构">2. 结构</h2>
+
+<h3 id="21-aof-文件结构">2.1. aof 文件结构</h3>
+
+<p><img src="/images/2020-03-28-15-38-27.png" alt="aof 文件结构" data-action="zoom" /></p>
+
+<p><strong>aof 文件可以由 redis 协议命令组成文本文件</strong>。 第一次启动 redis，执行第一个写命令： <code class="highlighter-rouge">set key1111 1111</code>。我们观察一下 aof 文件：</p>
+
+<ul>
+  <li>redis 记录了 <code class="highlighter-rouge">select</code> 数据库命令，<code class="highlighter-rouge">^M</code> 是 <code class="highlighter-rouge">cat</code> 命令打印的 <code class="highlighter-rouge">\r\n</code>。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># cat -v appendonly.aof</span>
+<span class="k">*</span>2^M
+<span class="nv">$6</span>^M
+SELECT^M
+<span class="nv">$1</span>^M
+0^M
+<span class="k">*</span>3^M
+<span class="nv">$3</span>^M
+<span class="nb">set</span>^M
+<span class="nv">$7</span>^M
+key1111^M
+<span class="nv">$4</span>^M
+1111^M
+</code></pre></div></div>
+
+<ul>
+  <li>命令存储文本。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># set key1111 1111</span>
+<span class="k">*</span>3<span class="se">\r\n</span><span class="nv">$3</span><span class="se">\r\n</span><span class="nb">set</span><span class="se">\r\n</span><span class="nv">$7</span><span class="se">\r\n</span>key1111<span class="nv">$4</span><span class="se">\r\n</span><span class="nv">$1111</span><span class="se">\r\n</span>
+</code></pre></div></div>
+
+<ul>
+  <li><a href="https://redis.io/topics/protocol">RESP 协议格式</a>，以 <code class="highlighter-rouge">\r\n</code> 作为分隔符，有一个作用：可以用 <code class="highlighter-rouge">fgets</code>，将文件数据一行一行读出来。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">*</span>&lt;命令参数个数&gt;<span class="se">\r\n</span><span class="nv">$&lt;</span>第1个参数字符串长度&gt;<span class="se">\r\n</span><span class="nv">$&lt;</span>第1个参数字符串&gt;<span class="se">\r\n</span><span class="nv">$&lt;</span>第2个参数字符串长度&gt;<span class="se">\r\n</span><span class="nv">$&lt;</span>第2个参数字符串&gt;<span class="se">\r\n</span><span class="nv">$&lt;</span>第n个参数字符串长度&gt;<span class="se">\r\n</span><span class="nv">$&lt;</span>第n个参数字符串&gt;
+</code></pre></div></div>
+
+<ul>
+  <li>aof 追加命令记录源码。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sds</span> <span class="nf">catAppendOnlyGenericCommand</span><span class="p">(</span><span class="n">sds</span> <span class="n">dst</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="n">robj</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+    <span class="kt">int</span> <span class="n">len</span><span class="p">,</span> <span class="n">j</span><span class="p">;</span>
+    <span class="n">robj</span> <span class="o">*</span><span class="n">o</span><span class="p">;</span>
+
+    <span class="c1">// 命令参数个数</span>
+    <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'*'</span><span class="p">;</span>
+    <span class="n">len</span> <span class="o">=</span> <span class="mi">1</span><span class="o">+</span><span class="n">ll2string</span><span class="p">(</span><span class="n">buf</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">argc</span><span class="p">);</span>
+    <span class="n">buf</span><span class="p">[</span><span class="n">len</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'\r'</span><span class="p">;</span>
+    <span class="n">buf</span><span class="p">[</span><span class="n">len</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'\n'</span><span class="p">;</span>
+    <span class="n">dst</span> <span class="o">=</span> <span class="n">sdscatlen</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span><span class="n">buf</span><span class="p">,</span><span class="n">len</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="n">getDecodedObject</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">j</span><span class="p">]);</span>
+        <span class="c1">// 参数字符串长度</span>
+        <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'$'</span><span class="p">;</span>
+        <span class="n">len</span> <span class="o">=</span> <span class="mi">1</span><span class="o">+</span><span class="n">ll2string</span><span class="p">(</span><span class="n">buf</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">));</span>
+        <span class="n">buf</span><span class="p">[</span><span class="n">len</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'\r'</span><span class="p">;</span>
+        <span class="n">buf</span><span class="p">[</span><span class="n">len</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="sc">'\n'</span><span class="p">;</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="n">sdscatlen</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span><span class="n">buf</span><span class="p">,</span><span class="n">len</span><span class="p">);</span>
+        <span class="c1">// 参数</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="n">sdscatlen</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">));</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="n">sdscatlen</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span><span class="s">"</span><span class="se">\r\n</span><span class="s">"</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span>
+        <span class="n">decrRefCount</span><span class="p">(</span><span class="n">o</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">dst</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="22-aof-和-rdb-混合结构">2.2. aof 和 rdb 混合结构</h3>
+
+<p><img src="/images/2020-03-28-16-19-34.png" alt="rdb aof 混合结构" data-action="zoom" /></p>
+
+<p><strong>redis 支持 aof 和 rdb 持久化同时使用</strong>，rdb 和 aof 存储格式同时存储在一个 aof 文件中。</p>
+
+<p>rdb 持久化速度快，而且落地文件小，这个优势理应加强使用。redis 持久化目前有两种方式，最终结合为一种方式，使其更加高效，这是 redis 作者一直努力的目标。</p>
+
+<blockquote>
+  <p>有关 rdb 持久化，可以参考帖子：</p>
+
+  <p><a href="https://wenfh2020.com/2020/03/19/redis-rdb-struct/">[redis 源码走读] rdb 持久化 - 文件结构</a></p>
+
+  <p><a href="https://wenfh2020.com/2020/03/19/redis-rdb-application/">[redis 源码走读] rdb 持久化 - 应用场景</a></p>
+</blockquote>
+
+<ul>
+  <li>可以通过配置，aof 持久化模式下，内存数据可以重写存储为 rdb 格式的 aof 文件。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+
+<span class="c"># 开启 aof 持久化模式</span>
+appendonly <span class="nb">yes</span>
+
+<span class="c"># [RDB file][AOF tail] 支持 aof 和 rdb 混合持久化。</span>
+aof-use-rdb-preamble <span class="nb">yes</span>
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// rdb 持久化时，添加 aof 标识。</span>
+<span class="kt">int</span> <span class="nf">rdbSaveInfoAuxFields</span><span class="p">(</span><span class="n">rio</span> <span class="o">*</span><span class="n">rdb</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rdbflags</span><span class="p">,</span> <span class="n">rdbSaveInfo</span> <span class="o">*</span><span class="n">rsi</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rdbSaveAuxFieldStrInt</span><span class="p">(</span><span class="n">rdb</span><span class="p">,</span><span class="s">"aof-preamble"</span><span class="p">,</span><span class="n">aof_preamble</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>redis 第一次启动后，执行第二个命令 <code class="highlighter-rouge">bgrewriteaof</code> 重写 aof 文件。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># cat -v appendonly.aof</span>
+REDIS0009�      redis-ver^K999.999.999�
+redis-bits�@�^Ectime�M-^J�<span class="o">}</span>^�^Hused-mem�^Pl^Q^@�^Laof-preamble
+�^A�^@�^A^@^@^Gkey1111�W^D��^L�6Afi�
+</code></pre></div></div>
+
+<ul>
+  <li>redis 第一次启动后，执行第三个命令 <code class="highlighter-rouge">set key2222 2222</code>，aof 文件结构展示了 rdb 和 aof 结合存储方式。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># cat -v appendonly.aof</span>
+REDIS0009�      redis-ver^K999.999.999�
+redis-bits�@�^Ectime�M-^J�<span class="o">}</span>^�^Hused-mem�^Pl^Q^@�^Laof-preamble
+�^A�^@�^A^@^@^Gkey1111�W^D��^L�6Afi�<span class="k">*</span>2^M
+<span class="nv">$6</span>^M
+SELECT^M
+<span class="nv">$1</span>^M
+0^M
+<span class="k">*</span>3^M
+<span class="nv">$3</span>^M
+<span class="nb">set</span>^M
+<span class="nv">$7</span>^M
+key2222^M
+<span class="nv">$4</span>^M
+2222^M
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-持久化策略">3. 持久化策略</h2>
+
+<h3 id="31-策略">3.1. 策略</h3>
+
+<p>磁盘 I/O 速度慢，redis 作为高性能的缓存数据库，在平衡性能和持久化上，提供了几个存储策略：</p>
+
+<blockquote>
+  <p>aof 持久化，每秒刷新一次缓存到磁盘，这是 redis aof 持久化默认的操作，兼顾性能和持久化。如果使用场景数据很重要，可以设置每条命令刷新磁盘一次，但是速度会非常慢。如果 redis 只作为缓存，持久化不那么重要，那么刷盘行为交给 Linux 系统管理。</p>
+</blockquote>
+
+<ul>
+  <li>每秒将新命令缓存刷新到磁盘。速度足够快，如果 redis 发生异常，您可能会丢失1秒的数据。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+appendfsync everysec
+</code></pre></div></div>
+
+<ul>
+  <li>每次将新命令刷新到磁盘，非常非常慢，但是非常安全。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+appendfsync always
+</code></pre></div></div>
+
+<ul>
+  <li>redis 不主动刷新文件缓存到磁盘，只需将数据交给操作系统即可。速度更快，但是更不安全。一般情况下，Linux 使用此配置每30秒刷新一次数据。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># redis.conf</span>
+appendfsync no
+</code></pre></div></div>
+
+<h3 id="32-流程原理">3.2. 流程原理</h3>
+
+<ul>
+  <li>
+    <p>文件数据刷新到磁盘原理：</p>
+
+    <p>传统的 UNIX 实现在内核中设有缓冲存储器，⼤多数磁盘 I/O 都通过缓存进⾏。</p>
+
+    <p>当将数据写到文件上时，通常该数据先由内核复制到缓存中，如果该缓存尚未写满，则并不将其排入输出队列，⽽是等待其写满或者当内核需要重⽤该缓存以便存放其他磁盘块数据时，再将该缓存排入输出队列，然后待其到达队首时，才进⾏实际的 I/O 操作。这种输出⽅式被称之为延迟写(delayed write)。</p>
+
+    <p>延迟写减少了磁盘读写次数，但是却降低了文件内容的更新速度，使得欲写到⽂件中的数据在⼀段时间内并没有写到磁盘上。当系统发⽣生故障时，这种延迟可能造成⽂件更新内容的丢失。为了保证磁盘上实际文件系统与缓存中内容的一致性，UNIX系统提供了 sync 和 fsync 两个系统调⽤函数。</p>
+
+    <p>sync 只是将所有修改过的块的缓存排入写队列，然后就返回，它并不等待实际 I/O操作结束。系统精灵进程 (通常称为 update)一般每隔 30秒调⽤一次 sync 函数。这就保证了定期刷新内核的块缓存。</p>
+
+    <p>函数fsync 只引⽤单个文件，它等待I/O结束，然后返回。fsync 可用于数据库这样的应用程序，它确保修改过的块⽴即写到磁盘上。</p>
+
+    <blockquote>
+      <p>上文引用自 《UNINX 环境高级编程》 4.24</p>
+    </blockquote>
+  </li>
+</ul>
+
+<p><img src="/images/2020-03-29-19-12-04.png" alt="数据持久化流程" data-action="zoom" /></p>
+
+<ul>
+  <li>文件数据刷新到磁盘流程。</li>
+</ul>
+
+<ol>
+  <li>client 向 redis 服务发送写命令。</li>
+  <li>redis 服务接收到 client 发送的写命令，存储于 redis 进程内存中（redis 服务缓存）。</li>
+  <li>
+    <p>redis 服务调用接口 write 将进程内存数据写入文件。</p>
+
+    <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="kt">void</span> <span class="nf">flushAppendOnlyFile</span><span class="p">(</span><span class="kt">int</span> <span class="n">force</span><span class="p">)</span> <span class="p">{</span>
+     <span class="p">...</span>
+     <span class="n">nwritten</span> <span class="o">=</span> <span class="n">aofWrite</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fd</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">));</span>
+     <span class="p">...</span>
+ <span class="p">}</span>
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>redis 服务调用接口(<code class="highlighter-rouge">redis_fsync</code>)，将文件在内核缓冲区的数据刷新到磁盘缓冲区中。</p>
+
+    <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="cm">/* Define redis_fsync to fdatasync() in Linux and fsync() for all the rest */</span>
+ <span class="cp">#ifdef __linux__
+</span> <span class="cp">#define redis_fsync fdatasync
+</span> <span class="cp">#else
+</span> <span class="cp">#define redis_fsync fsync
+</span> <span class="cp">#endif
+</span></code></pre></div>    </div>
+  </li>
+  <li>磁盘控制器将磁盘缓冲区数据写入到磁盘物理介质中。</li>
+</ol>
+
+<hr />
+
+<p>流程走到第 5 步，数据才算真正持久化成功。其中 2-4 步骤，一般情况下，系统会提供对外接口给服务控制，但是第 5 步没有接口，redis 服务控制不了磁盘缓存写入物理介质。一般情况下，进程正常退出或者崩溃退出，第 5 步机器系统会执行的。但是如果断电情况或其他物理异常，这样磁盘数据还是会丢失一部分。</p>
+
+<p>如果用 <code class="highlighter-rouge">appendfsync everysec</code> 配置，正常情况程序退出可能会丢失 1 - 2 秒数据，但是断电等物理情况导致系统终止，丢失的数据就不可预料了。</p>
+
+<blockquote>
+  <p>参考 <a href="http://oldblog.antirez.com/post/redis-persistence-demystified.html">Redis persistence demystified</a></p>
+</blockquote>
+
+<hr />
+
+<h3 id="33-策略实现">3.3. 策略实现</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define AOF_WRITE_LOG_ERROR_RATE 30 </span><span class="cm">/* Seconds between errors logging. */</span><span class="cp">
+</span>
+<span class="c1">// 刷新缓存到磁盘。</span>
+<span class="kt">void</span> <span class="nf">flushAppendOnlyFile</span><span class="p">(</span><span class="kt">int</span> <span class="n">force</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">ssize_t</span> <span class="n">nwritten</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">sync_in_progress</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">mstime_t</span> <span class="n">latency</span><span class="p">;</span>
+
+    <span class="c1">// 新的命令数据是先写入 aof 缓冲区的，所以先判断缓冲区是否有数据需要刷新到磁盘。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sdslen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="cm">/* 每秒刷新策略，有可能存在缓冲区是空的，但是还有数据没刷新磁盘的情况，需要执行刷新操作。
+         * 当异步线程还有刷盘任务没有完成，新的刷盘任务是不会执行的，但是 aof_buf 已经写进了
+         * 文件缓存，aof_buf 缓存任务已经完成需要清空。只是文件缓存还没刷新到磁盘，数据只在文件缓存
+         * 里，还算不上最终落地，需要调用 redis_fsync 才会将文件缓存刷新到磁盘。* aof_fsync_offset 才会最后更新到刷盘的位置*/</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fsync</span> <span class="o">==</span> <span class="n">AOF_FSYNC_EVERYSEC</span> <span class="o">&amp;&amp;</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">aof_fsync_offset</span> <span class="o">!=</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span> <span class="o">&amp;&amp;</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span> <span class="o">&gt;</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_last_fsync</span> <span class="o">&amp;&amp;</span>
+            <span class="o">!</span><span class="p">(</span><span class="n">sync_in_progress</span> <span class="o">=</span> <span class="n">aofFsyncInProgress</span><span class="p">()))</span> <span class="p">{</span>
+            <span class="k">goto</span> <span class="n">try_fsync</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 每秒刷新策略，采用的是后台线程刷新方式，检查后台线程是否还有刷新任务没完成。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fsync</span> <span class="o">==</span> <span class="n">AOF_FSYNC_EVERYSEC</span><span class="p">)</span>
+        <span class="n">sync_in_progress</span> <span class="o">=</span> <span class="n">aofFsyncInProgress</span><span class="p">();</span>
+
+    <span class="c1">// 部分操作需要 force 强制写入，不接受延时。例如退出 redis 服务。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fsync</span> <span class="o">==</span> <span class="n">AOF_FSYNC_EVERYSEC</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">force</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">sync_in_progress</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_flush_postponed_start</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+                <span class="c1">// 如果后台线程还有刷新任务，当前刷新需要延后操作。</span>
+                <span class="n">server</span><span class="p">.</span><span class="n">aof_flush_postponed_start</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span><span class="p">;</span>
+                <span class="k">return</span><span class="p">;</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">unixtime</span> <span class="o">-</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_flush_postponed_start</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+                <span class="c1">// 延时操作不能超过 2 秒，否则强制执行。</span>
+                <span class="k">return</span><span class="p">;</span>
+            <span class="p">}</span>
+
+            <span class="c1">// 延时超时，强制执行。</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">aof_delayed_fsync</span><span class="o">++</span><span class="p">;</span>
+            <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_NOTICE</span><span class="p">,</span><span class="s">"Asynchronous AOF fsync is taking too long (disk is busy?). Writing the AOF buffer without waiting for fsync to complete, this may slow down Redis."</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="p">...</span>
+
+    <span class="c1">// 写缓冲区数据到文件。</span>
+    <span class="n">nwritten</span> <span class="o">=</span> <span class="n">aofWrite</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fd</span><span class="p">,</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">,</span><span class="n">sdslen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">));</span>
+    <span class="p">...</span>
+    <span class="cm">/* We performed the write so reset the postponed flush sentinel to zero. */</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">aof_flush_postponed_start</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// 处理写文件异常</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">nwritten</span> <span class="o">!=</span> <span class="p">(</span><span class="kt">ssize_t</span><span class="p">)</span><span class="n">sdslen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">static</span> <span class="kt">time_t</span> <span class="n">last_write_error_log</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">can_log</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+        <span class="c1">// 设置异常日志打印频率</span>
+        <span class="k">if</span> <span class="p">((</span><span class="n">server</span><span class="p">.</span><span class="n">unixtime</span> <span class="o">-</span> <span class="n">last_write_error_log</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">AOF_WRITE_LOG_ERROR_RATE</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">can_log</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+            <span class="n">last_write_error_log</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="cm">/* Log the AOF write error and record the error code. */</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">nwritten</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">can_log</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span><span class="s">"Error writing to the AOF file: %s"</span><span class="p">,</span>
+                    <span class="n">strerror</span><span class="p">(</span><span class="n">errno</span><span class="p">));</span>
+                <span class="n">server</span><span class="p">.</span><span class="n">aof_last_write_errno</span> <span class="o">=</span> <span class="n">errno</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">can_log</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span><span class="s">"Short write while writing to "</span>
+                                       <span class="s">"the AOF file: (nwritten=%lld, "</span>
+                                       <span class="s">"expected=%lld)"</span><span class="p">,</span>
+                                       <span class="p">(</span><span class="kt">long</span> <span class="kt">long</span><span class="p">)</span><span class="n">nwritten</span><span class="p">,</span>
+                                       <span class="p">(</span><span class="kt">long</span> <span class="kt">long</span><span class="p">)</span><span class="n">sdslen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">));</span>
+            <span class="p">}</span>
+
+            <span class="cm">/* 写入了部分数据，新写入的数据有可能是不完整的命令。这样会导致 redis 启动时，
+             * 解析 aof 文件失败，所以需要将文件截断到上一次有效写入的位置。*/</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">ftruncate</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fd</span><span class="p">,</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">can_log</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span> <span class="s">"Could not remove short write "</span>
+                             <span class="s">"from the append-only file.  Redis may refuse "</span>
+                             <span class="s">"to load the AOF the next time it starts.  "</span>
+                             <span class="s">"ftruncate: %s"</span><span class="p">,</span> <span class="n">strerror</span><span class="p">(</span><span class="n">errno</span><span class="p">));</span>
+                <span class="p">}</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="cm">/* If the ftruncate() succeeded we can set nwritten to
+                 * -1 since there is no longer partial data into the AOF. */</span>
+                <span class="n">nwritten</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">aof_last_write_errno</span> <span class="o">=</span> <span class="n">ENOSPC</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 处理错误</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fsync</span> <span class="o">==</span> <span class="n">AOF_FSYNC_ALWAYS</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 命令实时更新策略下，如果出现写文件错误，需要关闭服务。</span>
+            <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span><span class="s">"Can't recover from AOF write error when the AOF fsync policy is 'always'. Exiting..."</span><span class="p">);</span>
+            <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="cm">/* 其它策略，出现写入错误，更新写入成功部分，没写成功部分则在时钟里定时检查，重新写入。*/</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">aof_last_write_status</span> <span class="o">=</span> <span class="n">C_ERR</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">nwritten</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span> <span class="o">+=</span> <span class="n">nwritten</span><span class="p">;</span>
+                <span class="n">sdsrange</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">,</span><span class="n">nwritten</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="k">return</span><span class="p">;</span> <span class="cm">/* We'll try again on the next call... */</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// 之前持久化异常，现在已经正常恢复，解除异常标识。</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_last_write_status</span> <span class="o">==</span> <span class="n">C_ERR</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span>
+                <span class="s">"AOF write error looks solved, Redis can write again."</span><span class="p">);</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">aof_last_write_status</span> <span class="o">=</span> <span class="n">C_OK</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span> <span class="o">+=</span> <span class="n">nwritten</span><span class="p">;</span>
+
+    <span class="c1">// 持久化成功，清空 aof 缓冲区。</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">sdslen</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">)</span><span class="o">+</span><span class="n">sdsavail</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">4000</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">sdsclear</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">sdsfree</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span><span class="p">);</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_buf</span> <span class="o">=</span> <span class="n">sdsempty</span><span class="p">();</span>
+    <span class="p">}</span>
+
+<span class="nl">try_fsync:</span>
+    <span class="c1">// 检查当有子进程在操作时是否允许刷新文件缓存到磁盘。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_no_fsync_on_rewrite</span> <span class="o">&amp;&amp;</span> <span class="n">hasActiveChildProcess</span><span class="p">())</span>
+        <span class="k">return</span><span class="p">;</span>
+
+    <span class="c1">// 刷新文件缓存到磁盘。</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fsync</span> <span class="o">==</span> <span class="n">AOF_FSYNC_ALWAYS</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">latencyStartMonitor</span><span class="p">(</span><span class="n">latency</span><span class="p">);</span>
+        <span class="n">redis_fsync</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fd</span><span class="p">);</span> <span class="cm">/* Let's try to get this data on the disk */</span>
+        <span class="n">latencyEndMonitor</span><span class="p">(</span><span class="n">latency</span><span class="p">);</span>
+        <span class="n">latencyAddSampleIfNeeded</span><span class="p">(</span><span class="s">"aof-fsync-always"</span><span class="p">,</span><span class="n">latency</span><span class="p">);</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_fsync_offset</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span><span class="p">;</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_last_fsync</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fsync</span> <span class="o">==</span> <span class="n">AOF_FSYNC_EVERYSEC</span> <span class="o">&amp;&amp;</span>
+                <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span> <span class="o">&gt;</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_last_fsync</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">sync_in_progress</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 将刷新文件缓存到磁盘操作添加到异步线程处理。</span>
+            <span class="n">aof_background_fsync</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fd</span><span class="p">);</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">aof_fsync_offset</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_last_fsync</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-异步持久化">4. 异步持久化</h2>
+
+<p>redis 作为高性能缓存系统，它的主逻辑都在主进程主线程中实现运行的。而持久化写磁盘是一个低效缓慢操作，因此redis 一般情况下不允许这个操作在主线程中运行。这样 redis 开启了后台线程，用来异步处理任务，保障主线程可以高速运行。</p>
+
+<ul>
+  <li>添加异步任务</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Define redis_fsync to fdatasync() in Linux and fsync() for all the rest */</span>
+<span class="cp">#ifdef __linux__
+#define redis_fsync fdatasync
+#else
+#define redis_fsync fsync
+#endif
+</span>
+<span class="kt">void</span> <span class="nf">flushAppendOnlyFile</span><span class="p">(</span><span class="kt">int</span> <span class="n">force</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fsync</span> <span class="o">==</span> <span class="n">AOF_FSYNC_EVERYSEC</span> <span class="o">&amp;&amp;</span>
+                <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span> <span class="o">&gt;</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_last_fsync</span><span class="p">))</span> <span class="p">{</span>
+        <span class="c1">// 每秒刷新缓存到磁盘一次。</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">sync_in_progress</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 添加任务到后台线程。</span>
+            <span class="n">aof_background_fsync</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">aof_fd</span><span class="p">);</span>
+            <span class="n">server</span><span class="p">.</span><span class="n">aof_fsync_offset</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">aof_current_size</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">server</span><span class="p">.</span><span class="n">aof_last_fsync</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="n">unixtime</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 添加异步任务</span>
+<span class="kt">void</span> <span class="nf">aof_background_fsync</span><span class="p">(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">bioCreateBackgroundJob</span><span class="p">(</span><span class="n">BIO_AOF_FSYNC</span><span class="p">,(</span><span class="kt">void</span><span class="o">*</span><span class="p">)(</span><span class="kt">long</span><span class="p">)</span><span class="n">fd</span><span class="p">,</span><span class="nb">NULL</span><span class="p">,</span><span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>异步线程刷新缓存到磁盘。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 后台异步线程创建</span>
+<span class="kt">void</span> <span class="nf">bioInit</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">BIO_NUM_OPS</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)</span> <span class="n">j</span><span class="p">;</span>
+        <span class="c1">// 创建线程</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="kr">thread</span><span class="p">,</span><span class="o">&amp;</span><span class="n">attr</span><span class="p">,</span><span class="n">bioProcessBackgroundJobs</span><span class="p">,</span><span class="n">arg</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">serverLog</span><span class="p">(</span><span class="n">LL_WARNING</span><span class="p">,</span><span class="s">"Fatal: Can't initialize Background Jobs."</span><span class="p">);</span>
+            <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">bio_threads</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="kr">thread</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 添加异步任务</span>
+<span class="kt">void</span> <span class="nf">bioCreateBackgroundJob</span><span class="p">(</span><span class="kt">int</span> <span class="n">type</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg1</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg2</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg3</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">bio_job</span> <span class="o">*</span><span class="n">job</span> <span class="o">=</span> <span class="n">zmalloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">job</span><span class="p">));</span>
+
+    <span class="n">job</span><span class="o">-&gt;</span><span class="n">time</span> <span class="o">=</span> <span class="n">time</span><span class="p">(</span><span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">job</span><span class="o">-&gt;</span><span class="n">arg1</span> <span class="o">=</span> <span class="n">arg1</span><span class="p">;</span>
+    <span class="n">job</span><span class="o">-&gt;</span><span class="n">arg2</span> <span class="o">=</span> <span class="n">arg2</span><span class="p">;</span>
+    <span class="n">job</span><span class="o">-&gt;</span><span class="n">arg3</span> <span class="o">=</span> <span class="n">arg3</span><span class="p">;</span>
+    <span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">bio_mutex</span><span class="p">[</span><span class="n">type</span><span class="p">]);</span>
+    <span class="n">listAddNodeTail</span><span class="p">(</span><span class="n">bio_jobs</span><span class="p">[</span><span class="n">type</span><span class="p">],</span><span class="n">job</span><span class="p">);</span>
+    <span class="n">bio_pending</span><span class="p">[</span><span class="n">type</span><span class="p">]</span><span class="o">++</span><span class="p">;</span>
+    <span class="n">pthread_cond_signal</span><span class="p">(</span><span class="o">&amp;</span><span class="n">bio_newjob_cond</span><span class="p">[</span><span class="n">type</span><span class="p">]);</span>
+    <span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">bio_mutex</span><span class="p">[</span><span class="n">type</span><span class="p">]);</span>
+<span class="p">}</span>
+
+<span class="c1">// 线程处理</span>
+<span class="kt">void</span> <span class="o">*</span><span class="nf">bioProcessBackgroundJobs</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">type</span> <span class="o">==</span> <span class="n">BIO_AOF_FSYNC</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 刷新内核缓存到磁盘。</span>
+        <span class="n">redis_fsync</span><span class="p">((</span><span class="kt">long</span><span class="p">)</span><span class="n">job</span><span class="o">-&gt;</span><span class="n">arg1</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2020/03/29/redis-aof-prev/">wenfh2020.com</a></p>
+</blockquote>

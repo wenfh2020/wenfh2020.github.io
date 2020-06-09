@@ -1,0 +1,97 @@
+I"<p>父进程 fork 子进程后，子进程通过 <code class="highlighter-rouge">copy-on-write</code> 模式获得父进程内存，也就是子进程共用了大部分父进程内存，只有当子进程在修改自己进程内存后，共享部分，才会把那些修改的拷贝出来，这样可以节省系统大量内存分配。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-系统" id="markdown-toc-1-系统">1. 系统</a></li>
+  <li><a href="#2-测试" id="markdown-toc-2-测试">2. 测试</a></li>
+  <li><a href="#3-测试源码" id="markdown-toc-3-测试源码">3. 测试源码</a></li>
+  <li><a href="#4-测试结果" id="markdown-toc-4-测试结果">4. 测试结果</a></li>
+  <li><a href="#5-参考" id="markdown-toc-5-参考">5. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-系统">1. 系统</h2>
+
+<p>macos</p>
+
+<hr />
+
+<h2 id="2-测试">2. 测试</h2>
+
+<p>测试对象申请一块内存，主进程 fork 子进程后监测子进程对内存数据修改前后状况。</p>
+
+<p><img src="/images/2020-03-11-10-09-06.png" alt="子进程数据修改前" data-action="zoom" /></p>
+
+<p><img src="/images/2020-03-11-10-09-21.png" alt="子进程数据修改后" data-action="zoom" /></p>
+
+<blockquote>
+  <p>测试进程跑得比较快，跑了两次去抓图，所以两次抓图的进程不一样。感兴趣的朋友可以拿<a href="https://github.com/wenfh2020/c_test/blob/master/normal/proc.cpp">源码</a>测试下。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="3-测试源码">3. 测试源码</h2>
+
+<p><a href="https://github.com/wenfh2020/c_test/blob/master/normal/proc.cpp">源码</a></p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">alloc_data</span> <span class="n">g_data</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">pid_t</span> <span class="n">pid</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="mi">0</span> <span class="o">==</span> <span class="n">pid</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"child pid: %d, data ptr: %#lx</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">getpid</span><span class="p">(),</span>
+               <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)</span><span class="o">&amp;</span><span class="n">g_data</span><span class="p">);</span>
+        <span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span>  <span class="c1">// update data before</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"child pid: %d, reset data:</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">getpid</span><span class="p">());</span>
+        <span class="n">g_data</span><span class="p">.</span><span class="n">reset</span><span class="p">();</span>
+        <span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span>  <span class="c1">// update data later</span>
+        <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">pid</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"parent pid: %d, data ptr: %#lx</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">getpid</span><span class="p">(),</span>
+               <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)</span><span class="o">&amp;</span><span class="n">g_data</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"fork fail</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+        <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">"parent end, pid: %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">getpid</span><span class="p">());</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-测试结果">4. 测试结果</h2>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>alloc, data ptr: 0x602140, array ptr: 0x602148
+parent pid: 29118, data ptr: 0x602140
+child pid: 29126, data ptr: 0x602140
+child pid: 29126, reset data:
+reset data, data ptr: 0x602140, array ptr: 0x602148
+delete data, pid: 29126
+child 29126 terminated normally with <span class="nb">exit </span>status <span class="o">=</span> 0
+sig_child_handler end, errno: 0
+parent end, pid: 29118
+delete data, pid: 29118
+</code></pre></div></div>
+
+<ol>
+  <li>子进程拷贝父进程的数据，数据地址（虚拟地址）是一样的。</li>
+  <li>父进程 alloc 了一次数据，delete 了两次数据，子进程只是拷贝了父进程数据，没有跑父进程 fork 前的代码逻辑。
+3.子进程有自己的独立空间， 子进程修改数据后，copy-on-write，子进程空间将分配新的数据空间存储新数据（top 查看进程负载情况）。</li>
+</ol>
+
+<hr />
+
+<h2 id="5-参考">5. 参考</h2>
+
+<ul>
+  <li>《深入理解计算机系统》第二部分，8.4 章 进程控制</li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

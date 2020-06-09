@@ -1,0 +1,130 @@
+<p>自动代码工具，根据 sql 脚本的语法特征，提取脚本的表名（table name）和其对应的列（column）信息，抽象成类，并生成对应的 C++ 源码文件。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-工具作用" id="markdown-toc-1-工具作用">1. 工具作用</a></li>
+  <li><a href="#2-使用" id="markdown-toc-2-使用">2. 使用</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-工具作用">1. 工具作用</h2>
+
+<p>自动代码工具作用，类似 protobuf 通过 *.proto 文件，用工具生成相应的源码文件。</p>
+
+<ol>
+  <li>直接减少了团队开发工作量。</li>
+  <li>有利于团队代码风格统一。</li>
+  <li>数据操作面向对象，操作人性化。</li>
+</ol>
+
+<hr />
+
+<h2 id="2-使用">2. 使用</h2>
+
+<p>源码已上传 <a href="https://github.com/wenfh2020/db_gencode">github</a>。</p>
+
+<ul>
+  <li>命令</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./db_gencode &lt;file_name&gt;
+</code></pre></div></div>
+
+<ul>
+  <li>编译源码使用。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/wenfh2020/db_gencode.git
+<span class="nb">cd </span>db_gencode
+make
+./db_gencode upload.sql
+</code></pre></div></div>
+
+<ul>
+  <li>脚本（upload.sql）。</li>
+</ul>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- MySQL dump 10.13  Distrib 5.7.22, for Linux (x86_64)</span>
+<span class="c1">--</span>
+<span class="c1">-- Host: localhost    Database: upload</span>
+<span class="c1">-- ------------------------------------------------------</span>
+<span class="c1">-- Server version   5.7.22</span>
+
+<span class="c1">--</span>
+<span class="c1">-- Table structure for table `tb_file`</span>
+<span class="c1">--</span>
+
+<span class="k">DROP</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">EXISTS</span> <span class="nv">`tb_file`</span><span class="p">;</span>
+<span class="cm">/*!40101 SET @saved_cs_client     = @@character_set_client */</span><span class="p">;</span>
+<span class="cm">/*!40101 SET character_set_client = utf8 */</span><span class="p">;</span>
+<span class="k">CREATE</span> <span class="k">TABLE</span> <span class="nv">`tb_file`</span> <span class="p">(</span>
+  <span class="nv">`id`</span> <span class="nb">int</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="nb">unsigned</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="n">AUTO_INCREMENT</span><span class="p">,</span>
+  <span class="nv">`file_name`</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+  <span class="nv">`file_size`</span> <span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="s1">'0'</span><span class="p">,</span>
+  <span class="nv">`md5`</span> <span class="nb">char</span><span class="p">(</span><span class="mi">32</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="s1">''</span><span class="p">,</span>
+  <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="p">(</span><span class="nv">`id`</span><span class="p">),</span>
+<span class="p">)</span> <span class="n">ENGINE</span><span class="o">=</span><span class="n">MyISAM</span> <span class="n">AUTO_INCREMENT</span><span class="o">=</span><span class="mi">55688</span> <span class="k">DEFAULT</span> <span class="n">CHARSET</span><span class="o">=</span><span class="n">utf8</span><span class="p">;</span>
+</code></pre></div></div>
+
+<ul>
+  <li>c++ 源码文件(*.h/*.cpp)。</li>
+</ul>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// tb_file.h</span>
+<span class="k">class</span> <span class="nc">tb_file</span> <span class="p">{</span>
+<span class="nl">public:</span>
+    <span class="n">tb_file</span><span class="p">();</span>
+    <span class="n">tb_file</span><span class="p">(</span><span class="k">const</span> <span class="n">tb_file</span><span class="o">&amp;</span> <span class="n">obj</span><span class="p">);</span>
+    <span class="o">~</span><span class="n">tb_file</span><span class="p">()</span> <span class="p">{}</span>
+
+    <span class="n">tb_file</span><span class="o">&amp;</span> <span class="k">operator</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="n">tb_file</span><span class="o">&amp;</span> <span class="n">obj</span><span class="p">);</span>
+
+    <span class="kr">inline</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">table_name</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="s">"tb_file"</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="n">tb_uint32</span> <span class="n">get_count</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="mi">4</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">string</span> <span class="n">serialize</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
+
+    <span class="kr">inline</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">col_id</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="s">"`id`"</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">col_file_name</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="s">"`file_name`"</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">col_file_size</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="s">"`file_size`"</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">col_md5</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="s">"`md5`"</span><span class="p">;</span> <span class="p">}</span>
+
+    <span class="kt">bool</span> <span class="n">set_id</span><span class="p">(</span><span class="k">const</span> <span class="n">tb_uint32</span> <span class="n">value</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">set_file_name</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">set_file_name</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">set_file_name</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">value</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">set_file_size</span><span class="p">(</span><span class="k">const</span> <span class="n">tb_int32</span> <span class="n">value</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">set_md5</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">set_md5</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">set_md5</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">value</span><span class="p">);</span>
+
+    <span class="kr">inline</span> <span class="n">tb_uint32</span> <span class="n">id</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_ui_id</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">file_name</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_str_file_name</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="n">tb_int32</span> <span class="n">file_size</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_i_file_size</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">md5</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_str_md5</span><span class="p">;</span> <span class="p">}</span>
+
+    <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">has_id</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="p">(</span><span class="n">m_ui_has_bit</span> <span class="o">&amp;</span> <span class="mh">0x00000001</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">has_file_name</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="p">(</span><span class="n">m_ui_has_bit</span> <span class="o">&amp;</span> <span class="mh">0x00000002</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">has_file_size</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="p">(</span><span class="n">m_ui_has_bit</span> <span class="o">&amp;</span> <span class="mh">0x00000004</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">has_md5</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="p">(</span><span class="n">m_ui_has_bit</span> <span class="o">&amp;</span> <span class="mh">0x00000008</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;</span> <span class="p">}</span>
+
+    <span class="kr">inline</span> <span class="kt">void</span> <span class="n">clear_has_id</span><span class="p">()</span> <span class="p">{</span> <span class="n">m_ui_has_bit</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="mh">0x00000001</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="kt">void</span> <span class="n">clear_has_file_name</span><span class="p">()</span> <span class="p">{</span> <span class="n">m_ui_has_bit</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="mh">0x00000002</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="kt">void</span> <span class="n">clear_has_file_size</span><span class="p">()</span> <span class="p">{</span> <span class="n">m_ui_has_bit</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="mh">0x00000004</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kr">inline</span> <span class="kt">void</span> <span class="n">clear_has_md5</span><span class="p">()</span> <span class="p">{</span> <span class="n">m_ui_has_bit</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="mh">0x00000008</span><span class="p">;</span> <span class="p">}</span>
+
+    <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">is_valid</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span><span class="k">return</span> <span class="p">(</span><span class="n">m_ui_has_bit</span> <span class="o">&amp;</span> <span class="mh">0x0000000f</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;}</span>
+
+<span class="nl">private:</span>
+    <span class="n">tb_uint32</span> <span class="n">m_ui_has_bit</span><span class="p">;</span>
+    <span class="n">tb_uint32</span> <span class="n">m_ui_id</span><span class="p">;</span>
+    <span class="n">string</span> <span class="n">m_str_file_name</span><span class="p">;</span>
+    <span class="n">tb_int32</span> <span class="n">m_i_file_size</span><span class="p">;</span>
+    <span class="n">string</span> <span class="n">m_str_md5</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2020/06/04/mysql-db-gencode/">wenfh2020.com</a></p>
+</blockquote>

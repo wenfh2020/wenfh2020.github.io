@@ -1,0 +1,984 @@
+<p>Centos 等 Linux 平台常用命令，记录起来，方便使用。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-系统" id="markdown-toc-1-系统">1. 系统</a>    <ul>
+      <li><a href="#11-机器启动" id="markdown-toc-11-机器启动">1.1. 机器启动</a></li>
+      <li><a href="#12-修改密码" id="markdown-toc-12-修改密码">1.2. 修改密码</a></li>
+      <li><a href="#13-查看-cpu" id="markdown-toc-13-查看-cpu">1.3. 查看 CPU</a></li>
+      <li><a href="#14-查看系统内存情况" id="markdown-toc-14-查看系统内存情况">1.4. 查看系统内存情况</a></li>
+      <li><a href="#15-查看系统信息" id="markdown-toc-15-查看系统信息">1.5. 查看系统信息</a></li>
+      <li><a href="#16-软链接" id="markdown-toc-16-软链接">1.6. 软链接</a></li>
+      <li><a href="#17-防火墙" id="markdown-toc-17-防火墙">1.7. 防火墙</a></li>
+      <li><a href="#18-开放端口号" id="markdown-toc-18-开放端口号">1.8. 开放端口号</a></li>
+      <li><a href="#19-压缩解压" id="markdown-toc-19-压缩解压">1.9. 压缩解压</a></li>
+      <li><a href="#110-更新文件配置" id="markdown-toc-110-更新文件配置">1.10. 更新文件配置</a></li>
+      <li><a href="#111-机器是多少位" id="markdown-toc-111-机器是多少位">1.11. 机器是多少位</a></li>
+      <li><a href="#112-环境变量" id="markdown-toc-112-环境变量">1.12. 环境变量</a></li>
+      <li><a href="#113-用户切换" id="markdown-toc-113-用户切换">1.13. 用户切换</a></li>
+      <li><a href="#114-日期" id="markdown-toc-114-日期">1.14. 日期</a></li>
+      <li><a href="#115-进程绝对路径" id="markdown-toc-115-进程绝对路径">1.15. 进程绝对路径</a></li>
+    </ul>
+  </li>
+  <li><a href="#2-文本" id="markdown-toc-2-文本">2. 文本</a>    <ul>
+      <li><a href="#21-awk" id="markdown-toc-21-awk">2.1. awk</a></li>
+      <li><a href="#22-sed" id="markdown-toc-22-sed">2.2. sed</a></li>
+      <li><a href="#23-grep" id="markdown-toc-23-grep">2.3. grep</a></li>
+    </ul>
+  </li>
+  <li><a href="#3-磁盘文件" id="markdown-toc-3-磁盘文件">3. 磁盘文件</a>    <ul>
+      <li><a href="#31-ls" id="markdown-toc-31-ls">3.1. ls</a></li>
+      <li><a href="#32-tree" id="markdown-toc-32-tree">3.2. tree</a></li>
+      <li><a href="#33-du" id="markdown-toc-33-du">3.3. du</a></li>
+      <li><a href="#34-df" id="markdown-toc-34-df">3.4. df</a></li>
+      <li><a href="#35-tail" id="markdown-toc-35-tail">3.5. tail</a></li>
+      <li><a href="#36-find" id="markdown-toc-36-find">3.6. find</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-权限" id="markdown-toc-4-权限">4. 权限</a>    <ul>
+      <li><a href="#41-执行权限" id="markdown-toc-41-执行权限">4.1. 执行权限</a></li>
+    </ul>
+  </li>
+  <li><a href="#5-进程线程" id="markdown-toc-5-进程线程">5. 进程线程</a>    <ul>
+      <li><a href="#51-查找进程" id="markdown-toc-51-查找进程">5.1. 查找进程</a></li>
+      <li><a href="#52-进程启动绝对路径" id="markdown-toc-52-进程启动绝对路径">5.2. 进程启动绝对路径</a></li>
+      <li><a href="#53-查进程名称对应的-pid" id="markdown-toc-53-查进程名称对应的-pid">5.3. 查进程名称对应的 pid</a></li>
+      <li><a href="#54-进程启动时间" id="markdown-toc-54-进程启动时间">5.4. 进程启动时间</a></li>
+      <li><a href="#55-查看线程" id="markdown-toc-55-查看线程">5.5. 查看线程</a></li>
+    </ul>
+  </li>
+  <li><a href="#6-网络" id="markdown-toc-6-网络">6. 网络</a>    <ul>
+      <li><a href="#61-scp" id="markdown-toc-61-scp">6.1. scp</a></li>
+      <li><a href="#62-nslookup" id="markdown-toc-62-nslookup">6.2. nslookup</a></li>
+      <li><a href="#63-ssh" id="markdown-toc-63-ssh">6.3. ssh</a></li>
+      <li><a href="#64-tcpdump" id="markdown-toc-64-tcpdump">6.4. tcpdump</a></li>
+      <li><a href="#65-wget" id="markdown-toc-65-wget">6.5. wget</a></li>
+      <li><a href="#66-netstat" id="markdown-toc-66-netstat">6.6. netstat</a></li>
+      <li><a href="#67-lsof" id="markdown-toc-67-lsof">6.7. lsof</a></li>
+    </ul>
+  </li>
+  <li><a href="#7-shell" id="markdown-toc-7-shell">7. shell</a>    <ul>
+      <li><a href="#71-语法" id="markdown-toc-71-语法">7.1. 语法</a>        <ul>
+          <li><a href="#711-for" id="markdown-toc-711-for">7.1.1. for</a></li>
+          <li><a href="#712-if" id="markdown-toc-712-if">7.1.2. if</a></li>
+          <li><a href="#713-数组" id="markdown-toc-713-数组">7.1.3. 数组</a></li>
+          <li><a href="#714-文件" id="markdown-toc-714-文件">7.1.4. 文件</a></li>
+          <li><a href="#715-数值比较" id="markdown-toc-715-数值比较">7.1.5. 数值比较</a></li>
+          <li><a href="#716-字符串" id="markdown-toc-716-字符串">7.1.6. 字符串</a></li>
+        </ul>
+      </li>
+      <li><a href="#72-其它" id="markdown-toc-72-其它">7.2. 其它</a>        <ul>
+          <li><a href="#721-有空格的路径-grep-操作" id="markdown-toc-721-有空格的路径-grep-操作">7.2.1. 有空格的路径 grep 操作</a></li>
+          <li><a href="#722-有空格路径进行-sed-操作" id="markdown-toc-722-有空格路径进行-sed-操作">7.2.2. 有空格路径进行 sed 操作</a></li>
+          <li><a href="#723-printf" id="markdown-toc-723-printf">7.2.3. printf</a></li>
+        </ul>
+      </li>
+      <li><a href="#73-命令" id="markdown-toc-73-命令">7.3. 命令</a>        <ul>
+          <li><a href="#731-xargs" id="markdown-toc-731-xargs">7.3.1. xargs</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><a href="#8-工具" id="markdown-toc-8-工具">8. 工具</a>    <ul>
+      <li><a href="#81-top" id="markdown-toc-81-top">8.1. top</a></li>
+      <li><a href="#82-htop" id="markdown-toc-82-htop">8.2. htop</a></li>
+      <li><a href="#83-iftop" id="markdown-toc-83-iftop">8.3. iftop</a></li>
+      <li><a href="#84-nload" id="markdown-toc-84-nload">8.4. nload</a></li>
+      <li><a href="#85-nethogs" id="markdown-toc-85-nethogs">8.5. nethogs</a></li>
+      <li><a href="#86-iotop" id="markdown-toc-86-iotop">8.6. iotop</a></li>
+      <li><a href="#87-vmstat" id="markdown-toc-87-vmstat">8.7. vmstat</a></li>
+      <li><a href="#88-strace" id="markdown-toc-88-strace">8.8. strace</a></li>
+    </ul>
+  </li>
+  <li><a href="#9-参考" id="markdown-toc-9-参考">9. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-系统">1. 系统</h2>
+
+<h3 id="11-机器启动">1.1. 机器启动</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>poweroff
+reboot
+shutdown <span class="nt">-r</span> now
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="12-修改密码">1.2. 修改密码</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>passwd root
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="13-查看-cpu">1.3. 查看 CPU</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> /proc/cpuinfo | <span class="nb">grep</span> <span class="s2">"processor"</span> | <span class="nb">wc</span> <span class="nt">-l</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="14-查看系统内存情况">1.4. 查看系统内存情况</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>free <span class="nt">-m</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="15-查看系统信息">1.5. 查看系统信息</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">uname</span> <span class="nt">-a</span>
+<span class="nb">cat</span> /proc/version
+<span class="nb">cat</span> /etc/redhat-release
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="16-软链接">1.6. 软链接</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">ln</span> <span class="nt">-s</span> <span class="nb">source </span>dest
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="17-防火墙">1.7. 防火墙</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>service iptables start
+service iptables stop
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="18-开放端口号">1.8. 开放端口号</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># centos</span>
+
+vi /etc/sysconfig/iptables
+<span class="nt">-A</span> INPUT <span class="nt">-m</span> state <span class="nt">--state</span> NEW <span class="nt">-m</span> tcp <span class="nt">-p</span> tcp <span class="nt">--dport</span> 19007 <span class="nt">-j</span> ACCEPT
+systemctl restart iptables.service
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="19-压缩解压">1.9. 压缩解压</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>zip <span class="nt">-r</span> mydata.zip mydata
+unzip mydata <span class="nt">-d</span> mydatabak
+<span class="nb">tar </span>zcf mydata.tar.gz mydata
+<span class="nb">tar </span>zxf mydata.tar.gz
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="110-更新文件配置">1.10. 更新文件配置</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">source</span> /etc/profile
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="111-机器是多少位">1.11. 机器是多少位</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>file /sbin/init 或者 file /bin/ls
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="112-环境变量">1.12. 环境变量</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">env</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="113-用户切换">1.13. 用户切换</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>su root
+<span class="nb">exit</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="114-日期">1.14. 日期</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">date</span> <span class="nt">-d</span> @1361542596 +<span class="s2">"%Y-%m-%d %H:%M:%S"</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="115-进程绝对路径">1.15. 进程绝对路径</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>top <span class="nt">-c</span>
+htop
+<span class="nb">ls</span> <span class="nt">-l</span> /proc/pid
+ps <span class="nt">-ef</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-文本">2. 文本</h2>
+
+<h3 id="21-awk">2.1. awk</h3>
+
+<p>awk 动作 文件名</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s1">'this is a test'</span> | <span class="nb">awk</span> <span class="s1">'{print $0}'</span>
+<span class="nb">echo</span> <span class="s1">'this is a test'</span> | <span class="nb">awk</span> <span class="s1">'{print $3}'</span>
+<span class="nb">awk</span> <span class="nt">-F</span> <span class="s1">':'</span> <span class="s1">'{ print $1 }'</span> demo.txt
+<span class="nb">echo</span> <span class="s1">'this is a test'</span> | <span class="nb">awk</span> <span class="s1">'{print $NF}'</span>
+<span class="nb">awk</span> <span class="nt">-F</span> <span class="s1">':'</span> <span class="s1">'{print $1, $(NF-1)}'</span> demo.txt
+<span class="nb">awk</span> <span class="nt">-F</span> <span class="s1">':'</span> <span class="s1">'{if ($1 &gt; "m") print $1; else print "---"}'</span> demo.txt
+<span class="nb">du</span> | <span class="nb">awk</span> <span class="s1">'{print $1}'</span> |sort <span class="nt">-nr</span>
+ps <span class="nt">-ef</span> | <span class="nb">grep </span>gdb | <span class="nb">grep</span> <span class="nt">-v</span> <span class="nb">grep</span> | <span class="nb">awk</span> <span class="s1">'{print $3}'</span> | xargs <span class="nb">sudo kill</span> <span class="nt">-9</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="22-sed">2.2. sed</h3>
+
+<p>字符串处理</p>
+
+<ul>
+  <li>linux</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># replace</span>
+<span class="nb">sed</span> <span class="nt">-i</span> <span class="s2">"s/jack/tom/g"</span> test.txt
+<span class="nb">sed</span> <span class="nt">-i</span> <span class="s2">"s/</span><span class="se">\/</span><span class="s2">usr</span><span class="se">\/</span><span class="s2">local</span><span class="se">\/</span><span class="s2">bin/</span><span class="se">\/</span><span class="s2">usr</span><span class="se">\/</span><span class="s2">bin/g"</span> /etc/init.d/fdfs_storaged
+
+<span class="c"># find and delete line.</span>
+<span class="nb">sed</span> <span class="s1">'/gettimeofday/d'</span> /tmp/connect.slave
+</code></pre></div></div>
+
+<ul>
+  <li>mac</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sed</span> <span class="nt">-i</span> <span class="s1">''</span> <span class="s1">'s/\/usr\/local\/bin/\/usr\/bin/g'</span> /etc/init.d/fdfs_storaged
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="23-grep">2.3. grep</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>命令</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-l</td>
+      <td>列出文件名</td>
+    </tr>
+    <tr>
+      <td>-r</td>
+      <td>递归遍历文件夹</td>
+    </tr>
+    <tr>
+      <td>-n</td>
+      <td>显示文件行数</td>
+    </tr>
+    <tr>
+      <td>-E</td>
+      <td>查找多个</td>
+    </tr>
+    <tr>
+      <td>-i</td>
+      <td>大小写匹配查找字符串</td>
+    </tr>
+    <tr>
+      <td>-w</td>
+      <td>匹配整个单词，而不是字符串</td>
+    </tr>
+    <tr>
+      <td>–include</td>
+      <td>搜索指定文件</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>找出文件（filename）中包含123或者包含abc的行</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">grep</span> <span class="nt">-E</span> <span class="s1">'123|abc'</span> filename
+</code></pre></div></div>
+
+<p>只匹配整个单词，而不是字符串的一部分（如匹配‘magic’，而不是‘magical’）</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">grep</span> <span class="nt">-w</span> pattern files
+</code></pre></div></div>
+
+<p>文件中查找字符串</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">grep</span> <span class="s2">"update"</span> moment_audit.log | <span class="nb">wc</span> <span class="nt">-l</span>
+</code></pre></div></div>
+
+<p>递归文件夹在指定文件查找字符串</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">grep</span> <span class="nt">-r</span> <span class="s2">"pic"</span> <span class="nt">--include</span> <span class="s2">"*.md"</span> <span class="nb">.</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-磁盘文件">3. 磁盘文件</h2>
+
+<h3 id="31-ls">3.1. ls</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>选项</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-a</td>
+      <td>列出目录所有文件，包含以.开始的隐藏文件</td>
+    </tr>
+    <tr>
+      <td>-A</td>
+      <td>列出除.及..的其它文件</td>
+    </tr>
+    <tr>
+      <td>-r</td>
+      <td>反序排列</td>
+    </tr>
+    <tr>
+      <td>-t</td>
+      <td>以文件修改时间排序</td>
+    </tr>
+    <tr>
+      <td>-S</td>
+      <td>以文件大小排序</td>
+    </tr>
+    <tr>
+      <td>-h</td>
+      <td>以易读大小显示</td>
+    </tr>
+    <tr>
+      <td>-l</td>
+      <td>除了文件名之外，还将文件的权限、所有者、文件大小等信息详细列出来</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 文件个数</span>
+<span class="c"># 不含子文件</span>
+<span class="nb">ls</span> <span class="nt">-l</span> |grep <span class="s2">"^-"</span>|wc <span class="nt">-l</span>
+<span class="c"># 包括子文件</span>
+<span class="nb">ls</span> <span class="nt">-lR</span>|grep <span class="s2">"^-"</span>|wc <span class="nt">-l</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="32-tree">3.2. tree</h3>
+
+<p>显示目录结构</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tree /dir/ <span class="nt">-L</span> 1
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="33-du">3.3. du</h3>
+
+<p>用于显示目录或文件的大小。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>选项</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-h</td>
+      <td>以K，M，G为单位，提高信息的可读性。</td>
+    </tr>
+    <tr>
+      <td>-s</td>
+      <td>仅显示总计。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看文件夹剩余空间</span>
+<span class="nb">du</span> <span class="nt">-sh</span> <span class="nb">dir</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="34-df">3.4. df</h3>
+
+<p>用于显示目前在Linux系统上的文件系统的磁盘使用情况统计。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看磁盘空间</span>
+<span class="nb">df</span> <span class="nt">-h</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="35-tail">3.5. tail</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">tail</span> <span class="nt">-f</span> file
+<span class="nb">tail</span> <span class="nt">-f</span> file | <span class="nb">grep</span> <span class="s1">'123'</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="36-find">3.6. find</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>man find
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>find   path   <span class="nt">-option</span>   <span class="o">[</span>   <span class="nt">-print</span> <span class="o">]</span>   <span class="o">[</span> <span class="nt">-exec</span>   <span class="nt">-ok</span>   <span class="nb">command</span> <span class="o">]</span>   <span class="o">{}</span> <span class="se">\;</span>
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>选项</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-name name, -iname name</td>
+      <td>文件名称符合 name 的文件。iname 会忽略大小写</td>
+    </tr>
+    <tr>
+      <td>-size</td>
+      <td>文件大小</td>
+    </tr>
+    <tr>
+      <td>-type</td>
+      <td>文件类型<br />f 一般文件<br />d 目录</td>
+    </tr>
+    <tr>
+      <td>-perm</td>
+      <td>对应文件目录权限</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查找删除文件</span>
+find / <span class="nt">-name</span> <span class="s2">"*.mp3"</span> |xargs <span class="nb">rm</span> <span class="nt">-rf</span>
+
+<span class="c"># 查询最近两个小时修改过的文件</span>
+find /work/imdev/IM3.0 <span class="nt">-iname</span> <span class="s2">"*"</span> <span class="nt">-mmin</span> <span class="nt">-120</span> <span class="nt">-type</span> f
+
+<span class="c"># linux 命令行转换，将源码文件 tab 替换为 4 个空格</span>
+find <span class="nb">.</span> <span class="nt">-regex</span> <span class="s1">'.*\.h\|.*\.hpp\|.*\.cpp'</span> <span class="o">!</span> <span class="nt">-type</span> d <span class="nt">-exec</span> bash <span class="nt">-c</span> <span class="s1">'expand -t 4 "$0" &gt; /tmp/e &amp;&amp; mv /tmp/e "$0"'</span> <span class="o">{}</span> <span class="se">\;</span>
+
+<span class="c"># 查找大于 500 字节的文件，并且删除。</span>
+find ./ <span class="nt">-size</span> +500 | xargs <span class="nb">rm</span> <span class="nt">-f</span>
+
+<span class="c"># 找出空文件</span>
+find / <span class="nt">-type</span> f <span class="nt">-size</span> 0 <span class="nt">-exec</span> <span class="nb">ls</span> <span class="nt">-l</span> <span class="o">{}</span> <span class="se">\;</span>
+
+<span class="c"># 在某路径，查找带 xxx 关键字的所有文件，列出文件完整路径，文件行数。</span>
+find ~/src/other/c_test <span class="nt">-name</span> <span class="s1">'*.cpp'</span> <span class="nt">-type</span> f | xargs <span class="nb">grep</span> <span class="nt">-n</span> <span class="s1">'include'</span>
+
+<span class="c"># 将文件转换为 unix 格式</span>
+find <span class="nb">.</span> <span class="nt">-type</span> f <span class="nt">-exec</span> dos2unix <span class="o">{}</span> <span class="se">\;</span>
+
+<span class="c"># 查找有执行权限文件</span>
+find <span class="nb">.</span> <span class="nt">-perm</span> <span class="nt">-111</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-权限">4. 权限</h2>
+
+<h3 id="41-执行权限">4.1. 执行权限</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x _file
+<span class="nb">chown</span> <span class="nt">-Rf</span> imdev:imdev _folder
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="5-进程线程">5. 进程线程</h2>
+
+<h3 id="51-查找进程">5.1. 查找进程</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ps aux | <span class="nb">grep </span>_proxy_srv
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="52-进程启动绝对路径">5.2. 进程启动绝对路径</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ps <span class="nt">-ef</span> | <span class="nb">grep </span>xxx
+ll /proc/pid ｜ <span class="nb">grep </span>exe
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="53-查进程名称对应的-pid">5.3. 查进程名称对应的 pid</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ps <span class="nt">-ef</span> | <span class="nb">grep </span>process_name | <span class="nb">grep</span> <span class="nt">-v</span> <span class="s2">"grep"</span> | <span class="nb">awk</span> <span class="s1">'{print $2}'</span> 
+pidof redis-server
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="54-进程启动时间">5.4. 进程启动时间</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ps <span class="nt">-p</span> PID <span class="nt">-o</span> lstart
+ps <span class="nt">-ef</span> | <span class="nb">grep </span>redis | <span class="nb">awk</span> <span class="s1">'{print $2}'</span> | xargs ps <span class="nt">-o</span> pid,tty,user,comm,lstart,etime <span class="nt">-p</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="55-查看线程">5.5. 查看线程</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>top <span class="nt">-H</span> <span class="nt">-p</span> pid
+ps <span class="nt">-efL</span> | mysql | <span class="nb">wc</span> <span class="nt">-l</span>
+pstree <span class="nt">-p</span> 1234 | <span class="nb">wc</span> <span class="nt">-l</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="6-网络">6. 网络</h2>
+
+<h3 id="61-scp">6.1. scp</h3>
+
+<ol>
+  <li>scp -P端口号 本地文件路径 username@服务器ip:目的路径</li>
+  <li>从服务器下载文件到本地，scp -P端口号 username@ip:路径 本地路径</li>
+</ol>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>scp <span class="nt">-P</span>端口号 username@ip:路径 本地路径
+scp <span class="nt">-r</span> root@120.25.44.163:/home/hhx/srv_20150120.tar.gz <span class="nb">.</span>
+scp /Users/wenfh2020/src/other/c_test/normal/proc/main.cpp root@120.25.44.163:/home/other/c_test/normal/proc
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="62-nslookup">6.2. nslookup</h3>
+
+<p>查域名对应的 ip</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># nslookup wenfh2020.com</span>
+
+Server:     116.116.116.116
+Address:    116.116.116.116#53
+
+Non-authoritative answer:
+Name:   wenfh2020.com
+Address: 120.25.83.163
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="63-ssh">6.3. ssh</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh <span class="nt">-p22</span> root@120.25.44.163
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="64-tcpdump">6.4. tcpdump</h3>
+
+<p>Linux tcpdump <a href="https://www.runoob.com/linux/linux-comm-tcpdump.html">命令</a>用于倾倒网络传输数据</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>选项</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-c</td>
+      <td><数据包数目> 收到指定的数据包数目后，就停止进行倾倒操作。</数据包数目></td>
+    </tr>
+    <tr>
+      <td>-i</td>
+      <td><网络界面> 使用指定的网络截面送出数据包。</网络界面></td>
+    </tr>
+    <tr>
+      <td>-n</td>
+      <td>不把主机的网络地址转换成名字。</td>
+    </tr>
+    <tr>
+      <td>-q</td>
+      <td>快速输出，仅列出少数的传输协议信息。</td>
+    </tr>
+    <tr>
+      <td>-v</td>
+      <td>详细显示指令执行过程。</td>
+    </tr>
+    <tr>
+      <td>-vv</td>
+      <td>更详细显示指令执行过程。</td>
+    </tr>
+    <tr>
+      <td>-w</td>
+      <td><数据包文件> 把数据包数据写入指定的文件。</数据包文件></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tcpdump port 80 and host www.baidu.com
+tcpdump  host 192.168.100.18 and dst host 10.10.10.122
+tcpdump <span class="nt">-i</span> eth0 <span class="nt">-vnn</span> dst host 10.10.10.122
+tcpdump <span class="nt">-i</span> eth0 <span class="nt">-vnn</span> src host 192.168.100.18 and dst port 8060
+
+<span class="c">#生产环境内网抓包。</span>
+tcpdump <span class="nt">-i</span> eth1 port 12911 <span class="nt">-vvvv</span> <span class="nt">-nnn</span> <span class="nt">-w</span> 123.cap
+
+<span class="c">#内循环 127.0.0.1</span>
+tcpdump <span class="nt">-i</span> lo port 8333
+tcpdump <span class="nt">-i</span> eth0 host api.fyber.com and port 80 <span class="nt">-w</span> 123.cap
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="65-wget">6.5. wget</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.rpm
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="66-netstat">6.6. netstat</h3>
+
+<p>netstat 命令用于显示网络状态</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>netstat [-acCeFghilMnNoprstuvVwx][-A&lt;网络类型&gt;][--ip]
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>选项</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-a</td>
+      <td>显示所有连线中的Socket。</td>
+    </tr>
+    <tr>
+      <td>-l</td>
+      <td>显示监控中的服务器的Socket。</td>
+    </tr>
+    <tr>
+      <td>-n</td>
+      <td>直接使用IP地址，而不通过域名服务器。</td>
+    </tr>
+    <tr>
+      <td>-p</td>
+      <td>显示正在使用Socket的程序识别码和程序名称。</td>
+    </tr>
+    <tr>
+      <td>-t</td>
+      <td>显示TCP传输协议的连线状况。</td>
+    </tr>
+    <tr>
+      <td>-u</td>
+      <td>显示UDP传输协议的连线状况。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>netstat <span class="nt">-nat</span>|grep <span class="nt">-i</span> <span class="s2">"80"</span>|wc <span class="nt">-l</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="67-lsof">6.7. lsof</h3>
+
+<ul>
+  <li>查询端口对应的信息</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lsof <span class="nt">-i</span>:30004
+</code></pre></div></div>
+
+<ul>
+  <li>查询进程打开的文件</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lsof <span class="nt">-p</span> &lt;pid&gt;
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="7-shell">7. shell</h2>
+
+<h3 id="71-语法">7.1. 语法</h3>
+
+<h4 id="711-for">7.1.1. for</h4>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for </span>p <span class="k">in </span>paths
+<span class="k">do
+done</span>
+</code></pre></div></div>
+
+<hr />
+
+<h4 id="712-if">7.1.2. <a href="https://www.runoob.com/linux/linux-shell-test.html">if</a></h4>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+else
+fi</span>
+</code></pre></div></div>
+
+<hr />
+
+<h4 id="713-数组">7.1.3. 数组</h4>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">align</span><span class="o">=</span>1
+<span class="nv">unalign</span><span class="o">=</span>0
+<span class="nv">array</span><span class="o">=(</span>1, 2, 4, 8, 16, 32,64<span class="o">)</span>
+
+<span class="k">for </span>x <span class="k">in</span> <span class="k">${</span><span class="nv">array</span><span class="p">[*]</span><span class="k">}</span>
+<span class="k">do
+    </span>gcc <span class="nt">-g</span> <span class="nt">-O0</span> align.cpp <span class="nt">-o</span> align  <span class="o">&amp;&amp;</span> <span class="nb">time</span> ./align <span class="nv">$x</span> <span class="nv">$align</span>
+    <span class="nb">echo</span> <span class="s1">'-------'</span>
+    gcc <span class="nt">-g</span> <span class="nt">-O0</span> align.cpp <span class="nt">-o</span> align  <span class="o">&amp;&amp;</span> <span class="nb">time</span> ./align <span class="nv">$x</span> <span class="nv">$unalign</span>
+    <span class="nb">echo</span> <span class="s1">'&gt;&gt;&gt;&gt;&gt;&gt;&gt;'</span>
+<span class="k">done</span>
+</code></pre></div></div>
+
+<hr />
+
+<h4 id="714-文件">7.1.4. 文件</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>参数</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-d</td>
+      <td>文件夹是否存在</td>
+    </tr>
+    <tr>
+      <td>-x</td>
+      <td>文件是否有执行权限</td>
+    </tr>
+    <tr>
+      <td>-f</td>
+      <td>文件是否存在</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h4 id="715-数值比较">7.1.5. 数值比较</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>参数</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-eq</td>
+      <td>等于</td>
+    </tr>
+    <tr>
+      <td>-ne</td>
+      <td>不等于</td>
+    </tr>
+    <tr>
+      <td>-gt</td>
+      <td>大于</td>
+    </tr>
+    <tr>
+      <td>-ge</td>
+      <td>大于等于</td>
+    </tr>
+    <tr>
+      <td>-lt</td>
+      <td>小于</td>
+    </tr>
+    <tr>
+      <td>-le</td>
+      <td>小于等于</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h4 id="716-字符串">7.1.6. 字符串</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>参数</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>=</td>
+      <td>等于</td>
+    </tr>
+    <tr>
+      <td>!=</td>
+      <td>等于</td>
+    </tr>
+    <tr>
+      <td>-z</td>
+      <td>字符串的长度为0</td>
+    </tr>
+    <tr>
+      <td>-n</td>
+      <td>字符串的长度不为0</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h3 id="72-其它">7.2. 其它</h3>
+
+<h4 id="721-有空格的路径-grep-操作">7.2.1. 有空格的路径 grep 操作</h4>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">infos</span><span class="o">=</span><span class="sb">`</span><span class="nb">grep</span> <span class="nt">-r</span> <span class="nv">$src_pic_path</span> <span class="nt">--include</span> <span class="s1">'*.md'</span> <span class="nb">.</span> | <span class="nb">tr</span> <span class="s2">" "</span> <span class="s2">"</span><span class="se">\?</span><span class="s2">"</span><span class="sb">`</span>
+</code></pre></div></div>
+
+<hr />
+
+<h4 id="722-有空格路径进行-sed-操作">7.2.2. 有空格路径进行 sed 操作</h4>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sed</span> <span class="nt">-i</span> <span class="s1">''</span> <span class="s2">"s:</span><span class="nv">$src_pic_path</span><span class="s2">:</span><span class="se">\.\/</span><span class="s2">pic:g"</span> <span class="nv">$file</span>
+</code></pre></div></div>
+
+<hr />
+
+<h4 id="723-printf">7.2.3. printf</h4>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">printf</span> <span class="s1">'%d\n'</span> 0xA
+<span class="nb">printf</span> <span class="s1">'%X\n'</span> 320
+
+<span class="nb">local </span><span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span><span class="nb">date</span> +<span class="s2">"%Y-%m-%d %H:%M:%S"</span><span class="sb">`</span>
+<span class="nb">printf</span> <span class="s2">"%-10s %-11s"</span> <span class="s2">"end:"</span> <span class="nv">$end_time</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="73-命令">7.3. 命令</h3>
+
+<h4 id="731-xargs">7.3.1. xargs</h4>
+
+<p>是给命令传递参数的一个过滤器</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>find /etc <span class="nt">-name</span> <span class="s2">"*.conf"</span> | xargs <span class="nb">ls</span> –l
+<span class="nb">cat </span>url-list.txt | xargs wget –c
+find / <span class="nt">-name</span> <span class="k">*</span>.jpg <span class="nt">-type</span> f <span class="nt">-print</span> | xargs <span class="nb">tar</span> <span class="nt">-cvzf</span> images.tar.gz
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="8-工具">8. 工具</h2>
+
+<h3 id="81-top">8.1. top</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#显示完整命令</span>
+top <span class="nt">-c</span>
+<span class="c"># 查看字段解析</span>
+<span class="nb">shift</span> + f 
+<span class="c"># 内存排序</span>
+<span class="nb">shift</span> + m
+<span class="c"># cpu 排序</span>
+shit + p 
+</code></pre></div></div>
+
+<p><img src="/images/image-20191113091943326.png" alt="image-20191113091943326" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="82-htop">8.2. htop</h3>
+
+<p><img src="/images/image-20191112180503405.png" alt="image-20191112180503405" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="83-iftop">8.3. iftop</h3>
+
+<p><img src="/images/image-20191112175351966.png" alt="image-20191112175351966" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="84-nload">8.4. nload</h3>
+
+<p><img src="/images/image-20191112180429804.png" alt="image-20191112180429804" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="85-nethogs">8.5. nethogs</h3>
+
+<p><img src="/images/image-20191112175719733.png" alt="image-20191112175719733" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="86-iotop">8.6. iotop</h3>
+
+<p><img src="/images/image-20191112212348819.png" alt="image-20191112212348819" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="87-vmstat">8.7. vmstat</h3>
+
+<p>命令查看内存转换情况，跟踪转换的频率</p>
+
+<p>swap 原因：系统内存不足会产生 swap，磁盘的速度读写速度是比较慢的，这会影响性能。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>free
+vmstat
+top
+</code></pre></div></div>
+
+<p>vmstat 1 每秒输出一次统计结果</p>
+
+<p>不是 swap 空间占用性能就会下降，要看 si so 频率。</p>
+
+<p><img src="/images/image-20191113090543751.png" alt="image-20191113090543751" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="88-strace">8.8. strace</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 跟踪具体的进程信息</span>
+strace <span class="nt">-p</span> &lt;PID&gt;
+<span class="c"># 统计</span>
+strace <span class="nt">-cp</span> &lt;PID&gt;
+<span class="c"># 单独跟踪某个被定位的内核函数</span>
+strace <span class="nt">-T</span> <span class="nt">-e</span> clone <span class="nt">-p</span> &lt;PID&gt;
+<span class="c"># 显示调用高耗能内核函数的业务代码。</span>
+strace-eclone php <span class="nt">-r</span> <span class="s1">'exec("ls");'</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="9-参考">9. 参考</h2>
+
+<ul>
+  <li><a href="https://www.runoob.com/linux/linux-command-manual.html">Linux 命令大全</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

@@ -1,0 +1,102 @@
+<p>LRU（Least recently used，最近最少使用），数据插入队列中，经常访问的数据单元靠近列表头部，不经常访问的靠近列表尾部。列表数据就像按照时间排序一样。常用来淘汰一些长时间不使用的数据。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-算法流程" id="markdown-toc-1-算法流程">1. 算法流程</a></li>
+  <li><a href="#2-算法实现" id="markdown-toc-2-算法实现">2. 算法实现</a></li>
+  <li><a href="#3-redis-近似-lru-算法" id="markdown-toc-3-redis-近似-lru-算法">3. redis 近似 lru 算法</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-算法流程">1. 算法流程</h2>
+
+<p>lru 算法用一个列表也可以实现。只是列表数据需要更新操作，那得先查找数据，列表的查找时间复杂度是 $O(n)$，这是个低效的操作，所以用时间复杂度为 $ O(1) $ 的哈希表 <code class="highlighter-rouge">std::unordered_map</code> 辅助实现查找。</p>
+
+<p><img src="/images/2020-03-13-12-35-17.png" alt="lru 算法流程" data-action="zoom" /></p>
+
+<hr />
+
+<h2 id="2-算法实现">2. 算法实现</h2>
+
+<p>简单实现 LRU 算法的添加，更新和删除最旧数据功能。定时测试相关接口操作。(测试源码放在 <a href="https://github.com/wenfh2020/c_test/blob/master/algorithms/lru">github</a>)</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#ifndef _LRU_H_
+#define _LRU_H_
+</span>
+<span class="cp">#include &lt;iostream&gt;
+#include &lt;list&gt;
+#include &lt;unordered_map&gt;
+</span>
+<span class="k">class</span> <span class="nc">data</span> <span class="p">{</span>
+   <span class="nl">public:</span>
+    <span class="n">data</span><span class="p">()</span> <span class="p">{}</span>
+    <span class="n">data</span><span class="p">(</span><span class="k">const</span> <span class="n">data</span><span class="o">&amp;</span> <span class="n">d</span><span class="p">)</span> <span class="o">:</span> <span class="n">m_key</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">m_key</span><span class="p">),</span> <span class="n">m_value</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">m_value</span><span class="p">)</span> <span class="p">{}</span>
+    <span class="n">data</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">key</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">)</span>
+        <span class="o">:</span> <span class="n">m_key</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">m_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="p">{}</span>
+
+   <span class="nl">public:</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">get_key</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_key</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">set_key</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">key</span><span class="p">)</span> <span class="p">{</span> <span class="n">m_key</span> <span class="o">=</span> <span class="n">key</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">get_value</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_value</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">set_value</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">)</span> <span class="p">{</span> <span class="n">m_value</span> <span class="o">=</span> <span class="n">value</span><span class="p">;</span> <span class="p">}</span>
+
+   <span class="nl">private:</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">m_key</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">m_value</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">class</span> <span class="nc">lru</span> <span class="p">{</span>
+   <span class="nl">public:</span>
+    <span class="n">lru</span><span class="p">()</span> <span class="p">{}</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">lru</span><span class="p">();</span>
+    <span class="kt">bool</span> <span class="n">insert</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">key</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">update</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">key</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">data</span><span class="o">*</span> <span class="n">get_random</span><span class="p">();</span>
+    <span class="kt">bool</span> <span class="n">pop</span><span class="p">();</span>
+    <span class="kt">bool</span> <span class="n">check</span><span class="p">();</span>
+
+   <span class="nl">private:</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">list</span><span class="o">&lt;</span><span class="n">data</span><span class="o">*&gt;</span> <span class="n">m_list</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">list</span><span class="o">&lt;</span><span class="n">data</span><span class="o">*&gt;::</span><span class="n">iterator</span><span class="o">&gt;</span> <span class="n">m_map</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="cp">#endif  //_LRU_H_
+</span></code></pre></div></div>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">...</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">lru</span> <span class="n">o</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">srand</span><span class="p">((</span><span class="kt">unsigned</span><span class="p">)</span><span class="n">time</span><span class="p">(</span><span class="nb">NULL</span><span class="p">));</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">i</span><span class="o">++</span> <span class="o">&lt;=</span> <span class="mi">50</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="mi">3</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">o</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">to_string</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">cur_time</span><span class="p">());</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="mi">8</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">o</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">const</span> <span class="n">data</span><span class="o">*</span> <span class="n">d</span> <span class="o">=</span> <span class="n">o</span><span class="p">.</span><span class="n">get_random</span><span class="p">();</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">o</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">d</span><span class="o">-&gt;</span><span class="n">get_key</span><span class="p">(),</span> <span class="n">cur_time</span><span class="p">());</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="n">o</span><span class="p">.</span><span class="n">check</span><span class="p">();</span>
+        <span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-redis-近似-lru-算法">3. redis 近似 lru 算法</h2>
+
+<p>redis 数据库 <code class="highlighter-rouge">maxmemory</code> 数据淘汰策略，通过采样实现了近似 LRU 的算法，有兴趣的朋友可以参考我的帖子 <a href="https://wenfh2020.com/2020/03/06/max-memory/">[redis 源码走读] maxmemory 数据淘汰策略</a></p>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

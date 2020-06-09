@@ -1,0 +1,153 @@
+<p>Git 是一个开源的分布式版本控制系统，在此记录自己常用的场景和命令。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-常用命令" id="markdown-toc-1-常用命令">1. 常用命令</a></li>
+  <li><a href="#2-场景" id="markdown-toc-2-场景">2. 场景</a>    <ul>
+      <li><a href="#21-创建项目流程" id="markdown-toc-21-创建项目流程">2.1. 创建项目流程</a></li>
+      <li><a href="#22-回退" id="markdown-toc-22-回退">2.2. 回退</a></li>
+      <li><a href="#23-创建分支" id="markdown-toc-23-创建分支">2.3. 创建分支</a></li>
+    </ul>
+  </li>
+  <li><a href="#3-参考" id="markdown-toc-3-参考">3. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-常用命令">1. 常用命令</h2>
+
+<p>查看 git 使用文档： <code class="highlighter-rouge">"git --help"</code> 或 <code class="highlighter-rouge">"man git"</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>命令</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>clone</td>
+      <td>拉取源码 <br />git clone https://github.com/enki/libev.git</td>
+    </tr>
+    <tr>
+      <td>pull</td>
+      <td>拉取文件</td>
+    </tr>
+    <tr>
+      <td>push</td>
+      <td>提交文件<br />git push -u origin master</td>
+    </tr>
+    <tr>
+      <td>log</td>
+      <td>查看日志<br />git log –pretty=oneline</td>
+    </tr>
+    <tr>
+      <td>status</td>
+      <td>目录文件状态<br />git status .</td>
+    </tr>
+    <tr>
+      <td>checkout</td>
+      <td>检索文件或分支<br />git checkout sync_pic.sh</td>
+    </tr>
+    <tr>
+      <td>remote</td>
+      <td>查看 git 项目路径<br />git remote -v</td>
+    </tr>
+    <tr>
+      <td>reset</td>
+      <td>当前版本回退到指定历史版本  <br />git reset –hard 2b050c8</td>
+    </tr>
+    <tr>
+      <td>show</td>
+      <td>查看提交版本的修改内容 <br />  git show 2b050c8</td>
+    </tr>
+    <tr>
+      <td>mv</td>
+      <td>重命名文件或文件名</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="2-场景">2. 场景</h2>
+
+<h3 id="21-创建项目流程">2.1. 创建项目流程</h3>
+
+<p>参考 <code class="highlighter-rouge">github</code> 创建一个新的项目。</p>
+
+<ul>
+  <li>create a new repository on the command line.</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s2">"# xxxxx"</span> <span class="o">&gt;&gt;</span> README.md
+git init
+git add README.md
+git commit <span class="nt">-m</span> <span class="s2">"first commit"</span>
+git remote add origin https://github.com/wenfh2020/xxxxx.git
+git push <span class="nt">-u</span> origin master
+</code></pre></div></div>
+
+<ul>
+  <li>push an existing repository from the command line.</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git remote add origin https://github.com/wenfh2020/xxxxx.git
+git push <span class="nt">-u</span> origin master
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="22-回退">2.2. 回退</h3>
+
+<p><code class="highlighter-rouge">git</code> 回退到之前的提交版本，可以使用命令 <code class="highlighter-rouge">reset</code>，这个方法比较简单，也比较暴力。</p>
+
+<ul>
+  <li>查看要回退的版本 <code class="highlighter-rouge">commmit id</code></li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># git log / git log --pretty=oneline / git reflog</span>
+5b8f126075fbd686b5a2c810ea2a4d918e0770d2 <span class="o">(</span>HEAD -&gt; master, origin/master, origin/HEAD<span class="o">)</span> update obj
+2b050c8547f3d92a014a3d24669bc1b61e89a5ea update blog
+80c72441eef04e945a091c6f1891761d332ca91a update blog
+b5b7a47e99a354cc5788185d0e0e767e8eda9677 update blog
+212edc157ade1d3eb7b89c14e5032b3254ab56ac <span class="nb">rm </span>file
+68309ca340b8cf65921fc7019770d100999c5f54 rdb application &amp; struct
+</code></pre></div></div>
+
+<ul>
+  <li>回退到指定版本</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git reset <span class="nt">--hard</span> 2b050c8547f3d92a014a3d24669bc1b61e89a5ea
+</code></pre></div></div>
+
+<ul>
+  <li>强制提交到远程</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git push <span class="nt">-u</span> origin <span class="nb">head</span> <span class="nt">--force</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="23-创建分支">2.3. 创建分支</h3>
+
+<p>参考 <a href="https://blog.csdn.net/zhangsify/article/details/80546069">Git-创建分支流程</a></p>
+
+<hr />
+
+<h2 id="3-参考">3. 参考</h2>
+
+<ul>
+  <li><a href="https://www.cnblogs.com/qianqiannian/p/6008140.html">Git push 常见用法</a></li>
+  <li><a href="https://www.cnblogs.com/hukuangjie/p/11369434.html">Git回滚代码到某个commit</a></li>
+  <li><a href="https://www.jianshu.com/p/c2ec5f06cf1a">Git Reset 三种模式</a></li>
+  <li><a href="https://blog.csdn.net/zhangsify/article/details/80546069">Git-创建分支流程</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

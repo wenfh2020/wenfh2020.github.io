@@ -1,0 +1,402 @@
+<p>redis 数据（<code class="highlighter-rouge">key-value</code>），<code class="highlighter-rouge">value</code> 往往是对象的形式存在（<code class="highlighter-rouge">redisObject</code>）。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-对象" id="markdown-toc-1-对象">1. 对象</a>    <ul>
+      <li><a href="#11-数据结构" id="markdown-toc-11-数据结构">1.1. 数据结构</a></li>
+      <li><a href="#12-类型type" id="markdown-toc-12-类型type">1.2. 类型（type）</a></li>
+      <li><a href="#13-编码encoding" id="markdown-toc-13-编码encoding">1.3. 编码（encoding）</a></li>
+      <li><a href="#14-引用计数refcount" id="markdown-toc-14-引用计数refcount">1.4. 引用计数（refcount）</a></li>
+      <li><a href="#15-最近操作时间lru" id="markdown-toc-15-最近操作时间lru">1.5. 最近操作时间（lru）</a></li>
+    </ul>
+  </li>
+  <li><a href="#2-创建对象" id="markdown-toc-2-创建对象">2. 创建对象</a></li>
+  <li><a href="#3-工作流程" id="markdown-toc-3-工作流程">3. 工作流程</a>    <ul>
+      <li><a href="#31-命令" id="markdown-toc-31-命令">3.1. 命令</a></li>
+      <li><a href="#32-堆栈" id="markdown-toc-32-堆栈">3.2. 堆栈</a></li>
+      <li><a href="#33-命令结构" id="markdown-toc-33-命令结构">3.3. 命令结构</a></li>
+      <li><a href="#34-其它" id="markdown-toc-34-其它">3.4. 其它</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-后记" id="markdown-toc-4-后记">4. 后记</a></li>
+  <li><a href="#5-参考" id="markdown-toc-5-参考">5. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-对象">1. 对象</h2>
+
+<p><img src="/images/2020-02-20-14-09-19.png" alt="对象关系" data-action="zoom" /></p>
+
+<h3 id="11-数据结构">1.1. 数据结构</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="n">redisObject</span> <span class="p">{</span>
+    <span class="c1">// 对象类型</span>
+    <span class="kt">unsigned</span> <span class="n">type</span><span class="o">:</span><span class="mi">4</span><span class="p">;</span>
+    <span class="c1">// 对象编码类型</span>
+    <span class="kt">unsigned</span> <span class="n">encoding</span><span class="o">:</span><span class="mi">4</span><span class="p">;</span>
+    <span class="c1">// 对象操作时间</span>
+    <span class="kt">unsigned</span> <span class="n">lru</span><span class="o">:</span><span class="n">LRU_BITS</span><span class="p">;</span> <span class="cm">/* LRU time (relative to global lru_clock) or
+                            * LFU data (least significant 8 bits frequency
+                            * and most significant 16 bits access time). */</span>
+    <span class="c1">// 使用计数</span>
+    <span class="kt">int</span> <span class="n">refcount</span><span class="p">;</span>
+    <span class="c1">// 数据内容</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">robj</span><span class="p">;</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="12-类型type">1.2. 类型（type）</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* The actual Redis Object */</span>
+<span class="cp">#define OBJ_STRING 0    </span><span class="cm">/* String object. */</span><span class="cp">
+#define OBJ_LIST 1      </span><span class="cm">/* List object. */</span><span class="cp">
+#define OBJ_SET 2       </span><span class="cm">/* Set object. */</span><span class="cp">
+#define OBJ_ZSET 3      </span><span class="cm">/* Sorted set object. */</span><span class="cp">
+#define OBJ_HASH 4      </span><span class="cm">/* Hash object. */</span><span class="cp">
+</span></code></pre></div></div>
+
+<hr />
+
+<h3 id="13-编码encoding">1.3. 编码（encoding）</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Objects encoding. Some kind of objects like Strings and Hashes can be
+ * internally represented in multiple ways. The 'encoding' field of the object
+ * is set to one of this fields for this object. */</span>
+<span class="cp">#define OBJ_ENCODING_RAW 0     </span><span class="cm">/* Raw representation */</span><span class="cp">
+#define OBJ_ENCODING_INT 1     </span><span class="cm">/* Encoded as integer */</span><span class="cp">
+#define OBJ_ENCODING_HT 2      </span><span class="cm">/* Encoded as hash table */</span><span class="cp">
+#define OBJ_ENCODING_ZIPMAP 3  </span><span class="cm">/* Encoded as zipmap */</span><span class="cp">
+#define OBJ_ENCODING_LINKEDLIST 4 </span><span class="cm">/* No longer used: old list encoding. */</span><span class="cp">
+#define OBJ_ENCODING_ZIPLIST 5 </span><span class="cm">/* Encoded as ziplist */</span><span class="cp">
+#define OBJ_ENCODING_INTSET 6  </span><span class="cm">/* Encoded as intset */</span><span class="cp">
+#define OBJ_ENCODING_SKIPLIST 7  </span><span class="cm">/* Encoded as skiplist */</span><span class="cp">
+#define OBJ_ENCODING_EMBSTR 8  </span><span class="cm">/* Embedded sds string encoding */</span><span class="cp">
+#define OBJ_ENCODING_QUICKLIST 9 </span><span class="cm">/* Encoded as linked list of ziplists */</span><span class="cp">
+#define OBJ_ENCODING_STREAM 10 </span><span class="cm">/* Encoded as a radix tree of listpacks */</span><span class="cp">
+</span></code></pre></div></div>
+
+<hr />
+
+<h3 id="14-引用计数refcount">1.4. 引用计数（refcount）</h3>
+
+<p>为了内存能重复使用，节省内存空间，redis 数据对象可能被共享，通过引用计数，统计对象被引用的次数。在内存回收时，当引用计数为 1，说明没有其它逻辑正在使用它，可以进行回收销毁。</p>
+
+<p>object.c</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">incrRefCount</span><span class="p">(</span><span class="n">robj</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">refcount</span> <span class="o">!=</span> <span class="n">OBJ_SHARED_REFCOUNT</span><span class="p">)</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">refcount</span><span class="o">++</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">decrRefCount</span><span class="p">(</span><span class="n">robj</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">refcount</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">switch</span><span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="n">OBJ_STRING</span><span class="p">:</span> <span class="n">freeStringObject</span><span class="p">(</span><span class="n">o</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">OBJ_LIST</span><span class="p">:</span> <span class="n">freeListObject</span><span class="p">(</span><span class="n">o</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">OBJ_SET</span><span class="p">:</span> <span class="n">freeSetObject</span><span class="p">(</span><span class="n">o</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">OBJ_ZSET</span><span class="p">:</span> <span class="n">freeZsetObject</span><span class="p">(</span><span class="n">o</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">OBJ_HASH</span><span class="p">:</span> <span class="n">freeHashObject</span><span class="p">(</span><span class="n">o</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">OBJ_MODULE</span><span class="p">:</span> <span class="n">freeModuleObject</span><span class="p">(</span><span class="n">o</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">OBJ_STREAM</span><span class="p">:</span> <span class="n">freeStreamObject</span><span class="p">(</span><span class="n">o</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span>
+        <span class="nl">default:</span> <span class="n">serverPanic</span><span class="p">(</span><span class="s">"Unknown object type"</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">zfree</span><span class="p">(</span><span class="n">o</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">refcount</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="n">serverPanic</span><span class="p">(</span><span class="s">"decrRefCount against refcount &lt;= 0"</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">refcount</span> <span class="o">!=</span> <span class="n">OBJ_SHARED_REFCOUNT</span><span class="p">)</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">refcount</span><span class="o">--</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">freeStreamObject</span><span class="p">(</span><span class="n">robj</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">freeStream</span><span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="15-最近操作时间lru">1.5. 最近操作时间（lru）</h3>
+
+<p>lru 主要是记录对象的最近使用时间和使用频率，具体用法可以参考 <a href="https://wenfh2020.com/2020/03/06/max-memory/">[redis 源码走读] maxmemory 数据淘汰策略</a></p>
+
+<hr />
+
+<h2 id="2-创建对象">2. 创建对象</h2>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">robj</span> <span class="o">*</span><span class="nf">createObject</span><span class="p">(</span><span class="kt">int</span> <span class="n">type</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">robj</span> <span class="o">*</span><span class="n">o</span> <span class="o">=</span> <span class="n">zmalloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">o</span><span class="p">));</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">=</span> <span class="n">type</span><span class="p">;</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">OBJ_ENCODING_RAW</span><span class="p">;</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">refcount</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="cm">/* Set the LRU to the current lruclock (minutes resolution), or
+     * alternatively the LFU counter. */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">maxmemory_policy</span> <span class="o">&amp;</span> <span class="n">MAXMEMORY_FLAG_LFU</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">o</span><span class="o">-&gt;</span><span class="n">lru</span> <span class="o">=</span> <span class="p">(</span><span class="n">LFUGetTimeInMinutes</span><span class="p">()</span><span class="o">&lt;&lt;</span><span class="mi">8</span><span class="p">)</span> <span class="o">|</span> <span class="n">LFU_INIT_VAL</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">o</span><span class="o">-&gt;</span><span class="n">lru</span> <span class="o">=</span> <span class="n">LRU_CLOCK</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="3-工作流程">3. 工作流程</h2>
+
+<p>对象实现可以通过调试，看看实现逻辑。刚看完<a href="https://wenfh2020.com/2020/02/04/redis-inset/">整数集合</a>，可以跟踪下实现流程。</p>
+
+<h3 id="31-命令">3.1. 命令</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sadd keytest 1 2 3
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="32-堆栈">3.2. 堆栈</h3>
+
+<p>下断点看看命令工作流程</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">intsetNew</span><span class="p">()</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">xxx</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">intset</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">createIntsetObject</span><span class="p">()</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">xxx</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">object</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">236</span><span class="p">)</span>
+<span class="n">setTypeCreate</span><span class="p">(</span><span class="n">sds</span> <span class="n">value</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">xxx</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">t_set</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">44</span><span class="p">)</span>
+<span class="n">saddCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span> <span class="n">c</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">xxx</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">t_set</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">270</span><span class="p">)</span>
+<span class="p">...</span>
+<span class="n">aeMain</span><span class="p">(</span><span class="n">aeEventLoop</span> <span class="o">*</span> <span class="n">eventLoop</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">xxx</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">ae</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">515</span><span class="p">)</span>
+<span class="n">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="p">(</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">xxx</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">redis</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">server</span><span class="p">.</span><span class="n">c</span><span class="o">:</span><span class="mi">5054</span><span class="p">)</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="33-命令结构">3.3. 命令结构</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">redisCommand</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">;</span>
+    <span class="n">redisCommandProc</span> <span class="o">*</span><span class="n">proc</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">arity</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">sflags</span><span class="p">;</span>   <span class="cm">/* Flags as string representation, one char per flag. */</span>
+    <span class="kt">uint64_t</span> <span class="n">flags</span><span class="p">;</span> <span class="cm">/* The actual flags, obtained from the 'sflags' field. */</span>
+    <span class="cm">/* Use a function to determine keys arguments in a command line.
+     * Used for Redis Cluster redirect. */</span>
+    <span class="n">redisGetKeysProc</span> <span class="o">*</span><span class="n">getkeys_proc</span><span class="p">;</span>
+    <span class="cm">/* What keys should be loaded in background when calling this command? */</span>
+    <span class="kt">int</span> <span class="n">firstkey</span><span class="p">;</span> <span class="cm">/* The first argument that's a key (0 = no keys) */</span>
+    <span class="kt">int</span> <span class="n">lastkey</span><span class="p">;</span>  <span class="cm">/* The last argument that's a key */</span>
+    <span class="kt">int</span> <span class="n">keystep</span><span class="p">;</span>  <span class="cm">/* The step between first and last key */</span>
+    <span class="kt">long</span> <span class="kt">long</span> <span class="n">microseconds</span><span class="p">,</span> <span class="n">calls</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">id</span><span class="p">;</span>     <span class="cm">/* Command ID. This is a progressive ID starting from 0 that
+                   is assigned at runtime, and is used in order to check
+                   ACLs. A connection is able to execute a given command if
+                   the user associated to the connection has this command
+                   bit set in the bitmap of allowed commands. */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<ul>
+  <li>初始化命令</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="k">struct</span> <span class="n">redisServer</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">dict</span> <span class="o">*</span><span class="n">commands</span><span class="p">;</span>             <span class="cm">/* Command table */</span>
+    <span class="n">dict</span> <span class="o">*</span><span class="n">orig_commands</span><span class="p">;</span>        <span class="cm">/* Command table before command renaming. */</span>
+    <span class="p">...</span>
+<span class="p">};</span>
+
+<span class="k">struct</span> <span class="n">redisCommand</span> <span class="n">redisCommandTable</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="p">{</span><span class="s">"sadd"</span><span class="p">,</span><span class="n">saddCommand</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span>
+     <span class="s">"write use-memory fast @set"</span><span class="p">,</span>
+     <span class="mi">0</span><span class="p">,</span><span class="nb">NULL</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">initServerConfig</span><span class="p">();</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">initServerConfig</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="cm">/* Command table -- we initiialize it here as it is part of the
+     * initial configuration, since command names may be changed via
+     * redis.conf using the rename-command directive. */</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">commands</span> <span class="o">=</span> <span class="n">dictCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">commandTableDictType</span><span class="p">,</span><span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">orig_commands</span> <span class="o">=</span> <span class="n">dictCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">commandTableDictType</span><span class="p">,</span><span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">populateCommandTable</span><span class="p">();</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">delCommand</span> <span class="o">=</span> <span class="n">lookupCommandByCString</span><span class="p">(</span><span class="s">"del"</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="cm">/* Populates the Redis Command Table starting from the hard coded list
+ * we have on top of redis.c file. */</span>
+<span class="kt">void</span> <span class="nf">populateCommandTable</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">j</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">numcommands</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">redisCommandTable</span><span class="p">)</span><span class="o">/</span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">redisCommand</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">numcommands</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">struct</span> <span class="n">redisCommand</span> <span class="o">*</span><span class="n">c</span> <span class="o">=</span> <span class="n">redisCommandTable</span><span class="o">+</span><span class="n">j</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">retval1</span><span class="p">,</span> <span class="n">retval2</span><span class="p">;</span>
+
+        <span class="cm">/* Translate the command string flags description into an actual
+         * set of flags. */</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">populateCommandTableParseFlags</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">sflags</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_ERR</span><span class="p">)</span>
+            <span class="n">serverPanic</span><span class="p">(</span><span class="s">"Unsupported command flag"</span><span class="p">);</span>
+
+        <span class="n">c</span><span class="o">-&gt;</span><span class="n">id</span> <span class="o">=</span> <span class="n">ACLGetCommandID</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span> <span class="cm">/* Assign the ID used for ACL. */</span>
+        <span class="n">retval1</span> <span class="o">=</span> <span class="n">dictAdd</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">commands</span><span class="p">,</span> <span class="n">sdsnew</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">),</span> <span class="n">c</span><span class="p">);</span>
+        <span class="cm">/* Populate an additional dictionary that will be unaffected
+         * by rename-command statements in redis.conf. */</span>
+        <span class="n">retval2</span> <span class="o">=</span> <span class="n">dictAdd</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">orig_commands</span><span class="p">,</span> <span class="n">sdsnew</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">),</span> <span class="n">c</span><span class="p">);</span>
+        <span class="n">serverAssert</span><span class="p">(</span><span class="n">retval1</span> <span class="o">==</span> <span class="n">DICT_OK</span> <span class="o">&amp;&amp;</span> <span class="n">retval2</span> <span class="o">==</span> <span class="n">DICT_OK</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>根据命令字符串，查找对应的 <code class="highlighter-rouge">redisCommand</code></li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">processCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/* Now lookup the command and check ASAP about trivial error conditions
+     * such as wrong arity, bad command name and so forth. */</span>
+    <span class="n">c</span><span class="o">-&gt;</span><span class="n">cmd</span> <span class="o">=</span> <span class="n">c</span><span class="o">-&gt;</span><span class="n">lastcmd</span> <span class="o">=</span> <span class="n">lookupCommand</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>命令处理函数</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">saddCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">robj</span> <span class="o">*</span><span class="n">set</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">j</span><span class="p">,</span> <span class="n">added</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// 查找 key 是否已经存在</span>
+    <span class="n">set</span> <span class="o">=</span> <span class="n">lookupKeyWrite</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">db</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">set</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 根据命令数值去确定实现编码。</span>
+        <span class="n">set</span> <span class="o">=</span> <span class="n">setTypeCreate</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">);</span>
+        <span class="n">dbAdd</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">db</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">set</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">set</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">!=</span> <span class="n">OBJ_SET</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">addReply</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">shared</span><span class="p">.</span><span class="n">wrongtypeerr</span><span class="p">);</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">c</span><span class="o">-&gt;</span><span class="n">argc</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">setTypeAdd</span><span class="p">(</span><span class="n">set</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">))</span> <span class="n">added</span><span class="o">++</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">added</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">signalModifiedKey</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">db</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+        <span class="n">notifyKeyspaceEvent</span><span class="p">(</span><span class="n">NOTIFY_SET</span><span class="p">,</span><span class="s">"sadd"</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">db</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">server</span><span class="p">.</span><span class="n">dirty</span> <span class="o">+=</span> <span class="n">added</span><span class="p">;</span>
+    <span class="n">addReplyLongLong</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">added</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>根据存储的数据，底层决定用那种编码进行保存。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Factory method to return a set that *can* hold "value". When the object has
+ * an integer-encodable value, an intset will be returned. Otherwise a regular
+ * hash table. */</span>
+<span class="n">robj</span> <span class="o">*</span><span class="nf">setTypeCreate</span><span class="p">(</span><span class="n">sds</span> <span class="n">value</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">isSdsRepresentableAsLongLong</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="nb">NULL</span><span class="p">)</span> <span class="o">==</span> <span class="n">C_OK</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">createIntsetObject</span><span class="p">();</span>
+    <span class="k">return</span> <span class="n">createSetObject</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="n">robj</span> <span class="o">*</span><span class="nf">createIntsetObject</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">intset</span> <span class="o">*</span><span class="n">is</span> <span class="o">=</span> <span class="n">intsetNew</span><span class="p">();</span>
+    <span class="n">robj</span> <span class="o">*</span><span class="n">o</span> <span class="o">=</span> <span class="n">createObject</span><span class="p">(</span><span class="n">OBJ_SET</span><span class="p">,</span><span class="n">is</span><span class="p">);</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">OBJ_ENCODING_INTSET</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">robj</span> <span class="o">*</span><span class="nf">createSetObject</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">dict</span> <span class="o">*</span><span class="n">d</span> <span class="o">=</span> <span class="n">dictCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">setDictType</span><span class="p">,</span><span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">robj</span> <span class="o">*</span><span class="n">o</span> <span class="o">=</span> <span class="n">createObject</span><span class="p">(</span><span class="n">OBJ_SET</span><span class="p">,</span><span class="n">d</span><span class="p">);</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">OBJ_ENCODING_HT</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="34-其它">3.4. 其它</h3>
+
+<p>以上是集合的工作流程，其它功能使用流程以此类推，当然你也可以走下哈希功能。编码是 <code class="highlighter-rouge">dict</code> 和 <code class="highlighter-rouge">ziplist</code> 的结合。推例如：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hset keytest filedtest valuetest
+</code></pre></div></div>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">robj</span> <span class="o">*</span><span class="nf">createHashObject</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">zl</span> <span class="o">=</span> <span class="n">ziplistNew</span><span class="p">();</span>
+    <span class="n">robj</span> <span class="o">*</span><span class="n">o</span> <span class="o">=</span> <span class="n">createObject</span><span class="p">(</span><span class="n">OBJ_HASH</span><span class="p">,</span> <span class="n">zl</span><span class="p">);</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">OBJ_ENCODING_ZIPLIST</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">hsetCommand</span><span class="p">(</span><span class="n">client</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">o</span> <span class="o">=</span> <span class="n">hashTypeLookupWriteOrCreate</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+    <span class="n">hashTypeTryConversion</span><span class="p">(</span><span class="n">o</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argc</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">c</span><span class="o">-&gt;</span><span class="n">argc</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">created</span> <span class="o">+=</span> <span class="o">!</span><span class="n">hashTypeSet</span><span class="p">(</span><span class="n">o</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">,</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">,</span><span class="n">HASH_SET_COPY</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">hashTypeTryConversion</span><span class="p">(</span><span class="n">robj</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="n">robj</span> <span class="o">**</span><span class="n">argv</span><span class="p">,</span> <span class="kt">int</span> <span class="n">start</span><span class="p">,</span> <span class="kt">int</span> <span class="n">end</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="n">start</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">sdsEncodedObject</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&amp;&amp;</span>
+            <span class="n">sdslen</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">server</span><span class="p">.</span><span class="n">hash_max_ziplist_value</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">hashTypeConvert</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">OBJ_ENCODING_HT</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">hashTypeSet</span><span class="p">(</span><span class="n">robj</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="n">sds</span> <span class="n">field</span><span class="p">,</span> <span class="n">sds</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">update</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">encoding</span> <span class="o">==</span> <span class="n">OBJ_ENCODING_ZIPLIST</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">encoding</span> <span class="o">==</span> <span class="n">OBJ_ENCODING_HT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">serverPanic</span><span class="p">(</span><span class="s">"Unknown hash encoding"</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-后记">4. 后记</h2>
+
+<p>很多时候，我们理解面向对象，会单纯认为 <code class="highlighter-rouge">C++</code>，<code class="highlighter-rouge">java</code> 等语言。所谓面向对象，是对事物逻辑进行抽象，无关语言，例如 <code class="highlighter-rouge">c</code>语言实现的 <code class="highlighter-rouge">redis</code> 对象，就很好阐述了这个问题。</p>
+
+<hr />
+
+<p>[redis 源码走读] 系列，根据 《redis 设计与实现》书籍的目录路线，结合相关内容进行源码阅读。计划事无巨细走读源码，发现时间不允许，很多细节在实际应用中可以不断查阅巩固，而且不少书籍博客也有很详尽的解说。redis 在使用过程中，自己还有不少疑惑，带着问题，在查阅过资料后，做一些总结，便于遗忘查阅。</p>
+
+<hr />
+
+<h2 id="5-参考">5. 参考</h2>
+
+<ul>
+  <li>《redis 设计与实现》</li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>

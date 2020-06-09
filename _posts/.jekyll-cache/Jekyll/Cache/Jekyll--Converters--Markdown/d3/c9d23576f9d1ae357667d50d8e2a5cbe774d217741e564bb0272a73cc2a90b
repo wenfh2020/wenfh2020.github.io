@@ -1,0 +1,294 @@
+I"8<p>本章主要说 c 语言。源码工作流程：程序员编写代码 -&gt; 编译 -&gt; 产生二进制执行文件 -&gt; 文件加载到系统运行。编译这个环节，其实是一个高级语言翻译成低级语言过程：高级语言 -&gt; 汇编 -&gt; 机器语言。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-gcc" id="markdown-toc-1-gcc">1. gcc</a></li>
+  <li><a href="#2-makemakefile" id="markdown-toc-2-makemakefile">2. make/Makefile</a>    <ul>
+      <li><a href="#21-make-工作流程" id="markdown-toc-21-make-工作流程">2.1. make 工作流程</a></li>
+      <li><a href="#22-makefile-规则" id="markdown-toc-22-makefile-规则">2.2. Makefile 规则</a></li>
+      <li><a href="#23-makefile-实例" id="markdown-toc-23-makefile-实例">2.3. Makefile 实例</a></li>
+    </ul>
+  </li>
+  <li><a href="#3-参考" id="markdown-toc-3-参考">3. 参考</a></li>
+</ul>
+
+<hr />
+
+<ol>
+  <li>
+    <p>随着时代变迁，人类根据不同应用场景，创造了很多应用级别的高级语言，例如 c 语言，然而这些都是高级语言，机器不懂啊，机器就是一堆硬件，它只懂（0 1）二进制机器码。用二进制机器码编写代码对人类非常不友好，那怎么办，后面工程师创造了汇编语言，比二进制机器码高级一点，它封装了二进制命令。后来在这个基础上，人们又创造出很多对人类友好的高级语言，只要将这些高级语言翻译成汇编就好了。</p>
+  </li>
+  <li>
+    <p>高级语言转汇编过程中，需要编译器进行“翻译”。例如 <code class="highlighter-rouge">gcc</code> 编译器套件，它是一个程序集合。编译器对高级语言通过：预编译 -&gt; 编译 -&gt; 汇编 -&gt; 链接，产生可以被系统加载运行的二进制文件。</p>
+
+    <p><img src="/images/2020-04-28-12-54-46.png" alt="编译流程" data-action="zoom" /></p>
+  </li>
+  <li>
+    <p>编译器可以对源码进行翻译，一个复杂的项目，往往不是一个简单的文件就能实现的，它通过很多文件实现不同功能，组合起来完成一个项目。这其实是模块化，不同的小功能模块，当你需要哪个小功能模块时就添加进来构成一个整体。但是编译器没那么智能，它不懂文件之间的依赖关系是怎么样的。所以 <code class="highlighter-rouge">make</code> 自动化构建命令工具应运而生，研发人员通过编写 <code class="highlighter-rouge">Makefile</code> 文件，将源码文件之间的依赖关系通过一定规则建立起来。make 工具读取 Makefile 文件规则，调用编译器套件（gcc）编译链接这些文件，最终这些小模块组织起来编译成预期的可执行文件。</p>
+  </li>
+</ol>
+
+<hr />
+
+<h2 id="1-gcc">1. gcc</h2>
+
+<p>GCC（GNU Compiler Collection，GNU编译器套件）是由GNU开发的编程语言译器。GNU编译器套件包括C、C++、 Objective-C、 Fortran、Java、Ada和Go语言前端，也包括了这些语言的库（如libstdc++，libgcj等）。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>参数</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-E</td>
+      <td>只运行 C 预编译器。</td>
+    </tr>
+    <tr>
+      <td>-S</td>
+      <td>告诉编译器产生汇编语言文件（.s 文件）后停止编译。</td>
+    </tr>
+    <tr>
+      <td>-c</td>
+      <td>只编译，不链接成为可执行文件，编译器只是由输入的.c等源代码文件生成.o为后缀的目标文件，通常用于编译不包含主程序的子程序文件。</td>
+    </tr>
+    <tr>
+      <td>-o</td>
+      <td>-o &lt;file_name&gt; 确定输出文件 file_name。</td>
+    </tr>
+    <tr>
+      <td>-g</td>
+      <td>在目标文件中嵌入调试信息，方便调试工具对源码进行调试。</td>
+    </tr>
+    <tr>
+      <td>-O</td>
+      <td>-On (n=0,1,2,3) 设置编译器优化等级，O0为不优化，O3为最高等级优化，O1为默认优化等级。</td>
+    </tr>
+    <tr>
+      <td>-Wall</td>
+      <td>使 gcc 对源文件的代码有问题的地方发出警告。</td>
+    </tr>
+    <tr>
+      <td>-D</td>
+      <td>宏编译。</td>
+    </tr>
+    <tr>
+      <td>-I</td>
+      <td>-I&lt;dir&gt; 将 dir 目录加入搜索头文件的目录路径。</td>
+    </tr>
+    <tr>
+      <td>-L</td>
+      <td>-L&lt;dir&gt; 将 dir 目录加入搜索库的目录路径。</td>
+    </tr>
+    <tr>
+      <td>-l</td>
+      <td>-l&lt;lib&gt; 链接库。</td>
+    </tr>
+    <tr>
+      <td>-static</td>
+      <td>禁止使用动态库，所以编译出来的目标文件很大。</td>
+    </tr>
+    <tr>
+      <td>-share</td>
+      <td>尽量使用动态库，生成的文件很小，但是需要系统已经安装有动态库。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// hello.c</span>
+<span class="cp">#include &lt;stdio.h&gt;
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"hello world</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># gcc -g hello.c -o hello &amp;&amp; ./hello</span>
+hello world
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-makemakefile">2. make/Makefile</h2>
+
+<h3 id="21-make-工作流程">2.1. make 工作流程</h3>
+
+<ol>
+  <li>搜索读入项目中的 Makefile 文件。</li>
+  <li>读入被 include 的其它 Makefile 文件。</li>
+  <li>初始化 Makefile 文件中的变量。</li>
+  <li>根据 Makefile 规则进行分析，为所有目标文件创建依赖关系。</li>
+  <li>根据依赖关系，决定哪些目标要重新编译。</li>
+  <li>执行 Makefile 中对应 shell 命令。</li>
+</ol>
+
+<hr />
+
+<h3 id="22-makefile-规则">2.2. Makefile 规则</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>target ... : prerequisites ...
+<span class="o">(</span>tab<span class="o">)</span><span class="nb">command</span>
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">关键字</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">target</td>
+      <td style="text-align: left">目标文件，可以是 Object File (*.o) ，也可以是执行文件。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">prerequisites</td>
+      <td style="text-align: left">要生成 target 所需要依赖的文件或是目标，也可以不写，代表不需要依赖。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">command</td>
+      <td style="text-align: left">make 需要执行的（shell）命令。</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<table>
+  <thead>
+    <tr>
+      <th>语法</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>all</td>
+      <td>这个伪目标是所有目标的目标，其功能一般是编译所有的目标。</td>
+    </tr>
+    <tr>
+      <td>wildcard</td>
+      <td>$ (wildcard $(dir)/*.cpp) 为了找出目录和指定目录下所有后缀为 cpp 的文件。</td>
+    </tr>
+    <tr>
+      <td>foreach</td>
+      <td>循环。$(foreach &lt;var&gt;, &lt;list&gt;, &lt;text&gt;)，把参数 &lt;list&gt; 中的单词逐一取出放到参数&lt;var&gt;所指定的变量中， 然后再执行&lt;text&gt;所包含的表达式。每一次&lt;text&gt;会返回一个字符串，循环过程中，&lt;text&gt; 的所返回的每个字符串会以空格分隔，最后当整个循环结束时，&lt;text&gt;所返回的每个字符串 所组成的整个字符串(以空格分隔)将会是 foreach 函数的返回值。CPP_SRCS = $ (foreach dir, ., $ (wildcard $(dir)/*.cpp))</td>
+    </tr>
+    <tr>
+      <td>vpath</td>
+      <td>告诉 make 搜索制定的源码目录。</td>
+    </tr>
+    <tr>
+      <td>patsubst</td>
+      <td>替代字符串<br /> SRCS = $(wildcard ./*.c) <br /> OBJS = $(patsubst %.c, %.o, $(SRCS))  <br /> 将 *c 文件替换成 *.o 文件。</td>
+    </tr>
+    <tr>
+      <td>.PHONY</td>
+      <td>“.PHONY” 用来显式地指明一个目标是“伪目标”，向 make 说明，不管是否有这个文件，这个目标就是“伪目标”。“伪目标”并不是一个文件，只是一个标签，由于“伪目标”不是文件，所以 make 无法生成它的依赖关系和决定它是否要执行。我们只有通过显式地指明这个“目标”才能让其生效。当然，“伪目标”的取名不能和文件名重名，不然其就失去了“伪目标”的意义了。<br />.PHONY: clean <br />clean: <br />rm *.o temp</td>
+    </tr>
+    <tr>
+      <td>%</td>
+      <td>我们的“目标模式”或是“依赖模式”中都应该有“%”这个字符<br />$(objects): %.o: %.c</td>
+    </tr>
+    <tr>
+      <td>$&lt;</td>
+      <td>依赖目标中的第一个目标名。字。</td>
+    </tr>
+    <tr>
+      <td>$^</td>
+      <td>所有依赖目标集合，以空格分隔。</td>
+    </tr>
+    <tr>
+      <td>$@</td>
+      <td>表示目标集(也就是“foo.o bar.o”)<br />$(CC) -c $(CFLAGS) $&lt; -o $@</td>
+    </tr>
+    <tr>
+      <td>$</td>
+      <td>可以定义变量<br />TARGETS = main<br />$(TARGETS)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="23-makefile-实例">2.3. Makefile 实例</h3>
+
+<ul>
+  <li>编译前。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># ls</span>
+Makefile     ae.h         ae_kqueue.c  anet.h       networking.c server.c
+ae.c         ae_epoll.c   anet.c       config.h     server.h
+</code></pre></div></div>
+
+<ul>
+  <li>Makefile 文件内容。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CC <span class="o">=</span> gcc
+CFLAGS <span class="o">=</span> <span class="nt">-g</span> <span class="nt">-O0</span>
+
+SRCS <span class="o">=</span> <span class="si">$(</span>wildcard ./<span class="k">*</span>.c<span class="si">)</span>
+OBJS <span class="o">=</span> <span class="si">$(</span>patsubst %.c, %.o, <span class="si">$(</span>SRCS<span class="si">))</span>
+SERVER_NAME <span class="o">=</span> my-redis-server
+
+.PHONY: clean
+
+<span class="si">$(</span>SERVER_NAME<span class="si">)</span>: <span class="si">$(</span>OBJS<span class="si">)</span>
+	<span class="si">$(</span>CC<span class="si">)</span> <span class="si">$(</span>CFLAGS<span class="si">)</span> <span class="nv">$^</span> <span class="nt">-o</span> <span class="nv">$@</span>
+
+%.o: %.c
+	<span class="si">$(</span>CC<span class="si">)</span> <span class="si">$(</span>CFLAGS<span class="si">)</span> <span class="nt">-c</span> <span class="nv">$&lt;</span> <span class="nt">-o</span> <span class="nv">$@</span>
+
+clean:
+	<span class="nb">rm</span> <span class="nt">-f</span> <span class="si">$(</span>OBJS<span class="si">)</span>
+	<span class="nb">rm</span> <span class="nt">-f</span> <span class="si">$(</span>SERVER_NAME<span class="si">)</span>
+</code></pre></div></div>
+
+<ul>
+  <li>编译后。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># make clean; make</span>
+<span class="nb">rm</span> <span class="nt">-f</span>  ./ae.o  ./ae_epoll.o  ./ae_kqueue.o  ./anet.o  ./networking.o  ./server.o
+<span class="nb">rm</span> <span class="nt">-f</span> my-redis-server
+gcc <span class="nt">-g</span> <span class="nt">-O0</span> <span class="nt">-c</span> ae.c <span class="nt">-o</span> ae.o
+gcc <span class="nt">-g</span> <span class="nt">-O0</span> <span class="nt">-c</span> ae_epoll.c <span class="nt">-o</span> ae_epoll.o
+gcc <span class="nt">-g</span> <span class="nt">-O0</span> <span class="nt">-c</span> ae_kqueue.c <span class="nt">-o</span> ae_kqueue.o
+gcc <span class="nt">-g</span> <span class="nt">-O0</span> <span class="nt">-c</span> anet.c <span class="nt">-o</span> anet.o
+gcc <span class="nt">-g</span> <span class="nt">-O0</span> <span class="nt">-c</span> networking.c <span class="nt">-o</span> networking.o
+gcc <span class="nt">-g</span> <span class="nt">-O0</span> <span class="nt">-c</span> server.c <span class="nt">-o</span> server.o
+gcc <span class="nt">-g</span> <span class="nt">-O0</span> ae.o ae_epoll.o ae_kqueue.o anet.o networking.o server.o <span class="nt">-o</span> my-redis-server
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># ls</span>
+Makefile        ae_epoll.c      anet.c          my-redis-server server.c
+ae.c            ae_epoll.o      anet.h          networking.c    server.h
+ae.h            ae_kqueue.c     anet.o          networking.o    server.o
+ae.o            ae_kqueue.o     config.h
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="3-参考">3. 参考</h2>
+
+<ul>
+  <li>《跟我一起学 Makefile》</li>
+  <li><a href="http://www.ruanyifeng.com/blog/2015/02/make.html">Make 命令教程</a></li>
+  <li><a href="https://wenfh2020.com/2020/02/17/mem-distribution/">进程内存分布（Linux）</a></li>
+  <li><a href="https://www.cnblogs.com/52php/p/5681725.html">编译器 cc、gcc、g++、CC 的区别</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Makefile">wiki Makefile</a></li>
+  <li><a href="https://baike.baidu.com/item/gcc/17570?fr=aladdin">gcc （GNU编译器套件）</a></li>
+  <li><a href="https://www.runoob.com/w3cnote/gcc-parameter-detail.html">GCC 参数详解</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Make_(software)">Make (software)</a></li>
+  <li><a href="https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html">gcc-Link-Options</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

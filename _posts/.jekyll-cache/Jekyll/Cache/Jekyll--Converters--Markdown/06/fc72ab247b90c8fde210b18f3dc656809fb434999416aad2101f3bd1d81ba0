@@ -1,0 +1,575 @@
+I"{�<p>内存池原理：内存池向系统预申请一块比较大的连续内存空间，当外部向内存池申请内存分配时，内存池从连续内存空间中，划分一部分出去，剩下部分是空闲的空间，当有新的分配，再划分一部分出去，直到内存池中没有足够的内存空间分配给新的申请，那么内存池再申请新的连续内存块。当然内存池分配出去的内存，也会回收使它重新成为空闲空间，重复利用。这样，内存池避免频繁向内核申请/释放内存，从而提高系统性能。</p>
+
+<p>nginx 内存池源码(<a href="https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c">ngx_palloc.c</a>)，通过链式管理大小内存块，实现内存管理。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-内存池使用测试" id="markdown-toc-1-内存池使用测试">1. 内存池使用测试</a></li>
+  <li><a href="#2-接口" id="markdown-toc-2-接口">2. 接口</a></li>
+  <li><a href="#3-内存池" id="markdown-toc-3-内存池">3. 内存池</a>    <ul>
+      <li><a href="#31-内存池数据结构" id="markdown-toc-31-内存池数据结构">3.1. 内存池数据结构</a></li>
+      <li><a href="#32-小内存块" id="markdown-toc-32-小内存块">3.2. 小内存块</a></li>
+      <li><a href="#33-大内存块" id="markdown-toc-33-大内存块">3.3. 大内存块</a></li>
+      <li><a href="#34-内存文件" id="markdown-toc-34-内存文件">3.4. 内存文件</a></li>
+    </ul>
+  </li>
+  <li><a href="#4-源码" id="markdown-toc-4-源码">4. 源码</a>    <ul>
+      <li><a href="#41-创建内存池" id="markdown-toc-41-创建内存池">4.1. 创建内存池</a></li>
+      <li><a href="#42-释放内存池" id="markdown-toc-42-释放内存池">4.2. 释放内存池</a></li>
+      <li><a href="#43-内存对齐申请空间" id="markdown-toc-43-内存对齐申请空间">4.3. 内存对齐申请空间</a></li>
+      <li><a href="#44-分配内存" id="markdown-toc-44-分配内存">4.4. 分配内存</a></li>
+      <li><a href="#45-分配小内存" id="markdown-toc-45-分配小内存">4.5. 分配小内存</a></li>
+      <li><a href="#46-分配小内存块" id="markdown-toc-46-分配小内存块">4.6. 分配小内存块</a></li>
+      <li><a href="#47-申请大块内存" id="markdown-toc-47-申请大块内存">4.7. 申请大块内存</a></li>
+      <li><a href="#48-释放大内存块" id="markdown-toc-48-释放大内存块">4.8. 释放大内存块</a></li>
+      <li><a href="#49-重置内存池" id="markdown-toc-49-重置内存池">4.9. 重置内存池</a></li>
+    </ul>
+  </li>
+  <li><a href="#5-问题" id="markdown-toc-5-问题">5. 问题</a></li>
+  <li><a href="#6-参考" id="markdown-toc-6-参考">6. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-内存池使用测试">1. 内存池使用测试</h2>
+
+<p><code class="highlighter-rouge">ngx_palloc.c</code> 代码耦合不是很大，可以扣出来用 <code class="highlighter-rouge">gdb</code> 跟踪其工作流程。</p>
+
+<blockquote>
+  <p>测试源码已上传 <a href="https://github.com/wenfh2020/c_test/blob/master/nginx/pool/pool.cpp">github</a>，测试视频已上传 <a href="https://www.bilibili.com/video/bv1TA41187Jp">bilibili</a> 。</p>
+</blockquote>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span> <span class="o">=</span> <span class="n">ngx_create_pool</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="n">ngx_palloc</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="mi">256</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">p2</span> <span class="o">=</span> <span class="n">ngx_palloc</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="mi">1024</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">p3</span> <span class="o">=</span> <span class="n">ngx_palloc</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="mi">1024</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">p4</span> <span class="o">=</span> <span class="n">ngx_palloc</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="mi">256</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">p5</span> <span class="o">=</span> <span class="n">ngx_palloc</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="mi">1024</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">p6</span> <span class="o">=</span> <span class="n">ngx_palloc</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="mi">1024</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">p7</span> <span class="o">=</span> <span class="n">ngx_palloc</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">);</span>
+
+    <span class="n">ngx_pool_cleanup_t</span> <span class="o">*</span><span class="n">c</span> <span class="o">=</span> <span class="p">(</span><span class="n">ngx_pool_cleanup_t</span> <span class="o">*</span><span class="p">)</span><span class="n">ngx_pool_cleanup_add</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="n">memcpy</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="s">"hello world!"</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="s">"hello world!"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">c</span><span class="o">-&gt;</span><span class="n">handler</span> <span class="o">=</span> <span class="n">test_cleanup</span><span class="p">;</span>
+    <span class="n">c</span><span class="o">-&gt;</span><span class="n">data</span> <span class="o">=</span> <span class="n">p</span><span class="p">;</span>
+
+    <span class="n">ngx_destroy_pool</span><span class="p">(</span><span class="n">pool</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-接口">2. 接口</h2>
+
+<ul>
+  <li>对外接口</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">接口</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">ngx_create_pool</td>
+      <td style="text-align: left">创建内存池。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ngx_destroy_pool</td>
+      <td style="text-align: left">释放内存池。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ngx_reset_pool</td>
+      <td style="text-align: left">重置内存池。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ngx_memalign</td>
+      <td style="text-align: left">内存对齐申请空间。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ngx_palloc</td>
+      <td style="text-align: left">分配内存。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ngx_pfree</td>
+      <td style="text-align: left">释放存块。</td>
+    </tr>
+  </tbody>
+</table>
+
+<ul>
+  <li>私有接口</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">接口</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">ngx_palloc_small</td>
+      <td style="text-align: left">分配小内存，内存池有足够空闲空间，从空闲空间分配，否则内存池申请新的小内存块进行分配。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ngx_palloc_block</td>
+      <td style="text-align: left">分配小内存块块。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ngx_palloc_large</td>
+      <td style="text-align: left">申请大块内存块。</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="3-内存池">3. 内存池</h2>
+
+<p><img src="/images/2020-04-25-17-15-19.png" alt="nginx 内存池" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="31-内存池数据结构">3.1. 内存池数据结构</h3>
+
+<p>nginx 内存池，将大小内存的分配分开管理：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">ngx_pool_data_t</code> 链表管理小内存块。</li>
+  <li><code class="highlighter-rouge">ngx_pool_large_t</code> 链表管理大内存块。</li>
+  <li>系统小内存的申请频率比较高，分配的粒度比较小，容易在一块连续空闲内存上进行多次分配。</li>
+  <li>大内存分配频率相对较低，而且在一块有限的连续内存上，可分配次数比较少，这样会产生比较大的碎片。</li>
+</ul>
+
+<p>这样，nginx 将大小内存的申请分开管理，逻辑更清晰，复杂度降低了，效率更高。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="n">ngx_pool_s</span> <span class="n">ngx_pool_t</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">ngx_pool_s</span> <span class="p">{</span>
+    <span class="n">ngx_pool_data_t</span>       <span class="n">d</span><span class="p">;</span>      <span class="c1">// 小内存块数据链表</span>
+    <span class="kt">size_t</span>                <span class="n">max</span><span class="p">;</span>    <span class="c1">// 小内存块最大空间长度</span>
+    <span class="n">ngx_pool_t</span>           <span class="o">*</span><span class="n">current</span><span class="p">;</span><span class="c1">// 当前小内存块</span>
+    <span class="n">ngx_chain_t</span>          <span class="o">*</span><span class="n">chain</span><span class="p">;</span>  <span class="c1">// 内存缓冲区链表（不详细分析）</span>
+    <span class="n">ngx_pool_large_t</span>     <span class="o">*</span><span class="n">large</span><span class="p">;</span>  <span class="c1">// 大内存块数据链表</span>
+    <span class="n">ngx_pool_cleanup_t</span>   <span class="o">*</span><span class="n">cleanup</span><span class="p">;</span><span class="c1">// 释放内存池回调链表</span>
+    <span class="n">ngx_log_t</span>            <span class="o">*</span><span class="n">log</span><span class="p">;</span>    <span class="c1">// 日志</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="32-小内存块">3.2. 小内存块</h3>
+
+<p>小内存块通过链表进行管理，内存分配过程，涉及到结点上空闲内存匹配是链表的遍历，复杂度是 $O(n)$，为了提高效率，增加了<code class="highlighter-rouge">failed</code> 分配内存失败次数统计（具体逻辑在分配函数里）</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+    <span class="n">u_char</span>               <span class="o">*</span><span class="n">last</span><span class="p">;</span>
+    <span class="n">u_char</span>               <span class="o">*</span><span class="n">end</span><span class="p">;</span>
+    <span class="n">ngx_pool_t</span>           <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+    <span class="n">ngx_uint_t</span>            <span class="n">failed</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">ngx_pool_data_t</span><span class="p">;</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="33-大内存块">3.3. 大内存块</h3>
+
+<p>大内存块由单向链表管理，没有复杂的空闲内存管理逻辑。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="k">struct</span> <span class="n">ngx_pool_large_s</span>  <span class="n">ngx_pool_large_t</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">ngx_pool_large_s</span> <span class="p">{</span>
+    <span class="n">ngx_pool_large_t</span>     <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+    <span class="kt">void</span>                 <span class="o">*</span><span class="n">alloc</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="34-内存文件">3.4. 内存文件</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">ngx_chain_s</span> <span class="p">{</span>
+    <span class="n">ngx_buf_t</span>    <span class="o">*</span><span class="n">buf</span><span class="p">;</span>
+    <span class="n">ngx_chain_t</span>  <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="4-源码">4. 源码</h2>
+
+<h3 id="41-创建内存池">4.1. 创建内存池</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ngx_int_t</span>
+<span class="nf">ngx_os_init</span><span class="p">(</span><span class="n">ngx_log_t</span> <span class="o">*</span><span class="n">log</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">ngx_pagesize</span> <span class="o">=</span> <span class="n">getpagesize</span><span class="p">();</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// </span>
+<span class="cp">#define NGX_MAX_ALLOC_FROM_POOL  (ngx_pagesize - 1)
+</span>
+<span class="c1">// 数据对齐有利于提高 cpu 读数据效率。</span>
+<span class="cp">#define NGX_POOL_ALIGNMENT       16
+</span>
+<span class="c1">// size 参数是小内存块大小。</span>
+<span class="n">ngx_pool_t</span> <span class="o">*</span>
+<span class="nf">ngx_create_pool</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="n">ngx_log_t</span> <span class="o">*</span><span class="n">log</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">ngx_pool_t</span>  <span class="o">*</span><span class="n">p</span><span class="p">;</span>
+
+    <span class="c1">// 分配 16 字节对齐的内存空间。</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">ngx_memalign</span><span class="p">(</span><span class="n">NGX_POOL_ALIGNMENT</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">log</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 小内存块内存空间结构 (数据结构信息头 + 已分配内存 + 空闲内存)。</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">last</span> <span class="o">=</span> <span class="p">(</span><span class="n">u_char</span> <span class="o">*</span><span class="p">)</span> <span class="n">p</span> <span class="o">+</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ngx_pool_t</span><span class="p">);</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">end</span> <span class="o">=</span> <span class="p">(</span><span class="n">u_char</span> <span class="o">*</span><span class="p">)</span> <span class="n">p</span> <span class="o">+</span> <span class="n">size</span><span class="p">;</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">failed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// 小块内存大小，空闲内存最大小于 page size。</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">size</span> <span class="o">-</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ngx_pool_t</span><span class="p">);</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">max</span> <span class="o">=</span> <span class="p">(</span><span class="n">size</span> <span class="o">&lt;</span> <span class="n">NGX_MAX_ALLOC_FROM_POOL</span><span class="p">)</span> <span class="o">?</span> <span class="n">size</span> <span class="o">:</span> <span class="n">NGX_MAX_ALLOC_FROM_POOL</span><span class="p">;</span>
+
+    <span class="c1">// 起始位置，指向初始结点。</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">current</span> <span class="o">=</span> <span class="n">p</span><span class="p">;</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">chain</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">large</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">cleanup</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">log</span> <span class="o">=</span> <span class="n">log</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="n">p</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="42-释放内存池">4.2. 释放内存池</h3>
+
+<p>除了对大小内存块数据进行释放，还增加了回调操作的设计，方便开发者进行部分具体的业务处理。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span>
+<span class="nf">ngx_destroy_pool</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">ngx_pool_t</span>          <span class="o">*</span><span class="n">p</span><span class="p">,</span> <span class="o">*</span><span class="n">n</span><span class="p">;</span>
+    <span class="n">ngx_pool_large_t</span>    <span class="o">*</span><span class="n">l</span><span class="p">;</span>
+    <span class="n">ngx_pool_cleanup_t</span>  <span class="o">*</span><span class="n">c</span><span class="p">;</span>
+
+    <span class="c1">// 释放回调处理。</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">c</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">cleanup</span><span class="p">;</span> <span class="n">c</span><span class="p">;</span> <span class="n">c</span> <span class="o">=</span> <span class="n">c</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">handler</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">c</span><span class="o">-&gt;</span><span class="n">handler</span><span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 释放大内存块</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">l</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">large</span><span class="p">;</span> <span class="n">l</span><span class="p">;</span> <span class="n">l</span> <span class="o">=</span> <span class="n">l</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">ngx_free</span><span class="p">(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 释放小内存块</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">p</span> <span class="o">=</span> <span class="n">pool</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">;</span> <span class="cm">/* void */</span><span class="p">;</span> <span class="n">p</span> <span class="o">=</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">n</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ngx_free</span><span class="p">(</span><span class="n">p</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="43-内存对齐申请空间">4.3. 内存对齐申请空间</h3>
+
+<p>内存对齐，涉及到 cpu 工作效率，是高性能系统不可缺少的一环。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#if (NGX_HAVE_POSIX_MEMALIGN)
+</span>
+<span class="kt">void</span> <span class="o">*</span>
+<span class="nf">ngx_memalign</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">alignment</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="n">ngx_log_t</span> <span class="o">*</span><span class="n">log</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">void</span>  <span class="o">*</span><span class="n">p</span><span class="p">;</span>
+    <span class="kt">int</span>    <span class="n">err</span><span class="p">;</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">posix_memalign</span><span class="p">(</span><span class="o">&amp;</span><span class="n">p</span><span class="p">,</span> <span class="n">alignment</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">p</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cp">#elif (NGX_HAVE_MEMALIGN)
+</span>
+<span class="kt">void</span> <span class="o">*</span>
+<span class="nf">ngx_memalign</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">alignment</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="n">ngx_log_t</span> <span class="o">*</span><span class="n">log</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">void</span>  <span class="o">*</span><span class="n">p</span><span class="p">;</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">memalign</span><span class="p">(</span><span class="n">alignment</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">p</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cp">#else
+</span>
+<span class="cp">#define ngx_memalign(alignment, size, log)  ngx_alloc(size, log)
+</span>
+<span class="cp">#endif
+</span>
+<span class="cp">#ifndef NGX_ALIGNMENT
+#define NGX_ALIGNMENT   sizeof(unsigned long)    </span><span class="cm">/* platform word */</span><span class="cp">
+#endif
+</span></code></pre></div></div>
+
+<hr />
+
+<h3 id="44-分配内存">4.4. 分配内存</h3>
+
+<p>如果分配的内存在小内存块空间范围内，就通过小内存块空闲链表中分配，否则直接分配到大内存块链表中。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="o">*</span>
+<span class="nf">ngx_palloc</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+<span class="cp">#if !(NGX_DEBUG_PALLOC)
+</span>    <span class="k">if</span> <span class="p">(</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">max</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">ngx_palloc_small</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="cp">#endif
+</span>    <span class="k">return</span> <span class="n">ngx_palloc_large</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">pool-&gt;max</code> 查看 <code class="highlighter-rouge">ngx_create_pool</code> 的实现：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">size</span> <span class="o">=</span> <span class="n">size</span> <span class="o">-</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ngx_pool_t</span><span class="p">);</span>
+<span class="n">p</span><span class="o">-&gt;</span><span class="n">max</span> <span class="o">=</span> <span class="p">(</span><span class="n">size</span> <span class="o">&lt;</span> <span class="n">NGX_MAX_ALLOC_FROM_POOL</span><span class="p">)</span> <span class="o">?</span> <span class="n">size</span> <span class="o">:</span> <span class="n">NGX_MAX_ALLOC_FROM_POOL</span><span class="p">;</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="45-分配小内存">4.5. 分配小内存</h3>
+
+<p>满足条件 <code class="highlighter-rouge">size &lt;= pool-&gt;max</code> 的小内存的空间分配，遍历小内存块链表，从已分配的空间中查找合适的空闲空间进行分配，否则再创建新的小内存块进行匹配。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="n">ngx_inline</span> <span class="kt">void</span> <span class="o">*</span>
+<span class="nf">ngx_palloc_small</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="n">ngx_uint_t</span> <span class="n">align</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">u_char</span>      <span class="o">*</span><span class="n">m</span><span class="p">;</span>
+    <span class="n">ngx_pool_t</span>  <span class="o">*</span><span class="n">p</span><span class="p">;</span>
+    <span class="c1">// 遍历查找起始位置。</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">current</span><span class="p">;</span>
+
+    <span class="k">do</span> <span class="p">{</span>
+        <span class="c1">// 从小内存块中，查找剩余空间，检查是否有足够的剩余空间分配。</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">last</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">align</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 从 m 开始，计算以NGX_ALIGNMENT对齐的偏移位置指针。</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">ngx_align_ptr</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">NGX_ALIGNMENT</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 如果有足够空间，就返回分配的空间，空闲内存减少 size 大小</span>
+        <span class="k">if</span> <span class="p">((</span><span class="kt">size_t</span><span class="p">)</span> <span class="p">(</span><span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">end</span> <span class="o">-</span> <span class="n">m</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">last</span> <span class="o">=</span> <span class="n">m</span> <span class="o">+</span> <span class="n">size</span><span class="p">;</span>
+            <span class="k">return</span> <span class="n">m</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 检查下一个结点</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">while</span> <span class="p">(</span><span class="n">p</span><span class="p">);</span>
+
+    <span class="c1">// 遍历链表后找不到合适的空闲空间，申请新的内存块。</span>
+    <span class="k">return</span> <span class="n">ngx_palloc_block</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="46-分配小内存块">4.6. 分配小内存块</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kt">void</span> <span class="o">*</span>
+<span class="nf">ngx_palloc_block</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">u_char</span>      <span class="o">*</span><span class="n">m</span><span class="p">;</span>
+    <span class="kt">size_t</span>       <span class="n">psize</span><span class="p">;</span>
+    <span class="n">ngx_pool_t</span>  <span class="o">*</span><span class="n">p</span><span class="p">,</span> <span class="o">*</span><span class="n">new</span><span class="p">;</span>
+
+    <span class="c1">// 获取小内存块链表第一个块内存空间大小。</span>
+    <span class="n">psize</span> <span class="o">=</span> <span class="p">(</span><span class="kt">size_t</span><span class="p">)</span> <span class="p">(</span><span class="n">pool</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">end</span> <span class="o">-</span> <span class="p">(</span><span class="n">u_char</span> <span class="o">*</span><span class="p">)</span> <span class="n">pool</span><span class="p">);</span>
+
+    <span class="c1">// 分配 16字节对齐的空间。</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">ngx_memalign</span><span class="p">(</span><span class="n">NGX_POOL_ALIGNMENT</span><span class="p">,</span> <span class="n">psize</span><span class="p">,</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">m</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 设置新结点信息。</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="p">)</span> <span class="n">m</span><span class="p">;</span>
+    <span class="n">new</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">m</span> <span class="o">+</span> <span class="n">psize</span><span class="p">;</span>
+    <span class="n">new</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">new</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">failed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// 数据结构信息头后存储空闲数据。</span>
+    <span class="n">m</span> <span class="o">+=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ngx_pool_data_t</span><span class="p">);</span>
+
+    <span class="c1">// 从 m 开始，计算以NGX_ALIGNMENT对齐的偏移位置指针。</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">ngx_align_ptr</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">NGX_ALIGNMENT</span><span class="p">);</span>
+
+    <span class="c1">// 分配 size 大小的空闲空间出去。</span>
+    <span class="n">new</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">last</span> <span class="o">=</span> <span class="n">m</span> <span class="o">+</span> <span class="n">size</span><span class="p">;</span>
+
+    <span class="c1">// 原来的内存块结点均分配失败，要将失败的分配记录下来。</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">p</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">current</span><span class="p">;</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">;</span> <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">failed</span><span class="o">++</span> <span class="o">&gt;</span> <span class="mi">4</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">pool</span><span class="o">-&gt;</span><span class="n">current</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 新的空闲内存块结点添加到链表末尾</span>
+    <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span> <span class="o">=</span> <span class="n">new</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">m</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="47-申请大块内存">4.7. 申请大块内存</h3>
+
+<p>大块内存已分配的大块数据，除了内存块头部信息是可以重复利用的，数据不会重复利用，不用将被 ngx_pfree 释放掉。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kt">void</span> <span class="o">*</span>
+<span class="nf">ngx_palloc_large</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">void</span>              <span class="o">*</span><span class="n">p</span><span class="p">;</span>
+    <span class="n">ngx_uint_t</span>         <span class="n">n</span><span class="p">;</span>
+    <span class="n">ngx_pool_large_t</span>  <span class="o">*</span><span class="n">large</span><span class="p">;</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">ngx_alloc</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// 重复利用已分配的大内存块结点信息。</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">large</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">large</span><span class="p">;</span> <span class="n">large</span><span class="p">;</span> <span class="n">large</span> <span class="o">=</span> <span class="n">large</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">large</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">large</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">=</span> <span class="n">p</span><span class="p">;</span>
+            <span class="k">return</span> <span class="n">p</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 防止大量的链表遍历降低效率（粒度那么小，会不会造成大量碎片？）。</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span><span class="o">++</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 为数据结构申请空间。</span>
+    <span class="n">large</span> <span class="o">=</span> <span class="n">ngx_palloc_small</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ngx_pool_large_t</span><span class="p">),</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">large</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ngx_free</span><span class="p">(</span><span class="n">p</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 新结点插入到表头，有点像 lru，将活跃数据放到前面去。</span>
+    <span class="n">large</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">=</span> <span class="n">p</span><span class="p">;</span>
+    <span class="n">large</span><span class="o">-&gt;</span><span class="n">next</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">large</span><span class="p">;</span>
+    <span class="n">pool</span><span class="o">-&gt;</span><span class="n">large</span> <span class="o">=</span> <span class="n">large</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="n">p</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="48-释放大内存块">4.8. 释放大内存块</h3>
+
+<p>只是释放数据，没有释放块的数据结构头。为了重复利用数据结构头信息，所以释放数据并没有删除链表结点，这里通过链表遍历进行删除，效率会不会很低。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ngx_int_t</span>
+<span class="nf">ngx_pfree</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">ngx_pool_large_t</span>  <span class="o">*</span><span class="n">l</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">l</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">large</span><span class="p">;</span> <span class="n">l</span><span class="p">;</span> <span class="n">l</span> <span class="o">=</span> <span class="n">l</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="n">l</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">ngx_free</span><span class="p">(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">);</span>
+            <span class="n">l</span><span class="o">-&gt;</span><span class="n">alloc</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+            <span class="k">return</span> <span class="n">NGX_OK</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">NGX_DECLINED</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="49-重置内存池">4.9. 重置内存池</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span>
+<span class="nf">ngx_reset_pool</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">ngx_pool_t</span>        <span class="o">*</span><span class="n">p</span><span class="p">;</span>
+    <span class="n">ngx_pool_large_t</span>  <span class="o">*</span><span class="n">l</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">l</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&gt;</span><span class="n">large</span><span class="p">;</span> <span class="n">l</span><span class="p">;</span> <span class="n">l</span> <span class="o">=</span> <span class="n">l</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">ngx_free</span><span class="p">(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">alloc</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 每个小内存块空闲内存指针，指向数据结构头后面</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">p</span> <span class="o">=</span> <span class="n">pool</span><span class="p">;</span> <span class="n">p</span><span class="p">;</span> <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">last</span> <span class="o">=</span> <span class="p">(</span><span class="n">u_char</span> <span class="o">*</span><span class="p">)</span> <span class="n">p</span> <span class="o">+</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ngx_pool_t</span><span class="p">);</span>
+        <span class="n">p</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">.</span><span class="n">failed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">pool</span><span class="o">-&gt;</span><span class="n">current</span> <span class="o">=</span> <span class="n">pool</span><span class="p">;</span>
+    <span class="n">pool</span><span class="o">-&gt;</span><span class="n">chain</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">pool</span><span class="o">-&gt;</span><span class="n">large</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="5-问题">5. 问题</h2>
+
+<p>nginx 的内存池实现足够精简高效，但是依然有些问题不能兼顾到：</p>
+
+<ul>
+  <li>链表管理：
+链表的查找遍历时间复杂度是 $O(n)$。<code class="highlighter-rouge">ngx_pfree</code> 效率不高。</li>
+  <li>小内存块链表，current 问题：
+当遇到密集地分配比较大的小内存场景时，导致已分配结点，分配失败，failed 次数增加。current 指向新的结点，由于是单向链表，前面的结点其实还有足够的空闲空间分配给其它小内存的，导致空闲空间利用率不高。</li>
+  <li>大内存块链表，重复利用已分配的信息头问题：
+遍历粒度很小，是否会产生大量内存碎片。</li>
+  <li>小内存回收问题：
+内存池只对大内存块进行内存回收，并没有小内存块的内存回收管理。只有 <code class="highlighter-rouge">ngx_reset_pool</code>， <code class="highlighter-rouge">ngx_destroy_pool</code> 是对其进行销毁处理的。</li>
+</ul>
+
+<p>所以综合以上问题，这个内存池只适合于轻量级的内存管理。</p>
+
+<hr />
+
+<h2 id="6-参考">6. 参考</h2>
+
+<ul>
+  <li><a href="https://www.cnblogs.com/jzhlin/archive/2012/06/07/ngx_palloc.html">Nginx 源码分析– 内存池(pool)的分析 三</a></li>
+  <li><a href="https://blog.csdn.net/unix21/article/details/12913287">nginx源码分析–内存对齐处理</a></li>
+  <li><a href="https://cloud.tencent.com/developer/article/1449440">利用cpu缓存实现高性能程序</a></li>
+  <li><a href="https://blog.csdn.net/mangobar/article/details/52668859">ngx_align_ptr</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
+:ET

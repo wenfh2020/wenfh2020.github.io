@@ -1,0 +1,496 @@
+I"�<p>epoll 源码涉及到很多知识点：（socket）网络通信，进程调度，等待队列，socket 信号处理，VFS（虚拟文件系统），红黑树算法等等知识点。有些接口的实现，藏得很深，参考了不少网上的帖子，在此整理一下。</p>
+
+<blockquote>
+  <p>本文主要为 《<a href="https://wenfh2020.com/2020/04/23/epoll-code/">[epoll 源码走读] epoll 实现原理</a>》，提供预备知识。</p>
+</blockquote>
+
+<ul id="markdown-toc">
+  <li><a href="#1-网络数据传输流程" id="markdown-toc-1-网络数据传输流程">1. 网络数据传输流程</a></li>
+  <li><a href="#2-内核进程调度" id="markdown-toc-2-内核进程调度">2. 内核进程调度</a></li>
+  <li><a href="#3-等待队列" id="markdown-toc-3-等待队列">3. 等待队列</a></li>
+  <li><a href="#4-文件描述符" id="markdown-toc-4-文件描述符">4. 文件描述符</a>    <ul>
+      <li><a href="#41-创建-socket" id="markdown-toc-41-创建-socket">4.1. 创建 socket</a></li>
+      <li><a href="#42-accept" id="markdown-toc-42-accept">4.2. accept</a></li>
+      <li><a href="#43-socket-关联-fdfile" id="markdown-toc-43-socket-关联-fdfile">4.3. socket 关联 fd/file</a></li>
+      <li><a href="#44-socket-关联-sock" id="markdown-toc-44-socket-关联-sock">4.4. socket 关联 sock</a></li>
+    </ul>
+  </li>
+  <li><a href="#5-fd-就绪事件回调处理" id="markdown-toc-5-fd-就绪事件回调处理">5. fd 就绪事件回调处理</a>    <ul>
+      <li><a href="#51-poll-接口" id="markdown-toc-51-poll-接口">5.1. poll 接口</a></li>
+      <li><a href="#52-file_operations" id="markdown-toc-52-file_operations">5.2. file_operations</a></li>
+      <li><a href="#53-tcp_poll" id="markdown-toc-53-tcp_poll">5.3. tcp_poll</a></li>
+      <li><a href="#54-ep_poll_callback" id="markdown-toc-54-ep_poll_callback">5.4. ep_poll_callback</a></li>
+    </ul>
+  </li>
+  <li><a href="#6-参考" id="markdown-toc-6-参考">6. 参考</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-网络数据传输流程">1. 网络数据传输流程</h2>
+
+<p>网络数据是如何从网卡传到内核，内核如何将数据传到用户层的。</p>
+
+<blockquote>
+  <p>参考 <a href="https://www.cnblogs.com/zhjh256/p/12227883.html">Linux网络包收发总体过程</a></p>
+
+  <p>参考 <a href="https://www.cnblogs.com/diegodu/p/9377535.html">epoll源码分析</a></p>
+</blockquote>
+
+<hr />
+
+<h2 id="2-内核进程调度">2. 内核进程调度</h2>
+
+<p>网络通信过程中，进程什么时候睡眠，什么时候唤醒，一个 cpu 为何能跑多个进程，进程是如何调度的。</p>
+
+<blockquote>
+  <p>参考 <a href="https://blog.csdn.net/qq_31967569/article/details/102953756">彻底理解epoll</a></p>
+</blockquote>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Used in tsk-&gt;state: */</span>
+
+<span class="c1">// sched.h</span>
+<span class="cp">#define TASK_RUNNING            0x0000
+#define TASK_INTERRUPTIBLE      0x0001
+#define TASK_UNINTERRUPTIBLE    0x0002
+</span></code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">进程状态</th>
+      <th style="text-align: left">描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">TASK_RUNNING</td>
+      <td style="text-align: left">正在运行</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">TASK_INTERRUPTIBLE</td>
+      <td style="text-align: left">等待状态。等待状态可被信号解除。</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">TASK_UNINTERRUPTIBLE</td>
+      <td style="text-align: left">等待状态。等待状态不可被信号解除。</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="3-等待队列">3. 等待队列</h2>
+
+<p>什么是等待队列，进程阻塞睡眠后，内核如何通过等待队列唤醒进程工作。</p>
+
+<blockquote>
+  <p>参考 <a href="https://blog.csdn.net/u012218309/article/details/81148083">linux等待队列 wait_queue 的使用</a>。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="4-文件描述符">4. 文件描述符</h2>
+
+<p>fd 文件描述符是什么，socket 是什么，Linux 一切皆文件，它通过 vfs 虚拟文件系统进行管理。</p>
+
+<blockquote>
+  <p>参考 <a href="https://www.solves.com.cn/news/hlw/2020-03-15/13907.html">Linux 进程、线程、文件描述符的底层原理</a></p>
+</blockquote>
+
+<hr />
+
+<h3 id="41-创建-socket">4.1. 创建 socket</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// socket.c</span>
+<span class="kt">int</span> <span class="nf">__sys_socket</span><span class="p">(</span><span class="kt">int</span> <span class="n">family</span><span class="p">,</span> <span class="kt">int</span> <span class="n">type</span><span class="p">,</span> <span class="kt">int</span> <span class="n">protocol</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 创建 socket。</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">sock_create</span><span class="p">(</span><span class="n">family</span><span class="p">,</span> <span class="n">type</span><span class="p">,</span> <span class="n">protocol</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">sock</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">retval</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">retval</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="n">sock_map_fd</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">flags</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">O_CLOEXEC</span> <span class="o">|</span> <span class="n">O_NONBLOCK</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="42-accept">4.2. accept</h3>
+
+<p>accept 分配 socket 资源。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// socket.c</span>
+<span class="kt">int</span> <span class="nf">__sys_accept4_file</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="n">file_flags</span><span class="p">,</span>
+               <span class="k">struct</span> <span class="n">sockaddr</span> <span class="n">__user</span> <span class="o">*</span><span class="n">upeer_sockaddr</span><span class="p">,</span>
+               <span class="kt">int</span> <span class="n">__user</span> <span class="o">*</span><span class="n">upeer_addrlen</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">newfile</span> <span class="o">=</span> <span class="n">sock_alloc_file</span><span class="p">(</span><span class="n">newsock</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_prot_creator</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">newfile</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">newfile</span><span class="p">);</span>
+        <span class="n">put_unused_fd</span><span class="p">(</span><span class="n">newfd</span><span class="p">);</span>
+        <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="43-socket-关联-fdfile">4.3. socket 关联 fd/file</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// socket.c</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">sock_map_fd</span><span class="p">(</span><span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">newfile</span><span class="p">;</span>
+    <span class="c1">// 分配一个空闲的 fd 文件描述符。</span>
+    <span class="kt">int</span> <span class="n">fd</span> <span class="o">=</span> <span class="n">get_unused_fd_flags</span><span class="p">(</span><span class="n">flags</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">unlikely</span><span class="p">(</span><span class="n">fd</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">sock_release</span><span class="p">(</span><span class="n">sock</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">fd</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// socket 与文件建立联系。</span>
+    <span class="n">newfile</span> <span class="o">=</span> <span class="n">sock_alloc_file</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">newfile</span><span class="p">))</span> <span class="p">{</span>
+        <span class="c1">// fd 文件描述符绑定 file 文件对象。</span>
+        <span class="n">fd_install</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">newfile</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">fd</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// socket.c</span>
+<span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="nf">sock_alloc_file</span><span class="p">(</span><span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dname</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">dname</span><span class="p">)</span>
+        <span class="n">dname</span> <span class="o">=</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">sk</span> <span class="o">?</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_prot_creator</span><span class="o">-&gt;</span><span class="n">name</span> <span class="o">:</span> <span class="s">""</span><span class="p">;</span>
+
+    <span class="n">file</span> <span class="o">=</span> <span class="n">alloc_file_pseudo</span><span class="p">(</span><span class="n">SOCK_INODE</span><span class="p">(</span><span class="n">sock</span><span class="p">),</span> <span class="n">sock_mnt</span><span class="p">,</span> <span class="n">dname</span><span class="p">,</span>
+                <span class="n">O_RDWR</span> <span class="o">|</span> <span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">O_NONBLOCK</span><span class="p">),</span>
+                <span class="o">&amp;</span><span class="n">socket_file_ops</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">file</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">sock_release</span><span class="p">(</span><span class="n">sock</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">file</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// socket 与文件建立联系。</span>
+    <span class="n">sock</span><span class="o">-&gt;</span><span class="n">file</span> <span class="o">=</span> <span class="n">file</span><span class="p">;</span>
+    <span class="n">file</span><span class="o">-&gt;</span><span class="n">private_data</span> <span class="o">=</span> <span class="n">sock</span><span class="p">;</span>
+    <span class="n">stream_open</span><span class="p">(</span><span class="n">SOCK_INODE</span><span class="p">(</span><span class="n">sock</span><span class="p">),</span> <span class="n">file</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">file</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="44-socket-关联-sock">4.4. socket 关联 sock</h3>
+
+<p><code class="highlighter-rouge">sock_init_data</code> 将 socket 关联 sock。sock 等待队列指向 socket 等待队列。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// socket.c</span>
+<span class="kt">int</span> <span class="nf">__sys_socket</span><span class="p">(</span><span class="kt">int</span> <span class="n">family</span><span class="p">,</span> <span class="kt">int</span> <span class="n">type</span><span class="p">,</span> <span class="kt">int</span> <span class="n">protocol</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 创建 socket。</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">sock_create</span><span class="p">(</span><span class="n">family</span><span class="p">,</span> <span class="n">type</span><span class="p">,</span> <span class="n">protocol</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">sock</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// socket.c</span>
+<span class="kt">int</span> <span class="nf">sock_create</span><span class="p">(</span><span class="kt">int</span> <span class="n">family</span><span class="p">,</span> <span class="kt">int</span> <span class="n">type</span><span class="p">,</span> <span class="kt">int</span> <span class="n">protocol</span><span class="p">,</span> <span class="k">struct</span> <span class="n">socket</span> <span class="o">**</span><span class="n">res</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">__sock_create</span><span class="p">(</span><span class="n">current</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">,</span> <span class="n">family</span><span class="p">,</span> <span class="n">type</span><span class="p">,</span> <span class="n">protocol</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">__sock_create</span><span class="p">(</span><span class="k">struct</span> <span class="n">net</span> <span class="o">*</span><span class="n">net</span><span class="p">,</span> <span class="kt">int</span> <span class="n">family</span><span class="p">,</span> <span class="kt">int</span> <span class="n">type</span><span class="p">,</span> <span class="kt">int</span> <span class="n">protocol</span><span class="p">,</span>
+            <span class="k">struct</span> <span class="n">socket</span> <span class="o">**</span><span class="n">res</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kern</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="n">sock</span> <span class="o">=</span> <span class="n">sock_alloc</span><span class="p">();</span> <span class="c1">// 创建传输层 socket。</span>
+    <span class="p">...</span>
+    <span class="n">pf</span> <span class="o">=</span> <span class="n">rcu_dereference</span><span class="p">(</span><span class="n">net_families</span><span class="p">[</span><span class="n">family</span><span class="p">]);</span>
+    <span class="p">...</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">pf</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">protocol</span><span class="p">,</span> <span class="n">kern</span><span class="p">);</span> <span class="c1">// inet_create</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// socket.c</span>
+<span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">net_proto_family</span> <span class="n">__rcu</span> <span class="o">*</span><span class="n">net_families</span><span class="p">[</span><span class="n">NPROTO</span><span class="p">]</span> <span class="n">__read_mostly</span><span class="p">;</span>
+
+<span class="c1">// af_inet.c</span>
+<span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">net_proto_family</span> <span class="n">inet_family_ops</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">family</span> <span class="o">=</span> <span class="n">PF_INET</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">create</span> <span class="o">=</span> <span class="n">inet_create</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">owner</span>    <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">,</span>
+<span class="p">};</span>
+
+<span class="c1">// af_inet.c</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">inet_create</span><span class="p">(</span><span class="k">struct</span> <span class="n">net</span> <span class="o">*</span><span class="n">net</span><span class="p">,</span> <span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="kt">int</span> <span class="n">protocol</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kern</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">sk</span> <span class="o">=</span> <span class="n">sk_alloc</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">PF_INET</span><span class="p">,</span> <span class="n">GFP_KERNEL</span><span class="p">,</span> <span class="n">answer_prot</span><span class="p">,</span> <span class="n">kern</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="n">sock_init_data</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">sk</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// socket.c</span>
+<span class="kt">void</span> <span class="nf">sock_init_data</span><span class="p">(</span><span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="k">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sock</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_type</span>    <span class="o">=</span>    <span class="n">sock</span><span class="o">-&gt;</span><span class="n">type</span><span class="p">;</span>
+        <span class="n">RCU_INIT_POINTER</span><span class="p">(</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_wq</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">sock</span><span class="o">-&gt;</span><span class="n">wq</span><span class="p">);</span> <span class="c1">// sock 的等待队列指向 socket 的等待队列。</span>
+        <span class="n">sock</span><span class="o">-&gt;</span><span class="n">sk</span>    <span class="o">=</span>    <span class="n">sk</span><span class="p">;</span> <span class="c1">// sock 与 socket 建立联系。</span>
+        <span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_uid</span>    <span class="o">=</span>    <span class="n">SOCK_INODE</span><span class="p">(</span><span class="n">sock</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">i_uid</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">RCU_INIT_POINTER</span><span class="p">(</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_wq</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_uid</span>    <span class="o">=</span>    <span class="n">make_kuid</span><span class="p">(</span><span class="n">sock_net</span><span class="p">(</span><span class="n">sk</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">user_ns</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="5-fd-就绪事件回调处理">5. fd 就绪事件回调处理</h2>
+
+<p>fd 与回调 <code class="highlighter-rouge">ep_poll_callback</code> 建立联系，当网络事件到来，触发回调来筛选出用户关注的事件进行处理。</p>
+
+<p><img src="/images/2020-05-12-16-53-50.png" alt="驱动粘合设备和内核" data-action="zoom" /></p>
+
+<hr />
+
+<h3 id="51-poll-接口">5.1. poll 接口</h3>
+
+<p>就绪事件处理操作 poll 接口。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">file_operations</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">__poll_t</span> <span class="p">(</span><span class="o">*</span><span class="n">poll</span><span class="p">)</span> <span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">,</span> <span class="k">struct</span> <span class="n">poll_table_struct</span> <span class="o">*</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span> <span class="n">__randomize_layout</span><span class="p">;</span>
+
+<span class="c1">// socket.c</span>
+<span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">file_operations</span> <span class="n">socket_file_ops</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="p">.</span><span class="n">poll</span> <span class="o">=</span> <span class="n">sock_poll</span><span class="p">,</span> <span class="c1">// socket 的就绪事件处理函数。</span>
+    <span class="p">...</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="52-file_operations">5.2. file_operations</h3>
+
+<p>file_operations 与文件建立联系。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// socket.c</span>
+<span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="nf">sock_alloc_file</span><span class="p">(</span><span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dname</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="c1">// 创建文件，绑定文件操作接口：poll().</span>
+    <span class="n">file</span> <span class="o">=</span> <span class="n">alloc_file_pseudo</span><span class="p">(</span><span class="n">SOCK_INODE</span><span class="p">(</span><span class="n">sock</span><span class="p">),</span> <span class="n">sock_mnt</span><span class="p">,</span> <span class="n">dname</span><span class="p">,</span>
+                <span class="n">O_RDWR</span> <span class="o">|</span> <span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">O_NONBLOCK</span><span class="p">),</span>
+                <span class="o">&amp;</span><span class="n">socket_file_ops</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="k">return</span> <span class="n">file</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// file_table.c</span>
+<span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="nf">alloc_file_pseudo</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="k">struct</span> <span class="n">vfsmount</span> <span class="o">*</span><span class="n">mnt</span><span class="p">,</span>
+                <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span>
+                <span class="k">const</span> <span class="k">struct</span> <span class="n">file_operations</span> <span class="o">*</span><span class="n">fops</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">file</span> <span class="o">=</span> <span class="n">alloc_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">path</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">fops</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="k">return</span> <span class="n">file</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// file_table.c</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="nf">alloc_file</span><span class="p">(</span><span class="k">const</span> <span class="k">struct</span> <span class="n">path</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">,</span>
+        <span class="k">const</span> <span class="k">struct</span> <span class="n">file_operations</span> <span class="o">*</span><span class="n">fop</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">;</span>
+
+    <span class="n">file</span> <span class="o">=</span> <span class="n">alloc_empty_file</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">current_cred</span><span class="p">());</span>
+    <span class="p">...</span>
+    <span class="c1">// 操作对象与文件建立关系。</span>
+    <span class="n">file</span><span class="o">-&gt;</span><span class="n">f_op</span> <span class="o">=</span> <span class="n">fop</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="k">return</span> <span class="n">file</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="53-tcp_poll">5.3. tcp_poll</h3>
+
+<p>socket 就绪事件处理 tcp_poll。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 就绪事件处理结构。</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">poll_table_struct</span> <span class="p">{</span>
+    <span class="n">poll_queue_proc</span> <span class="n">_qproc</span><span class="p">;</span> <span class="c1">// 处理函数（eventpoll.c 的 ep_ptable_queue_proc）。</span>
+    <span class="n">__poll_t</span> <span class="n">_key</span><span class="p">;</span>          <span class="c1">// 事件组合。</span>
+<span class="p">}</span> <span class="n">poll_table</span><span class="p">;</span>
+
+<span class="c1">// poll.h</span>
+<span class="k">static</span> <span class="kr">inline</span> <span class="n">__poll_t</span> <span class="nf">vfs_poll</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="k">struct</span> <span class="n">poll_table_struct</span> <span class="o">*</span><span class="n">pt</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">unlikely</span><span class="p">(</span><span class="o">!</span><span class="n">file</span><span class="o">-&gt;</span><span class="n">f_op</span><span class="o">-&gt;</span><span class="n">poll</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">DEFAULT_POLLMASK</span><span class="p">;</span>
+    <span class="c1">// sock_poll</span>
+    <span class="k">return</span> <span class="n">file</span><span class="o">-&gt;</span><span class="n">f_op</span><span class="o">-&gt;</span><span class="n">poll</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">pt</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="n">__poll_t</span> <span class="nf">sock_poll</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="n">poll_table</span> <span class="o">*</span><span class="n">wait</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span> <span class="o">=</span> <span class="n">file</span><span class="o">-&gt;</span><span class="n">private_data</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="k">return</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">poll</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">wait</span><span class="p">)</span> <span class="o">|</span> <span class="n">flag</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// net.h</span>
+<span class="k">struct</span> <span class="n">socket</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">const</span> <span class="k">struct</span> <span class="n">proto_ops</span> <span class="o">*</span><span class="n">ops</span><span class="p">;</span> <span class="c1">// 协议操作指针。</span>
+    <span class="k">struct</span> <span class="n">socket_wq</span> <span class="n">wq</span><span class="p">;</span>  <span class="c1">// socket 等待队列节点。</span>
+<span class="p">};</span>
+
+<span class="c1">// net.h</span>
+<span class="k">struct</span> <span class="n">socket_wq</span> <span class="p">{</span>
+    <span class="n">wait_queue_head_t</span> <span class="n">wait</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span> <span class="n">____cacheline_aligned_in_smp</span><span class="p">;</span>
+
+<span class="c1">// 初始化 socket.ops，指向 &amp;inet_stream_ops</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">inet_protosw</span> <span class="n">inetsw_array</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">{</span>
+        <span class="p">.</span><span class="n">type</span> <span class="o">=</span>       <span class="n">SOCK_STREAM</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">protocol</span> <span class="o">=</span>   <span class="n">IPPROTO_TCP</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">prot</span> <span class="o">=</span>       <span class="o">&amp;</span><span class="n">tcp_prot</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">ops</span> <span class="o">=</span>        <span class="o">&amp;</span><span class="n">inet_stream_ops</span><span class="p">,</span> <span class="c1">// tcp 数据流操作。</span>
+        <span class="p">.</span><span class="n">flags</span> <span class="o">=</span>      <span class="n">INET_PROTOSW_PERMANENT</span> <span class="o">|</span> <span class="n">INET_PROTOSW_ICSK</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// af_inet.c</span>
+<span class="k">const</span> <span class="k">struct</span> <span class="n">proto_ops</span> <span class="n">inet_stream_ops</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="p">.</span><span class="n">poll</span>          <span class="o">=</span> <span class="n">tcp_poll</span><span class="p">,</span> <span class="c1">// 就绪事件处理函数。</span>
+    <span class="p">...</span>
+<span class="p">};</span>
+
+<span class="c1">// tcp.c</span>
+<span class="n">__poll_t</span> <span class="nf">tcp_poll</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="n">poll_table</span> <span class="o">*</span><span class="n">wait</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">__poll_t</span> <span class="n">mask</span><span class="p">;</span>
+    <span class="k">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span> <span class="o">=</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">sk</span><span class="p">;</span>
+    <span class="k">const</span> <span class="k">struct</span> <span class="n">tcp_sock</span> <span class="o">*</span><span class="n">tp</span> <span class="o">=</span> <span class="n">tcp_sk</span><span class="p">(</span><span class="n">sk</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="n">state</span><span class="p">;</span>
+
+    <span class="n">sock_poll_wait</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">wait</span><span class="p">);</span>
+
+    <span class="c1">// 检查 socket 读写事件。</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">inet_sk_state_load</span><span class="p">(</span><span class="n">sk</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">==</span> <span class="n">TCP_LISTEN</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">inet_csk_listen_poll</span><span class="p">(</span><span class="n">sk</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// sock.h</span>
+<span class="k">static</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">sock_poll_wait</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="k">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="n">poll_table</span> <span class="o">*</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">poll_does_not_wait</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">poll_wait</span><span class="p">(</span><span class="n">filp</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">sock</span><span class="o">-&gt;</span><span class="n">wq</span><span class="p">.</span><span class="n">wait</span><span class="p">,</span> <span class="n">p</span><span class="p">);</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// poll.h</span>
+<span class="k">static</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">poll_wait</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span> <span class="n">filp</span><span class="p">,</span> <span class="n">wait_queue_head_t</span> <span class="o">*</span> <span class="n">wait_address</span><span class="p">,</span> <span class="n">poll_table</span> <span class="o">*</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">&amp;&amp;</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">_qproc</span> <span class="o">&amp;&amp;</span> <span class="n">wait_address</span><span class="p">)</span>
+        <span class="c1">// ep_ptable_queue_proc 增加等待队列并将 socket 与 ep_poll_callback 回调建立联系。</span>
+        <span class="n">p</span><span class="o">-&gt;</span><span class="n">_qproc</span><span class="p">(</span><span class="n">filp</span><span class="p">,</span> <span class="n">wait_address</span><span class="p">,</span> <span class="n">p</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="54-ep_poll_callback">5.4. ep_poll_callback</h3>
+
+<p>网卡读写数据，驱动通知内核，内核触发 ep_poll_callback。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// net.h</span>
+<span class="k">struct</span> <span class="n">socket</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span><span class="p">;</span>
+    <span class="k">struct</span> <span class="n">socket_wq</span> <span class="n">wq</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">struct</span> <span class="n">sock</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">union</span> <span class="p">{</span>
+        <span class="k">struct</span> <span class="n">socket_wq</span> <span class="n">__rcu</span>  <span class="o">*</span><span class="n">sk_wq</span><span class="p">;</span> <span class="c1">// 指针指向 socket 的等待队列。</span>
+        <span class="p">...</span>
+    <span class="p">};</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+
+<span class="c1">// 驱动中断回调，唤醒等待队列处理：ep_poll_callback</span>
+<span class="c1">// sock.c</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">sock_def_wakeup</span><span class="p">(</span><span class="k">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">socket_wq</span> <span class="o">*</span><span class="n">wq</span><span class="p">;</span>
+
+    <span class="n">rcu_read_lock</span><span class="p">();</span>
+    <span class="n">wq</span> <span class="o">=</span> <span class="n">rcu_dereference</span><span class="p">(</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_wq</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">skwq_has_sleeper</span><span class="p">(</span><span class="n">wq</span><span class="p">))</span>
+        <span class="c1">// 唤醒等待队列。</span>
+        <span class="n">wake_up_interruptible_all</span><span class="p">(</span><span class="o">&amp;</span><span class="n">wq</span><span class="o">-&gt;</span><span class="n">wait</span><span class="p">);</span>
+    <span class="n">rcu_read_unlock</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">// wait.h</span>
+<span class="cp">#define wake_up(x)      __wake_up(x, TASK_NORMAL, 1, NULL)
+#define wake_up_interruptible_all(x)    __wake_up(x, TASK_INTERRUPTIBLE, 0, NULL)
+</span>
+<span class="c1">// wait.c</span>
+<span class="kt">void</span> <span class="nf">__wake_up</span><span class="p">(</span><span class="k">struct</span> <span class="n">wait_queue_head</span> <span class="o">*</span><span class="n">wq_head</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">mode</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nr_exclusive</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">key</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">__wake_up_common_lock</span><span class="p">(</span><span class="n">wq_head</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">nr_exclusive</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">key</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// wait.c</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">__wake_up_common_lock</span><span class="p">(</span><span class="k">struct</span> <span class="n">wait_queue_head</span> <span class="o">*</span><span class="n">wq_head</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">mode</span><span class="p">,</span>
+            <span class="kt">int</span> <span class="n">nr_exclusive</span><span class="p">,</span> <span class="kt">int</span> <span class="n">wake_flags</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">key</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">do</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="n">nr_exclusive</span> <span class="o">=</span> <span class="n">__wake_up_common</span><span class="p">(</span><span class="n">wq_head</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">nr_exclusive</span><span class="p">,</span>
+                        <span class="n">wake_flags</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">bookmark</span><span class="p">);</span>
+        <span class="p">...</span>
+    <span class="p">}</span> <span class="k">while</span> <span class="p">(</span><span class="n">bookmark</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">WQ_FLAG_BOOKMARK</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// wait.c</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">__wake_up_common</span><span class="p">(</span><span class="k">struct</span> <span class="n">wait_queue_head</span> <span class="o">*</span><span class="n">wq_head</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">mode</span><span class="p">,</span>
+            <span class="kt">int</span> <span class="n">nr_exclusive</span><span class="p">,</span> <span class="kt">int</span> <span class="n">wake_flags</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">key</span><span class="p">,</span>
+            <span class="n">wait_queue_entry_t</span> <span class="o">*</span><span class="n">bookmark</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">wait_queue_entry_t</span> <span class="o">*</span><span class="n">curr</span><span class="p">,</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="c1">// 循环处理等待队列结点，回调 ep_poll_callback</span>
+    <span class="n">list_for_each_entry_safe_from</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="n">next</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">wq_head</span><span class="o">-&gt;</span><span class="n">head</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="c1">// ep_poll_callback</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">curr</span><span class="o">-&gt;</span><span class="n">func</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">wake_flags</span><span class="p">,</span> <span class="n">key</span><span class="p">);</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="6-参考">6. 参考</h2>
+
+<ul>
+  <li><a href="https://vcpu.me/socket%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/">socket信号处理</a></li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/2020/04/22/epoll_code-prepare/">wenfh2020.com</a></p>
+</blockquote>
+:ET

@@ -1,0 +1,66 @@
+<p>多线程模型中，锁是一个复杂的东西，即便是经验丰富的老司机也不免会有翻车的时候。可见 <code class="highlighter-rouge">nginx</code> 和 <code class="highlighter-rouge">redis</code> 为什么主逻辑都在单进程单线程里实现（我知道 redis 有多线程，但是主逻辑还是在主线程里实现的）。单线程最大的好处是避开了锁带来的复杂度。锁很多时候都是配对出现的，锁上了，就要解锁，忘记解锁会产生死锁。一般这种低级错误有经验的程序员很容易避免。然而在复杂的业务体系中，多人共同开发，往往会产生嵌套式死锁问题，而这个问题藏得很深。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#1-嵌套死锁理解" id="markdown-toc-1-嵌套死锁理解">1. 嵌套死锁理解</a></li>
+  <li><a href="#2-总结" id="markdown-toc-2-总结">2. 总结</a></li>
+</ul>
+
+<hr />
+
+<h2 id="1-嵌套死锁理解">1. 嵌套死锁理解</h2>
+
+<p>嵌套式死锁：系统中存在多个锁，通过函数相互调用。伪代码，展示两个线程同时运行，极有可能产生嵌套死锁问题。</p>
+
+<p><img src="/images/2020-03-11-13-25-42.png" alt="多线程逻辑时序" data-action="zoom" /></p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">func1</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">lock1</span><span class="p">();</span>
+    <span class="p">...</span>
+    <span class="n">func22</span><span class="p">();</span>
+    <span class="p">...</span>
+    <span class="n">unlock1</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">func12</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">lock1</span><span class="p">();</span>
+    <span class="p">...</span>
+    <span class="n">unlock1</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">func2</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">lock2</span><span class="p">();</span>
+    <span class="p">...</span>
+    <span class="n">func12</span><span class="p">();</span>
+    <span class="p">...</span>
+    <span class="n">unlock2</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">func22</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">lock2</span><span class="p">();</span>
+    <span class="p">...</span>
+    <span class="n">unlock2</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">thread1</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">func1</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">thread2</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">func2</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="2-总结">2. 总结</h2>
+
+<ul>
+  <li>在一个功能单元里，尽量不要调用有其它锁的函数。</li>
+  <li>锁的粒度尽量小，锁是锁数据的，不是锁逻辑的。在一个函数里，函数入口加锁，函数退出解锁，这种操作看似方便，其实隐藏了很多问题。假如在解锁前正在执行一个插入数据库语句的逻辑，刚好这个数据库堵了。那整个多线程系统有可能卡在这里。</li>
+</ul>
+
+<hr />
+
+<blockquote>
+  <p>🔥文章来源：<a href="https://wenfh2020.com/">wenfh2020.com</a></p>
+</blockquote>
