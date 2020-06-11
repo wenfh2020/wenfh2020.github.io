@@ -12,6 +12,7 @@ mathjax: true
 nginx 内存池源码([ngx_palloc.c](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c))，通过链式管理大小内存块，实现内存管理。
 
 
+
 * content
 {:toc}
 
@@ -72,6 +73,8 @@ int main() {
 ## 3. 内存池
 
 ![nginx 内存池](/images/2020-04-25-17-15-19.png){: data-action="zoom"}
+
+> 设计图来源：[nginx 内存池结构图](https://www.processon.com/view/5e24d976e4b049828093bebe)
 
 ---
 
