@@ -17,7 +17,7 @@ author: wenfh2020
 
 ## 1. 原理
 
-`epoll_wait` 内核源码，核心逻辑在 `ep_send_events_proc` 函数里实现。
+`epoll_wait` 内核源码，核心逻辑在 `ep_send_events_proc` 函数里实现，关键在**就绪列表**。
 
 * epoll 监控的 fd 产生事件，fd 信息被添加进就绪列表。
 * epoll_wait 发现有就绪事件，进程持续执行，或者被唤醒工作。
