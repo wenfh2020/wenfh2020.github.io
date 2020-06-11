@@ -133,4 +133,4 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/06/11/epoll-lt-et/)
