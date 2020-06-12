@@ -73,10 +73,20 @@ author: wenfh2020
 | c/c++  | [libev](http://software.schmorp.de/pkg/libev.html) <br/> [redis](https://github.com/antirez/redis) |
 | golang | [codis](https://github.com/CodisLabs/codis) <br/> [kingshard](https://github.com/flike/kingshard)  |
 
+---
+
+## 6. 源码走读方法
+
+* 了解需求文档。
+* 应用并熟悉工作流程。
+* 走读源码，理解核心数据结构，接口。
+* 通过 uml 抽象出业务对象，建立彼此的时序关系，走通流程。
+* 验证逻辑结果。
+* 输出总结，落地文档。
 
 ---
 
-## 6. 其它
+## 7. 其它
 
 * [github + jekyll 博客](https://github.com/Gaohaoyang/gaohaoyang.github.io)
   [本博客](https://wenfh2020.com/2020/02/17/make-blog/)主要采用这个模版搭建。搭建框架，请参考[这个文档](https://github.com/wonderseen/wonderseen.github.io)的搭建流程。
