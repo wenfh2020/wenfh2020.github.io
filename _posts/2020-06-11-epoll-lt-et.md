@@ -8,7 +8,7 @@ author: wenfh2020
 
 走读内核源码，看看 epoll 的 LT 和 ET 模式区别。
 
-> 详细信息在文章《[epoll 源码走读] epoll 实现原理》里，现在将部分代码提取出来。
+> 详细信息可以参考文章《[[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)》，现在将部分代码提取出来。
 
 
 
