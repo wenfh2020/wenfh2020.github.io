@@ -1,12 +1,14 @@
 ---
 layout: post
-title:  "epoll LT 与 ET 模式区别"
+title:  "[epoll 源码走读] LT 与 ET 模式区别"
 categories: 网络
 tags: epoll LT ET 区别
 author: wenfh2020
 ---
 
 走读内核源码，看看 epoll 的 LT 和 ET 模式区别。
+
+> 详细信息在文章《[epoll 源码走读] epoll 实现原理》里，现在将部分代码提取出来。
 
 
 
@@ -17,7 +19,7 @@ author: wenfh2020
 
 ## 1. 原理
 
-`epoll_wait` 内核源码，核心逻辑在 `ep_send_events_proc` 函数里实现，关键在**就绪列表**。
+核心逻辑在 `ep_send_events_proc` 函数里实现，关键在 **就绪列表**。
 
 * epoll 监控的 fd 产生事件，fd 信息被添加进就绪列表。
 * epoll_wait 发现有就绪事件，进程持续执行，或者被唤醒工作。
