@@ -67,7 +67,7 @@ sentinel <--> master，sentinel <--> slave，sentinel A <--> sentinel B
 
    通过以上步骤，sentinel 可以链接 master / slave。而多个 sentinel 通过发布/订阅 master / slave 的渠道 `__sentinel:hello__` 进行广播和接收信息。每个 sentinel 每次发布自己的 ip / port 信息到 redis 服务的 `__sentinel:hello__` 渠道，其它 sentinel 都会收到。多个 sentinel 不需要配置对方的信息，就能获得通过这个流程获得其它 sentinel 的信息并进行相互链接。
 
-> 详细流程，可以参考 《[[redis 源码走读] sentinel 哨兵 - 集群节点链接流程](wenfh2020.com)》
+> 详细流程，可以参考 《[[redis 源码走读] sentinel 哨兵 - 集群节点链接流程](https://wenfh2020.com/2020/06/12/redis-sentinel-nodes-contact/)》
 
 ---
 
@@ -132,4 +132,4 @@ sentinel <----- PING/PONG -----> master / slave
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/06/06/redis-sentinel/)
