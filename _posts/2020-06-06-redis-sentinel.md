@@ -106,11 +106,13 @@ redis 集群三个角色 sentinel / master / slave 都可能出现故障，当 r
 
 ## 4. 源码走读
 
-源码走读，可以通过 gdb 调试，去落实 sentinel 的源码运行流程。
+通过 gdb 调试，去落实 sentinel 的源码工作流程。
 
 在 main 函数入口下断点，在 `sentinel.c` 源码文件里，几乎每个函数都下断点，启动调试，这个方法好像有点笨，但是这样每个细节流程都不会错过（^_^!）。
 
 > 调试请参考 《[用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)》。
+
+![启动调试](/images/2020-06-12-14-31-49.png){:data-action="zoom"}
 
 ---
 

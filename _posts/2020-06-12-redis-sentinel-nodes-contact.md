@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] sentinel 哨兵 - 集群节点链接流程"
 categories: redis
-tags: redis sentinel
+tags: redis sentinel contact
 author: wenfh2020
 ---
 
@@ -16,6 +16,13 @@ author: wenfh2020
 ---
 
 ## 1. 测试
+
+通过命令启动 sentinel 进程。
+
+```shell
+redis-sentinel /path/to/your/sentinel.conf
+redis-server /path/to/your/sentinel.conf --sentinel
+```
 
 先启动两个 sentinel 进程，端口分别为 26377，26378。然后启动第三个 sentinel A 进程，端口为 26379，观察它的工作流程。
 
