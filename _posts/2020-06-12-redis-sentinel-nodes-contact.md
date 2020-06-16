@@ -24,27 +24,26 @@ redis-sentinel /path/to/your/sentinel.conf
 redis-server /path/to/your/sentinel.conf --sentinel
 ```
 
-先启动两个 sentinel 进程，端口分别为 26377，26378。然后启动第三个 sentinel A 进程，端口为 26379，观察它的工作流程。
-
-测试过程中，用 `strace` 工具抓取 sentinel 工作日志。测试集群节点情况：3 个 sentinel，1 个 master，1 个 slave。
+* 先启动两个 sentinel 进程，端口分别为 26377，26378。
+* 然后启动第三个 sentinel A 进程，端口为 26379，观察它的工作流程。
+* 测试过程中，用 `strace` 工具抓取 sentinel 工作日志。
+* 测试集群节点情况：3 个 sentinel，1 个 master，1 个 slave。
 
 ![角色关系](/images/2020-06-15-09-59-12.png){:data-action="zoom"}
 
 ---
 
-### 1.1. 启动 sentinel 测试
+### 1.1. 连接关系
 
+节点之间通过 TCP 建立联系，下图展示了 sentinel A 节点与其它节点的关系。
 
-
-> 节点之间通过 TCP 建立联系，下图展示了 sentinel A 节点与其它节点的关系。
->
-> 箭头代表节点 connect 的方向，箭头上面的数字是 fd，可以根据 strace 日志，对号入座。fd 从小到大，展示了创建链接的时序。
+箭头代表节点 connect 的方向，箭头上面的数字是 fd，可以根据 strace 日志，对号入座。fd 从小到大，展示了创建链接的时序。
 
 ![抓包流程](/images/2020-06-15-09-54-30.png){:data-action="zoom"}
 
 ---
 
-### 1.2. 简单通信流程
+### 1.2. 通信流程
 
 查看 socket 的发送和接收数据，了解节点间的通信内容。
 
@@ -63,9 +62,9 @@ recvfrom(9, "+OK\r\n*3\r\n$9\r\nsubscribe\r\n$18\r\n__sentinel__:hello\r\n:1\r\n
 sendto(10, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$21\r\nsentinel-270e0528-cmd\r\n*1\r\n$4\r\nPING\r\n*1\r\n$4\r\nINFO\r\n", 85, 0, NULL, 0) = 85
 # 向 slave 发送命令 CLIENT SETNAME，并订阅 master 的 __sentinel__:hello 频道。
 sendto(11, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$24\r\nsentinel-270e0528-pubsub\r\n*2\r\n$9\r\nSUBSCRIBE\r\n$18\r\n__sentinel__:hello\r\n", 104, 0, NULL, 0) = 104
-# 收到 slave 的回复。
+# 收到 slave 回复。
 recvfrom(10, "+OK\r\n+PONG\r\n$3812\r\n# Server\r\nredis_version:5.9.104\r\nredis_git_sha1:00000000\r\nredis_git_dirty:0\r\nredis_build_id:995c39fc3a59d30e\r\nredis_mode:standalone\r\nos:Linux 3.10.0-693.2.2.el7.x86_64 x86_64\r\narch_bits:64\r\nmultiplexing_api:epoll\r\natomicvar_api:atomic-builtin\r\ngcc_version:8.3.1\r\nprocess_id:31519\r\nrun_id:81bd16693346a6a9641df9a3852ff21f2d396c3d\r\ntcp_port:6378\r\nuptime_in_seconds:331563\r\nuptime_in_days:3\r\nhz:1000\r\nconfigured_hz:1000\r\nlru_clock:14972439\r\nexecutable:/home/other/redis-test/slave/./redis-server\r"..., 16384, 0, NULL, NULL) = 3833
-# 收到 slave 的回复。
+# 收到 slave 回复。
 recvfrom(11, "+OK\r\n*3\r\n$9\r\nsubscribe\r\n$18\r\n__sentinel__:hello\r\n:1\r\n", 16384, 0, NULL, NULL) = 53
 # 收到 sentinel 节点的请求。获得该节点的 ip / port 等信息。
 read(12, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$21\r\nsentinel-260e0528-cmd\r\n*1\r\n$4\r\nPING\r\n*3\r\n$7\r\nPUBLISH\r\n$18\r\n__sentinel__:hello\r\n$84\r\n127.0.0.1,26378,260e052832c9352926f4bbfb48a7c1d7033264fb,0,mymaster,127.0.0.1,6379,0\r\n", 16384) = 204
@@ -128,11 +127,11 @@ struct sentinelState {
 
 ### 2.2. 初始化
 
-* sentinel 从配置 sentinel.conf 读取 master 信息，链接 master。
+* sentinel 从配置加载 master 信息。
 
 ```shell
 # sentinel.conf
-sentinel monitor mymaster 127.0.0.1 6379 2
+sentinel monitor <master-group-name> <ip> <port> <quorum>
 ```
 
 * 加载配置，创建角色监控实例运行堆栈。
@@ -147,9 +146,9 @@ loadServerConfig(char* filename, char* options) (/Users/wenfh2020/src/redis/src/
 main(int argc, char** argv) (/Users/wenfh2020/src/redis/src/server.c:5101)
 ```
 
-* sentinel 进程启动，载入 sentinel.conf 配置，创建对应节点的管理实例 `sentinelRedisInstance`，读出对应节点 ip / port，准备建立连接。
+* sentinel 进程启动，加载配置，创建对应节点的管理实例 `sentinelRedisInstance`。
 
-> sentinel 运行过程中，会把新发现的 sentinel / master / slave 节点信息保存回 sentinel.conf 文件里。
+> sentinel 运行过程中，会把新发现的 sentinel / master / slave 节点信息保存 sentinel.conf 文件里。
 
 ```c
 // 加载处理配置信息。
