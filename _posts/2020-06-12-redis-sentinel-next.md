@@ -39,7 +39,7 @@ redis-server /path/to/your/sentinel.conf --sentinel
 sentinel monitor mymaster 127.0.0.1 6379 2
 ```
 
-* 初始化配置运行堆栈。
+* 加载配置，创建角色监控实例运行堆栈。
 
 ```shell
 # 创建 sentinel 管理实例。
@@ -53,7 +53,7 @@ main(int argc, char** argv) (/Users/wenfh2020/src/redis/src/server.c:5101)
 
 ---
 
-* 创建 master / slave 监控实例。
+* sentinel 第一次运行会配置 master 信息。sentinle 运行过程中，进程会保存相关信息到 sentinel.conf 文件，下次启动会重新载入。
 
 ```c
 // 加载处理配置信息。
@@ -293,6 +293,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 }
 
 void sentinelTimer(void) {
+    // tilt 安全保护模式。
     sentinelCheckTiltCondition();
     sentinelHandleDictOfRedisInstances(sentinel.masters);
     sentinelRunPendingScripts();
@@ -311,7 +312,145 @@ void sentinelTimer(void) {
 
 ---
 
-## 6. 参考
+## 6. tilt 安全保护模式
+
+sentinel 通过心跳与其它节点进行保活，当 master 出现故障，它会参与到故障转移流程。但是 sentinel 它自己也是 redis 集群角色之一，它也有可能出现故障。出现故障的管理者，再也不适合去做故障转移工作，这时它会进入 tilt 保护模式，继续接收数据，但不会进行故障转移等操作，这个过程持续 30 秒。直到检测自身正常，才会退出保护模式。
+
+1. 心跳保活，主要依靠系统时间进行包间隔判断。有可能系统时间被修改，导致时间不正常了。
+2. sentinel 运行所在机器，有可能负载很大，系统出现卡顿，阻塞等现象。
+
+```c
+#define SENTINEL_TILT_TRIGGER 2000
+
+void sentinelCheckTiltCondition(void) {
+    mstime_t now = mstime();
+    mstime_t delta = now - sentinel.previous_time;
+
+    // 系统时间被改小，或进程出现卡顿，两次的检测间隔超过了 SENTINEL_TILT_TRIGGER。
+    // 本来时钟的运行频率很快，默认是 100 ms 一次。
+    if (delta < 0 || delta > SENTINEL_TILT_TRIGGER) {
+        sentinel.tilt = 1;
+        sentinel.tilt_start_time = mstime();
+        sentinelEvent(LL_WARNING,"+tilt",NULL,"#tilt mode entered");
+    }
+    sentinel.previous_time = mstime();
+}
+
+void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
+    ...
+    if (sentinel.tilt) {
+        // 检测 tilt 模式是否恢复正常。
+        if (mstime()-sentinel.tilt_start_time < SENTINEL_TILT_PERIOD) return;
+        sentinel.tilt = 0;
+        sentinelEvent(LL_WARNING,"-tilt",NULL,"#tilt mode exited");
+    }
+    ...
+}
+
+```c
+void sentinelInfoReplyCallback(redisAsyncContext *c, void *reply, void *privdata) {
+    sentinelRedisInstance *ri = privdata;
+    instanceLink *link = c->data;
+    redisReply *r;
+
+    if (!reply || !link) return;
+    link->pending_commands--;
+    r = reply;
+
+    if (r->type == REDIS_REPLY_STRING)
+        // 监控集群监控情况。
+        sentinelRefreshInstanceInfo(ri,r->str);
+}
+
+// 行分析 INFO 回复的文本信息。
+void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
+    sds *lines;
+    int numlines, j;
+    int role = 0;
+
+    /* cache full INFO output for instance */
+    sdsfree(ri->info);
+    ri->info = sdsnew(info);
+
+    /* The following fields must be reset to a given value in the case they
+     * are not found at all in the INFO output. */
+    ri->master_link_down_time = 0;
+
+    /* Process line by line. */
+    lines = sdssplitlen(info,strlen(info),"\r\n",2,&numlines);
+    for (j = 0; j < numlines; j++) {
+        sentinelRedisInstance *slave;
+        sds l = lines[j];
+        ...
+        /* old versions: slave0:<ip>,<port>,<state>
+         * new versions: slave0:ip=127.0.0.1,port=9999,... */
+        if ((ri->flags & SRI_MASTER) &&
+            sdslen(l) >= 7 && !memcmp(l,"slave",5) && isdigit(l[5])) {
+            char *ip, *port, *end;
+            ...
+            if (sentinelRedisInstanceLookupSlave(ri,ip,atoi(port)) == NULL) {
+                // 如果有新的 slave 就增加。
+                if ((slave = createSentinelRedisInstance(
+                    NULL,SRI_SLAVE,ip, atoi(port), ri->quorum, ri)) != NULL) {
+                    sentinelEvent(LL_NOTICE,"+slave",slave,"%@");
+                    sentinelFlushConfig();
+                }
+            }
+        }
+
+        /* role:<role> */
+        if (!memcmp(l,"role:master",11)) role = SRI_MASTER;
+        else if (!memcmp(l,"role:slave",10)) role = SRI_SLAVE;
+
+        // 更新 slave 对应的属性信息。
+        if (role == SRI_SLAVE) {
+            /* master_host:<host> */
+            ...
+            /* master_port:<port> */
+            ...
+            /* master_link_status:<status> */
+            ...
+            /* slave_priority:<priority> */
+            ...
+            /* slave_repl_offset:<offset> */
+            ...
+        }
+    }
+
+    // 如果是保护模式，不进行故障转移。
+    if (sentinel.tilt) return;
+
+    /* Handle slave -> master role switch. */
+    // 如果是 slave 角色转移为 master。
+    if ((ri->flags & SRI_SLAVE) && role == SRI_MASTER) {
+        ...
+    }
+    ...
+}
+```
+
+```
+
+---
+
+## 7. strace 工作流程
+
+strace 抓包查看工作流程，角色。
+
+三个 sentinel。
+一个 master。
+一个 slave。
+
+场景：
+
+1. 启动 sentinel，工作流程。
+2. master 断开，sentinel 工作流程。
+3. slave 断开工作流程。
+4. sentinel 断开，工作流程。leader 和 非 leader 工作流程。
+
+---
+
+## 8. 参考
 
 * [Redis Sentinel Documentation](https://redis.io/topics/sentinel)
 * [[redis 源码走读] 主从数据复制（上）](https://wenfh2020.com/2020/05/17/redis-replication/)

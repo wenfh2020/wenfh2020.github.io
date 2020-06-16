@@ -717,12 +717,18 @@ vmstat 1 每秒输出一次统计结果
 ```shell
 # 跟踪具体的进程信息
 strace -p <PID>
+
 # 统计
 strace -cp <PID>
+
 # 单独跟踪某个被定位的内核函数
 strace -T -e clone -p <PID>
+
 # 显示调用高耗能内核函数的业务代码。
 strace-eclone php -r 'exec("ls");'
+
+# 抓取进程启动工作流程
+strace -s 512 -o /tmp/sentinel.log ./redis-sentinel sentinel.conf
 ```
 
 ---

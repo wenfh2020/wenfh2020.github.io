@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[redis 源码走读] 高可用集群 - sentinel 哨兵（上）"
+title:  "[redis 源码走读] sentinel 哨兵 - 原理"
 categories: redis
 tags: redis sentinel
 author: wenfh2020
@@ -65,7 +65,9 @@ sentinel <--> master，sentinel <--> slave，sentinel A <--> sentinel B
 
 * 多个 sentinel 相互链接。
 
-   通过以上步骤，sentinel 可以链接 master / slave。而多个 sentinel 通过发布/订阅 master / slave 的渠道 `__sentinel:hello__` 进行广播和接收信息。所以每个 sentinel 每次发布自己的 ip 和 port 信息到 redis 服务的 `__sentinel:hello__` 渠道，其它 sentinel 都会收到。所以多个 sentinel 不需要配置就能获得其它 sentinel 的链接并进行相互链接。
+   通过以上步骤，sentinel 可以链接 master / slave。而多个 sentinel 通过发布/订阅 master / slave 的渠道 `__sentinel:hello__` 进行广播和接收信息。每个 sentinel 每次发布自己的 ip / port 信息到 redis 服务的 `__sentinel:hello__` 渠道，其它 sentinel 都会收到。多个 sentinel 不需要配置对方的信息，就能获得通过这个流程获得其它 sentinel 的信息并进行相互链接。
+
+> 详细流程，可以参考 《[[redis 源码走读] sentinel 哨兵 - 集群节点链接流程](wenfh2020.com)》
 
 ---
 
@@ -112,8 +114,6 @@ sentinel <----- PING/PONG -----> master / slave
 源码走读，主要通过 gdb 调试，去落实 sentinel 的源码运行流程。
 
 在系统 main 函数下断点，在 4500 行源码的 `sentinel.c` 文件里，几乎每个函数都下断点，启动调试，这个方法好像有点笨，但是这样每个细节流程都不会错过（^_^!）。
-
-源码详细走读，请参考下一章 《[[redis 源码走读] 高可用集群 - sentinel 哨兵（下）](wenfh2020.com)》
 
 > 调试请参考 《[用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)》。
 
