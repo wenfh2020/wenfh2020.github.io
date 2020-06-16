@@ -65,7 +65,7 @@ sentinel <--> master，sentinel <--> slave，sentinel A <--> sentinel B
 
 * 多个 sentinel 相互链接。
 
-   通过以上步骤，sentinel 可以链接 master / slave。而多个 sentinel 通过发布/订阅 master / slave 的渠道 `__sentinel:hello__` 进行广播和接收信息。每个 sentinel 每次发布自己的 ip / port 信息到 redis 服务的 `__sentinel:hello__` 渠道，其它 sentinel 都会收到。多个 sentinel 不需要配置对方的信息，就能获得通过这个流程获得其它 sentinel 的信息并进行相互链接。
+   通过以上步骤，sentinel 可以链接 master / slave。而多个 sentinel 通过发布/订阅 master / slave 的 `__sentinel__:hello` 频道进行发布和接收信息。多个 sentinel 不需要配置对方的信息，就能获得通过这个流程获得其它 sentinel 的信息并进行相互链接。
 
 > 详细流程，可以参考 《[[redis 源码走读] sentinel 哨兵 - 集群节点链接流程](https://wenfh2020.com/2020/06/12/redis-sentinel-nodes-contact/)》
 
@@ -81,18 +81,13 @@ redis 集群三个角色 sentinel / master / slave 都可能出现故障，当 r
 
 ### 3.1. 检测故障
 
-角色间建立了联系，那么 sentinel 与其它节点通过心跳进行保活。
-
-```shell
-sentinel A <----- PING/PONG -----> sentinel B
-sentinel <----- PING/PONG -----> master / slave
-```
+角色节点之间建立了联系，那么 sentinel 与其它节点通过定期发送相应命令（`PING / INFO / PUBLISH`）进行相互通信。
 
 ---
 
 ### 3.2. 发现故障
 
-1. 当对方（master）心跳回复异常或者长期收不到对方回复，那么 sentinel 发现了故障，暂时将该节点标记为主动下线。
+1. 当对方（master）命令回复异常或者长期收不到对方回复，那么 sentinel 发现了故障，暂时将该节点标记为主动下线。
 2. sentinel 向其它 sentinel 节点询问，是否同样检测到该结点出现故障。
 3. 其它节点回复确认故障，当前 sentinel 将该节点标记为客观下线。
 
@@ -111,9 +106,9 @@ sentinel <----- PING/PONG -----> master / slave
 
 ## 4. 源码走读
 
-源码走读，主要通过 gdb 调试，去落实 sentinel 的源码运行流程。
+源码走读，可以通过 gdb 调试，去落实 sentinel 的源码运行流程。
 
-在系统 main 函数下断点，在 4500 行源码的 `sentinel.c` 文件里，几乎每个函数都下断点，启动调试，这个方法好像有点笨，但是这样每个细节流程都不会错过（^_^!）。
+在 main 函数入口下断点，在 `sentinel.c` 源码文件里，几乎每个函数都下断点，启动调试，这个方法好像有点笨，但是这样每个细节流程都不会错过（^_^!）。
 
 > 调试请参考 《[用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)》。
 
