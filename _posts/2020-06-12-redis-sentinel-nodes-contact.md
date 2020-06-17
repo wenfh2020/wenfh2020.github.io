@@ -1,12 +1,12 @@
 ---
 layout: post
-title:  "[redis 源码走读] sentinel 哨兵 - 集群节点链接流程"
+title:  "[redis 源码走读] sentinel 哨兵 - 节点链接流程"
 categories: redis
 tags: redis sentinel contact
 author: wenfh2020
 ---
 
-承接上一章 《[[redis 源码走读] sentinel 哨兵 - 原理](https://wenfh2020.com/2020/06/06/redis-sentinel/)》，本章通过 `strace` 命令从底层抓取 sentinel 工作流程日志。通过对日志分析，走通 sentinel 通信逻辑，阅读相关源码。
+承接上一章 《[[redis 源码走读] sentinel 哨兵 - 原理](https://wenfh2020.com/2020/06/06/redis-sentinel/)》，本章通过 `strace` 命令从底层抓取 sentinel 工作日志，熟悉节点通信流程，阅读相关源码。
 
 
 
