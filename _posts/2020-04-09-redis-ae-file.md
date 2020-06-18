@@ -6,10 +6,10 @@ tags: redis 文件事件 event epoll
 author: wenfh2020
 ---
 
-redis 服务底层采用了`异步事件`管理（`aeEventLoop`）：管理时间事件和文件事件。对于大量网络文件描述符（fd）的事件管理，redis 建立在安装系统对应的事件驱动基础上（例如 Linux 的 `epoll`）。
+redis 服务底层采用了`异步事件`管理（`aeEventLoop`）：管理时间事件和文件事件。对大量网络文件描述符（fd）事件管理，redis 建立在安装系统对应的事件驱动基础上（例如 Linux 的 `epoll`）。
 
 > * 关于事件驱动，本章主要讲述 Linux 系统的 epoll 事件驱动。
-> * 关于事件处理，本章主要讲述文件事件，时间事件可以参考帖子 [[redis 源码走读] 事件 - 定时器](https://wenfh2020.com/2020/04/06/ae-timer/)。
+> * 关于事件处理，本章主要讲述文件事件，时间事件可以参考帖子 《[[redis 源码走读] 事件 - 定时器](https://wenfh2020.com/2020/04/06/ae-timer/)》。
 
 
 
