@@ -86,6 +86,7 @@ ev_timer_start (struct ev_loop *loop, ev_timer *w)
 ## 2. gdb 调试
 
 1. 下载 libev 源码：[源码地址](http://dist.schmorp.de/libev/)
+   > 地址如果打不开，可能被墙了。
 2. 修改源码目录下的 configure 文件，将所有编译优化项（CFLAGS），修改为 CFLAGS="-g O0"。
 3. 编译安装源码：./configure && make && make install
 4. gdb 调试测试源码。
