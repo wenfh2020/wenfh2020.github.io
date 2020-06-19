@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] 多线程通信 I/O"
 categories: redis
-tags: reids mutithreading I/O
+tags: reids multithreading I/O
 author: wenfh2020
 ---
 
