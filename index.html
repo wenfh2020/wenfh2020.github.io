@@ -59,18 +59,6 @@ layout: default
   <!-- <button class="anchor"><i class="fa fa-anchor"></i></button> -->
   <div class="right">
     <div class="wrap">
-      <div class="side">
-        <div>
-          <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
-          Recent Posts
-        </div>
-        <ul class="content-ul" recent>
-          {% for post in site.posts offset: 0 limit: 10  %}
-          <li><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></li>
-          {% endfor %}
-        </ul>
-      </div>
-
       <!-- Content -->
       <div class="side ">
         <div>
@@ -91,6 +79,19 @@ layout: default
           {% endfor %}
         </ul>
       </div>
+
+      <!-- <div class="side">
+        <div>
+          <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+          Recent Posts
+        </div>
+        <ul class="content-ul" recent>
+          {% for post in site.posts offset: 0 limit: 10  %}
+          <li><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></li>
+          {% endfor %}
+        </ul>
+      </div> -->
+
       <!-- 其他div框放到这里 -->
       <!-- <div class="side">
         <div>
