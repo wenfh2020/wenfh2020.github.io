@@ -115,6 +115,7 @@ enum {
 ## 4. 其它
 
 * 客户端主动 connect 服务端，三次握手是在服务端 accept 前完成的。服务端 accept 前面添加 sleep 再抓下包看看。
+* 为什么链接是三次，挥手是四次？因为 TCP 协议是全双工的，全双工实际是用两条单工信道。TCP 建立链接握手时，对端 ACK + SYN 两个包并在一起发，所以链接是三次握手。
 
 ---
 
@@ -123,6 +124,7 @@ enum {
 * [为什么tcp 连接断开只有3个包？](https://www.zhihu.com/question/55890292)
 * [TCP_Relative_Sequence_Numbers](https://wiki.wireshark.org/TCP_Relative_Sequence_Numbers)
 * 《TCP/IP 详解卷 1：协议》
+* [Linux SIGPIPE信号产生原因与解决方法](https://blog.csdn.net/u010821666/article/details/81841755)
 
 ---
 
