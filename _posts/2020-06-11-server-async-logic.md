@@ -22,6 +22,8 @@ author: wenfh2020
 
 ![高性能异步框架通信流程](/images/2020-06-11-21-28-24.png){:data-action="zoom"}
 
+> 设计图来源：《[异步服务框架通信流程](https://www.processon.com/view/5ee1d7de7d9c084420107b53)》
+
 ---
 
 > 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/06/11/server-async-logic/)
