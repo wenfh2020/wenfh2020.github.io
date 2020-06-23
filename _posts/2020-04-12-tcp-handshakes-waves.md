@@ -2,7 +2,7 @@
 layout: post
 title:  "抓包分析 tcp 握手和挥手"
 categories: 网络
-tags: tcp 三次握手 四次挥手
+tags: tcp handshakes waves
 author: wenfh2020
 ---
 

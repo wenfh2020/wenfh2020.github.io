@@ -2,7 +2,7 @@
 layout: post
 title:  "程序变量内存分布（Linux）"
 categories: Linux
-tags: 系统 Linux
+tags: system Linux memory distribution
 author: wenfh2020
 ---
 

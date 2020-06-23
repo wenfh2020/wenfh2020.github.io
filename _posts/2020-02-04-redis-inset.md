@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] 整数集合(inset)"
 categories: redis
-tags: redis c
+tags: redis inset
 author: wenfh2020
 ---
 

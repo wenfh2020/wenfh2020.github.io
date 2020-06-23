@@ -2,7 +2,7 @@
 layout: post
 title:  "Collection"
 categories: 技术
-tags: 
+tags: collection
 author: wenfh2020
 --- 
 

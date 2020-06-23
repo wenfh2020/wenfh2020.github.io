@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] 事件 - 文件事件"
 categories: redis
-tags: redis 文件事件 event epoll
+tags: redis file event epoll
 author: wenfh2020
 ---
 

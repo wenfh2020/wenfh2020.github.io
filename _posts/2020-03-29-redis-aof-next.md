@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] aof 持久化 (下)"
 categories: redis
-tags: redis aof 持久化
+tags: redis aof persistence
 author: wenfh2020
 ---
 

@@ -2,7 +2,7 @@
 layout: post
 title:  "付费自习室"
 categories: 随笔
-tags: 自习室
+tags: study room
 author: wenfh2020
 ---
 

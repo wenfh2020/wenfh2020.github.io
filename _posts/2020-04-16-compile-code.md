@@ -2,7 +2,7 @@
 layout: post
 title:  "gcc/make/Makefile 源码编译"
 categories: c/c++
-tags: make Makefile gcc 编译
+tags: make Makefile gcc compile
 author: wenfh2020
 # mathjax: true
 ---

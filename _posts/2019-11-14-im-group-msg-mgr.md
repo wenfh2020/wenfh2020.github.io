@@ -2,7 +2,7 @@
 layout: post
 title:  "[即时通讯] 千人群组-消息管理"
 categories: 即时通讯
-tags: im group
+tags: im group message
 author: wenfh2020
 --- 
 

@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] 压缩列表(ziplist)"
 categories: redis
-tags: redis c
+tags: redis ziplist
 author: wenfh2020
 mathjax: true
 ---

@@ -2,7 +2,7 @@
 layout: post
 title:  "linux 下实现 itoa 转二进制"
 categories: c/c++
-tags: c/c++
+tags: c/c++ itoa
 author: wenfh2020
 --- 
 

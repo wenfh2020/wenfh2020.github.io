@@ -2,7 +2,7 @@
 layout: post
 title:  "redis 脑裂现象"
 categories: redis
-tags: redis
+tags: split brain
 author: wenfh2020
 --- 
 

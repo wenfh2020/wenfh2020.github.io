@@ -2,7 +2,7 @@
 layout: post
 title:  "ssh 快捷登录"
 categories: Linux
-tags: Linux
+tags: Linux quick login
 author: wenfh2020
 --- 
 

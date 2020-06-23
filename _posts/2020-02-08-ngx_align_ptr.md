@@ -2,7 +2,7 @@
 layout: post
 title:  "nginx 地址对齐(ngx_align_ptr)"
 categories: nginx
-tags: nginx c
+tags: nginx c align
 author: wenfh2020
 mathjax: 1
 ---

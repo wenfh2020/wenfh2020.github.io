@@ -2,7 +2,7 @@
 layout: post
 title:  "redis 持久化方式 - aof 和 rdb 区别"
 categories: redis
-tags: redis aof rdb 区别 difference
+tags: redis aof rdb difference
 author: wenfh2020
 ---
 

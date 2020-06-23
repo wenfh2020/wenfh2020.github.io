@@ -2,7 +2,7 @@
 layout: post
 title:  "Siege HTTP 压力测试"
 categories: 网络
-tags: siege 压力测试
+tags: siege pressure
 author: wenfh2020
 ---
 

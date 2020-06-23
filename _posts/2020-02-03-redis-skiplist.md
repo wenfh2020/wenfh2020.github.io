@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] 跳跃表(skiplist)"
 categories: redis
-tags: redis c
+tags: redis skiplist
 author: wenfh2020
 mathjax: true
 ---

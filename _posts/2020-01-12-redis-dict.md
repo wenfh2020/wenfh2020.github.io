@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] 字典(dict)"
 categories: redis
-tags: redis dict 字典
+tags: redis dict
 author: wenfh2020
 mathjax: true
 ---

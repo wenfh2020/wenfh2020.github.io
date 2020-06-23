@@ -2,7 +2,7 @@
 layout: post
 title:  "[redis 源码走读] maxmemory 数据淘汰策略"
 categories: redis
-tags: redis maxmemory 数据淘汰 策略
+tags: redis maxmemory expire policy
 author: wenfh2020
 ---
 

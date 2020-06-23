@@ -2,7 +2,7 @@
 layout: post
 title:  "[即时通讯] 分布式系统-用户在线状态管理"
 categories: 即时通讯
-tags: im group
+tags: im user status
 author: wenfh2020
 --- 
 

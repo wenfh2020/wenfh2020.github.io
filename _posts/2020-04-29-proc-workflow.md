@@ -2,7 +2,7 @@
 layout: post
 title:  "程序工作流程（Linux）"
 categories: Linux
-tags: 系统 Linux
+tags: system Linux
 author: wenfh2020
 ---
 

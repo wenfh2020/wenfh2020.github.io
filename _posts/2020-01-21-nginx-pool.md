@@ -2,7 +2,7 @@
 layout: post
 title:  "[nginx 源码走读] 内存池"
 categories: nginx
-tags: nginx c
+tags: nginx pool
 author: wenfh2020
 mathjax: true
 ---
