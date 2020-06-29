@@ -20,7 +20,7 @@ shell 常用语法，整理方便查阅。
 ### 1.1. for
 
 ```shell
-for p in paths
+for p in $paths
 do
 done
 ```
