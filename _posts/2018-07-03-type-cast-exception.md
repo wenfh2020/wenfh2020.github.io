@@ -84,4 +84,4 @@ CDownloadTask* pDLoadTask = dynamic_cast<CDownloadTask*>(pTask);
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2018/07/03/type-cast-exception/)
