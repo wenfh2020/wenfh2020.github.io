@@ -74,7 +74,7 @@ CDownloadTask* pDLoadTask = dynamic_cast<CDownloadTask*>(pTask);
 
 如果不清楚变量是在哪里发生改变的，VS 系列，可以用“数据断点”功能，监控某个变量的改变。类似于 gdb 的 watch 功能。
 
-![调试手段 watch](/images/2020-06-29-17-08-06.png){:data-action="zoom"}
+![调试手段 watch](/images/2020-06-29-17-17-10.png){:data-action="zoom"}
 
 ---
 
