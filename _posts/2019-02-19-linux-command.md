@@ -213,19 +213,19 @@ sed -i '' 's/\/usr\/local\/bin/\/usr\/bin/g' /etc/init.d/fdfs_storaged
 grep -E '123|abc' filename
 ```
 
-只匹配整个单词，而不是字符串的一部分（如匹配‘magic’，而不是‘magical’）
+只匹配整个单词，而不是字符串的一部分（如匹配‘magic’，而不是‘magical’）。
 
 ```shell
 grep -w pattern files
 ```
 
-文件中查找字符串
+文件中查找字符串。
 
 ```shell
 grep "update" moment_audit.log | wc -l
 ```
 
-递归文件夹在指定文件查找字符串
+递归文件夹在指定文件查找字符串。
 
 ```shell
 grep -r "pic" --include "*.md" .
@@ -488,7 +488,7 @@ wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.r
 
 netstat 命令用于显示网络状态
 
-```
+```shell
 netstat [-acCeFghilMnNoprstuvVwx][-A<网络类型>][--ip]
 ```
 
@@ -523,85 +523,9 @@ lsof -p <pid>
 
 ---
 
-## 7. shell
+## 7. 其它
 
-### 7.1. 语法
-
-#### 7.1.1. for
-
-```shell
-for p in paths
-do
-done
-```
-
----
-
-#### 7.1.2. [if](https://www.runoob.com/linux/linux-shell-test.html)
-
-```shell
-if [ ! -d "$dir" ]; then
-else
-fi
-```
-
----
-
-#### 7.1.3. 数组
-
-```shell
-align=1
-unalign=0
-array=(1, 2, 4, 8, 16, 32,64)
-
-for x in ${array[*]}
-do
-    gcc -g -O0 align.cpp -o align  && time ./align $x $align
-    echo '-------'
-    gcc -g -O0 align.cpp -o align  && time ./align $x $unalign
-    echo '>>>>>>>'
-done
-```
-
----
-
-#### 7.1.4. 文件
-
-| 参数 | 描述               |
-| ---- | ------------------ |
-| -d   | 文件夹是否存在     |
-| -x   | 文件是否有执行权限 |
-| -f   | 文件是否存在       |
-
----
-
-#### 7.1.5. 数值比较
-
-| 参数 | 描述     |
-| ---- | -------- |
-| -eq  | 等于     |
-| -ne  | 不等于   |
-| -gt  | 大于     |
-| -ge  | 大于等于 |
-| -lt  | 小于     |
-| -le  | 小于等于 |
-
----
-
-#### 7.1.6. 字符串
-
-| 参数 | 描述              |
-| ---- | ----------------- |
-| =    | 等于              |
-| !=   | 等于              |
-| -z   | 字符串的长度为0   |
-| -n   | 字符串的长度不为0 |
-
----
-
-### 7.2. 其它
-
-#### 7.2.1. 有空格的路径 grep 操作
+### 7.1. 有空格的路径 grep 操作
 
 ```shell
 infos=`grep -r $src_pic_path --include '*.md' . | tr " " "\?"`
@@ -609,7 +533,7 @@ infos=`grep -r $src_pic_path --include '*.md' . | tr " " "\?"`
 
 ---
 
-#### 7.2.2. 有空格路径进行 sed 操作
+### 7.2. 有空格路径进行 sed 操作
 
 ```shell
 sed -i '' "s:$src_pic_path:\.\/pic:g" $file
@@ -617,7 +541,7 @@ sed -i '' "s:$src_pic_path:\.\/pic:g" $file
 
 ---
 
-#### 7.2.3. printf
+### 7.3. printf
 
 ```shell
 printf '%d\n' 0xA
@@ -629,9 +553,7 @@ printf "%-10s %-11s" "end:" $end_time
 
 ---
 
-### 7.3. 命令
-
-#### 7.3.1. xargs
+### 7.4. xargs
 
 是给命令传递参数的一个过滤器
 
@@ -740,3 +662,4 @@ strace -s 512 -o /tmp/sentinel.log ./redis-sentinel sentinel.conf
 ---
 
 > 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
+ 
