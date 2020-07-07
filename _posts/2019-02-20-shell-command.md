@@ -106,8 +106,7 @@ done
 ### 1.8. 函数
 
 ```shell
-function main()
-{
+function main() {
     # do something.
 }
 
@@ -117,8 +116,7 @@ main $@
 ---
 
 ```shell
-function func_check_path()
-{
+function func_check_path() {
     if [ ! -d "${ROOT_PATH}" ]; then
         echo "invalid root path."${ROOT_PATH}
         return 1
@@ -137,8 +135,7 @@ function func_check_path()
 ---
 
 ```shell
-function kill_process()
-{
+function kill_process() {
     for process_name in ${PN_ARRAY[@]}
     do
         #echo ${process_name}

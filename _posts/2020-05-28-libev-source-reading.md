@@ -171,6 +171,7 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
 * [[redis 源码走读] 事件 - 定时器](https://wenfh2020.com/2020/04/06/ae-timer/)
 * [[redis 源码走读] 事件 - 文件事件](https://wenfh2020.com/2020/04/09/redis-ae-file/)
 * [Libev轻网络库 源码浅析](http://chenzhenianqing.com/articles/1051.html)
+* [__builtin_expect 说明](https://www.jianshu.com/p/2684613a300f)
 
 ---
 

@@ -81,6 +81,7 @@ CDownloadTask* pDLoadTask = dynamic_cast<CDownloadTask*>(pTask);
 ## 4. 参考
 
 * [static_cast, dynamic_cast, const_cast 三种类型转化的区别](https://www.cnblogs.com/xj626852095/p/3648099.html)
+* [C++四种类型转换运算符](http://c.biancheng.net/cpp/biancheng/view/3297.html)
 
 ---
 
