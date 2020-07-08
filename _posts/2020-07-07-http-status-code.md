@@ -9,6 +9,7 @@ author: wenfh2020
 整理 http 协议的状态码。
 
 
+
  
 * content
 {:toc}
@@ -90,4 +91,4 @@ static const char* status_string(int code) {
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2019/02/20/shell-command/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/07/07/http-status-code/)
