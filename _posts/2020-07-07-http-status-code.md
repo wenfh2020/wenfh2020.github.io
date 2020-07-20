@@ -88,6 +88,7 @@ static const char* status_string(int code) {
 ## 2. 参考
 
 * [HTTP返回状态码简介](https://blog.csdn.net/zhang18330699274/article/details/77621419)
+* [HTTP Transfer-Encoding 介绍](https://blog.csdn.net/Dancen/article/details/89957486)
 
 ---
 
