@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "压测 redis 消息队列（golang）"
-categories: redis
+categories: redis golang
 tags: redis list pressure golang
 author: wenfh2020
 ---
