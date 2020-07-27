@@ -30,7 +30,7 @@ author: wenfh2020
 
 ## 2. 源码
 
-正常逻辑一般有 N 个步骤，异步逻辑不同之处，通过 callback 逻辑实现，与同步比较确实有点反人类。callback 回调回来还能定位到原来执行体，关键点在于 `privdata`，
+正常逻辑一般有 N 个步骤，异步逻辑不同之处，通过 callback 逻辑实现，与同步比较确实有点反人类。callback 回调回来还能定位到原来执行体，关键点在于 `privdata`。
 
 我们看看 redis 的 callback 逻辑。（[github 源码](https://github.com/redis/redis/blob/unstable/src/sentinel.c)）
 
