@@ -77,6 +77,59 @@ void LogError(LPCTSTR pFile, int iLine, LPCTSTR lpszFormat, ...);
 #define LOG4_TRACE(args...) LOG4CPLUS_TRACE_FMT(GetLogger(), ##args)
 ```
 
+* 自定义（[github 源码](https://github.com/wenfh2020/kimserver/blob/master/src/server.h)）
+
+```c++
+#define LOG_FORMAT(level, args...)                                           \
+    if (m_logger != nullptr) {                                               \
+        m_logger->log_data(__FILE__, __LINE__, __FUNCTION__, level, ##args); \
+    }
+
+#define LOG_EMERG(args...) LOG_FORMAT((Log::LL_EMERG), ##args)
+#define LOG_ALERT(args...) LOG_FORMAT((Log::LL_ALERT), ##args)
+#define LOG_CRIT(args...) LOG_FORMAT((Log::LL_CRIT), ##args)
+#define LOG_ERROR(args...) LOG_FORMAT((Log::LL_ERR), ##args)
+#define LOG_WARN(args...) LOG_FORMAT((Log::LL_WARNING), ##args)
+#define LOG_NOTICE(args...) LOG_FORMAT((Log::LL_NOTICE), ##args)
+#define LOG_INFO(args...) LOG_FORMAT((Log::LL_INFO), ##args)
+#define LOG_DEBUG(args...) LOG_FORMAT((Log::LL_DEBUG), ##args)
+```
+
+* 源码实现（[github 源码](https://github.com/wenfh2020/kimserver/blob/master/src/util/log.h)）
+
+```c++
+class Log {
+   public:
+    enum {
+        LL_EMERG = 0, /* system is unusable */
+        LL_ALERT,     /* action must be taken immediately */
+        LL_CRIT,      /* critical conditions */
+        LL_ERR,       /* error conditions */
+        LL_WARNING,   /* warning conditions */
+        LL_NOTICE,    /* normal but significant condition */
+        LL_INFO,      /* informational */
+        LL_DEBUG,     /* debug-level messages */
+        LL_COUNT
+    };
+
+    Log();
+    virtual ~Log() {}
+
+   public:
+    bool set_level(int level);
+    bool set_level(const char* level);
+    bool set_log_path(const char* path);
+    bool log_data(const char* file_name, int file_line, const char* func_name, int level, const char* fmt, ...);
+
+   private:
+    bool log_raw(const char* file_name, int file_line, const char* func_name, int level, const char* msg);
+
+   private:
+    int m_cur_level;
+    std::string m_path;
+};
+```
+
 ---
 
 > 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/)
