@@ -49,4 +49,4 @@ flamegraph.pl perf.folded > perf.svg
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/07/30/flame/diagram/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/07/30/flame-diagram/)
