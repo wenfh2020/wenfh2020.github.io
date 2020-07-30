@@ -114,8 +114,8 @@ Cmd::STATUS CmdTestRedis::execute_steps(int err, void* data) {
         }
         case E_STEP_REDIS_SET: {
             LOG_DEBUG("step redis set, key: %s, value: %s", m_key.c_str(), m_value.c_str());
-            std::string cmd_str = format_str("set %s %s", m_key.c_str(), m_value.c_str());
-            Cmd::STATUS status = redis_send_to(host, port, cmd_str);
+            std::vector<std::string> rds_cmds{"set", m_key, m_value};
+            Cmd::STATUS status = redis_send_to(host, port, rds_cmds);
             if (status == Cmd::STATUS::ERROR) {
                 return response_http(ERR_FAILED, "redis failed!");
             }
@@ -132,8 +132,8 @@ Cmd::STATUS CmdTestRedis::execute_steps(int err, void* data) {
             return execute_next_step(err, data);
         }
         case E_STEP_REDIS_GET: {
-            std::string cmd_str = format_str("get %s", m_key.c_str());
-            Cmd::STATUS status = redis_send_to(host, port, cmd_str);
+            std::vector<std::string> rds_cmds{"get", m_key};
+            Cmd::STATUS status = redis_send_to(host, port, rds_cmds);
             if (status == Cmd::STATUS::ERROR) {
                 return response_http(ERR_FAILED, "redis failed!");
             }
