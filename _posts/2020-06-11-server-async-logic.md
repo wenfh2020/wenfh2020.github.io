@@ -28,7 +28,7 @@ author: wenfh2020
 
 ---
 
-## 2. 源码
+## 2. redis 源码逻辑
 
 正常逻辑一般有 N 个步骤，异步逻辑不同之处，通过 callback 逻辑实现，与同步比较确实有点反人类。callback 回调回来还能定位到原来执行体，关键点在于 `privdata`。
 
@@ -71,7 +71,99 @@ static void redisAeReadEvent(aeEventLoop *el, int fd, void *privdata, int mask) 
 
 ---
 
-## 3. 参考
+## 3. 状态机
+
+用状态机实现异步逻辑是常用做法，异步本来已经是个复杂的东西，状态机如果实现复杂，那将会增加理解难度，所以用 `switch` 实现，简简单单就足够了。
+
+下面的测试代码写得比较粗糙，只实现了简单的几个操作，就有几十行代码了。用 python 和 golang 协程，源码可控制在 20 行以内，而且也能一定程度上兼顾性能。所以用 callback 写异步逻辑不是一个明智的做法，非性能瓶颈，不建议使用异步逻辑去写业务。
+
+[github 测试源码](https://github.com/wenfh2020/kimserver/blob/master/src/module/cmd_test_redis.cpp)
+
+```c++
+namespace kim {
+
+enum E_STEP {
+    E_STEP_PARSE_REQUEST = 0,
+    E_STEP_REDIS_SET,
+    E_STEP_REDIS_SET_CALLBACK,
+    E_STEP_REDIS_GET,
+    E_STEP_REDIS_GET_CALLBACK,
+};
+
+Cmd::STATUS CmdTestRedis::execute_steps(int err, void* data) {
+    int port = 6379;
+    std::string host("127.0.0.1");
+
+    switch (get_exec_step()) {
+        case E_STEP_PARSE_REQUEST: {
+            const HttpMsg* msg = m_req->get_http_msg();
+            if (msg == nullptr) {
+                return Cmd::STATUS::ERROR;
+            }
+
+            LOG_DEBUG("cmd test redis, http path: %s, data: %s",
+                      msg->path().c_str(), msg->body().c_str());
+
+            CJsonObject req_data(msg->body());
+            if (!req_data.Get("key", m_key) ||
+                !req_data.Get("value", m_value)) {
+                LOG_ERROR("invalid request data! pls check!");
+                return response_http(ERR_FAILED, "invalid request data");
+            }
+            return execute_next_step(err, data);
+        }
+        case E_STEP_REDIS_SET: {
+            LOG_DEBUG("step redis set, key: %s, value: %s", m_key.c_str(), m_value.c_str());
+            std::string cmd_str = format_str("set %s %s", m_key.c_str(), m_value.c_str());
+            Cmd::STATUS status = redis_send_to(host, port, cmd_str);
+            if (status == Cmd::STATUS::ERROR) {
+                return response_http(ERR_FAILED, "redis failed!");
+            }
+            return status;
+        }
+        case E_STEP_REDIS_SET_CALLBACK: {
+            redisReply* reply = (redisReply*)data;
+            if (err != ERR_OK || reply == nullptr ||
+                reply->type != REDIS_REPLY_STATUS || strncmp(reply->str, "OK", 2) != 0) {
+                LOG_ERROR("redis set data callback failed!");
+                return response_http(ERR_FAILED, "redis set data callback failed!");
+            }
+            LOG_DEBUG("redis set callback result: %s", reply->str);
+            return execute_next_step(err, data);
+        }
+        case E_STEP_REDIS_GET: {
+            std::string cmd_str = format_str("get %s", m_key.c_str());
+            Cmd::STATUS status = redis_send_to(host, port, cmd_str);
+            if (status == Cmd::STATUS::ERROR) {
+                return response_http(ERR_FAILED, "redis failed!");
+            }
+            return status;
+        }
+        case E_STEP_REDIS_GET_CALLBACK: {
+            redisReply* reply = (redisReply*)data;
+            if (err != ERR_OK || reply == nullptr || reply->type != REDIS_REPLY_STRING) {
+                LOG_ERROR("redis get data callback failed!");
+                return response_http(ERR_FAILED, "redis set data failed!");
+            }
+            LOG_DEBUG("redis get callback result: %s, type: %d", reply->str, reply->type);
+            CJsonObject rsp_data;
+            rsp_data.Add("key", m_key);
+            rsp_data.Add("value", m_value);
+            return response_http(ERR_OK, "success", rsp_data);
+        }
+        default: {
+            LOG_ERROR("invalid step");
+            return response_http(ERR_FAILED, "invalid step!");
+        }
+    }
+}
+
+}  // namespace kim
+```
+
+---
+
+## 4. 参考
 
 * [[redis 源码走读] 事件 - 文件事件](https://wenfh2020.com/2020/04/09/redis-ae-file/)
 
