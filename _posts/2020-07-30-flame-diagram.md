@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "检测软件性能--火焰图"
+title:  "检测软件性能--火焰图🔥"
 categories: c/c++
 tags: flame diagram performance
 author: wenfh2020
@@ -45,7 +45,37 @@ flamegraph.pl perf.folded > perf.svg
 
 通过图象，我们对自己写的代码工作效率一目了然，这样就可以针对性地优化耗性能部分代码。
 
+* siege 压测工具。
+
+```shell
+# siege 压力测试工具
+# $ ./http_pressure.sh
+
+{
+        "transactions":                        50000,
+        "availability":                       100.00,
+        "elapsed_time":                         1.62,
+        "data_transferred":                     3.43,
+        "response_time":                        0.00,
+        "transaction_rate":                 30864.20,
+        "throughput":                           2.12,
+        "concurrency":                         46.59,
+        "successful_transactions":             50000,
+        "failed_transactions":                     0,
+        "longest_transaction":                  0.01,
+        "shortest_transaction":                 0.00
+}
+```
+
+* 火焰图🔥
+
 ![火焰图](/images/2020-07-30-19-33-44.png){:data-action="zoom"}
+
+---
+
+## 3. 参考
+
+* [Siege HTTP 压力测试](https://wenfh2020.com/2018/05/02/siege-pressure/)
 
 ---
 
