@@ -163,7 +163,51 @@ Cmd::STATUS CmdTestRedis::execute_steps(int err, void* data) {
 
 ---
 
-## 4. 参考
+## 4. 性能
+
+用 siege 对异步 http 服务进行压力测试。服务单进程支持：长连接 1.5w qps，短连接 1w qps。多进程整体的并发能力将会更大。
+
+* 长连接。
+
+```shell
+# ./http_pressure.sh
+{       "transactions":                        50000,
+        "availability":                       100.00,
+        "elapsed_time":                         3.38,
+        "data_transferred":                     3.43,
+        "response_time":                        0.01,
+        "transaction_rate":                 14792.90,
+        "throughput":                           1.02,
+        "concurrency":                         99.66,
+        "successful_transactions":             50000,
+        "failed_transactions":                     0,
+        "longest_transaction":                  0.02,
+        "shortest_transaction":                 0.00
+}
+```
+
+* 短连接。
+
+```shell
+# ./http_pressure.sh
+{       "transactions":                        10000,
+        "availability":                       100.00,
+        "elapsed_time":                         0.99,
+        "data_transferred":                     0.69,
+        "response_time":                        0.01,
+        "transaction_rate":                 10101.01,
+        "throughput":                           0.69,
+        "concurrency":                         97.59,
+        "successful_transactions":             10000,
+        "failed_transactions":                     0,
+        "longest_transaction":                  0.08,
+        "shortest_transaction":                 0.00
+}
+```
+
+---
+
+## 5. 参考
 
 * [[redis 源码走读] 事件 - 文件事件](https://wenfh2020.com/2020/04/09/redis-ae-file/)
 
