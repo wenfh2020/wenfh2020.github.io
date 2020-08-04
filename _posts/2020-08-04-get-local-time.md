@@ -18,8 +18,10 @@ author: wenfh2020
 ## 1. gettimeofday
 
 ```c
+#include <sys/time.h>
+
 int
-gettimeofday(struct timeval *restrict tp, void *restrict tzp);
+gettimeofday(struct timeval *tp, struct timezone *tzp);
 
 struct timeval {
     time_t       tv_sec;   /* seconds since Jan. 1, 1970 */
@@ -74,4 +76,4 @@ double time_now() {
 
 ---
 
-> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/07/30/get-local-time/)
+> 🔥文章来源：[wenfh2020.com](https://wenfh2020.com/2020/08/04/get-local-time/)
