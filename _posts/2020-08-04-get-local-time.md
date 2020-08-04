@@ -6,7 +6,7 @@ tags: gettimeofday local time
 author: wenfh2020
 ---
 
-获取本地时间是比较常用的操作，可通过 `gettimeofday` 函数可获取本地时间，根据需要转化为毫秒，微秒，dobule 精度的时间。
+获取本地时间是比较常用的操作，可通过 `gettimeofday` 函数获取本地时间，然后根据需要转化为毫秒，微秒，dobule 精度的时间。
 
 
 
