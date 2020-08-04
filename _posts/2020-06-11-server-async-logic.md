@@ -169,6 +169,8 @@ Cmd::STATUS CmdTestRedis::execute_steps(int err, void* data) {
 
 用 siege 对异步 http 服务进行压力测试。服务单进程支持：长连接 1.5w qps，短连接 1w qps。多进程整体的并发能力将会更大。
 
+> 数据是通过 Mac 本子本地压测获得的，不同机器，得出的数据可能不一样，进程并发能力与物理机器配置也有直接关系。
+
 * 长连接。
 
 ```shell
