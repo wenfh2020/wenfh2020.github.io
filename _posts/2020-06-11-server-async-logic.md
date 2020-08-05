@@ -79,7 +79,7 @@ static void redisAeReadEvent(aeEventLoop *el, int fd, void *privdata, int mask) 
 
 > 在一些致力于敏捷研发的团队，用 callback 写异步逻辑不是一个明智的做法，非性能瓶颈，不建议使用异步逻辑去写业务。毕竟快速交付项目，推进业务，才是目标。而且很多时候，增加几台机器的成本，远远低于增加一个员工。
 
-[github 测试源码](https://github.com/wenfh2020/kimserver/blob/master/src/module/cmd_test_redis.cpp)
+[github 测试源码](https://github.com/wenfh2020/kimserver/blob/master/src/module/cmd_test_redis.h)
 
 ```c++
 namespace kim {
@@ -167,7 +167,7 @@ Cmd::STATUS CmdTestRedis::execute_steps(int err, void* data) {
 
 ## 4. 性能
 
-用 siege 对异步 http 服务进行压力测试。服务单进程支持：长连接 1.5w qps，短连接 1w qps。多进程整体的并发能力将会更大。
+用 siege 对异步 http 服务进行压力测试。服务单进程单线程支持：长连接 1.5w qps，短连接 1w qps。多进程整体的并发能力将会更大。
 
 > 数据是通过 Mac 本子本地压测获得的，不同机器，得出的数据可能不一样，进程并发能力与物理机器配置也有直接关系。
 
