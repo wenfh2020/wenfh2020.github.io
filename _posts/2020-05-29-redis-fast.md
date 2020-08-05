@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "redis 为什么这么快"
+title:  "redis 为啥这么快"
 categories: redis
 tags: redis fast
 author: wenfh2020
