@@ -73,7 +73,29 @@ flamegraph.pl perf.folded > perf.svg
 
 ---
 
-## 3. 参考
+## 3. 定位问题
+
+下图可以看到 `snprintf` 函数在优化前使用频率非常高，占 6.7%，这里有点奇怪。所以在源码中查找 `vsnprintf` 的使用代码，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致低等级的日志虽然没有被记录，仍然执行了 `vnsprintf` 操作。后面将判断放在 `vnsprintf` 函数前，优化压测后，占 1.54%。——good!
+
+```c++
+bool Log::log_data(const char* file_name, int file_line, const char* func_name, int level, const char* fmt, ...) {
+    if (level < LL_EMERG || level > LL_DEBUG || level > m_cur_level) {
+        return false;
+    }
+    va_list ap;
+    char msg[LOG_MAX_LEN] = {0};
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+    return log_raw(file_name, file_line, func_name, level, msg);
+}
+```
+
+![定位性能问题](/images/2020-08-07-00-05-48.png){:data-action="zoom"}
+
+---
+
+## 4. 参考
 
 * [Siege HTTP 压力测试](https://wenfh2020.com/2018/05/02/siege-pressure/)
 
