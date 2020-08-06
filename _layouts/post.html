@@ -24,7 +24,6 @@ layout: default
         <article itemscope itemtype="http://schema.org/BlogPosting">
             {{content}}
         </article>
-        <hr>
 
         {% assign hasSimilar = '' %}
         {% for post in site.related_posts %}
@@ -33,7 +32,7 @@ layout: default
         {% for thisTag in page.tags %}
         {% if postHasSimilar == false and hasSimilar.size < 6 and post != page and tag == thisTag %}
         {% if hasSimilar.size == 0 %}
-        <h2 id="similar_posts">Similar Posts</h2>
+        <h2 id="similar_posts">文章推荐</h2>
         <ul>
             {% endif %}
             <li class="relatedPost">
@@ -67,17 +66,18 @@ layout: default
             <!-- Content -->
             <div class="side content">
                 <div>
+                    <i class="fa fa-bars"></i>
                     Content
                 </div>
                 <ul id="content-side" class="content-ul">
                     {% if hasSimilar.size > 0 %}
-                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    <li><a href="#similar_posts">文章推荐</a></li>
                     {% endif %}
                     <!-- <li><a href="#comments">Comments</a></li> -->
                 </ul>
             </div>
             <!-- 其他div框放到这里 -->
-            <!-- <div class="side">bbbb</div> -->
+            <!-- <br /> -->
         </div>
     </div>
 </div>
