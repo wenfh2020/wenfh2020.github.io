@@ -67,7 +67,7 @@ layout: default
             <div class="side content">
                 <div>
                     <i class="fa fa-bars"></i>
-                    Content
+                    目录
                 </div>
                 <ul id="content-side" class="content-ul">
                     {% if hasSimilar.size > 0 %}
@@ -77,7 +77,37 @@ layout: default
                 </ul>
             </div>
             <!-- 其他div框放到这里 -->
-            <!-- <br /> -->
+            <br />
+            <div class="side">
+                <div>
+                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                    近期文章
+                </div>
+                <ul class="content-ul" recent>
+                    {% for post in site.posts offset: 0 limit: 8  %}
+                    <li><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <br />
+            <div class="side ">
+                <div>
+                    <i class="fa fa-th-list"></i>
+                    文集
+                </div>
+                <ul class="content-ul" recent>
+                    {% for category in site.categories %}
+                    <li>
+                        <a href="{{ root_url }}/{{ site.category_dir }}#{{ category | first }}"
+                            class="categories-list-item" cate="{{ category | first }}">
+                            <span class="name">
+                                {{ category | first }}
+                            </span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
         </div>
     </div>
 </div>
