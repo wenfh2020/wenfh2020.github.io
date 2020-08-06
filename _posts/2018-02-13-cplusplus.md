@@ -282,5 +282,14 @@ class size: 1
 这就是实例化的原因（空类同样可以被实例化），每个实例在内存中都有一个独一无二的地址，为了达到这个目的，编译器往往会给一个空类隐含的加一个字节，这样空类在实例化后在内存得到了独一无二的地址，所以空类所占的内存大小是1个字节。
 
 ---
+
 ## 3. 参考
-[c++ 官网](http://www.cplusplus.com/reference/)
+
+* [c++ 官网](http://www.cplusplus.com/reference/)
+
+---
+
+> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/)
+>
+> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
+<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

@@ -102,3 +102,10 @@ avg: 9433
 ---
 
 测试代码用的是 golang 第三方库 `redigo` 做的压测，如果换成 C++ 的 hiredis 异步特性（参考我的帖子[《hiredis + libev 异步测试》）](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/)，生产者单进程并发轻松上 10w+，原则上消费能力也一样，但是消费为了保证数据的时序性，一般是一条条取出来入库处理，入库是同步操作，速度显然快不了多少。
+
+---
+
+> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/)
+>
+> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
+<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
