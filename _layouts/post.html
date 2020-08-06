@@ -90,19 +90,16 @@ layout: default
                 </ul>
             </div>
             <br />
-            <div class="side ">
+            <div class="side content">
                 <div>
                     <i class="fa fa-th-list"></i>
                     文集
                 </div>
-                <ul class="content-ul" recent>
-                    {% for category in site.categories %}
+                <ul id="content-side" class="content-ul">
+                    {% for category in site.categories%}
                     <li>
-                        <a href="{{ root_url }}/{{ site.category_dir }}#{{ category | first }}"
-                            class="categories-list-item" cate="{{ category | first }}">
-                            <span class="name">
-                                {{ category | first }}
-                            </span>
+                        <a data-scroll href="#{{ category | first }}">
+                            {{ category | first }} ({{ category | last | size }})
                         </a>
                     </li>
                     {% endfor %}
