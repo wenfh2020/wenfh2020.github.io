@@ -39,11 +39,12 @@ flamegraph.pl perf.folded > perf.svg
 
 ## 2. 火焰图
 
-压力测试自己的源码，通过上面的 fg.sh 脚本，对指定进程（`pid`）进行数据采集，即可生成下面的火焰图。
+通过上面脚本，对指定进程（`pid`）进行数据采集，即可生成下面的二维火焰图：
 
-火焰图是二维图像：Y 轴是函数块叠加而成，有点像程序调试堆栈；X 轴代表函数工作，在单位时间内被采样的密集度，函数块越长说明，采样越多，耗性能越多。
+* Y 轴是函数块叠加而成，有点像程序调试堆栈；
+* X 轴代表程序函数，在单位时间内被采样的密集度。函数块越长，说明采样越多，工作频率越高，耗性能越多。
 
-通过图象，我们对自己写的代码工作效率一目了然，这样就可以针对性地优化耗性能部分代码。
+通过图象，我们对自己写的代码工作效率一目了然，这样可以针对性优化源码性能。
 
 * siege 压测工具。
 
@@ -75,7 +76,9 @@ flamegraph.pl perf.folded > perf.svg
 
 ## 3. 定位问题
 
-下图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 `vsnprintf` 的使用代码，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致高等级的日志虽然没有被记录，仍然执行了 `vsnprintf` 操作。后面将判断放在 `vsnprintf` 前，优化后，占 1.54%。——good!
+<div align=center><img src="/images/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
+
+上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 `vsnprintf`，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致高等级的日志虽然没有被记录，仍然执行了 `vsnprintf` 操作。后面将判断放在 `vsnprintf` 前，重复进行测试，占 1.54%。 性能提高 5 个百分点——good!
 
 ```c++
 bool Log::log_data(const char* file_name, int file_line, const char* func_name, int level, const char* fmt, ...) {
@@ -90,8 +93,6 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
     return log_raw(file_name, file_line, func_name, level, msg);
 }
 ```
-
-<div align=center><img src="/images/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
 
 ---
 
