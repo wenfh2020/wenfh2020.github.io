@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "shell 常用语法"
+title:  "[shell] shell 常用语法"
 categories: Linux
 tags: shell command
 author: wenfh2020
