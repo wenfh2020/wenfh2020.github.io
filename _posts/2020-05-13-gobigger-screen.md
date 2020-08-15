@@ -25,6 +25,8 @@ author: wenfh2020
 
   分辨率：3840 * 2160；刷新频率：60 hz；
 
+  价钱：1899 人民币。
+
 ![Gobigger](/images/2020-05-13-11-27-48.png){:data-action="zoom"}
 
 * 使用
