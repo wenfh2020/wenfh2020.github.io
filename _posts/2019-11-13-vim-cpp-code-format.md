@@ -9,6 +9,13 @@ author: wenfh2020
 * 安装 vim 插件 [vim-autoformat](https://github.com/Chiel92/vim-autoformat#default-formatprograms)
 * 安装 Artistic Style
 
+
+
+* content
+{:toc}
+
+---
+
 ```shell
 mkdir /work/soft/astyle
 wget https://jaist.dl.sourceforge.net/project/astyle/astyle/astyle%203.1/astyle_3.1_linux.tar.gz
