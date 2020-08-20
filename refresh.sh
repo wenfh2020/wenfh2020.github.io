@@ -1,9 +1,7 @@
 #!/bin/sh
 # -------------------------------------------------------------------------------
-# project  refresh
-# file:    refresh.sh
-# brief    rebuild blog to run.
-# author:  wenfh2020
+# brief    re compile and run.
+# author:  wenfh2020.com / 2020-02-18
 # date:    2020-02-18
 # note:    nohup ./refresh.sh >> /tmp/blog_log.txt 2>&1 &
 # -------------------------------------------------------------------------------
