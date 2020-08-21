@@ -61,6 +61,8 @@ typedef struct dictType {
 } dictType;
 ```
 
+---
+
 ## 2. 时间复杂度（读数据）
 
 查找数据，哈希表 $O(1)$ 时间复杂度，但是哈希表也会存在碰撞问题，所以哈希索引指向的列表长度也会影响效率。
@@ -92,6 +94,8 @@ dictEntry *dictFind(dict *d, const void *key) {
 }
 ```
 
+---
+
 ## 3. 工作流程
 
 * 堆栈调用流程，下面会通过这个堆栈函数调用时序，看以下写操作的源码流程：
@@ -115,6 +119,8 @@ dictEntry *dictFind(dict *d, const void *key) {
 #10 0x0000000100005ede in aeMain (eventLoop=0x100528ba0) at ae.c:455
 #11 0x00000001000159d7 in main (argc=2, argv=0x7ffeefbff8c8) at server.c:4114
 ```
+
+---
 
 ## 4. 写数据
 
@@ -141,6 +147,8 @@ void setKey(redisDb *db, robj *key, robj *val) {
 }
 ```
 
+---
+
 ### 4.2. 添加数据
 
 要添加一个元素，首先需要申请一个空间，申请空间涉及到是否需要扩容，key 是否已经存在了。
@@ -155,6 +163,8 @@ int dictAdd(dict *d, void *key, void *val) {
     return DICT_OK;
 }
 ```
+
+---
 
 ### 4.3. 增加数据结点
 
@@ -204,6 +214,8 @@ dictEntry *dictAddRaw(dict *d, void *key) {
 }
 ```
 
+---
+
 ### 4.4. 哈希索引
 
 ```c
@@ -239,6 +251,8 @@ static int _dictKeyIndex(dict *d, const void *key) {
     return idx;
 }
 ```
+
+---
 
 ## 5. 数据迁移
 
@@ -321,6 +335,8 @@ int dictRehash(dict *d, int n) {
 }
 ```
 
+---
+
 ### 5.2. 定时执行任务
 
 ```c
@@ -336,6 +352,8 @@ int dictRehashMilliseconds(dict *d, int ms) {
     return rehashes;
 }
 ```
+
+---
 
 ## 6. 扩容缩容
 
@@ -367,6 +385,8 @@ static int _dictExpandIfNeeded(dict *d) {
 }
 ```
 
+---
+
 ### 6.2. 扩容容量大小
 
 ```c
@@ -383,6 +403,8 @@ static unsigned long _dictNextPower(unsigned long size) {
     }
 }
 ```
+
+---
 
 ### 6.3. 扩容
 
@@ -420,6 +442,8 @@ int dictExpand(dict *d, unsigned long size) {
     return DICT_OK;
 }
 ```
+
+---
 
 ### 6.4. 缩容
 
@@ -534,6 +558,8 @@ unsigned int dictGetSomeKeys(dict *d, dictEntry **des, unsigned int count) {
 }
 
 ```
+
+---
 
 ### 7.2. 随机取一个
 
