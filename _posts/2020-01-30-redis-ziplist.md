@@ -38,6 +38,8 @@ mathjax: true
 
 ![结构](/images/2020-02-20-16-44-19.png){: data-action="zoom"}
 
+> 设计图来源 《[redis ziplist 压缩列表内存结构](https://www.processon.com/view/5e2d0707e4b049828097c0f7)》
+
 ```c
 /* Size of the "end of ziplist" entry. Just one byte. */
 #define ZIPLIST_HEADER_SIZE     (sizeof(uint32_t)*2+sizeof(uint16_t))
@@ -400,6 +402,8 @@ int main() {
 主要画了部分令人费解的地方。
 
 ![插入流程](/images/2020-02-20-16-45-26.png){: data-action="zoom"}
+
+> 设计图来源 《[redis ziplist 压缩列表加新工作流程](https://www.processon.com/view/5e867515e4b07e41dc273aa0)》
 
 ---
 
