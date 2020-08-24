@@ -198,6 +198,10 @@ EXPORT_SYMBOL(tcp_poll);
 
 ![epoll 源码工作流程](/images/2020-05-16-21-14-46.png){:data-action="zoom"}
 
+> 设计图来源：《[epoll 源码工作流程](https://www.processon.com/view/5eb95ba50791290fe0581bb9)》
+
+---
+
 ## 6. 数据结构
 
 ### 6.1. eventpoll
