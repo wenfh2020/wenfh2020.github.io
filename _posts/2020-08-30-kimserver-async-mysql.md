@@ -156,6 +156,8 @@ int main(int args, char** argv) {
         }
     }
     ...
+    ev_run(loop, 0);
+    ...
 }
 ```
 
