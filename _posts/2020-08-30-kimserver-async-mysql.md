@@ -6,7 +6,7 @@ tags: kimserver async mysql pool
 author: wenfh2020
 ---
 
-感觉 `mysql` 非阻塞异步链接很小众，能够搜索出来的资料很少。只要做单进程的异步服务，就绕不开数据库。很幸运，`mariadb` 提供了异步接口，在 github 上找到一个项目（[mysql_async](https://github.com/liujian0616/mysql_async)）是结合 libev 实现的异步项目，正合我意！接下来对其进行改造。
+感觉 `mysql` 非阻塞异步链接很小众，能够搜索出来的资料不多。只要做单进程的异步服务，就绕不开数据库。很幸运，`mariadb` 提供了异步接口，在 github 上找到一个项目（[mysql_async](https://github.com/liujian0616/mysql_async)）是结合 libev 实现的异步项目，正合我意！接下来对其进行改造。
 
 
 
@@ -57,7 +57,11 @@ sudo make && make install
 
 ## 3. 性能
 
-通过压测，对同步异步工作情况进行对比。用 Mac 机器本地压力测试 10,000 个数据。单进程，单链接，同步异步读写相差不会很大，但是单进程异步客户端支持多条链接同时工作，这样性能就上来了。
+测试数据： 10000。
+
+测试场景：单进程，单线程。
+
+用 Mac 机器本地压力测试，对比同步异步工作情况。单链接，同步异步读写相差不大，但是单线程异步客户端支持多条链接同时工作，这样性能就上来了。
 
  | links | driver | read / s | write / s |
  | :---- | :----- | :------- | :-------- |
@@ -72,15 +76,17 @@ sudo make && make install
 
 ### 4.1. 原理
 
-虽然是异步非阻塞操作，但是 mysql 不像 redis 的 pipline 那样支持批量处理命令。所以，每个命令都是一个一个发送给 mysql 服务处理的：先处理完成一个，再处理一个，并不是一下子发多个，然后 mysql 返回多个结果，所以单链接的异步处理，与同步处理比较，并没有什么优势可言。但是异步处理，支持多个链接同时并行处理，这样并发就上来了。
+虽然是异步非阻塞操作，mysql 不像 redis 那样支持批量处理命令（pipline）。而且异步 client 端发送一个命令，需要等待 mysql 处理完成后返回结果，再发送下一个，所以单链接的异步处理本质上也是串行的，与同步比较，并没有什么优势可言。但是异步处理，支持多个链接并行工作，具体参考上述压测结果。
 
-测试项目的异步链接池基于 libev 对链接事件进行管理，我们来看看读数据的流程逻辑：
+测试项目的异步链接池基于 `libev` 对链接事件进行管理，我们来看看**读数据**的流程逻辑：
 
 ![异步 client 读数据逻辑](/images/2020-08-30-15-11-33.png){:data-action="zoom"}
 
 ---
 
 ### 4.2. 配置
+
+数据库链接信息，写在 json 配置文件里。
 
 ```json
 {
@@ -112,9 +118,9 @@ typedef void(MysqlQueryCallbackFn)(const MysqlAsyncConn*, sql_task_t* task, Mysq
 
 /* 初始化数据库信息，读取配置，加载数据库连接信息。*/
 bool init(CJsonObject& config);
-/* 写数据接口。*/
+/* 写数据接口。node 参数是 json 配置里的 database 信息。*/
 bool async_exec(const char* node, MysqlExecCallbackFn* fn, const char* sql, void* privdata = nullptr);
-/* 读数据接口。*/
+/* 读数据接口。node 参数是 json 配置里的 database 信息。*/
 bool async_query(const char* node, MysqlQueryCallbackFn* fn, const char* sql, void* privdata = nullptr);
 ```
 
@@ -125,9 +131,12 @@ bool async_query(const char* node, MysqlQueryCallbackFn* fn, const char* sql, vo
 * 详细测试源码可以查看 [github](https://github.com/wenfh2020/kimserver/tree/master/src/test/test_mysql/test_async)
 
 ```c++
+static void mysql_exec_callback(const kim::MysqlAsyncConn* c, kim::sql_task_t* task) {...}
+static void mysql_query_callback(const kim::MysqlAsyncConn* c, kim::sql_task_t* task, kim::MysqlResult* res) {...}
+
 int main(int args, char** argv) {
     ...
-     struct ev_loop* loop = EV_DEFAULT;
+    struct ev_loop* loop = EV_DEFAULT;
     kim::DBMgr* pool = new kim::DBMgr(m_logger, loop);
     ...
     for (int i = 0; i < g_test_cnt; i++) {
