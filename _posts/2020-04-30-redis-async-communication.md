@@ -10,7 +10,7 @@ author: wenfh2020
 | :---------------- | :------------------------------------------------------- |
 | 服务异步通信核心  | 非阻塞 + 异步事件驱动。                                  |
 | 事件驱动核心源码  | ae.c                                                     |
-| 网络通信核心源码  | connection.h / connection.c，networking.h / connection.c |
+| 网络通信核心源码  | connection.h / connection.c，networking.h / networking.c |
 | 读/写数据核心函数 | readQueryFromClient / writeToClient                      |
 
 > 本文主要讲述 Linux 平台下的 redis 客户端与服务端异步通信（单线程），不包括 redis 集群间的通信。
