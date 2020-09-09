@@ -20,6 +20,8 @@ redis 是 key-value 的 NoSQL 数据库，dict 是基本数据结构，dict 总�
 
 ![数据结构](/images/2020-02-20-16-49-43.png){: data-action="zoom"}
 
+> 设计图来源：《[redis dict 字典数据结构](https://www.processon.com/view/5e1deaa3e4b0a55fbb5dcc8e)》
+
 ```c
 //字典
 typedef struct dict {
