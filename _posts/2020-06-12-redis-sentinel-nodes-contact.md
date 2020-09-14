@@ -15,39 +15,74 @@ author: wenfh2020
 
 ---
 
-## 1. 测试
+## 1. 工作流程
 
-通过命令启动 sentinel 进程。
+### 1.1. 命令
+
+* 启动。下面两个命令都可以启动 sentinel 进程。
 
 ```shell
 redis-sentinel /path/to/your/sentinel.conf
 redis-server /path/to/your/sentinel.conf --sentinel
 ```
 
-* 先启动两个 sentinel 进程，端口分别为 26377，26378。
-* 然后启动第三个 sentinel A 进程，端口为 26379，观察它的工作流程。
-* 测试过程中，用 `strace` 工具抓取 sentinel 工作日志。
-* 测试集群节点情况：3 个 sentinel，1 个 master，1 个 slave。
+* 其它逻辑。
+
+```c
+struct redisCommand sentinelcmds[] = {
+    {"ping",pingCommand,1,"",0,NULL,0,0,0,0,0},
+    {"sentinel",sentinelCommand,-2,"",0,NULL,0,0,0,0,0},
+    {"subscribe",subscribeCommand,-2,"",0,NULL,0,0,0,0,0},
+    {"unsubscribe",unsubscribeCommand,-1,"",0,NULL,0,0,0,0,0},
+    {"psubscribe",psubscribeCommand,-2,"",0,NULL,0,0,0,0,0},
+    {"punsubscribe",punsubscribeCommand,-1,"",0,NULL,0,0,0,0,0},
+    {"publish",sentinelPublishCommand,3,"",0,NULL,0,0,0,0,0},
+    {"info",sentinelInfoCommand,-1,"",0,NULL,0,0,0,0,0},
+    {"role",sentinelRoleCommand,1,"ok-loading",0,NULL,0,0,0,0,0},
+    {"client",clientCommand,-2,"read-only no-script",0,NULL,0,0,0,0,0},
+    {"shutdown",shutdownCommand,-1,"",0,NULL,0,0,0,0,0},
+    {"auth",authCommand,2,"no-auth no-script ok-loading ok-stale fast",0,NULL,0,0,0,0,0},
+    {"hello",helloCommand,-2,"no-auth no-script fast",0,NULL,0,0,0,0,0}
+};
+```
+
+---
+
+### 1.2. 测试节点
+
+3 个 sentinel，1 个 master，1 个 slave。
+
+| node       | port  |
+| :--------- | :---- |
+| master     | 6379  |
+| slave      | 6378  |
+| sentinel A | 26379 |
+| sentinel B | 26377 |
+| sentinel C | 26378 |
 
 ![角色关系](/images/2020-06-15-09-59-12.png){:data-action="zoom"}
 
 ---
 
-### 1.1. 连接关系
+### 1.3. 连接关系
 
 节点之间通过 TCP 建立联系，下图展示了 sentinel A 节点与其它节点的关系。
 
-箭头代表节点 connect 的方向，箭头上面的数字是 fd，可以根据 strace 日志，对号入座。fd 从小到大，展示了创建链接的时序。
+> 箭头代表节点 connect 的方向，箭头上面的数字是 fd，可以根据 strace 日志，对号入座。fd 从小到大，展示了创建链接的时序。
 
 ![抓包流程](/images/2020-06-15-09-54-30.png){:data-action="zoom"}
 
 ---
 
-### 1.2. 通信流程
+### 1.4. 通信流程
 
-查看 socket 的发送和接收数据，了解节点间的通信内容。
+通过 `strace` 命令查看 socket 的发送和接收数据日志内容，我们基本可以掌握 sentinel/master/slave 这三个角色是怎么联系起来的。
 
-> 详细 strace 日志，请参考  <u> strace 详细日志 </u>  章节。
+1. sentinel 配置 master 的 ip 和 port。
+2. sentinel 向 master 发送 `INFO` 命令，获取 master 上的 slave 名单。
+3. sentinel 向 master/slave 订阅了 `__sentinel__:hello` 频道，当其它节点向 master 发布消息时，订阅者也能被通知，从而获得其它 sentinel 信息，并进行链接。
+
+这样 sentinel 只需要配置 `master` 的信息，通过 `INFO` 命令和订阅频道 `__sentinel__:hello` 就能将集群中所有角色的节点紧密联系在一起。
 
 ```shell
 # 向 master 发送命令 CLIENT SETNAME / PING / INFO。
@@ -58,6 +93,7 @@ sendto(9, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$24\r\nsentinel-270e0528-pubsu
 recvfrom(8, "+OK\r\n+PONG\r\n$3705\r\n# Server\r\nredis_version:5.9.104\r\nredis_git_sha1:00000000\r\nredis_git_dirty:0\r\nredis_build_id:995c39fc3a59d30e\r\nredis_mode:standalone\r\nos:Linux 3.10.0-693.2.2.el7.x86_64 x86_64\r\narch_bits:64\r\nmultiplexing_api:epoll\r\natomicvar_api:atomic-builtin\r\ngcc_version:8.3.1\r\nprocess_id:26660\r\nrun_id:95e58cbfd24f896b11147da117b799383ddf3f96\r\ntcp_port:6379\r\nuptime_in_seconds:410048\r\nuptime_in_days:4\r\nhz:1000\r\nconfigured_hz:1000\r\nlru_clock:14972439\r\nexecutable:/home/other/redis-test/maser/./redis-server\r"..., 16384, 0, NULL, NULL) = 3726
 # 链接 2 收到 master 的回复。
 recvfrom(9, "+OK\r\n*3\r\n$9\r\nsubscribe\r\n$18\r\n__sentinel__:hello\r\n:1\r\n", 16384, 0, NULL, NULL) = 53
+
 # 向 slave 发送 CLIENT SETNAME / PING / INFO 命令。
 sendto(10, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$21\r\nsentinel-270e0528-cmd\r\n*1\r\n$4\r\nPING\r\n*1\r\n$4\r\nINFO\r\n", 85, 0, NULL, 0) = 85
 # 向 slave 发送命令 CLIENT SETNAME，并订阅 master 的 __sentinel__:hello 频道。
@@ -66,6 +102,7 @@ sendto(11, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$24\r\nsentinel-270e0528-pubs
 recvfrom(10, "+OK\r\n+PONG\r\n$3812\r\n# Server\r\nredis_version:5.9.104\r\nredis_git_sha1:00000000\r\nredis_git_dirty:0\r\nredis_build_id:995c39fc3a59d30e\r\nredis_mode:standalone\r\nos:Linux 3.10.0-693.2.2.el7.x86_64 x86_64\r\narch_bits:64\r\nmultiplexing_api:epoll\r\natomicvar_api:atomic-builtin\r\ngcc_version:8.3.1\r\nprocess_id:31519\r\nrun_id:81bd16693346a6a9641df9a3852ff21f2d396c3d\r\ntcp_port:6378\r\nuptime_in_seconds:331563\r\nuptime_in_days:3\r\nhz:1000\r\nconfigured_hz:1000\r\nlru_clock:14972439\r\nexecutable:/home/other/redis-test/slave/./redis-server\r"..., 16384, 0, NULL, NULL) = 3833
 # 收到 slave 回复。
 recvfrom(11, "+OK\r\n*3\r\n$9\r\nsubscribe\r\n$18\r\n__sentinel__:hello\r\n:1\r\n", 16384, 0, NULL, NULL) = 53
+
 # 收到 sentinel 节点的请求。获得该节点的 ip / port 等信息。
 read(12, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$21\r\nsentinel-260e0528-cmd\r\n*1\r\n$4\r\nPING\r\n*3\r\n$7\r\nPUBLISH\r\n$18\r\n__sentinel__:hello\r\n$84\r\n127.0.0.1,26378,260e052832c9352926f4bbfb48a7c1d7033264fb,0,mymaster,127.0.0.1,6379,0\r\n", 16384) = 204
 # 回复请求处理。
@@ -74,6 +111,7 @@ write(12, "+OK\r\n+PONG\r\n:1\r\n", 16) = 16
 sendto(13, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$21\r\nsentinel-270e0528-cmd\r\n*1\r\n$4\r\nPING\r\n", 71, 0, NULL, 0) = 71
 # 收到 sentinel 的回复。
 recvfrom(13, "+OK\r\n+PONG\r\n", 16384, 0, NULL, NULL) = 12
+
 # 读取 sentinel 发送的消息。
 read(14, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$21\r\nsentinel-210e0528-cmd\r\n*1\r\n$4\r\nPING\r\n*3\r\n$7\r\nPUBLISH\r\n$18\r\n__sentinel__:hello\r\n$84\r\n127.0.0.1,26377,210e052832c9352926f4bbfb48a7c1d7033264fb,0,mymaster,127.0.0.1,6379,0\r\n", 16384) = 204
 write(14, "+OK\r\n+PONG\r\n:1\r\n", 16) = 16
@@ -87,7 +125,7 @@ recvfrom(9, "*3\r\n$7\r\nmessage\r\n$18\r\n__sentinel__:hello\r\n$84\r\n127.0.0.
 
 ## 2. 源码理解
 
-通过 `strace` 日志内容分析，我们基本了解了节点之间的通信流程，下面来看源码。
+通过上面 `strace` 的日志内容分析，我们基本了解了节点之间的通信流程时序，下面来分析一下源码实现。
 
 ---
 
@@ -209,12 +247,11 @@ sentinelRedisInstance *createSentinelRedisInstance(char *name, int flags, char *
     serverAssert(flags & (SRI_MASTER|SRI_SLAVE|SRI_SENTINEL));
     serverAssert((flags & SRI_MASTER) || master != NULL);
 
-    // 解析域名地址。
+    // 域名解析
     addr = createSentinelAddr(hostname,port);
     if (addr == NULL) return NULL;
 
-    /* 一般以 master 为核心管理。只有 master 才配置名称。
-     * slave 通过 ip:port 组合成名称进行管理。*/
+    /* 一般以 master 为核心管理。只有 master 才配置名称。slave 通过 ip:port 组合成名称进行管理。*/
     if (flags & SRI_SLAVE) {
         anetFormatAddr(slavename, sizeof(slavename), hostname, port);
         name = slavename;
@@ -320,7 +357,7 @@ void sentinelHandleDictOfRedisInstances(dict *instances) {
 
 void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
     ...
-    // 链接其它节点。
+    // 链接节点。
     sentinelReconnectInstance(ri);
     // 监控节点，定时向其它节点发送信息。
     sentinelSendPeriodicCommands(ri);
@@ -328,7 +365,7 @@ void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
 }
 ```
 
-* 异步链接节点逻辑。
+* 异步链接节点逻辑。链接节点和订阅 hello 频道。
 
 ```c
 /* Create the async connections for the instance link if the link
@@ -340,6 +377,7 @@ void sentinelReconnectInstance(sentinelRedisInstance *ri) {
     instanceLink *link = ri->link;
     mstime_t now = mstime();
 
+    // 每秒处理一次。
     if (now - ri->link->last_reconn_time < SENTINEL_PING_PERIOD) return;
     ri->link->last_reconn_time = now;
 
@@ -373,7 +411,7 @@ void sentinelReconnectInstance(sentinelRedisInstance *ri) {
         }
     }
 
-    // 发布 / 订阅链接。只限 master / slave 角色。
+    // 订阅 master/slave 角色的 "__sentinel__:hello" 频道。
     if ((ri->flags & (SRI_MASTER|SRI_SLAVE)) && link->pc == NULL) {
         // 创建异步非阻塞链接。
         link->pc = redisAsyncConnectBind(ri->addr->ip,ri->addr->port,NET_FIRST_BIND_ADDR);
@@ -443,7 +481,8 @@ void sentinelSendPeriodicCommands(sentinelRedisInstance *ri) {
     if (ri->link->pending_commands >=
         SENTINEL_MAX_PENDING_COMMANDS * ri->link->refcount) return;
 
-    // 如果监控的节点出现异常，提高发命令频率。
+    /* 如果监控的 slave 节点，它的主节点已经客观下线，那么提高发命令（INFO）频率，
+     * 因为当前 slave 节点有可能被故障转移为主节点。*/
     if ((ri->flags & SRI_SLAVE) &&
         ((ri->master->flags & (SRI_O_DOWN|SRI_FAILOVER_IN_PROGRESS)) ||
          (ri->master_link_down_time != 0))) {
@@ -467,13 +506,13 @@ void sentinelSendPeriodicCommands(sentinelRedisInstance *ri) {
         if (retval == C_OK) ri->link->pending_commands++;
     }
 
-    // 对所有链接角色实例，发送 PING 信息。
+    // 发送 PING 信息。
     if ((now - ri->link->last_pong_time) > ping_period &&
         (now - ri->link->last_ping_time) > ping_period/2) {
         sentinelSendPing(ri);
     }
 
-    // 对所有链接角色实例，发布信息。
+    // 发布信息。
     if ((now - ri->last_pub_time) > SENTINEL_PUBLISH_PERIOD) {
         sentinelSendHello(ri);
     }
@@ -484,7 +523,10 @@ void sentinelSendPeriodicCommands(sentinelRedisInstance *ri) {
 
 #### 2.4.1. INFO 回复
 
-sentinel 通过 master 回复，获得 master / slave 详细信息。如果有发现新的 slave，可以创建链接。如果 master 发生改变，再进行故障转移。
+sentinel 通过 master 回复，获得 master / slave 详细信息。
+
+1. 如果有发现新的 slave，可以进行链接建立联系。
+2. 如果 master 发生改变，进行故障转移。
 
 * master INFO 命令。
 
@@ -553,7 +595,7 @@ fsync(10)                               = 0
 close(10)                               = 0
 ```
 
-* 根据 INFO 回复信息，更新当前集群监控情况。
+* 根据 INFO 回复信息，更新当前集群监控信息。
 
 ```c
 void sentinelInfoReplyCallback(redisAsyncContext *c, void *reply, void *privdata) {
@@ -566,11 +608,11 @@ void sentinelInfoReplyCallback(redisAsyncContext *c, void *reply, void *privdata
     r = reply;
 
     if (r->type == REDIS_REPLY_STRING)
-        // 监控集群监控情况。
+        // 监控集群监控信息。
         sentinelRefreshInstanceInfo(ri,r->str);
 }
 
-// 行分析 INFO 回复的文本信息。
+// 分析 INFO 回复的文本信息。
 void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
     sds *lines;
     int numlines, j;
@@ -696,6 +738,8 @@ void sentinelProcessHelloMessage(char *hello, int hello_len) {
 ---
 
 ## 3. strace 详细日志
+
+`strace` 监测的 setinel A 详细网络日志。
 
 ```shell
 # 命令启动进程
@@ -1014,6 +1058,12 @@ read(12, "*1\r\n$4\r\nPING\r\n*3\r\n$7\r\nPUBLISH\r\n$18\r\n__sentinel__:hello\r
 write(12, "+PONG\r\n:1\r\n", 11)        = 11
 ...
 ```
+
+---
+
+## 4. 参考
+
+* [Redis Sentinel Documentation](https://redis.io/topics/sentinel)
 
 ---
 
