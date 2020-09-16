@@ -512,7 +512,8 @@ void sentinelSendPeriodicCommands(sentinelRedisInstance *ri) {
         sentinelSendPing(ri);
     }
 
-    // 发布信息。
+    /* 发布 hello 消息到其它 channel。 */
+    /* PUBLISH hello messages to all the three kinds of instances. */
     if ((now - ri->last_pub_time) > SENTINEL_PUBLISH_PERIOD) {
         sentinelSendHello(ri);
     }

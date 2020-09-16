@@ -1,9 +1,10 @@
 ---
 layout: post
-title:  "redis 脑裂现象"
+title:  "[redis 源码走读] sentinel 哨兵 - 脑裂处理方案"
 categories: redis
-tags: split brain
+tags: split brain redis sentinel
 author: wenfh2020
+mathjax: true
 --- 
 
 由于网络问题，集群节点失去联系。主从节点数据不同步；重新平衡选举，产生多个主服务，导致数据不一致。
@@ -15,27 +16,125 @@ author: wenfh2020
 
 ---
 
-## 1. 解决方案
+## 1. 原理
 
-比较简单的方案，修改 redis 配置 [redis.conf](https://github.com/antirez/redis/blob/unstable/redis.conf) :
+### 1.1. 概述
 
-```shell
-# master 至少有 N 个副本连接。
-min-slaves-to-write 3
-# 数据复制和同步的延迟不能超过 M 秒。
-min-slaves-max-lag 10
-```
+redis 集群，我们看看 redis 哨兵的高可用模式。
 
-> **注意：高版本 redis 已经修改这个两个选项**
->
->```shell
-># min-replicas-to-write 3
-># min-replicas-max-lag 10
->```
+集群有三种 redis 角色：sentinel/master/slave，三种角色通过 tcp 链接，相互建立联系。sentinel 作为高可用集群管理者，它的功能主要是：检查故障，发现故障，故障转移。
 
 ---
 
-redis.conf 相关解析
+### 1.2. 故障转移流程
+
+1. 当 redis 集群中 master 出现故障，sentinel 检测到故障，那么 sentinel 需要对集群进行故障转移。
+2. 当一个 sentinel 发现 master 下线，它会将下线的 master 确认为**主观下线**。
+3. 当多个 sentinel 已经发现该 master 节点下线，那么 sentinel 会将其确认为**客观下线**。
+4. 多个 sentinel 根据一定的逻辑，选出一个 sentinel 作为代表，由它去进行故障转移，将 master 的其它副本 slave 提升为 master 的角色。原来的 master 如果重新激活，它将被降级，从 master 降级为 slave。
+
+我们看看下面的部署：两个机器，分别部署了 redis 的三个角色。
+
+---
+
+### 1.3. 脑裂场景
+
+* 如果我们将集群部署在两个机器上（redis 集群部署情况如下图）。
+* sentinel 配置 `quorum = 1`，也就是一个 sentinel 发现故障，也可以选举自己为代表，进行故障转移。
+
+| 节点 | 描述                         |
+| :--- | :--------------------------- |
+| M    | redis 主服务 master          |
+| R    | redis 副本 replication/slave |
+| S    | redis 哨兵 sentinel          |
+| C    | 链接 redis 客户端            |
+
+```shell
++----+         +----+
+| M1 |---------| R1 |
+| S1 |         | S2 |
++----+         +----+
+```
+
+* 因为某种原因，两个机器断开链接，S2 将同机器的 R1 提升角色为 master，这样集群里，出现了两个 master 服务同时工作 —— 脑裂出现了。不同的 client 链接到不同的 redis 进行读写，那么在两台机器上的 redis 数据，就出现了不一致的现象了。
+
+```shell
++----+           +------+
+| M1 |----//-----| [M1] |
+| S1 |           | S2   |
++----+           +------+
+```
+
+---
+
+## 2. 解决方案
+
+### 2.1. sentienl 部署
+
+1. sentinel 节点个数最好 >= 3，节点个数最好是基数。
+2. sentinel 的选举法定人数设置为 $(\frac{n}{2} + 1)$。
+
+* 配置
+
+```shell
+# sentinel.conf
+# sentinel monitor <master-name> <ip> <redis-port> <quorum>
+sentinel monitor mymaster 127.0.0.1 6379 2
+```
+
+* quorum
+
+\<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过一定`法定人数`选举某人为代表，那么他就成为 sentinel 的代表，代表负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 $(\frac{n}{2} + 1)$ 比较合理。
+
+---
+
+### 2.2. redis 配置
+
+#### 2.2.1. 问题
+
+按照上述的 sentinel 部署方案，下面三个机器，任何一个机器出现问题，只要两个 sentinel 能相互链接，故障转移是正常的。
+
+```shell
+       +----+
+       | M1 |
+       | S1 |
+       +----+
+          |
++----+    |    +----+
+| R2 |----+----| R3 |
+| S2 |         | S3 |
++----+         +----+
+
+Configuration: quorum = 2
+```
+
+假如 M1 机器与其它机器断开链接了，S2 和 S3 两个 sentinel 能相互链接，sentinel 能正常进行故障转移，sentinel 将 R2 提升为新的 master 角色。但是客户端 C1 链接到 M1 的客户端依然正常读写，这样仍然会出现问题，所以我们不得不对 M1 进行限制。
+
+```shell
+         +----+
+         | M1 |
+         | S1 | <- C1 (writes will be lost)
+         +----+
+            |
+            /
+            /
++------+    |    +----+
+| [M2] |----+----| R3 |
+| S2   |         | S3 |
++------+         +----+
+```
+
+---
+
+#### 2.2.2. 解决方案
+
+限制 M1 比较简单的方案，修改 redis 配置 [redis.conf](https://github.com/antirez/redis/blob/unstable/redis.conf)，检查 master 节点与其它副本的联系。当 master 与其它副本在一定时间内失去联系，那么禁止 master 进行写数据。
+
+> 但是这个方案也不是完美的，`min-slaves-to-write` 依赖于副本的链接个数，如果 slave 个数设置不合理，那么集群很难故障转移成功。
+
+##### 2.2.2.1. 配置
+
+* redis.conf
 
 ```shell
 # It is possible for a master to stop accepting writes if there are less than
@@ -61,9 +160,23 @@ redis.conf 相关解析
 # min-slaves-max-lag is set to 10.
 ```
 
+```shell
+# master 至少有 N 个副本连接。
+min-slaves-to-write 1
+# 数据复制和同步的延迟不能超过 M 秒。
+min-slaves-max-lag 10
+```
+
+> **注意：高版本 redis 已经修改这个两个选项**
+>
+>```shell
+># min-replicas-to-write 3
+># min-replicas-max-lag 10
+>```
+
 ---
 
-## 2. 实现流程
+##### 2.2.2.2. 源码实现流程
 
 * 时钟定期检查副本链接健康情况。
 
@@ -134,6 +247,7 @@ int processCommand(client *c) {
 
 ## 3. 参考
 
+* [Redis Sentinel Documentation](https://redis.io/topics/sentinel)
 * [Replication](https://redis.io/topics/replication)
 * [redis 脑裂等极端情况分析](https://www.cnblogs.com/yjmyzz/p/redis-split-brain-analysis.html)
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)
