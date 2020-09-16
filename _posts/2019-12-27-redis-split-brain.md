@@ -245,7 +245,16 @@ int processCommand(client *c) {
 
 ---
 
-## 3. 参考
+## 3. 小结
+
+* redis 脑裂主要表现为，同一个 redis 集群，出现多个 master，导致 redis 集群出现数据不一致。
+* 解决方案主要通过 sentinel 哨兵的配置和 redis 的配置去解决问题。
+* 上述方案也是有不足的地方，例如 redis 配置限制可能会受到副本个数的影响，所以具体设置，要看具体的业务场景。主要是怎么通过比较小的代价去解决问题，或者降低出现问题的概率。
+* redis 虽然已经发布了 gossip 协议的无中心集群，sentinel 哨兵模式还是比较常用的，我们不建议直接使用 sentinel，可以使用 codis 这样的第三方代理，还是挺方便实用的。
+
+---
+
+## 4. 参考
 
 * [Redis Sentinel Documentation](https://redis.io/topics/sentinel)
 * [Replication](https://redis.io/topics/replication)
