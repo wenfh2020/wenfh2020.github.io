@@ -33,11 +33,11 @@ redis 集群，我们看看 redis 哨兵的高可用模式。
 3. 当多个 sentinel 已经发现该 master 节点下线，那么 sentinel 会将其确认为**客观下线**。
 4. 多个 sentinel 根据一定的逻辑，选出一个 sentinel 作为代表，由它去进行故障转移，将 master 的其它副本 slave 提升为 master 的角色。原来的 master 如果重新激活，它将被降级，从 master 降级为 slave。
 
-我们看看下面的部署：两个机器，分别部署了 redis 的三个角色。
-
 ---
 
 ### 1.3. 脑裂场景
+
+我们看看下面的部署：两个机器，分别部署了 redis 的三个角色。
 
 * 如果我们将集群部署在两个机器上（redis 集群部署情况如下图）。
 * sentinel 配置 `quorum = 1`，也就是一个 sentinel 发现故障，也可以选举自己为代表，进行故障转移。

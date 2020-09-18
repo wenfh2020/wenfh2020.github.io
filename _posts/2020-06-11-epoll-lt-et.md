@@ -94,6 +94,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
         // 获取 epi 对应 fd 的就绪事件。
         revents = ep_item_poll(epi, &pt, 1);
         if (!revents)
+            // 如果没有就绪事件就返回（这时候，epi 已经从就绪列表中删除了。）
             continue;
 
         // 内核空间向用户空间传递数据。__put_user 成功拷贝返回 0。

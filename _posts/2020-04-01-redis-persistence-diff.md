@@ -62,23 +62,21 @@ aof 和 rdb 是 redis 持久化的两种方式。我们看看它们的特点和�
 
 ## 3. 持久化详细文档
 
-redis 持久化 aof 和 rdb 区别，详细文档可以参考 redis 作者的文章 [Redis Persistence](https://redis.io/topics/persistence#how-durable-is-the-append-only-file) 
-
-> 链接可能被墙，用国内搜索引擎搜索下
+redis 持久化 aof 和 rdb 区别，详细文档可以参考 redis 作者文章 《[Redis Persistence](https://redis.io/topics/persistence#how-durable-is-the-append-only-file)》。
 
 要了解更多的细节，可以查看 redis 源码实现。redis 持久化源码理解，可以参考我的帖子：
 
-* [[redis 源码走读] aof 持久化 (上)](https://wenfh2020.com/2020/03/29/redis-aof-prev/)
+* 《[[redis 源码走读] aof 持久化 (上)](https://wenfh2020.com/2020/03/29/redis-aof-prev/)》
 
-* [[redis 源码走读] aof 持久化 (下)](https://wenfh2020.com/2020/03/29/redis-aof-next/)
+* 《[[redis 源码走读] aof 持久化 (下)](https://wenfh2020.com/2020/03/29/redis-aof-next/)》
 
-* [[redis 源码走读] rdb 持久化 - 文件结构](https://wenfh2020.com/2020/03/19/redis-rdb-struct/)
+* 《[[redis 源码走读] rdb 持久化 - 文件结构](https://wenfh2020.com/2020/03/19/redis-rdb-struct/)》
 
-* [[redis 源码走读] rdb 持久化 - 应用场景](https://wenfh2020.com/2020/03/19/redis-rdb-application/)
+* 《[[redis 源码走读] rdb 持久化 - 应用场景](https://wenfh2020.com/2020/03/19/redis-rdb-application/)》
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/2020/04/01/redis-persistence-diff/)
+> 🔥 文章来源：《[redis 持久化方式 - aof 和 rdb 区别](https://wenfh2020.com/2020/04/01/redis-persistence-diff/)》
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
