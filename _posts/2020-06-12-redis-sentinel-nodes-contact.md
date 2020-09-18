@@ -659,13 +659,13 @@ void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
 
 ![抓包工作流程](/images/2020-09-17-15-29-12.png){:data-action="zoom"}
 
-* 发布订阅文本内容。
+* sentinel 发布的文本内容。
 
 ```shell
 <ip>,<port>,<runid>,<current_epoch>,<master_name>,<master_ip>,<master_port>,<master_config_epoch>
 ```
 
-* sentinel 向 `__sentinel__:hello` 频道发布订阅日志。
+* sentinel 向 `__sentinel__:hello` 频道发布订阅的 `strace` 日志。
 
 ```shell
 # sentinel A 向 master 订阅 hello 频道。
