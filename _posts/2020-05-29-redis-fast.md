@@ -7,7 +7,7 @@ author: wenfh2020
 mathjax: true
 ---
 
-天下武功，唯快不破。redis 为什么那么快？redis 单进程并发 10w+ ([hiredis + libev 异步测试](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本章从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
+天下武功，唯快不破。redis 为什么那么快？redis 单进程并发 10w+ ([《hiredis + libev 异步测试》](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本章从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
 
 
 
@@ -62,7 +62,7 @@ redis 有部分场景需要子进程和子线程辅助。
 
 * 多线程读写通信。
   
-  > redis 6.0 增加多线程读写网络事件功能。[[redis 源码走读] 多线程通信 I/O](https://wenfh2020.com/2020/04/13/redis-multithreading-mode/)
+  > redis 6.0 增加多线程读写网络事件功能。[《[redis 源码走读] 多线程通信 I/O》](https://wenfh2020.com/2020/04/13/redis-multithreading-mode/)
 
 ---
 
@@ -86,9 +86,11 @@ redis 有持久化功能：aof 和 rdb 方式。持久化需要将内存数据�
 
 * 高可用。
 
-  > 可以通过 sentinel 哨兵模式，redis cluster 自带集群模式，或者第三方代理模式实现 redis 高可用。
+  > 1. sentinel 哨兵模式。
+  > 2. redis cluster 自带集群模式。
+  > 3. 第三方代理模式（例如 codis）。
 
-* proxy˝
+* proxy
 
   > redis 可以开多个实例，提高系统并发能力，这些实例通过第三方代理（例如 [codis](https://github.com/CodisLabs/codis)）进行扩容缩容，对数据进行分片管理。
 
