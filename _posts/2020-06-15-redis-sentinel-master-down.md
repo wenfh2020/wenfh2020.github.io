@@ -8,7 +8,7 @@ author: wenfh2020
 
 redis 哨兵集群有 3 个角色：sentinel/master/slave，每个角色都可能出现故障，故障转移主要针对 <font color='red'>master</font>，而且故障转移是个复杂的工作流程。在分布式系统中，多个节点要保证数据一致性，需要相互通信协调，要经历几个环节：
 
-master 主观下线 --> master 客观下线 --> 投票选举 leader --> leader 执行故障转移。
+> master 主观下线 --> master 客观下线 --> 投票选举 leader --> leader 执行故障转移。
 
 本章重点走读 redis 源码，理解 sentinel 检测 master 节点的主客观下线流程。
 
@@ -204,9 +204,9 @@ void sentinelCommand(client *c) {
 }
 ```
 
-* 当前 sentinel 接收回复。
+* 当前 sentinel 接收命令回复。
 
-`sentinelAskMasterStateToOtherSentinels` 的回复回调。对应的其它 sentinel 确认该 master 已经主观下线，那么将其标识为 `SRI_MASTER_DOWN`。
+当前 sentinel 接收到询问的回复，如果确认该 master 已经主观下线，那么将其标识为 `SRI_MASTER_DOWN`。
 
 ```c
 /* Receive the SENTINEL is-master-down-by-addr reply, see the
