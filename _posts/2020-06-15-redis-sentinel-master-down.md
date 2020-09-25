@@ -62,6 +62,8 @@ void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
 
 ## 2. 故障发现
 
+![主客观下线时序](/images/2020-09-26-07-38-49.png){:data-action="zoom"}
+
 ### 2.1. 主观下线
 
 主要检查节点间的 <font color=red>心跳</font> 通信是否正常。
@@ -224,17 +226,7 @@ void sentinelReceiveIsMasterDownReply(redisAsyncContext *c, void *reply, void *p
         } else {
             ri->flags &= ~SRI_MASTER_DOWN;
         }
-        if (strcmp(r->element[1]->str, "*")) {
-            /* 当前 sentinel 向 ri 拉选票，ri 回复它选举的情况。 */
-            sdsfree(ri->leader);
-            if ((long long)ri->leader_epoch != r->element[2]->integer)
-                serverLog(LL_WARNING,
-                          "%s voted for %s %llu", ri->name,
-                          r->element[1]->str,
-                          (unsigned long long)r->element[2]->integer);
-            ri->leader = sdsnew(r->element[1]->str);
-            ri->leader_epoch = r->element[2]->integer;
-        }
+        ...
     }
 }
 ```
@@ -294,7 +286,6 @@ void sentinelCheckObjectivelyDown(sentinelRedisInstance *master) {
 * [raft 算法原理](http://thesecretlivesofdata.com/raft/)
 * [Redis Sentinel 高可用原理](https://521-wf.com/archives/356.html)
 * [Redis源码解析：21sentinel(二)定期发送消息、检测主观下线](https://www.cnblogs.com/gqtcgq/p/7247048.html)
-* [Redis源码解析：22sentinel(三)客观下线以及故障转移之选举领导节点](https://www.cnblogs.com/gqtcgq/archive/2004/01/13/7247047.html)
 
 ---
 
