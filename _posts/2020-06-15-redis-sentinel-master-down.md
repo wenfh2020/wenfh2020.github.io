@@ -233,7 +233,7 @@ void sentinelReceiveIsMasterDownReply(redisAsyncContext *c, void *reply, void *p
 
 ---
 
-#### 2.2.1. 确认客观下线
+* 确认客观下线
 
 当 >= 法定个数（quorum）的 sentinel 节点确认该 master 主观下线，那么标识当前主观下线的 master 被标识为客观下线。
 
@@ -279,7 +279,68 @@ void sentinelCheckObjectivelyDown(sentinelRedisInstance *master) {
 
 ---
 
-## 3. 参考
+## 3. 开启故障转移
+
+当 sentinel 检测到某个 master 客观下线，可以进入开启故障转移流程了。
+
+```c
+/* 定时检查 master 故障情况情况。 */
+void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
+    ...
+    if (ri->flags & SRI_MASTER) {
+        /* 检查 master 是否客观下线。 */
+        sentinelCheckObjectivelyDown(ri);
+        /* 是否满足故障转移条件，开启故障转移。 */
+        if (sentinelStartFailoverIfNeeded(ri))
+            /* 满足条件，进入故障转移环节，马上向其它 sentinel 节点选举拉票。 */
+            sentinelAskMasterStateToOtherSentinels(ri, SENTINEL_ASK_FORCED);
+        /* 通过状态机，处理故障转移对应各个环节。 */
+        sentinelFailoverStateMachine(ri);
+        /* 定时向其它 sentinel 节点询问 master 主观下线状况或选举拉票。 */
+        sentinelAskMasterStateToOtherSentinels(ri, SENTINEL_NO_FLAGS);
+    }
+}
+
+/* 是否满足故障转移条件，开启故障转移。 */
+int sentinelStartFailoverIfNeeded(sentinelRedisInstance *master) {
+    /* master 客观下线。 */
+    if (!(master->flags & SRI_O_DOWN)) return 0;
+
+    /* 当前 master 没有处在故障转移过程中。 */
+    if (master->flags & SRI_FAILOVER_IN_PROGRESS) return 0;
+
+    /* 两次故障转移，需要有一定的时间间隔。
+     * 1. 当前 sentinel 满足了故障转移条件。
+     * 2. 当前 sentinel 接收到其它 sentinel 的拉票，也设置了 failover_start_time，说明
+     *    其它 sentinel 先开启了故障转移，为了避免冲突，需要等待一段时间。*/
+    if (mstime() - master->failover_start_time < master->failover_timeout * 2) {
+        ...
+        return 0;
+    }
+
+    sentinelStartFailover(master);
+    return 1;
+}
+
+/* 开启故障转移，进入投票环节。 */
+void sentinelStartFailover(sentinelRedisInstance *master) {
+    ...
+    /* 当前 master 开启故障转移。 */
+    master->failover_state = SENTINEL_FAILOVER_STATE_WAIT_START;
+    /* 当前 master 故障转移正在进行中。 */
+    master->flags |= SRI_FAILOVER_IN_PROGRESS;
+    /* 开始一轮选举，选举纪元（计数器 + 1）。*/
+    master->failover_epoch = ++sentinel.current_epoch;
+    ...
+    /* 记录故障转移开启时间。 */
+    master->failover_start_time = mstime() + rand() % SENTINEL_MAX_DESYNC;
+    master->failover_state_change_time = mstime();
+}
+```
+
+---
+
+## 4. 参考
 
 * [raft 论文翻译](https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md)
 * [raft 算法官网](https://raft.github.io)
@@ -289,7 +350,7 @@ void sentinelCheckObjectivelyDown(sentinelRedisInstance *master) {
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/2019/12/27/redis-split-brain/)
+> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/2020/06/15/redis-sentinel-master-down/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
