@@ -18,7 +18,7 @@ author: wenfh2020
 
 ## 1. 异步接口文档
 
-Mariadb 提供异步接口，官网文档 [Non-blocking API Reference](https://mariadb.com/kb/en/non-blocking-api-reference/)。
+Mariadb 提供异步接口，官网文档 [《Non-blocking API Reference》](https://mariadb.com/kb/en/non-blocking-api-reference/)。
 
 ---
 
@@ -126,7 +126,39 @@ bool async_query(const char* node, MysqlQueryCallbackFn* fn, const char* sql, vo
 
 ---
 
-### 4.4. 测试源码
+### 4.4. 状态机工作流程
+
+```c
+void MysqlAsyncConn::wait_for_mysql(struct ev_loop* loop, ev_io* w, int event) {
+    switch (m_state) {
+        case STATE::CONNECT_WAITING:
+            connect_wait(loop, w, event);
+            break;
+        case STATE::WAIT_OPERATE:
+            operate_wait();
+            break;
+        case STATE::QUERY_WAITING:
+            query_wait(loop, w, event);
+            break;
+        case STATE::EXECSQL_WAITING:
+            exec_sql_wait(loop, w, event);
+            break;
+        case STATE::STORE_WAITING:
+            store_result_wait(loop, w, event);
+            break;
+        case STATE::PING_WAITING:
+            ping_wait(loop, w, event);
+            break;
+        default:
+            LOG_ERROR("invalid state: %d", m_state);
+            break;
+    }
+}
+```
+
+---
+
+### 4.5. 测试源码
 
 * 详细测试源码可以查看 [github](https://github.com/wenfh2020/kimserver/tree/master/src/test/test_mysql/test_async)
 
