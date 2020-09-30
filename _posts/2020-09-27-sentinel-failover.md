@@ -121,7 +121,7 @@ sleep 5
 # 查看 sentinel 日志，观察工作流程。
 ```
 
-* sentinel-26378 故障转移日志，它在选举中赢得选票，执行完整的故障转移流程。
+* sentinel-26379 故障转移日志，它在选举中赢得选票，执行完整的故障转移流程。
 
 ```shell
 32121:X 30 Sep 2020 15:06:54.145 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
