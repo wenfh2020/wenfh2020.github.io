@@ -268,7 +268,7 @@ sleep 5
 32140:X 30 Sep 2020 15:10:22.900 # -sdown slave 127.0.0.1:6379 127.0.0.1 6379 @ mymaster 127.0.0.1 6377
 ```
 
-## 2. 流程
+## 2. 源码流程
 
 ### 2.1. 开启故障转移
 
@@ -293,6 +293,9 @@ void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
 /* 是否满足故障转移条件，开启故障转移。 */
 int sentinelStartFailoverIfNeeded(sentinelRedisInstance *master) {
     ...
+    /* 1. 检测到 master 客观下线。
+     * 2. 没有正在对该客观下线的 master 进行故障转移。
+     * 3. 需要与一个故障转移相隔一段足够长的时间。*/
     sentinelStartFailover(master);
     return 1;
 }
@@ -517,7 +520,7 @@ int compareSlavesForPromotion(const void *a, const void *b) {
 
 ### 2.4. slave 晋升 master
 
-sentinel leader 给 slave 发送 `SLAVEOF` 命令，使得 master 客观下线后，原来链接客观下线 master 的 slaves，能重新建立 master <--> slave 的关系。
+sentinel leader 给 slave 发送 `slaveof` 命令，使得 master 客观下线后，原来链接客观下线 master 的 slaves，能重新建立 master <--> slave 的关系。
 
 sentinel leader 给筛选出来的 slave 中发送 `slave no one` 命令，使得该 slave 成为 master 角色。
 
@@ -527,7 +530,7 @@ void sentinelFailoverSendSlaveOfNoOne(sentinelRedisInstance *ri) {
     int retval;
     ...
     /* sentinel 给筛选出来的 slave 发送 "slaveof no one" 命令，让该 slave 成为 master。
-     * sentinel 并不关心命令返回的结果，因为它通过发送 “info” 命令，感知它的角色是否发生改变。 */
+     * sentinel 并不关心命令返回的结果，因为它通过发送 “info” 命令，确认它的角色是否发生改变。 */
     retval = sentinelSendSlaveOf(ri->promoted_slave, NULL, 0);
     if (retval != C_OK) return;
     sentinelEvent(LL_NOTICE, "+failover-state-wait-promotion",
@@ -549,7 +552,7 @@ int sentinelSendSlaveOf(sentinelRedisInstance *ri, char *host, int port) {
                                sentinelDiscardReplyCallback, ri, "%s",
                                sentinelInstanceMapCommand(ri, "MULTI"));
     ...
-    /* 给 slave 发 SALVEOF 命令。 */
+    /* 给 slave 发 "slaveof" 命令。 */
     retval = redisAsyncCommand(ri->link->cc,
                                sentinelDiscardReplyCallback, ri, "%s %s %s",
                                sentinelInstanceMapCommand(ri, "SLAVEOF"),
