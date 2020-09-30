@@ -86,6 +86,8 @@ void sentinelFailoverStateMachine(sentinelRedisInstance *ri) {
 
 ![故障转移测试环节](/images/2020-09-30-16-42-39.png){:data-action="zoom"}
 
+![故障转移测试环节](/images/2020-09-30-16-47-51.png){:data-action="zoom"}
+
 * 测试脚本
 
 ```shell
