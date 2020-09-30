@@ -506,7 +506,9 @@ void sentinelSendPeriodicCommands(sentinelRedisInstance *ri) {
         SENTINEL_MAX_PENDING_COMMANDS * ri->link->refcount) return;
 
     /* 如果当前节点是 slave，它对应的 master 已经客观下线，并且进入了故障转移状态。
-     * 那么提高发命令（INFO）频率，因为当前 slave 有可能在故障转移中提升为 master。*/
+     * 那么提高发命令（INFO）频率，因为故障转移过程中，sentinel 需要通过 "info" 命令
+     * 获得节点的信息来完成故障转移环节，例如：slave 的 role 角色信息，
+     * 还有当 slave 是否已经成功连接新的 master（"master_link_status"），等等。*/
     if ((ri->flags & SRI_SLAVE) &&
         ((ri->master->flags & (SRI_O_DOWN|SRI_FAILOVER_IN_PROGRESS)) ||
          (ri->master_link_down_time != 0))) {
