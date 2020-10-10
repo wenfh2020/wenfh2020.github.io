@@ -64,6 +64,8 @@ logfile "sentinel.log"
 
 ---
 
+![第三方通知流程](/images/2020-10-10-11-41-26.png){:data-action="zoom"}
+
 ## 2. 命令
 
 sentinel 也是 redis 程序，支持 redis-client 通过命令读写访问。
@@ -262,6 +264,12 @@ void sentinelRunPendingScripts(void) {
     }
 }
 ```
+
+---
+
+## 4. 参考
+
+* [Redis Sentinel for monitoring purposes? Notification script fires off too many times](https://stackoverflow.com/questions/34645391/redis-sentinel-for-monitoring-purposes-notification-script-fires-off-too-many-t)
 
 ---
 
