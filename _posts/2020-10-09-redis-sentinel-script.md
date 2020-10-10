@@ -11,7 +11,7 @@ sentinel 监控管理 redis 节点，那么我们如何感知 sentinel 的动作
 > 详细请参考官方文档 [《Redis Sentinel Documentation》](https://redis.io/topics/sentinel)
 
 1. 日志。
-2. 事件的发布订阅。
+2. 事件的发布订阅，用户向 sentinel 订阅感兴趣事件。
 3. 脚本通知 `sentinel notification-script <master-name> <script-path>`。
 4. 也提供了命令，提供 client 获取信息，例如 `SENTINEL get-master-addr-by-name <master name>`
 
@@ -68,7 +68,9 @@ logfile "sentinel.log"
 
 sentinel 也是 redis 程序，支持 redis-client 通过命令读写访问。
 
-例如，第三方程序，需要知道 redis 集群的 master 信息，可以通过命令 `SENTINEL get-master-addr-by-name <master name>` 进行访问。其它命令详细参考官网文档 [《Redis Sentinel Documentation》](https://redis.io/topics/sentinel)
+例如，第三方程序，需要知道 redis 集群的 master 信息，可以通过命令 `SENTINEL get-master-addr-by-name <master name>` 进行访问。
+
+> 其它命令详细参考官网文档 [《Redis Sentinel Documentation》](https://redis.io/topics/sentinel)
 
 ```shell
 # Sentinel commands
