@@ -20,7 +20,9 @@ redis 可能存在大量过期数据，一次性遍历检查不太现实。redis
 
 主服务检查过期/删除过期逻辑 -> 删除过期键值 -> 异步/同步删除数据 -> 主从同步。
 
-![流程](/images/2020-02-29-11-37-42.png){: data-action="zoom"}
+![流程](/images/2020-10-10-12-32-27.png){:data-action="zoom"}
+
+> 设计图来源：[《redis 过期数据淘汰流程》](https://www.processon.com/view/5e4cd648e4b01f766b4c099b)
 
 redis 数据库，数据内容和过期时间是分开保存。`expires` 保存了键值对应的过期时间。
 
@@ -173,8 +175,8 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 
 #### 3.1.3. maxmemory 淘汰
 
-超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，可以参考[[redis 源码走读] maxmemory 数据淘汰策略
-](https://wenfh2020.com/2020/03/06/max-memory/)。
+超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，可以参考[《[redis 源码走读] maxmemory 数据淘汰策略
+》](https://wenfh2020.com/2020/03/06/max-memory/)。
 
 ```c
 typedef struct redisObject {
