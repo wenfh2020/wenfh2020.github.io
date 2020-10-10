@@ -55,14 +55,14 @@ author: wenfh2020
 
 ## 4. 收藏
 
-| 类型  | 链接                                                                                                                                                                                                                                                                                                                                                                                                 |
-| :---- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 系统  | [Linux slab 分配器剖析](https://www.ibm.com/developerworks/cn/linux/l-linux-slab-allocator/index.html) <br/> [用户空间_内核空间以及内存映射](https://www.solves.com.cn/news/hlw/2020-03-15/13907.html) <br/> [Linux进程调度器-进程切换](https://www.cnblogs.com/LoyenWang/p/12386281.html) <br/> [Linux 进程、线程、文件描述符的底层原理](https://blog.csdn.net/fdl123456/article/details/103982657) |
-| c/c++ | [STL 源码剖析](https://www.kancloud.cn/digest/stl-sources/) <br/> [我在项目中经常使用的c++11新特性](https://zhuanlan.zhihu.com/p/102419965?utm_source=qq)                                                                                                                                                                                                                                            |
-| redis | [redis-stat](https://github.com/junegunn/redis-stat)                                                                                                                                                                                                                                                                                                                                                 |
-| 管理  | [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp)                                                                                                                                                                                                                                                                                                                                 |
-| ebook | [book1](https://evanli.github.io/programming-book/Git/) <br/> [book2](https://github.com/wenfh2020/books) <br/> [book3](https://github.com/hello2dj/Books-1)   <br/> [book4](https://github.com/yuebaii/books)     <br/> [book5](https://github.com/lancetw/ebook-1)                                                                                                                                 |
-| 素材  | [iconarchive](http://www.iconarchive.com/) <br/> [download video from url](https://en.savefrom.net/11/)                                                                                                                                                                                                                                                                                              |
+| 类型  | 链接                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| :---- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 系统  | [Linux slab 分配器剖析](https://www.ibm.com/developerworks/cn/linux/l-linux-slab-allocator/index.html) <br/> [用户空间_内核空间以及内存映射](https://www.solves.com.cn/news/hlw/2020-03-15/13907.html) <br/> [Linux进程调度器-进程切换](https://www.cnblogs.com/LoyenWang/p/12386281.html) <br/> [Linux 进程、线程、文件描述符的底层原理](https://blog.csdn.net/fdl123456/article/details/103982657)  <br/> [凉了！张三同学没答好「进程间通信」，被面试官挂了...](https://blog.csdn.net/qq_34827674/article/details/107678226) |
+| c/c++ | [STL 源码剖析](https://www.kancloud.cn/digest/stl-sources/) <br/> [我在项目中经常使用的c++11新特性](https://zhuanlan.zhihu.com/p/102419965?utm_source=qq)                                                                                                                                                                                                                                                                                                                                                                      |
+| redis | [redis-stat](https://github.com/junegunn/redis-stat)                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 管理  | [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp)                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ebook | [book1](https://evanli.github.io/programming-book/Git/) <br/> [book2](https://github.com/wenfh2020/books) <br/> [book3](https://github.com/hello2dj/Books-1)   <br/> [book4](https://github.com/yuebaii/books)     <br/> [book5](https://github.com/lancetw/ebook-1)                                                                                                                                                                                                                                                           |
+| 素材  | [iconarchive](http://www.iconarchive.com/) <br/> [download video from url](https://en.savefrom.net/11/)                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 ---
 
@@ -72,18 +72,6 @@ author: wenfh2020
 | :----- | :------------------------------------------------------------------------------------------------- |
 | c/c++  | [libev](http://software.schmorp.de/pkg/libev.html) <br/> [redis](https://github.com/antirez/redis) |
 | golang | [codis](https://github.com/CodisLabs/codis) <br/> [kingshard](https://github.com/flike/kingshard)  |
-
----
-
-## 6. 源码走读方法
-
-* 了解需求文档。
-* 应用并熟悉工作流程。
-* 走读源码，理解核心数据结构，接口。
-  > 逻辑复杂的源码，采用减法，独立抽取核心源码到一个文件，将其逻辑关联起来。
-* 通过 uml 抽象出业务对象，建立彼此的时序关系，走通流程。
-* 验证逻辑结果。
-* 输出总结，落地文档。
 
 ---
 
