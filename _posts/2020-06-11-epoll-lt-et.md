@@ -116,9 +116,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
             epi->event.events &= EP_PRIVATE_BITS;
         else if (!(epi->event.events & EPOLLET)) {
             /* lt 模式下，当前事件被处理完后，不会从就绪列表中删除，留待下一次 epoll_wait
-             * 调用，再查看是否还有事件没处理，如果没有事件了就从就绪列表中删除。
-             * 在遍历事件的过程中，不能写 ep->rdllist，因为已经上锁，只能把新的就绪信息
-             * 添加到 ep->ovflist */
+             * 调用，再查看是否还有事件没处理，如果没有事件了就从就绪列表中删除。*/
             list_add_tail(&epi->rdllink, &ep->rdllist);
             ep_pm_stay_awake(epi);
         }

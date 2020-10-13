@@ -636,6 +636,8 @@ vmstat 1 每秒输出一次统计结果
 
 ### 8.8. strace
 
+> macos: dtruss
+
 ```shell
 # 跟踪具体的进程信息
 strace -p <PID>
