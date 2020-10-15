@@ -273,7 +273,7 @@ void sentinelRunPendingScripts(void) {
 
 ---
 
-> 🔥 文章来源：[《[redis 源码走读] sentinel 哨兵 - 故障转移》](https://wenfh2020.com/2020/09/27/redis-sentinel-failover/)
+> 🔥 文章来源：[《[redis 源码走读] sentinel 哨兵 - 通知第三方》](https://wenfh2020.com/2020/10/09/redis-sentinel-script/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

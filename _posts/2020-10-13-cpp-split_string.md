@@ -18,7 +18,6 @@ author: wenfh2020
 ```c++
 /* g++ -std='c++11' test_split_strings.cpp -o test_split_strings && ./test_split_strings */
 #include <iostream>
-#include <sstream>
 #include <vector>
 
 void string_splits(const char* in, const char* sep, std::vector<std::string>& out, bool no_blank = true) {
