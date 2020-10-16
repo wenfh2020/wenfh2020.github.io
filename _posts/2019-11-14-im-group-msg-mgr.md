@@ -26,6 +26,8 @@ author: wenfh2020
 
 ![消息时序](/images/2020-02-25-08-14-15.png){: data-action="zoom"}
 
+> 设计图来源：[《即时通讯（IM）- 千人群组消息管理》](https://www.processon.com/apps/5dbb0ac4e4b0ea86c41ca550)
+
 ---
 
 * 群组离线消息数据分页链式管理。
@@ -125,7 +127,7 @@ msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/2019/11/14/im-group-msg-mgr/)
+> 🔥 文章来源：[《即时通讯（IM）- 千人群组消息管理》](https://wenfh2020.com/2019/11/14/im-group-msg-mgr/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
