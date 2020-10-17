@@ -88,7 +88,7 @@ WatchedEvent state:SyncConnected type:None path:null
 
 ---
 
-> 🔥 文章来源：[《zookeeper 异步 C++ client》](https://wenfh2020.com/2020/10/14/zk-async-c-client/)
+> 🔥 文章来源：[《[zookeeper] MacOS 安装 ZooKeeper》](https://wenfh2020.com/2020/10/14/zookeeper-macos-install/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
