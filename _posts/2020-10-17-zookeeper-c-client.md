@@ -85,7 +85,7 @@ int main() {
 
 ## 2. zookeeper-client-c 源码分析
 
-![client 工作流程](/images/2020-10-18-19-26-37.png){:data-action="zoom"}
+![client 工作流程](/images/2020-10-18-21-59-50.png){:data-action="zoom"}
 
 ### 2.1. 创建子线程
 
