@@ -19,10 +19,10 @@ author: wenfh2020
 
 ```c++
 /* script: g++ -std='c++11' test_split_strings.cpp -o split && ./split */
-void split(const std::string& s, std::vector<std::string>& vec, const std::string& seq = " ", bool trim_blank = true) {
+void split(const std::string& s, std::vector<std::string>& vec, const std::string& sep = " ", bool trim_blank = true) {
     std::size_t pre = 0, cur = 0;
-    while ((pre = s.find_first_not_of(seq, cur)) != std::string::npos) {
-        cur = s.find(seq, pre);
+    while ((pre = s.find_first_not_of(sep, cur)) != std::string::npos) {
+        cur = s.find(sep, pre);
         if (cur == std::string::npos) {
             vec.push_back(s.substr(pre, s.length() - pre));
             break;
@@ -30,7 +30,7 @@ void split(const std::string& s, std::vector<std::string>& vec, const std::strin
         vec.push_back(s.substr(pre, cur - pre));
     }
 
-    if (trim_blank && seq != " ") {
+    if (trim_blank && sep != " ") {
         for (auto& v : vec) {
             v.erase(0, v.find_first_not_of(" "));
             v.erase(v.find_last_not_of(" ") + 1);
