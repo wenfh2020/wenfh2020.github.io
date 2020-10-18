@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[zookeeper] MacOS 安装 ZooKeeper"
+title:  "MacOS 安装 ZooKeeper"
 categories: zookeeper
 tags: zookeeper macos install
 author: wenfh2020
