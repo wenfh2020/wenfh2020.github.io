@@ -8,7 +8,7 @@ author: wenfh2020
 
 zookeeper 有 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c)，它可以被编译成静态库进行工作。
 
-client 提供了两种工作方式：同步 / 异步。其实同步和异步实现并没有本质不同，都是通过多线程实现。下面通过走读源码，理解它们的工作方式，这样方便我们对它进行二次封装。
+client 提供了两种接口：同步 / 异步。其实同步和异步实现并没有本质不同，都是通过多线程实现。下面通过走读源码，理解它们的工作方式，这样方便我们对它进行二次封装。
 
 
 
