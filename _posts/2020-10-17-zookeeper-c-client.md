@@ -20,7 +20,7 @@ client 提供了两种接口：同步 / 异步。其实同步和异步实现并�
 
 ## 1. 使用
 
-[zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 同步方式，需要添加编译宏 `THREADED`，否则是异步。
+[zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 同步接口使用，需要添加编译宏 `THREADED`。
 
 这里是别人的封装的轻量级 `同步` [C++ 测试源码](https://github.com/yandaren/zk_cpp)。
 
