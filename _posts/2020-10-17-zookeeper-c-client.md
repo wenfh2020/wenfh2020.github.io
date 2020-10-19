@@ -472,7 +472,7 @@ void process_completions(zhandle_t *zh) {
 
 ## 4. 问题
 
-* 异步回调是通过子线程回调。一般情况下回调函数都是从主线程函数注册进去的，也就是子线程调用了主线程的函数，所以这个回调函数的操作涉及到多线程的操作，需要注意主线程的数据原子性。
+* 异步回调是通过子线程回调。所以这个回调函数涉及到多线程操作，需要注意主线程的数据原子性，这个问题隐藏得比较深。
 * 这个库是用 `poll` 管理 fd 相关逻辑，所以如果要将库的 fd 取出来绑定到主线程的 `epoll` 估计不那么容易。
 
 ---
@@ -482,6 +482,8 @@ void process_completions(zhandle_t *zh) {
 * [zk_cpp](https://github.com/yandaren/zk_cpp)
 * [Zookeeper 教程](https://www.runoob.com/w3cnote/zookeeper-tutorial.html)
 * [Zookeeper C API 指南](https://www.cnblogs.com/haippy/archive/2013/02/21/2920280.html)
+* [pthread_cond_wait()](https://www.cnblogs.com/diyingyun/archive/2011/11/25/2263164.html)
+* [pthread_cond_broadcast & pthread_cond_signal](https://www.cnblogs.com/XiaoXiaoShuai-/p/11855408.html)
 
 ---
 
