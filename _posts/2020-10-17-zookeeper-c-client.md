@@ -360,7 +360,7 @@ int zookeeper_process(zhandle_t *zh, int events) {
                 queue_completion(&zh->completions_to_process, cptr, 0);
             } else {
 #ifdef THREADED
-                /* 多线程模式，在本线程处理回复包，并唤醒等待的请求接口线程。 */
+                /* 多线程同步模式，在本线程处理回复包，并唤醒等待的请求接口线程。 */
                 struct sync_completion
                     *sc = (struct sync_completion *)cptr->data;
                 sc->rc = rc;
@@ -414,7 +414,10 @@ static int check_events(zhandle_t *zh, int events) {
                     /* 回复包，放进处理队列。 */
                     queue_buffer(&zh->to_process, zh->input_buffer, 0);
         }
+        ...
+        zh->input_buffer = 0;
      }
+     ...
 }
 ```
 
@@ -472,7 +475,7 @@ void process_completions(zhandle_t *zh) {
 
 ## 4. 问题
 
-* 异步回调是通过子线程回调。所以这个回调函数涉及到多线程操作，需要注意主线程的数据原子性，这个问题隐藏得比较深。
+* 异步回调方式是通过子线程回调，同步方式也有监控事件通过子线程回调，所以这个回调函数涉及到多线程操作，需要注意回调数据原子性的操作，这个问题隐藏得比较深。
 * 这个库是用 `poll` 管理 fd 相关逻辑，所以如果要将库的 fd 取出来绑定到主线程的 `epoll` 估计不那么容易。
 
 ---
