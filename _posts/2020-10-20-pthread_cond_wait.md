@@ -35,14 +35,13 @@ bool Bio::bio_init() {
 
 /* 添加数据。 */
 bool Bio::add_req_task(...) {
-    zk_task_t* task = new zk_task_t;
     ...
     pthread_mutex_lock(&m_mutex);
     m_req_tasks.push_back(task);
-    /* 发“信号”唤醒在睡眠的线程。*/
+    /* 发“信号”唤醒正在睡眠的一个线程。*/
     pthread_cond_signal(&m_cond);
     pthread_mutex_unlock(&m_mutex);
-    return true;
+    ...
 }
 
 /* 线程处理函数。 */
@@ -52,10 +51,10 @@ void* Bio::bio_process_tasks(void* arg) {
         ...
         pthread_mutex_lock(&bio->m_mutex);
         while (bio->m_req_tasks.size() == 0) {
-            /* 没有数据就睡眠，等待唤醒。 */
+            /* 没有数据就睡眠阻塞，等待唤醒。 */
             pthread_cond_wait(&bio->m_cond, &bio->m_mutex);
         }
-        /* 有数据就取出数据进行处理。 */
+        /* 处理数据。*/
         task = *bio->m_req_tasks.begin();
         bio->m_req_tasks.erase(bio->m_req_tasks.begin());
         pthread_mutex_unlock(&bio->m_mutex);
@@ -88,6 +87,8 @@ void* Bio::bio_process_tasks(void* arg) {
 
 ```c
 /* pthread_cond_wait.c */
+versioned_symbol (libpthread, __pthread_cond_wait, pthread_cond_wait, GLIBC_2_3_2);
+
 int
 __pthread_cond_wait (pthread_cond_t *cond, pthread_mutex_t *mutex) {
   return __pthread_cond_wait_common (cond, mutex, NULL);
@@ -113,13 +114,16 @@ __pthread_cond_wait_common(pthread_cond_t* cond, pthread_mutex_t* mutex,
                 break;
             ...
             if (abstime == NULL) {
-                /* 睡眠等待。 */
+                /* 睡眠阻塞等待。 */
                 err = futex_wait_cancelable(
                     cond->__data.__g_signals + g, 0, private);
             } else {
-                /* 限时等待。 */
+                ...
+                /* 限时阻塞等待。 */
+                err = futex_reltimed_wait_cancelable(...);
+                ...
             }
-
+            ...
             if (__glibc_unlikely(err == ETIMEDOUT)) {
                 __condvar_dec_grefs(cond, g, private);
                 /* 超时唤醒。 */
@@ -127,14 +131,13 @@ __pthread_cond_wait_common(pthread_cond_t* cond, pthread_mutex_t* mutex,
                 result = ETIMEDOUT;
                 goto done;
             }
+            ...
         }
     }
-
     ...
     /* “回复”唤醒者。 */
     futex_wake(cond->__data.__g_signals + g, 1, private);
     ...
-
 done:
     /* 确认唤醒。 */
     __condvar_confirm_wakeup(cond, private);
