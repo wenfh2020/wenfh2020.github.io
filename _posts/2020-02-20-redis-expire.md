@@ -176,7 +176,7 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 #### 3.1.3. maxmemory 淘汰
 
 超出最大内存 `maxmemory`，触发数据淘汰。淘汰合适的数据，可以参考[《[redis 源码走读] maxmemory 数据淘汰策略
-》](https://wenfh2020.com/2020/03/06/max-memory/)。
+》](https://wenfh2020.com/2020/03/06/redis-max-memory/)。
 
 ```c
 typedef struct redisObject {
