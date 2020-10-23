@@ -46,7 +46,7 @@ drwxr-xr-x  7 wenfh2020  staff   224B  3 13 14:51 lru
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥 文章来源：[《Linux 文件目录权限》](https://wenfh2020.com/2020/03/17/linux-file-attribute/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

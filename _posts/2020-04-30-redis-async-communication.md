@@ -315,7 +315,7 @@ typedef struct client {
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/2020/04/30/redis-async-communication/)
+> 🔥 文章来源：[《[redis 源码走读] 异步通信流程-单线程》](https://wenfh2020.com/2020/04/30/redis-async-communication/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

@@ -502,7 +502,7 @@ rdb 这一块内容挺多的，一章节太长了，所以分开了两章，本�
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/)
+> 🔥 文章来源：[《[redis 源码走读] rdb 持久化 - 应用场景》](https://wenfh2020.com/2020/03/19/redis-rdb-application/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
