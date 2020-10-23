@@ -134,7 +134,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/2020/06/11/epoll-lt-et/)
+> 🔥 文章来源：[《[epoll 源码走读] LT 与 ET 模式区别》](https://wenfh2020.com/2020/06/11/epoll-lt-et/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

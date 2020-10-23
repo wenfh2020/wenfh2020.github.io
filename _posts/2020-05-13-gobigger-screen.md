@@ -117,7 +117,7 @@ author: wenfh2020
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/2020/05/13/gobigger-screen/)
+> 🔥 文章来源：[《Macbook Pro 副屏 - Gobigger 4k 便携屏使用体验》](https://wenfh2020.com/2020/05/13/gobigger-screen/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
