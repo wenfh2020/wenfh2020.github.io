@@ -2,13 +2,14 @@
 layout: post
 title:  "[kimserver] 父子进程传输文件描述符"
 categories: kimserver
-tags: kimserver socketpair socket transfer
+tags: kimserver socketpair sendmsg recvmsg
 author: wenfh2020
 ---
 
-多进程服务架构，涉及到进程管理，例如，服务端为了负载均衡，希望负载比较低的子进程处理新的用户请求，这就需要主进程进行调度。就像包工头负责接活，然后将活分配给没那么忙处理能力比较强的马仔处理。
+父子进程传输文件描述符调度，通过管道通信实现。
 
-这个（文件描述符传输）调度的实现，通过管道通信，实现 socket 的传输。
+多进程服务架构，涉及到进程管理，例如，服务端为了负载均衡，希望负载比较低的子进程处理新的用户请求，这就需要主进程进行调度。就像包工头接活，马仔干活，包工头将活分配给没那么忙或者能力比较强的马仔处理。
+
 
 
 
@@ -22,13 +23,13 @@ author: wenfh2020
 
 ### 1.1. C/S 接入流程
 
-1. 父子进程通过 `socketpair` 创建的相互通信的管道。
-2. 客户端接入到主进程。
-3. 主进程 accept 到客户端的 fd1。
-4. 主进程将客户端的 fd1 通过管道 `sendmsg` 传输给子进程。
-5. 子进程通过 `recvmsg` 接收到主进程发送的 fd1。注意，这时候经过发送后的文件描述符已经发生改变，变成 fd2 了。
+1. 父子进程通过 `socketpair` 创建相互通信管道。
+2. 客户端连接到服务主进程。
+3. 主进程 accept 客户端连接文件描述符 fd1。
+4. 主进程将 fd1 通过管道 `sendmsg` 传输给子进程。
+5. 子进程通过 `recvmsg` 接收主进程发送的 fd1。注意，这时候经过发送后的客户端连接文件描述符 fd1 已经发生改变，变成 fd2 了。
 6. 文件描述符传输完毕，客户端与子进程成功建立连接 fd2。
-7. 主进程可以关闭旧的 fd1。
+7. 主进程关闭旧的 fd1。
 
 ![接入流程](/images/2020-10-23-17-41-28.png){:data-action="zoom"}
 
@@ -36,8 +37,8 @@ author: wenfh2020
 
 ### 1.2. 优缺点
 
-* 优点：多进程方便调度，无锁，减少 accept 竞争。
-* 缺点：单进程单线程接入，能力被削弱。（尽管接入操作不是很耗费资源。）
+* 优点：多进程方便调度，无锁，减少 accept 资源竞争。
+* 缺点：单进程单线程接入，肯定没有多进程（多线程） accept 强大。（尽管接入操作不是很耗费资源。）
 
 ---
 
@@ -51,7 +52,7 @@ author: wenfh2020
 
 ### 2.2. nginx
 
-sendmsg 和 recvmsg 发送和接收文件描述符。具体功能实现可以参考 nginx 源码：[ngx_channel](https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_channel.c)。
+sendmsg 和 recvmsg 具体功能实现可以参考 nginx 源码：[ngx_channel](https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_channel.c)。
 
 ```c
 /* 读数据。 */
@@ -64,7 +65,7 @@ ngx_int_t ngx_write_channel(ngx_socket_t s, ngx_channel_t *ch, size_t size, ngx_
 
 ## 3. 源码实现
 
-详细源码调用实现在 [kimserver](https://github.com/wenfh2020/kimserver)
+文件描述符传输逻辑，详细源码实现可以参考 [kimserver](https://github.com/wenfh2020/kimserver)。
 
 ```c++
 /* 传输数据结构。 */
@@ -78,11 +79,11 @@ typedef struct channel_s {
 int write_channel(int fd, channel_t* ch, size_t size, Log* logger = nullptr);
 int read_channel(int fd, channel_t* ch, size_t size, Log* logger = nullptr);
 
-/* manager.cpp 父子进程创建管道进行通信。 */
+/* 父子进程创建管道进行相互通信。 */
 bool Manager::create_worker(int worker_index) {
     int pid, data_fds[2];
     ...
-    /* 创建父子进程通信管道。 */
+    /* 创建管道。 */
     if (socketpair(PF_UNIX, SOCK_STREAM, 0, data_fds) < 0) {
        ...
     }
@@ -95,7 +96,7 @@ bool Manager::create_worker(int worker_index) {
     ...
 }
 
-/* 发送文件描述符，主进程 accpet 客户端接入的 fd，然后传输给子进程。 */
+/* 发送文件描述符：主进程 accpet 客户端的文件描述符，然后将其传输给子进程。 */
 void Network::accept_and_transfer_fd(int fd) {
     int cport, cfd, family;
     char cip[NET_IP_STR_LEN] = {0};
@@ -107,7 +108,7 @@ void Network::accept_and_transfer_fd(int fd) {
     int chanel_fd = m_woker_data_mgr->get_next_worker_data_fd();
     if (chanel_fd > 0) {
         LOG_DEBUG("send client fd: %d to worker through chanel fd %d", cfd, chanel_fd);
-        /* 发送的结构体数据。 */
+        /* 数据填充发送结构体。 */
         channel_t ch = {cfd, family, static_cast<int>(m_gate_codec)};
         int err = write_channel(chanel_fd, &ch, sizeof(channel_t), m_logger);
         ...
@@ -120,7 +121,7 @@ void Network::read_transfer_fd(int fd) {
     channel_t ch;
     ...
     while (max--) {
-        /* 子进程接收父进程发送的客户端的文件描述符。*/
+        /* 子进程接收父进程发送的客户端文件描述符。*/
         err = read_channel(fd, &ch, sizeof(channel_t), m_logger);
         ...
     }
