@@ -63,12 +63,12 @@ sudo make && make install
 
 用 Mac 机器本地压力测试，对比同步异步工作情况。单链接，同步异步读写相差不大，但是单线程异步客户端支持多条链接同时工作，这样性能就上来了。
 
- | links | driver | read / s | write / s |
- | :---- | :----- | :------- | :-------- |
- | 1     | sync   | 18913.9  | 2706.23   |
- | 1     | async  | 13576.3  | 3773.74   |
- | 5     | async  | 35166.9  | 12635.7   |
- | 10    | async  | 40861.2  | 17500.7   |
+| links | driver | read / s | write / s |
+| :---- | :----- | :------- | :-------- |
+| 1     | sync   | 18913.9  | 2706.23   |
+| 1     | async  | 13576.3  | 3773.74   |
+| 5     | async  | 35166.9  | 12635.7   |
+| 10    | async  | 40861.2  | 17500.7   |
 
 ---
 
@@ -204,7 +204,7 @@ int main(int args, char** argv) {
 
 ---
 
-> 🔥 文章来源：[wenfh2020.com](https://wenfh2020.com/2020/08/30/kimserver-async-mysql/)
+> 🔥 文章来源：[《[kimserver] C++ 异步非阻塞 Mysql 连接池》](https://wenfh2020.com/2020/08/30/kimserver-async-mysql/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
