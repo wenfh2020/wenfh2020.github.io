@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "golang & viper config & zookeeper"
-categories: golang
+categories: golang zookeeper
 tags: golang zookeeper viper
 author: wenfh2020
 ---
