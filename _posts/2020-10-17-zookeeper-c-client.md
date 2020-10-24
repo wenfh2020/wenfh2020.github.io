@@ -260,6 +260,12 @@ int zoo_adelete(zhandle_t *zh, const char *path, int version,
 
 ---
 
+<font color=red> 吐槽一下： </font>
+
+> 这个 lib 的异步是假异步，异步接口到处都是锁，回调函数由回调线程调用，即便调用异步接口，整个进程仍然都是多线程操作，并非单进程单线程的异步。所以这个 lib 从开始设计就只适合于多线程环境使用。
+
+---
+
 ### 2.3. 异步网络 IO
 
 逻辑在`网络线程`中实现。
