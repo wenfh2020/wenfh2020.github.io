@@ -6,7 +6,7 @@ tags: kimserver nodes contact
 author: wenfh2020
 ---
 
-kimserver 是多进程框架，在分布式系统里，多进程节点之间是如何进行通信的，客户端与分布式服务集群的通信流程是怎么样的，本章主要讲解这些问题。
+[kimserver](https://github.com/wenfh2020/kimserver) 是多进程框架，在分布式系统里，多进程节点之间是如何进行通信的，客户端与分布式服务集群的通信流程是怎么样的，本章主要讲解这些问题。
 
 
 

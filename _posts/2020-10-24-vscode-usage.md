@@ -6,9 +6,9 @@ tags: vscode usage
 author: wenfh2020
 ---
 
-我写代码习惯了一边写一边编译，以前用 `vistual studio` 系列，有编译、调试、运行快捷键；现在使用 `vscode` 却没发现这些快捷键，在很长一段时间里，经常在 `terminal` 窗口执行脚本编译，窗口来回切换，思路很容易被打断。
+写代码习惯了一边写一边编译，以前用 `vistual studio` 系列，有编译、调试、运行快捷键；现在使用 `vscode` 却找不到这些快捷键，在很长一段时间里，在 `terminal` 窗口执行脚本编译，窗口来回切换，麻烦不说，思路也很容易被打断。
 
-最近查了一下，需要自己设置 `vscode` 的一些脚本，绑定快捷键。
+最近查了一下，需要自己设置 `vscode` 的一些配置，绑定快捷键。
 
 
 
@@ -20,7 +20,7 @@ author: wenfh2020
 
 ## 1. 原理
 
-快捷键和脚本绑定，主要编辑两个文件 `keybindings.json` + `tasks.json`。详细可以参考[官方文档](https://code.visualstudio.com/docs/editor/tasks#_binding-keyboard-shortcuts-to-tasks)。
+快捷键和脚本绑定，主要编辑两个文件配置： `keybindings.json` + `tasks.json`。详细可以参考[官方文档](https://code.visualstudio.com/docs/editor/tasks#_binding-keyboard-shortcuts-to-tasks)。
 
 现在看看如何绑定快捷键 `ctrl+h` 和下面这个脚本命令。
 
