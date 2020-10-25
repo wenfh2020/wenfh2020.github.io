@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "vscode 快捷键执行脚本命令"
+title:  "vscode 一键（快捷键）执行脚本命令"
 categories: tool
-tags: vscode usage
+tags: vscode shell shortcuts
 author: wenfh2020
 ---
 
@@ -91,13 +91,19 @@ author: wenfh2020
 
 ---
 
-## 4. 参考
+## 4. 小结
+
+通过这种方法，可以将更多脚本命令关联快捷键，例如 `F6`，`F7`，`F10` 这些快捷键可以关联：编译，全编译，运行脚本，真正做到一键执行。
+
+---
+
+## 5. 参考
 
 * [Integrate with External Tools via Tasks](https://code.visualstudio.com/docs/editor/tasks#_binding-keyboard-shortcuts-to-tasks)
 
 ---
 
-> 🔥 文章来源：[《vscode 实用功能实用》](https://wenfh2020.com/2020/10/24/vscode-usage/)
+> 🔥 文章来源：[《vscode 实用功能实用》](https://wenfh2020.com/2020/10/24/vscode-shortcut-shell/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
