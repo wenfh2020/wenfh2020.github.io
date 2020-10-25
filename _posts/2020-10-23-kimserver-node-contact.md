@@ -43,15 +43,11 @@ author: wenfh2020
 4. gate 主进程将接入连接分派给合适的子进程（详细请参考 [《[kimserver] 父子进程传输文件描述符》](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)）。
 5. gate workerA 收到 client 发送的数据，它不处理，转发给 logic（gate 是如何知道 logic 节点的？前面说了通过 zk 进行节点发现）。
 6. gate 与 logic 建立连接，这里又回到了步骤 4。
-7. gate 子进程能成功接入 logic 的某个子进程 w。
+7. gate 子进程能成功接入 logic 的某个子进程。
 
 ---
 
-![分布式系统节点通信详细流程](/images/2020-10-24-11-07-15.png){:data-action="zoom"}
-
----
-
-## 2. 参考
+![分布式系统节点通信详细流程](/images/2020-10-25-09-40-12.png){:data-action="zoom"}
 
 ---
 
