@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[kimserver] redis + libev 异步连接池"
+title:  "[kimserver] libev + hiredis redis 异步连接池"
 categories: kimserver redis
 tags: redis hiredis pool
 author: wenfh2020
@@ -141,7 +141,7 @@ err callback cnt: 0
 
 ---
 
-> 🔥 文章来源：[《[kimserver] redis + libev 异步连接池》](https://wenfh2020.com/2020/09/07/libev-async-redis-pool/)
+> 🔥 文章来源：[《[kimserver] libev + hiredis redis 异步连接池》](https://wenfh2020.com/2020/09/07/libev-async-redis-pool/)
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
