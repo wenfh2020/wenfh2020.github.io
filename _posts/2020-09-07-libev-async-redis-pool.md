@@ -6,7 +6,7 @@ tags: redis hiredis pool
 author: wenfh2020
 ---
 
-[kimserver](https://github.com/wenfh2020/kimserver) 网络库基于 `libev`，异步链接池主要封装了 `hiredis`，它足够高效：
+[kimserver](https://github.com/wenfh2020/kimserver) 网络库基于 `libev`，redis 异步链接池主要封装了 `hiredis`，它足够高效：
 
 1. 单进程（单线程）的异步服务，轻松并发 10w+，。
 2. 一个 `redis - ip:port` 对应一个链接基本可以满足正常的读写。
