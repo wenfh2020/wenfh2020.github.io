@@ -6,7 +6,12 @@ tags: redis hiredis pool
 author: wenfh2020
 ---
 
-链接池主要封装了 `hiredis`，因为这个 redis client 已经足够高效：异步功能，轻松并发 10w+，单进程的异步服务，一个链接基本可以满足正常的读写。其它就是简单封装了一些接口，方便使用操作。
+[kimserver](https://github.com/wenfh2020/kimserver) 网络库基于 `libev`，异步链接池主要封装了 `hiredis`，它足够高效：
+
+1. 单进程（单线程）的异步服务，轻松并发 10w+，。
+2. 一个 `redis - ip:port` 对应一个链接基本可以满足正常的读写。
+3. 其它简单封装了一些接口，方便对多个 redis 节点进行操作。
+
 
 
 
@@ -82,25 +87,31 @@ class RedisMgr {
 详细源码在 ([github](https://github.com/wenfh2020/kimserver/blob/master/src/test/test_redis/test_redis.cpp))。
 
 ```c++
+/* redis 异步连接池对象指针。 */
 kim::RedisMgr* g_mgr = nullptr;
 
+/* redis 命令回调函数。 */
 void on_redis_callback(redisAsyncContext* c, void* reply, void* privdata) {...}
 
 int main(int args, char** argv) {
     ...
     struct ev_loop* loop = EV_DEFAULT;
     g_mgr = new kim::RedisMgr(m_logger, loop);
+    /* 初始化连接池，从 json 配置文件读入 redis 相关连接信息。 */
     if (!g_mgr->init(config["redis"])) {
         LOG_ERROR("init redis g_mgr failed!");
         return 1;
     }
     ...
+    /* redis 读写命令。 */
     std::vector<std::string> read_cmds{"get", "key"};
     std::vector<std::string> write_cmds{"set", "key", "hello world!"};
     for (int i = 0; i < g_test_cnt; i++) {
         user_data_t* d = new user_data_t(++g_send_cnt);
+        /* 发送 redis 命令到 redis test（参考配置）节点。 */
         g_mgr->send_to("test", g_is_write ? write_cmds : read_cmds, on_redis_callback, (void*)d);
     }
+    /* 运行 libev 异步服务。 */
     ev_run(loop, 0);
     ...
 }
