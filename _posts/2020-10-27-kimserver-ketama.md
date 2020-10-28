@@ -234,7 +234,7 @@ node_t* Nodes::get_node_in_hash(const std::string& node_type, const std::string&
 
 为了让它能散列开，分布均匀，采用对真实节点信息进行组合，生成 16 个字节的 md5 字符串，该字符串分为 4 组，每组 4 个字节，4 个字节的字符串通过移位组合成 4 个字节的 uint32 key。因为 md5 字符串里面的字母都是随机的，理论上，随机产生的数据应该是均匀的。这样 200 个散列 key 能映射到实体节点上，这样比较符合一致性哈希算法原理。
 
-> 这个虚拟节点算法不是我原创，是开源者的贡献，经过测试，比较符合算法预期。
+> 这个虚拟节点算法是开源者贡献，经过测试，比较符合算法预期。
 
 ```c
 std::vector<uint32_t> Nodes::gen_vnodes(const std::string& node_id) {
@@ -283,6 +283,7 @@ uint32_t Nodes::hash(const std::string& obj) {
 * [《五分钟理解一致性哈希算法》](https://blog.csdn.net/cywosp/article/details/23397179)
 * [理解一致性哈希算法的原理](https://blog.csdn.net/z_s_z2016/article/details/108111907)
 * [一致性哈希算法与C++实现](https://blog.csdn.net/okiwilldoit/article/details/51352743)
+* [FNV哈希算法](https://blog.csdn.net/hustfoxy/article/details/23687239)
 
 ---
 
