@@ -6,7 +6,7 @@ tags: protobuffer json
 author: wenfh2020
 ---
 
-protobuf 3.0 版本支持 protobuf 与 json 数据结构相互转换。
+protobuf 3.0 版本支持 protobuf 与 json 数据相互转换。
 
 
 
