@@ -17,16 +17,13 @@ protobuf 3.0 版本支持 protobuf 与 json 数据结构相互转换。
 
 ## 1. 转换接口
 
+protobuf 与 json 数据转换接口在 `google/protobuf/util/json_util.h` 文件里。
+
 ```c++
 /* protobuf 数据转换成 json 结构。 */
-inline util::Status MessageToJsonString(const Message& message, std::string* output) {
-  return MessageToJsonString(message, output, JsonOptions());
-}
-
+inline util::Status MessageToJsonString(const Message& message, std::string* output);
 /* json 数据结构转换为 protobuf 数据结构。 */
-inline util::Status JsonStringToMessage(StringPiece input, Message* message) {
-  return JsonStringToMessage(input, message, JsonParseOptions());
-}
+inline util::Status JsonStringToMessage(StringPiece input, Message* message);
 ```
 
 ---
@@ -61,9 +58,8 @@ message node_info {
 ```c++
 ...
 #include <google/protobuf/util/json_util.h>
-using google::protobuf::util::JsonStringToMessage;
 
-void test_proto_json() {
+void convert() {
     kim::node_info node;
     node.set_name("111111");
     node.mutable_addr_info()->set_bind("wruryeuwryeuwrw");
@@ -83,7 +79,6 @@ void test_proto_json() {
     options.preserve_proto_field_names = true;
     MessageToJsonString(node, &json_string, options);
 
-    // std::cout << node.SerializeAsString() << std::endl
     std::cout << json_string << std::endl;
 
     node.Clear();
@@ -97,7 +92,7 @@ void test_proto_json() {
 }
 
 int main(int argc, char** argv) {
-    test_proto_json();
+    convert();
     return 0;
 }
 ```
