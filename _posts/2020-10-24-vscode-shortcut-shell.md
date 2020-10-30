@@ -91,15 +91,33 @@ author: wenfh2020
 
 ---
 
-## 4. 小结
+## 4. 其它
+
+当运行快捷键后，vscode 底部的 terminal 窗口会弹出，可以修改 `keybindings.json` 绑定 `esc` 键，快捷隐藏。
+
+> 有时候在 13 寸本子上撸代码，就那么一点代码展示空间，所以只能使劲折腾。
+
+``` json
+{
+    "key": "escape",
+    "command": "workbench.action.closePanel",
+    "when": "activePanel"
+}
+```
+
+---
+
+## 5. 小结
 
 通过这种方法，可以将更多脚本命令关联快捷键，例如 `F6`，`F7`，`F10` 这些快捷键可以关联：编译，全编译，运行脚本，真正做到一键执行。
 
 ---
 
-## 5. 参考
+## 6. 参考
 
 * [Integrate with External Tools via Tasks](https://code.visualstudio.com/docs/editor/tasks#_binding-keyboard-shortcuts-to-tasks)
+* [vscode 快捷键配置](https://www.cnblogs.com/JohnRain/p/10361940.html)
+* [在Visual Studio Code中在编辑器和集成终端之间切换焦点](https://blog.csdn.net/CHCH998/article/details/106451078)
 
 ---
 
