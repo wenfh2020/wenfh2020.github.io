@@ -59,6 +59,7 @@ message node_info {
 ```c++
 ...
 #include <google/protobuf/util/json_util.h>
+using google::protobuf::util::JsonStringToMessage;
 
 void convert() {
     kim::node_info node;
