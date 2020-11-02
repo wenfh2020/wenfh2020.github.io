@@ -18,7 +18,44 @@ client 提供了两种接口：同步 / 异步。同步和异步接口都是通�
 
 ---
 
-## 1. 使用
+## 1. Linux 安装
+
+[zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 在 [zookeeper](https://github.com/apache/zookeeper) 的子目录下。
+
+* 安装脚本。
+
+```shell
+yum install -y ant
+yum install -y cppunit-devel
+# 下载的是 2018 年的版本，最新版本根据文档，执行 ant 命令会失败。
+wget https://github.com/apache/zookeeper/archive/release-3.4.13.tar.gz
+tar zxf release-3.4.13.tar.gz
+cd zookeeper-release-3.4.13
+ant clean jar
+ant compile_jute
+cd src/c
+autoreconf -if
+./configure
+make && make install
+```
+
+* 安装结果。
+
+```shell
+# 安装静态库到 /usr/local/lib/ 目录下。
+libtool: install: /usr/bin/install -c .libs/libzookeeper_st.a /usr/local/lib/libzookeeper_st.a
+...
+libtool: install: /usr/bin/install -c .libs/libzookeeper_mt.a /usr/local/lib/libzookeeper_mt.a
+...
+# 安装对应的头文件到 /usr/local/include 目录下。
+/usr/bin/mkdir -p '/usr/local/include/zookeeper'
+/usr/bin/install -c -m 644 include/zookeeper.h include/zookeeper_version.h include/zookeeper_log.h include/proto.h include/recordio.h generated/zookeeper.jute.h '/usr/local/include/zookeeper'
+
+```
+
+---
+
+## 2. 使用
 
 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 同步接口使用，需要添加编译宏 `THREADED`。
 
@@ -26,7 +63,7 @@ client 提供了两种接口：同步 / 异步。同步和异步接口都是通�
 
 ---
 
-### 1.1. 编译脚本
+### 2.1. 编译脚本
 
 * 添加宏 `THREADED`。
 * 添加静态库 `zookeeper_mt`。
@@ -38,7 +75,7 @@ g++ -g -std='c++11' -DTHREADED zk_cpp_test.cpp zk_cpp.cpp -lzookeeper_mt -o test
 
 ---
 
-### 1.2. 测试源码
+### 2.2. 测试源码
 
 即便是同步使用方式，也有部分异步回调的接口。因为监控的节点变化和节点数据变化不是实时发生的。
 
@@ -83,11 +120,11 @@ int main() {
 
 ---
 
-## 2. zookeeper-client-c 源码分析
+## 3. zookeeper-client-c 源码分析
 
 ![client 工作流程](/images/2020-10-18-21-59-50.png){:data-action="zoom"}
 
-### 2.1. 创建子线程
+### 3.1. 创建子线程
 
 `zookeeper-client-c` 初始化时，会创建两个子线程。换句话说，只要使用这个库，最少得有三个线程：主线程 + 两个子线程。
 
@@ -129,7 +166,7 @@ void start_threads(zhandle_t *zh) {
 
 ---
 
-### 2.2. 同步异步接口
+### 3.2. 同步异步接口
 
 zk client 与 zk server 通信常用接口。
 
@@ -266,7 +303,7 @@ int zoo_adelete(zhandle_t *zh, const char *path, int version,
 
 ---
 
-### 2.3. 异步网络 IO
+### 3.3. 异步网络 IO
 
 逻辑在`网络线程`中实现。
 
@@ -429,7 +466,7 @@ static int check_events(zhandle_t *zh, int events) {
 
 ---
 
-### 2.4. 回调
+### 3.4. 回调
 
 异步接口实现调用 / 节点监控事件，都是通过异步回调进行通知。异步回调逻辑，在回调线程中实现。
 
@@ -470,7 +507,7 @@ void process_completions(zhandle_t *zh) {
 
 ---
 
-## 3. 小结
+## 4. 小结
 
 * [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 提供同步异步接口。
 * 它是多线程工作方式。两个线程分别是：网络 IO 线程 和 回调处理线程。
@@ -479,7 +516,7 @@ void process_completions(zhandle_t *zh) {
 
 ---
 
-## 4. 问题
+## 5. 问题
 
 * 异步接口回调，通过回调线程处理。同步接口阻塞在网络线程，当网络请求收到回复，网络线程才会唤醒阻塞。显然异步性能要高于同步，但是同步方式在多线程模式下工作，可以避免逻辑割裂。
 * 异步回调方式是通过子线程回调，同步方式也有监控事件通过子线程回调，所以这个回调函数涉及到多线程操作，需要注意回调数据原子性的操作，这个问题隐藏得比较深。
@@ -487,13 +524,14 @@ void process_completions(zhandle_t *zh) {
 
 ---
 
-## 5. 参考
+## 6. 参考
 
 * [zk_cpp](https://github.com/yandaren/zk_cpp)
 * [Zookeeper 教程](https://www.runoob.com/w3cnote/zookeeper-tutorial.html)
 * [Zookeeper C API 指南](https://www.cnblogs.com/haippy/archive/2013/02/21/2920280.html)
 * [pthread_cond_wait()](https://www.cnblogs.com/diyingyun/archive/2011/11/25/2263164.html)
 * [pthread_cond_broadcast & pthread_cond_signal](https://www.cnblogs.com/XiaoXiaoShuai-/p/11855408.html)
+* [Zookeeper C客户端库编译](https://blog.csdn.net/jinguangliu/article/details/87191236)
 
 ---
 
