@@ -49,10 +49,10 @@ zookeeper 源码目录下有一个 [zookeeper-client-c](https://github.com/apach
 > [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 工作方式，请参考 [《ZooKeeper C - Client 异步/同步工作方式》](https://wenfh2020.com/2020/10/17/zookeeper-c-client/)
 
 * 创建一个新的线程，调用 `zookeeper-c-client` 的同步接口。
-* 主线程向 zookeeper 发送命令，命令将以任务方式将其放到任务队列，提供新线程消费。
+* 主线程向 zookeeper 发送命令，命令将以任务方式将其添加到任务队列，提供新线程消费。
 * 主线程通过时钟定时消费，新线程处理任务的结果。
 
-![整合 zookeeper-c-client](/images/2020-11-07-16-30-39.png){:data-action="zoom"}
+![整合 zookeeper-client-c](/images/2020-11-07-16-38-36.png){:data-action="zoom"}
 
 ---
 
@@ -63,7 +63,7 @@ zookeeper 源码目录下有一个 [zookeeper-client-c](https://github.com/apach
 * 异步服务接口逻辑。
 
 ```c++
-/* 这个类参考了 redis 的 bio 线程实现。 */
+/* Bio 这个类功能参考了 redis 的 bio 线程实现。 */
 class ZkClient : public Bio {
    public:
     ZkClient(Log* logger);
@@ -79,7 +79,7 @@ class ZkClient : public Bio {
     bool reconnect();
     /* 节点注册逻辑。 */
     bool node_register();
-    /* zk 日志设置，注意要在 zk-client 连接前调用，是 client 里面的独立日志。 */
+    /* zk 日志设置，注意要在 zookeeper-client-c 连接前调用，是 client 里面的独立日志。 */
     void set_zk_log(const std::string& path, utility::zoo_log_lvl level = utility::zoo_log_lvl_info);
 
     /* bio 线程调用同步接口处理任务队列的任务。 */
@@ -131,7 +131,7 @@ class ZkClient : public Bio {
 };
 ```
 
-* 后台线程处理逻辑。
+* 后台线程处理同步逻辑。
 
 ```c++
 /* 添加任务接口。 */
