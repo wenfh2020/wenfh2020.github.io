@@ -50,7 +50,7 @@ PATH=".$PATH:$JAVA_HOME/bin"
 
 ### 1.2. 安装 zk
 
-* MacOS 安装命令。
+* 安装命令。
 
 ```shell
 brew install zookeeper
@@ -86,7 +86,7 @@ WatchedEvent state:SyncConnected type:None path:null
 
 ## 2. Centos
 
-zk 在 Linux 上的安装方法与 MacOS 的安装也是大同小异。
+在 Linux / MacOS 安装 zk 方法大同小异。
 
 ### 2.1. 安装 jdk
 
@@ -99,7 +99,7 @@ yum install java-1.8.0-openjdk.x86_64 -y
 
 ### 2.2. 安装 zk
 
-最好去官网下载文件名带 `bin` 字母的安装包，从 github 下载的源码包，编译了好几个都没有运行成功！
+最好去官网下载文件名带 `bin` 字母的安装包，笔者从 github 下载的源码包，编译了好几个都没有成功跑起来！
 
 ```shell
 wget https://archive.apache.org/dist/zookeeper/zookeeper-3.5.6/apache-zookeeper-3.5.6-bin.tar.gz
