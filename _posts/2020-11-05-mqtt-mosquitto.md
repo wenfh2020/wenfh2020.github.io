@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "物联网数据通信 mqtt - mosquitto"
-categories: tool
+categories: golang
 tags: mqtt mosquitto
 author: wenfh2020
 ---
