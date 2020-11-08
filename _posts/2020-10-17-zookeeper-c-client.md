@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "ZooKeeper C - Client 异步/同步工作方式"
+title:  "zookeeper-client-c 异步/同步工作方式"
 categories: zookeeper
 tags: zookeeper sync async c client
 author: wenfh2020
