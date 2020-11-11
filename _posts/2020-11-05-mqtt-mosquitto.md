@@ -6,7 +6,7 @@ tags: mqtt mosquitto
 author: wenfh2020
 ---
 
-最近在做一个智慧农场项目，数据服务与硬件对接，需要用到 `mqtt` 解决方案 `mosquitto`。通过 golang 建立数据服务，获取硬件数据。
+前段时间在跟进智慧农场项目，数据服务与硬件对接，需要用到 `mqtt` 解决方案 `mosquitto`。通过 golang 建立数据服务，获取硬件数据。
 
 
 
