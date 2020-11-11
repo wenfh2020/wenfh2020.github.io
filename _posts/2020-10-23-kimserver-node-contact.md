@@ -18,36 +18,26 @@ author: wenfh2020
 
 ## 1. 流程
 
-客户端与服务集群通信流程。
+### 1.1. 客户端与服务通信
+
+![client 与 server 通信流程](/images/2020-11-10-10-41-39.png){:data-action="zoom"}
 
 ---
 
-### 1.1. 总流程
+### 1.2. 服务节点通信
 
-1. client 连接接入服务（gate），然后给 gate 发送 request。
-2. gate 接收到 client 发送的 request，它不处理，它转发给后面的逻辑服务（logic）处理。
-3. logic 处理 gate 发送的 request，给 gate 回复处理结果 ack。
-4. gate 收到 logic 的 ack 然后给 client 回复。
+A 节点与 B 节点数据透传 --> A1 与 B1 子进程建立通信。
 
-> 服务集群通过 zookeeper（后面简称 zk）管理，所以节点可以通过 zk 发现其它节点。
+* A1 创建 socket fd。
+* A1 连接 B 节点 ip / port -->  A1 连接 B0。
+* A1 connect 异步返回结果，触发读写事件。
+* A1 与 B0 连接成功，A1 发送连接信息（type / ip / port / index）给 B0。
+* B0 接收到 A1 发的数据，将 fd 透传给对应的子进程 B1，A1 与 B1 连接成功。（[《[kimserver] 父子进程传输文件描述符》](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)
+* B1 将自己的 type / ip / port / index 信息回传给 A1。
+* A1 收到 B1 回包，将 B1 的 fd 保存起来。
+* A1 与 B1 的通道被打通，执行转发的业务包。
 
-![分布式系统节点通信总流程](/images/2020-10-24-10-57-14.png){:data-action="zoom"}
-
----
-
-### 1.2. 详细通信流程
-
-1. 通过域名解析获取离 client 最近的服务 ip。
-2. nginx 做服务集群 proxy。
-3. nginx 根据负载均衡策略，接入到某个 gate 服务节点。
-4. gate 主进程将接入连接分派给合适的子进程（详细请参考 [《[kimserver] 父子进程传输文件描述符》](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)）。
-5. gate workerA 收到 client 发送的数据，它不处理，转发给 logic（gate 是如何知道 logic 节点的？前面说了通过 zk 进行节点发现）。
-6. gate 与 logic 建立连接，这里又回到了步骤 4。
-7. gate 子进程能成功接入 logic 的某个子进程。
-
----
-
-![分布式系统节点通信详细流程](/images/2020-10-25-09-40-12.png){:data-action="zoom"}
+![分布式系统节点通信详细流程](/images/2020-11-10-10-29-50.png){:data-action="zoom"}
 
 ---
 

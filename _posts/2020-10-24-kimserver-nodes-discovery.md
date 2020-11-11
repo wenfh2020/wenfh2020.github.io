@@ -40,9 +40,7 @@ author: wenfh2020
 
 ---
 
-## 2. 整合 zk-client
-
-### 2.1. 原理
+## 2. 整合 zookeeper-client-c
 
 zookeeper 源码目录下有一个 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c)，工作模式是多线程。而 [kimserver](https://github.com/wenfh2020/kimserver) 是多进程异步服务，要整合一个多线程的 client 进来，又不能破坏原来的异步逻辑，这里确实花了不少心思。
 
@@ -56,9 +54,87 @@ zookeeper 源码目录下有一个 [zookeeper-client-c](https://github.com/apach
 
 ---
 
-### 2.2. 源码实现
+## 3. 节点逻辑
 
-从上图可以看出，这个功能的实现流程，详细实现请查看 [源码](https://github.com/wenfh2020/kimserver/blob/master/src/core/zk_client.cpp)，这里简单介绍一下对应的逻辑。
+### 3.1. zk 端数据
+  
+zk 节点结构，类似 Linux 目录管理，节点管理详细命令请通过 `./zkCli.sh` 执行 `help` 命令。
+
+```shell
+# 启动 client。
+# [...] ./zkCli.sh
+# 查看 kimserver 服务集群的节点目录。
+[zk: localhost:2181(CONNECTED) 0] ls -R /kimserver
+# 服务根节点。
+/kimserver
+# 根节点下的节点类型。
+/kimserver/gate
+# gate 节点类型下的两个子服务（临时保护节点）。
+/kimserver/gate/kimserver-gate0000000310
+/kimserver/gate/kimserver-gate0000000312
+```
+
+---
+
+### 3.2. client 端数据
+
+[zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 端日志数据。设置 DEBUG 等级日志，查看调用 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 注册节点的工作流程。
+
+```shell
+# 初始化 client 连接 zk 信息。
+2020-11-11 09:26:57,416:21244(0x7ff8dc3ed8c0):ZOO_INFO@zookeeper_init@827: Initiating client connection, host=127.0.0.1:2181 sessionTimeout=10000 watcher=0x44233a sessionId=0 sessionPasswd=<null> context=0x7ff8d7888500 flags=0
+
+# 启动两条线程工作。
+2020-11-11 09:26:57,416:21244(0x7ff8dc3ed8c0):ZOO_DEBUG@start_threads@221: starting threads...
+2020-11-11 09:26:57,416:21244(0x7ff8d6ffe700):ZOO_DEBUG@do_completion@458: started completion thread
+2020-11-11 09:26:57,420:21244(0x7ff8d77ff700):ZOO_DEBUG@do_io@367: started IO thread
+2020-11-11 09:26:57,421:21244(0x7ff8d77ff700):ZOO_INFO@check_events@1764: initiated connection to server [127.0.0.1:2181]
+
+# 检查父节点（/kimserver/gate）是否存在。
+2020-11-11 09:26:57,427:21244(0x7ff8d5bff700):ZOO_DEBUG@zoo_awexists@2894: Sending request xid=0x5fab3de2 for path [/kimserver/gate] to 127.0.0.1:2181
+
+...
+
+# 创建临时保护节点（/kimserver/gate/kimserver-gate0000000312）
+2020-11-11 09:26:57,798:21244(0x7ff8d5bff700):ZOO_DEBUG@zoo_acreate@2815: Sending request xid=0x5fab3de4 for path [/kimserver/gate/kimserver-gate] to 127.0.0.1:2181
+2020-11-11 09:26:57,801:21244(0x7ff8d77ff700):ZOO_DEBUG@process_sync_completion@1929: Processing sync_completion with type=6 xid=0x5fab3de4 rc=0
+
+# 设置节点信息（type/ip/port）。
+2020-11-11 09:26:57,801:21244(0x7ff8d5bff700):ZOO_DEBUG@zoo_aset@2759: Sending request xid=0x5fab3de5 for path [/kimserver/gate/kimserver-gate0000000312] to 127.0.0.1:2181
+2020-11-11 09:26:57,803:21244(0x7ff8d77ff700):ZOO_DEBUG@process_sync_completion@1929: Processing sync_completion with type=1 xid=0x5fab3de5 rc=0
+
+# 获取并监视（watch） gate（/kimserver/gate）节点类型下的子节点变化。
+2020-11-11 09:26:57,803:21244(0x7ff8d5bff700):ZOO_DEBUG@zoo_awget_children_@2927: Sending request xid=0x5fab3de6 for path [/kimserver/gate] to 127.0.0.1:2181
+2020-11-11 09:26:57,805:21244(0x7ff8d77ff700):ZOO_DEBUG@process_sync_completion@1929: Processing sync_completion with type=3 xid=0x5fab3de6 rc=0
+
+# gate（/kimserver/gate）节点类型下，有三个子节点（包括自己），获取并监控子节点的 ip/port 信息，并监控它们节点数据的变化。
+2020-11-11 09:26:57,805:21244(0x7ff8d5bff700):ZOO_DEBUG@zoo_awget@2714: Sending request xid=0x5fab3de7 for path [/kimserver/gate/kimserver-gate0000000312] to 127.0.0.1:2181
+2020-11-11 09:26:57,806:21244(0x7ff8d77ff700):ZOO_DEBUG@process_sync_completion@1929: Processing sync_completion with type=2 xid=0x5fab3de7 rc=0
+2020-11-11 09:26:57,806:21244(0x7ff8d5bff700):ZOO_DEBUG@zoo_awget@2714: Sending request xid=0x5fab3de8 for path [/kimserver/gate/kimserver-gate0000000311] to 127.0.0.1:2181
+2020-11-11 09:26:57,807:21244(0x7ff8d77ff700):ZOO_DEBUG@process_sync_completion@1929: Processing sync_completion with type=2 xid=0x5fab3de8 rc=0
+2020-11-11 09:26:57,807:21244(0x7ff8d5bff700):ZOO_DEBUG@zoo_awget@2714: Sending request xid=0x5fab3de9 for path [/kimserver/gate/kimserver-gate0000000310] to 127.0.0.1:2181
+
+# 节点掉线通知。（/kimserver/gate/kimserver-gate0000000311）
+2020-11-11 09:27:08,559:21244(0x7ff8d77ff700):ZOO_DEBUG@zookeeper_process@2263: Processing WATCHER_EVENT
+2020-11-11 09:27:08,559:21244(0x7ff8d77ff700):ZOO_DEBUG@zookeeper_process@2263: Processing WATCHER_EVENT
+2020-11-11 09:27:08,559:21244(0x7ff8d6ffe700):ZOO_DEBUG@process_completions@2169: Calling a watcher for node [/kimserver/gate/kimserver-gate0000000311], type = -1 event=ZOO_DELETED_EVENT
+
+# 前面监控了父节点（/kimserver/gate）的节点变化，有节点掉线了，父节点通知有子节点变化。
+2020-11-11 09:27:08,559:21244(0x7ff8d6ffe700):ZOO_DEBUG@process_completions@2169: Calling a watcher for node [/kimserver/gate], type = -1 event=ZOO_CHILD_EVENT
+
+...
+
+# client 执行完逻辑后，通过心跳与 zk 保活。
+2020-11-11 09:27:12,753:21244(0x7ff8d77ff700):ZOO_DEBUG@zookeeper_process@2255: Got ping response in 0 ms
+2020-11-11 09:27:16,090:21244(0x7ff8d77ff700):ZOO_DEBUG@zookeeper_process@2255: Got ping response in 0 ms
+2020-11-11 09:27:19,427:21244(0x7ff8d77ff700):ZOO_DEBUG@zookeeper_process@2255: Got ping response in 0 ms
+```
+
+---
+
+### 3.3. 源码实现
+
+从上图可以看出，这个功能的实现流程，注册逻辑主要通过 `node_register()` 函数实现，详细实现请查看 [源码](https://github.com/wenfh2020/kimserver/blob/master/src/core/zk_client.cpp)，这里简单介绍一下对应的逻辑。
 
 * 异步服务接口逻辑。
 
@@ -161,8 +237,8 @@ void* Bio::bio_process_tasks(void* arg) {
             /* wait for pthread_cond_signal. */
             pthread_cond_wait(&bio->m_cond, &bio->m_mutex);
         }
-        task = *bio->m_req_tasks.begin();
-        bio->m_req_tasks.erase(bio->m_req_tasks.begin());
+        task = bio->m_req_tasks.front();
+        bio->m_req_tasks.pop_front();
         pthread_mutex_unlock(&bio->m_mutex);
 
         if (task != nullptr) {
@@ -187,12 +263,9 @@ void Bio::handle_acks() {
 
     /* fetch 100 acks to handle. */
     pthread_mutex_lock(&m_mutex);
-    if (m_ack_tasks.size() > 0) {
-        auto it = m_ack_tasks.begin();
-        while (it != m_ack_tasks.end() && i++ < 100) {
-            tasks.push_back(*it);
-            m_ack_tasks.erase(it++);
-        }
+    while (m_ack_tasks.size() > 0 && i++ < 100) {
+        tasks.push_back(m_ack_tasks.front());
+        m_ack_tasks.pop_front();
     }
     pthread_mutex_unlock(&m_mutex);
 
@@ -205,13 +278,13 @@ void Bio::handle_acks() {
 
 ---
 
-## 3. 后记
+## 4. 后记
 
 坦白说，这个轮子造得有点费劲，还有很多细节地方有待优化。
 
 ---
 
-## 4. 参考
+## 5. 参考
 
 * [徒手教你使用zookeeper编写服务发现](https://zhuanlan.zhihu.com/p/34156758)
 
