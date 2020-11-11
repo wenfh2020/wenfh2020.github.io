@@ -139,7 +139,6 @@ zk 节点结构，类似 Linux 目录管理，节点管理详细命令请通过 
 * 异步服务接口逻辑。
 
 ```c++
-/* Bio 这个类功能参考了 redis 的 bio 线程实现。 */
 class ZkClient : public Bio {
    public:
     ZkClient(Log* logger);
@@ -207,7 +206,7 @@ class ZkClient : public Bio {
 };
 ```
 
-* 后台线程处理同步逻辑。
+* 后台线程（Bio）处理同步逻辑。Bio 这个类参考了 redis 的 [bio](https://github.com/antirez/redis/blob/unstable/src/bio.c) 线程实现。
 
 ```c++
 /* 添加任务接口。 */
@@ -280,7 +279,7 @@ void Bio::handle_acks() {
 
 ## 4. 后记
 
-坦白说，这个轮子造得有点费劲，还有很多细节地方有待优化。
+这个轮子造得有点费劲，还有很多细节有待后续优化。
 
 ---
 
