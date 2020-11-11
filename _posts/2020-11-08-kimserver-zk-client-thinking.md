@@ -6,7 +6,7 @@ tags: kimserver nodes contact
 author: wenfh2020
 ---
 
-[kimserver](https://github.com/wenfh2020/kimserver) 是多进程异步框架，而 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 工作模式是多线程，整理下将它们整合过程的思维。
+[kimserver](https://github.com/wenfh2020/kimserver) 是多进程异步框架，而 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 工作模式是多线程，本章整理一下将它们整合的思考过程。
 
 
 
@@ -50,7 +50,7 @@ author: wenfh2020
 
 ## 4. 小结
 
-从上面几个图，思路从复杂到简单，直到逻辑碎片被串联起来。
+从上面几个图，思路从复杂到简单，直到逻辑碎片被串联起来，这样多线程的 lib 添加进来后，不会破坏 [kimserver](https://github.com/wenfh2020/kimserver) 异步服务原来的逻辑。
 
 ---
 
