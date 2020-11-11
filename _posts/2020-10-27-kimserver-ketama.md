@@ -27,7 +27,7 @@ author: wenfh2020
 
 > 详细通信流程可以参考 [《[kimserver] 分布式系统-多进程框架节点通信》](https://wenfh2020.com/2020/10/23/kimserver-node-contact/)
 
-![节点一致性哈希算法工作流程](/images/2020-10-28-09-27-00.png){:data-action="zoom"}
+![节点一致性哈希算法工作流程](/images/2020-11-11-12-39-44.png){:data-action="zoom"}
 
 ---
 
