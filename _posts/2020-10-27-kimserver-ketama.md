@@ -6,9 +6,11 @@ tags: kimserver ketama
 author: wenfh2020
 ---
 
-一致性哈希算法是一种特殊的哈希算法，目的是解决分布式缓存的问题。算法原理，这篇帖子（[《五分钟理解一致性哈希算法》](https://blog.csdn.net/cywosp/article/details/23397179)）讲得很通俗易懂，可以去看看。
+一致性哈希算法是一种特殊的哈希算法，目的是解决分布式缓存的问题。
 
 本章主要讲述一致性哈希算法在 [kimserver](https://github.com/wenfh2020/kimserver) 架构下的使用流程，以及算法实现。
+
+> 算法原理，这篇帖子（[《五分钟理解一致性哈希算法》](https://blog.csdn.net/cywosp/article/details/23397179)）讲得很通俗易懂，可以去看看。
 
 
 
