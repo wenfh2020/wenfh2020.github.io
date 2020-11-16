@@ -141,7 +141,7 @@ __pthread_cond_wait_common(pthread_cond_t* cond, pthread_mutex_t* mutex,
 done:
     /* 确认唤醒。 */
     __condvar_confirm_wakeup(cond, private);
-    /* 解锁。*/
+    /* 上锁。*/
     err = __pthread_mutex_cond_lock(mutex);
     /* XXX Abort on errors that are disallowed by POSIX?  */
     return (err != 0) ? err : result;
