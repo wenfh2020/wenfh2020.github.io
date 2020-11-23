@@ -35,7 +35,7 @@ A 节点与 B 节点数据透传 --> A1 与 B1 子进程建立通信。
 * B0 接收到 A1 发的数据，将 fd 透传给对应的子进程 B1，A1 与 B1 连接成功。（[《[kimserver] 父子进程传输文件描述符》](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)
 * B1 将自己的 type / ip / port / index 信息回传给 A1。
 * A1 收到 B1 回包，将 B1 的 fd 保存起来。
-* A1 与 B1 的通道被打通，执行转发的业务包。
+* A1 与 B1 的通道被打通后，发送缓冲区里等待发送的的业务数据包。
 
 ![分布式系统节点通信详细流程](/images/2020-11-10-10-29-50.png){:data-action="zoom"}
 
@@ -45,9 +45,9 @@ A 节点与 B 节点数据透传 --> A1 与 B1 子进程建立通信。
 
 核心逻辑在 `sys_cmd.h/sys_cmd.cpp` 文件里实现。
 
-kimserver 作为异步服务，核心功能是把异步的逻辑封装在 `Cmd` 沙盒里，但是系统内部节点通信逻辑牵涉到多种数据结构调用，而且分开多个 `Module` 或者 `Cmd` 模块，让逻辑更加零散，维护起来，会让人云里雾绕。
+kimserver 作为异步服务，核心功能是把异步的逻辑封装在 `Cmd` 沙盒里，但是系统内部节点通信逻辑复杂，逻辑牵涉到多种数据结构调用，而且分开多个 `Cmd` 模块，让逻辑更加零散，维护起来，会让人云里雾绕。
 
-所以笔者，将系统的父子进程通信逻辑集中在一个文件里实现，逻辑清晰，而且方便维护。
+所以笔者，将系统的父子进程异步通信逻辑集中在一个文件里实现，逻辑相对清晰，而且方便维护。
 
 ---
 
@@ -59,7 +59,6 @@ kimserver 作为异步服务，核心功能是把异步的逻辑封装在 `Cmd` 
 /* network.cpp */
 bool Network::auto_send(const std::string& host, int port, int worker_index,
                         const MsgHead& head, const MsgBody& body) {
-            host.c_str(), port, worker_index, head.cmd(), head.seq());
     ...
     /* 创建 socket，等待连接。 */
     fd = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
@@ -112,7 +111,7 @@ bool Network::auto_send(const std::string& host, int port, int worker_index,
     c->set_node_id(node_id);
     /* 启动链接。 */
     connect(fd, (struct sockaddr*)&saddr, sizeof(struct sockaddr));
-...
+    ...
 }
 ```
 
@@ -186,4 +185,3 @@ Cmd::STATUS SysCmd::process_worker_msg(Request& req) {
 >
 > 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
 <div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
-
