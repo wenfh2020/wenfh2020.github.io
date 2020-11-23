@@ -2,7 +2,7 @@
 layout: post
 title:  "[kimserver] zookeeper-client-c 接入流程思考"
 categories: kimserver
-tags: kimserver nodes contact
+tags: kimserver zookeeper client thinking
 author: wenfh2020
 ---
 
