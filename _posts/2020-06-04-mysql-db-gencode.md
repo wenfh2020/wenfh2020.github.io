@@ -35,15 +35,6 @@ author: wenfh2020
 ./db_gencode <file_name>
 ```
 
-* 编译源码使用。
-
-```shell
-git clone https://github.com/wenfh2020/db_gencode.git
-cd db_gencode
-make
-./db_gencode upload.sql
-```
-
 * 脚本（upload.sql）。
 
 ```sql
@@ -67,6 +58,15 @@ CREATE TABLE `tb_file` (
   `md5` char(32) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
 ) ENGINE=MyISAM AUTO_INCREMENT=55688 DEFAULT CHARSET=utf8;
+```
+
+* 编译源码使用。
+
+```shell
+git clone https://github.com/wenfh2020/db_gencode.git
+cd db_gencode
+make
+./db_gencode upload.sql
 ```
 
 * c++ 源码文件(\*.h/\*.cpp)。

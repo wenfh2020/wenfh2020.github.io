@@ -51,7 +51,13 @@ kimserver 作为异步服务，核心功能是把异步的逻辑封装在 `Cmd` 
 
 ---
 
-### 2.1. 接入流程
+### 2.1. 实现逻辑
+
+![源码逻辑](/images/2020-11-25-08-54-00.png){:data-action="zoom"}
+
+---
+
+### 2.2. 接入
 
 节点间相互连接的接口调用，主要参考 `network.cpp/auto_send` 函数的实现。
 
@@ -117,7 +123,7 @@ bool Network::auto_send(const std::string& host, int port, int worker_index,
 
 ---
 
-### 2.2. 协议处理流程
+### 2.3. 协议处理流程
 
 节点相互连接协议通信实现，详细信息，参考源码实现。
 
