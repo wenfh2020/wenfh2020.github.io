@@ -250,10 +250,3 @@ sys     0m0.075s
 [C语言字节对齐问题详解](https://www.cnblogs.com/clover-toeic/p/3853132.html)
 
 [谈谈内存对齐一](http://www.openedv.com/thread-277386-1-1.html)
-
----
-
-> 🔥 文章来源：[《nginx 地址对齐(ngx_align_ptr)》](https://wenfh2020.com/2020/02/08/ngx_align_ptr/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

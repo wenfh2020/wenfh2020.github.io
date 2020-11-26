@@ -119,10 +119,3 @@ cd ../bin
 * [Zookeeper 教程](https://www.runoob.com/w3cnote/zookeeper-tutorial.html)
 * [Java SE Development Kit 8 Downloads](https://www.oracle.com/java/technologies/javase/javase-jdk8-downloads.html)
 * [centos7搭建Zookeeper集群 & 错误解决](https://blog.csdn.net/u014454538/article/details/108050520)
-
----
-
-> 🔥 文章来源：[《安装 ZooKeeper》](https://wenfh2020.com/2020/10/14/zookeeper-macos-install/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

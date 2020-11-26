@@ -532,12 +532,3 @@ void process_completions(zhandle_t *zh) {
 * [pthread_cond_wait()](https://www.cnblogs.com/diyingyun/archive/2011/11/25/2263164.html)
 * [pthread_cond_broadcast & pthread_cond_signal](https://www.cnblogs.com/XiaoXiaoShuai-/p/11855408.html)
 * [Zookeeper C客户端库编译](https://blog.csdn.net/jinguangliu/article/details/87191236)
-
----
-
-> 🔥 文章来源：[《ZooKeeper C - Client 异步/同步工作方式》](https://wenfh2020.com/2020/10/17/zookeeper-c-client/)
-
-
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

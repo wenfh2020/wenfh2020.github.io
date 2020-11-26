@@ -168,11 +168,3 @@ min-replicas-max-lag xxx
 ---
 
 如果当 redis 和消息队列同时故障呢？😅。。。告警？从数据库日志流水里，捞一些数据出来恢复？或者大家可以考虑一下另外一个解决方案：mongodb，它保证数据最终一致性。
-
----
-
-> 🔥 文章来源：[《即时通讯（IM）- 千人群组消息管理》](https://wenfh2020.com/2019/11/14/im-group-msg-mgr/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
-

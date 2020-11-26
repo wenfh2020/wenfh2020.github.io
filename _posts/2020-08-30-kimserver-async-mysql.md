@@ -201,10 +201,3 @@ int main(int args, char** argv) {
 * [mysql_async](https://github.com/liujian0616/mysql_async/)
 * [在 C/C++ 异步 I/O 中使用 MariaDB 的非阻塞接口](https://cloud.tencent.com/developer/article/1336510)
 * [Non-blocking API Reference](https://mariadb.com/kb/en/non-blocking-api-reference/)
-
----
-
-> 🔥 文章来源：[《[kimserver] C++ 异步非阻塞 Mysql 连接池》](https://wenfh2020.com/2020/08/30/kimserver-async-mysql/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

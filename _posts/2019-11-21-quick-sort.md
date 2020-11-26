@@ -161,10 +161,3 @@ $n + nlog_2n = n(1+log_2n) ==> nlog_2n ==> nlgn$
 * [算法导论------递归算法的时间复杂度求解](https://blog.csdn.net/so_geili/article/details/53444816)
 * [算法复杂度中的 O(logN) 底数是多少](https://www.cnblogs.com/lulin1/p/9516132.html)
 * [Cmd Markdown 公式指导手册](https://www.zybuluo.com/codeep/note/163962)
-
----
-
-> 🔥 文章来源：[《[算法导论] 快速排序》](https://wenfh2020.com/2019/11/21/quick-sort/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

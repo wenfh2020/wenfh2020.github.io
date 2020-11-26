@@ -93,10 +93,3 @@ void merge(int array[], int start, int end) {
 
 * [快速排序、归并排序、堆排序三种算法性能比较](https://www.cnblogs.com/yu-chao/p/4324485.html)
 * 《算法导论》（第三版）
-
----
-
-> 🔥 文章来源：[《[算法导论] 归并排序》](https://wenfh2020.com/2019/11/29/merge-sort/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

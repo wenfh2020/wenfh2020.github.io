@@ -618,10 +618,3 @@ dictEntry *dictGetRandomKey(dict *d) {
 * [Redis源码学习简记（三）dict哈希原理与个人理解](https://blog.csdn.net/qq_30085733/article/details/79843175)
 * [Redis源码剖析和注释](https://blog.csdn.net/men_wen/article/details/69787532)
 * [Redis Scan迭代器遍历操作原理（二）–dictScan反向二进制迭代器](http://chenzhenianqing.com/articles/1101.html)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] 字典(dict)》](https://wenfh2020.com/2020/01/12/redis-dict/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

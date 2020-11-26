@@ -89,10 +89,3 @@ delete data, pid: 29118
 ## 5. 参考
 
 * 《深入理解计算机系统》第二部分，8.4 章 进程控制
-
----
-
-> 🔥 文章来源：[《fork 进程测试 copy-on-write》](https://wenfh2020.com/2020/01/02/fork-copy-on-write/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

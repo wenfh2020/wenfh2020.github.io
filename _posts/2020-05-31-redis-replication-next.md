@@ -603,10 +603,3 @@ typedef struct client {
 * [Codis 与 RedisCluster 的原理详解](https://www.cnblogs.com/pingyeaa/p/11294773.html)
 * [redis系列--主从复制以及redis复制演进](https://www.cnblogs.com/wdliu/p/9407179.html)
 * [Redis Replication 实现原理](https://521-wf.com/archives/414.html)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] 主从数据复制（下）》](https://wenfh2020.com/2020/05/17/redis-replication/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

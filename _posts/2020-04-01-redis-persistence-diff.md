@@ -73,10 +73,3 @@ redis 持久化 aof 和 rdb 区别，详细文档可以参考 redis 作者文章
 * 《[[redis 源码走读] rdb 持久化 - 文件结构](https://wenfh2020.com/2020/03/19/redis-rdb-struct/)》
 
 * 《[[redis 源码走读] rdb 持久化 - 应用场景](https://wenfh2020.com/2020/03/19/redis-rdb-application/)》
-
----
-
-> 🔥 文章来源：《[redis 持久化方式 - aof 和 rdb 区别](https://wenfh2020.com/2020/04/01/redis-persistence-diff/)》
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

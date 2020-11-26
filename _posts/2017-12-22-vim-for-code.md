@@ -80,10 +80,3 @@ ycm 对于复杂的 C++ 项目，无法跳转问题。错误：Can't jump to def
 参考：https://www.golangtc.com/download/package
 
 ![golang 编译依赖配置](/images/2020-04-22-13-30-01.png){: data-action="zoom"}
-
----
-
-> 🔥 文章来源：[《Centos7 vim 编码环境 (C++/golang)》](https://wenfh2020.com/2017/12/22/vim-for-code/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

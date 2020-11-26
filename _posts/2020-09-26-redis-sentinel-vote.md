@@ -376,10 +376,3 @@ char *sentinelVoteLeader(sentinelRedisInstance *master, uint64_t req_epoch, char
 ## 6. 参考
 
 * [Redis源码解析：22sentinel(三)客观下线以及故障转移之选举领导节点](https://www.cnblogs.com/gqtcgq/archive/2004/01/13/7247047.html)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] sentinel 哨兵 - 选举投票》](https://wenfh2020.com/2020/09/26/redis-sentinel-vote/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

@@ -118,10 +118,3 @@ author: wenfh2020
 * [Integrate with External Tools via Tasks](https://code.visualstudio.com/docs/editor/tasks#_binding-keyboard-shortcuts-to-tasks)
 * [vscode 快捷键配置](https://www.cnblogs.com/JohnRain/p/10361940.html)
 * [在Visual Studio Code中在编辑器和集成终端之间切换焦点](https://blog.csdn.net/CHCH998/article/details/106451078)
-
----
-
-> 🔥 文章来源：[《vscode 一键（快捷键）执行脚本命令》](https://wenfh2020.com/2020/10/24/vscode-shortcut-shell/)
->
-> 👍 欢迎点赞、评论、分享、赞赏（微信二维码）大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

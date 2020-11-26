@@ -252,10 +252,3 @@ func main() {
 * [go get 指令没有反应/出错/超时](https://blog.csdn.net/ELiGwz/article/details/101783339)
 * [以mosquitto为服务, 用golang实现简单的mqtt发布和订阅](https://blog.csdn.net/c_cppcoder/article/details/104520091)
 * [msgpack](https://github.com/vmihailenco/msgpack)
-
----
-
-> 🔥 文章来源：[《物联网数据通信 mqtt - mosquitto》](https://wenfh2020.com/2020/11/05/mqtt-mosquitto/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

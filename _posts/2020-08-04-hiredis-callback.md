@@ -308,10 +308,3 @@ static int redisLibevAttach(EV_P_ redisAsyncContext *ac) {
 * [redis 为啥这么快](https://wenfh2020.com/2020/05/29/redis-fast/)
 * [高性能服务异步通信逻辑](https://wenfh2020.com/2020/06/11/server-async-logic/)
 * [[redis 源码走读] 多线程通信 I/O](https://wenfh2020.com/2020/04/13/redis-multithreading-mode/)
-
----
-
-> 🔥 文章来源：[《[hiredis 源码走读] 异步回调机制剖析》](https://wenfh2020.com/2020/08/04/hiredis-callback/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

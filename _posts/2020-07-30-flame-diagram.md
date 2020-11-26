@@ -99,10 +99,3 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
 ## 4. 参考
 
 * [Siege HTTP 压力测试](https://wenfh2020.com/2018/05/02/siege-pressure/)
-
----
-
-> 🔥 文章来源：[《软件性能检测--火焰图🔥》](https://wenfh2020.com/2020/07/30/flame-diagram/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

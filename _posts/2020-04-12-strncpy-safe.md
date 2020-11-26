@@ -129,10 +129,3 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args) {
 ---
 
 内存越界是 c/c++ 一个坑，有时候要解决这类型的偶发问题，只能看缘分。所以平时使用，须要形成良好的编码习惯。
-
----
-
-> 🔥 文章来源：[《strncpy 安全吗? 》](https://wenfh2020.com/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

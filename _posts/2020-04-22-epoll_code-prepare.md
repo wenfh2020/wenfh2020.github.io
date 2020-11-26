@@ -459,10 +459,3 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 ## 6. 参考
 
 * [socket信号处理](https://vcpu.me/socket%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/)
-
----
-
-> 🔥 文章来源：[《[epoll 源码走读] epoll 源码实现-预备知识》](https://wenfh2020.com/2020/04/22/epoll_code-prepare/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

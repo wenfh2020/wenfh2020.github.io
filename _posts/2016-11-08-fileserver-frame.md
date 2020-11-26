@@ -52,10 +52,3 @@ author: wenfh2020
 
 ![逻辑时序](/images/2020-02-24-09-16-08.png){: data-action="zoom"}
 <!-- <div align=center><img src="/images/2020-02-24-09-16-08.png"/></div> -->
-
----
-
-> 🔥 文章来源：[《文件服务器架构逻辑》](https://wenfh2020.com/2016/11/08/fileserver-frame/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

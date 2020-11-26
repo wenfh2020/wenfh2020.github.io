@@ -156,10 +156,3 @@ done:
 * [Linux Futex浅析](http://blog.sina.com.cn/s/blog_e59371cc0102v29b.html)
 * [pthread_cond_wait()](https://www.cnblogs.com/diyingyun/archive/2011/11/25/2263164.html)
 * [pthread_cond_wait()用法分析](https://blog.csdn.net/hairetz/article/details/4535920)
-
----
-
-> 🔥 文章来源：[《pthread_cond_wait》](https://wenfh2020.com/2020/10/20/pthread_cond_wait/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

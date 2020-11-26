@@ -51,10 +51,3 @@ author: wenfh2020
 ## 4. 小结
 
 从上面几个图，思路从复杂到简单，直到逻辑碎片被串联起来，这样多线程的 lib 添加进来后，不会破坏 [kimserver](https://github.com/wenfh2020/kimserver) 异步服务原来的逻辑。
-
----
-
-> 🔥 文章来源：[《[kimserver] zookeeper-client-c 接入流程思考》](https://wenfh2020.com/2020/11/08/kimserver-zk-client-thinking/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

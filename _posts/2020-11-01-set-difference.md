@@ -113,10 +113,3 @@ turn: 1, diff: 192.168.0.1:1122.2, 192.168.0.1:1133.3,
 
 * [set_difference()](https://blog.csdn.net/querdaizhi/article/details/6712519)
 * [cppreference.com](https://zh.cppreference.com/w/cpp/algorithm/set_difference)
-
----
-
-> 🔥 文章来源：[《C++ 计算两个集合差集》](https://wenfh2020.com/2020/11/01/set-difference/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

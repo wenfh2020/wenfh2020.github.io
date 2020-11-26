@@ -135,10 +135,3 @@ void Network::read_transfer_fd(int fd) {
 
 * [linux网络编程之socket（十六）：通过UNIX域套接字传递描述符和 sendmsg/recvmsg 函数](https://blog.csdn.net/jnu_simba/article/details/9079627)
 * [通过UNIX域套接字传递文件描述符](view-source:https://www.bwar.tech/2018/07/17/fd-transfer.html)
-
----
-
-> 🔥 文章来源：[《[kimserver] 父子进程文件描述符传输》](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

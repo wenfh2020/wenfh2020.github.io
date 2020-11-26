@@ -24,6 +24,35 @@ layout: default
         <article itemscope itemtype="http://schema.org/BlogPosting">
             {{content}}
         </article>
+        <hr />
+        <div>
+            <ul class="post-copyright">
+                <li class="post-copyright-author">
+                    <strong>本文作者： </strong> wenfh2020
+                </li>
+                <li class="post-copyright-link">
+                    <strong>本文链接：</strong>
+                    <a href="{{ page.url | prepend: site.baseurl }}">《{{page.title}}》</a>
+                </li>
+                <li class="post-copyright-license">
+                    <strong>版权声明： </strong>转载请注明出处，谢谢！
+                </li>
+            </ul>
+        </div>
+        <hr />
+        <div class="reward-container">
+            <div> 如果觉得文章不错，随意打赏，谢谢 🤝 </div>
+            <button
+                onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+                打赏
+            </button>
+            <div id="qr" style="display: none;">
+                <div style="display: inline-block;">
+                    <img src="/images/2020-08-06-15-49-47.jpeg" alt="wenfh2020.com 微信小额打赏">
+                    <p>微信小额打赏</p>
+                </div>
+            </div>
+        </div>
 
         {% assign hasSimilar = '' %}
         {% for post in site.related_posts %}

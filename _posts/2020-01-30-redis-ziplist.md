@@ -589,10 +589,3 @@ int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
 * [Redis的一个历史bug及其后续改进](https://segmentfault.com/a/1190000018878466?utm_source=tag-newest)
 
 * [Ziplist: insertion bug under particular conditions fixed.](https://github.com/wenfh2020/redis/commit/c495d095ae495ea5253443ee4562aaa30681a854?diff=unified)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] 压缩列表(ziplist)》](https://wenfh2020.com/2020/01/30/redis-ziplist/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

@@ -130,10 +130,3 @@ markdown，舒服的排版可以让知识归纳总结事半功倍。
 学习总结归纳，将知识实时落地，条理化整理成文档，便于复盘 ——学而时习之,不亦说乎。
 
 ![博客](/images/2020-02-20-16-07-43.png){: data-action="zoom"}
-
----
-
-> 🔥 文章来源：[《redis 学习的思考》](https://wenfh2020.com/2019/11/17/redis-learn/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

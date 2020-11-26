@@ -366,10 +366,3 @@ ssize_t rdbSaveObject(rio *rdb, robj *o, robj *key) {
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)
 * [redis配置文件样例(二)](https://blog.csdn.net/mishifangxiangdefeng/article/details/50032357)
 * [Redis RDB Dump File Format](https://github.com/sripathikrishnan/redis-rdb-tools/wiki/Redis-RDB-Dump-File-Format)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] rdb 持久化 - 文件结构》](https://wenfh2020.com/2020/03/19/redis-rdb-struct/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

@@ -125,10 +125,3 @@ enum {
 * [TCP_Relative_Sequence_Numbers](https://wiki.wireshark.org/TCP_Relative_Sequence_Numbers)
 * 《TCP/IP 详解卷 1：协议》
 * [Linux SIGPIPE信号产生原因与解决方法](https://blog.csdn.net/u010821666/article/details/81841755)
-
----
-
-> 🔥 文章来源：[《抓包分析 tcp 握手和挥手》](https://wenfh2020.com/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

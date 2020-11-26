@@ -949,10 +949,3 @@ void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
 ## 3. 参考
 
 * [Redis源码解析：23sentinel(四)故障转移流程](https://www.cnblogs.com/gqtcgq/p/7247046.html)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] sentinel 哨兵 - 故障转移》](https://wenfh2020.com/2020/09/27/redis-sentinel-failover/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

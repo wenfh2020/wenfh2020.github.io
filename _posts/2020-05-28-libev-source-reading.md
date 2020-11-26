@@ -172,10 +172,3 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
 * [[redis 源码走读] 事件 - 文件事件](https://wenfh2020.com/2020/04/09/redis-ae-file/)
 * [Libev轻网络库 源码浅析](http://chenzhenianqing.com/articles/1051.html)
 * [__builtin_expect 说明](https://www.jianshu.com/p/2684613a300f)
-
----
-
-> 🔥 文章来源：[《libev 源码理解方式》](https://wenfh2020.com/2020/05/28/libev-source-reading/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

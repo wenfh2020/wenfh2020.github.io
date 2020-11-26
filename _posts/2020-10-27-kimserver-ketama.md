@@ -286,10 +286,3 @@ uint32_t Nodes::hash(const std::string& obj) {
 * [理解一致性哈希算法的原理](https://blog.csdn.net/z_s_z2016/article/details/108111907)
 * [一致性哈希算法与C++实现](https://blog.csdn.net/okiwilldoit/article/details/51352743)
 * [FNV哈希算法](https://blog.csdn.net/hustfoxy/article/details/23687239)
-
----
-
-> 🔥 文章来源：[《[kimserver] 分布式系统 - 一致性哈希算法》](https://wenfh2020.com/2020/10/27/kimserver-ketama/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

@@ -320,10 +320,3 @@ int main(int argc, char *argv[]) {
 * [一个epoll惊群导致的性能问题](https://www.ichenfu.com/2017/05/03/proxy-epoll-thundering-herd/)
 * [Linux惊群效应详解](https://blog.csdn.net/lyztyycode/article/details/78648798)
 * [Linux 最新SO_REUSEPORT特性](https://www.cnblogs.com/Anker/p/7076537.html)
-
----
-
-> 🔥 文章来源：[《惊群效应理解》](https://wenfh2020.com/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

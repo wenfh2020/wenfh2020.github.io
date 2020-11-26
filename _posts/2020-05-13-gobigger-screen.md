@@ -114,10 +114,3 @@ author: wenfh2020
 便携屏，我目前只用来做笔记本副屏，没有体验过手机，游戏机等等的链接，所以其它的就不做评价了。
 
 坦白说，非刚需，这个价钱，不如买个大显示器。刚需不差钱的，可以入手 `iPad Pro 12.9 英寸`。我是刚需，家里没矿，Gobigger 基本满足我的需求，小问题可以消化，凑合着用。
-
----
-
-> 🔥 文章来源：[《Macbook Pro 副屏 - Gobigger 4k 便携屏使用体验》](https://wenfh2020.com/2020/05/13/gobigger-screen/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

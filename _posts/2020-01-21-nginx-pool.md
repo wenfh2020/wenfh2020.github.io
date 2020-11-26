@@ -516,10 +516,3 @@ nginx 的内存池实现足够精简高效，但是依然有些问题不能兼�
 * [nginx源码分析--内存对齐处理](https://blog.csdn.net/unix21/article/details/12913287)
 * [利用cpu缓存实现高性能程序](https://cloud.tencent.com/developer/article/1449440)
 * [ngx_align_ptr](https://blog.csdn.net/mangobar/article/details/52668859)
-
----
-
-> 🔥 文章来源：[《[nginx 源码走读] 内存池》](https://wenfh2020.com/2020/01/21/nginx-pool/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

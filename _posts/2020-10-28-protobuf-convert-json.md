@@ -127,10 +127,3 @@ json to protobuf: 111111, wruryeuwryeuwrw
 * [protobuf github](https://github.com/protocolbuffers/protobuf)
 * [protobuf json 文档](https://developers.google.com/protocol-buffers/docs/proto3#json)
 * [c++ - 协议(protocol)buffer3和json](https://www.coder.work/article/121306)
-
----
-
-> 🔥 文章来源：[《protobuf / json 数据转换》](https://wenfh2020.com/2020/10/28/protobuf-convert-json/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

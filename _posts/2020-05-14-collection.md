@@ -80,10 +80,3 @@ author: wenfh2020
 * [github + jekyll 博客](https://github.com/Gaohaoyang/gaohaoyang.github.io)
   [本博客](https://wenfh2020.com/2020/02/17/make-blog/)主要采用这个模版搭建。搭建框架，请参考[这个文档](https://github.com/wonderseen/wonderseen.github.io)的搭建流程。
 * [The GNU C Library (glibc)](https://www.gnu.org/software/libc/)
-
----
-
-> 🔥 文章来源：[《Collection》](https://wenfh2020.com/2020/05/14/collection/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

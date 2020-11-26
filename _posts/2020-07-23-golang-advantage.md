@@ -52,10 +52,3 @@ author: wenfh2020
 ## 2. 总结
 
 golang 还有很多优点，例如有自己的 `GC`，有 `defer` 功能，函数可以返回多个参数等等。个人认为，最主要的还是上面提到的几个优点。PS: 语言只是工具，没有高低之分，解决问题，要看自己油箱储备。
-
----
-
-> 🔥 文章来源：[《简单说说 golang 的主要优点》](https://wenfh2020.com/2020/07/23/golang-advantage/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

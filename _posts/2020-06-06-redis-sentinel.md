@@ -126,10 +126,3 @@ redis 集群三个角色 sentinel / master / slave 都可能出现故障，当 r
 * [10分钟弄懂Raft算法](http://blog.itpub.net/31556438/viewspace-2637112/)
 * [Redis开发与运维之第九章哨兵(四)--配置优化](https://blog.csdn.net/cuiwjava/article/details/99405508)
 * [用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] sentinel 哨兵 - 原理》](https://wenfh2020.com/2020/06/06/redis-sentinel/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

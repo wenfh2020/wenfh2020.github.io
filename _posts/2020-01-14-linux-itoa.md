@@ -100,10 +100,3 @@ int sdsll2str(char *s, long long value) {
 ### 2.1. 方法三
 
 可以参考下 linux 源码，看看 printf 是怎么格式化字符串的。参考 [github 源码](https://github.com/torvalds/linux/blob/master/arch/x86/boot/printf.c)
-
----
-
-> 🔥 文章来源：[Linux 下实现 itoa 转二进制](https://wenfh2020.com/2020/01/14/linux-itoa/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

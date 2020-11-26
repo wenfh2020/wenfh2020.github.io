@@ -296,10 +296,3 @@ The following switches are optional:
 * 《UNIX 环境高级编程》
 * 《程序员的自我修养》
 * [C语言中的static 详细分析](https://blog.csdn.net/keyeagle/article/details/6708077)
-
----
-
-> 🔥 文章来源：[《程序变量内存分布（Linux）》](https://wenfh2020.com/2020/02/17/mem-distribution/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

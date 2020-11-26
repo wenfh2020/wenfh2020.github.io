@@ -464,10 +464,3 @@ logfile "redis.log"
 * [read/write/fsync与fread/fwrite/fflush的关系和区别](https://blog.csdn.net/ybxuwei/article/details/22727565)
 * 《redis 设计与实现》
 * 《UNINX 环境高级编程》
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] aof 持久化 (下)》](https://wenfh2020.com/2020/03/29/redis-aof-next/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

@@ -585,10 +585,3 @@ replica-lazy-flush no
 * 《redis 设计与实现》
 * [redis 过期策略及内存回收机制](https://blog.csdn.net/alex_xfboy/article/details/88959647)
 * [redis3.2配置文件redis.conf详细说明](https://www.zhangshengrong.com/p/Z9a28xkVXV/)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] redis 过期策略》](https://wenfh2020.com/2020/02/20/redis-expire/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

@@ -28,10 +28,3 @@ author: wenfh2020
 ---
 
 对于 996 的朋友，早睡早起不太现实。然而晚上提前做好第二天的规划，这确实是不错的做法。
-
----
-
-> 🔥 文章来源：[《早睡早起》](https://wenfh2020.com/2019/12/09/sleep-wakeup/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

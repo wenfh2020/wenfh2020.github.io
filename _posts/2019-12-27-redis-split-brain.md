@@ -43,12 +43,12 @@ redis 集群，我们看看 redis 哨兵的高可用模式。
 * 如果我们将集群部署在两个机器上（redis 集群部署情况如下图）。
 * sentinel 配置 `quorum = 1`，也就是一个 sentinel 发现故障，也可以选举自己为代表，进行故障转移。
 
-| 节点 | 描述                         |
-| :--- | :--------------------------- |
-| M    | redis 主服务 master          |
-| R    | redis 副本 replication/slave |
-| S    | redis 哨兵 sentinel          |
-| C    | 链接 redis 客户端            |
+| 节点  | 描述                         |
+| :---: | :--------------------------- |
+|   M   | redis 主服务 master          |
+|   R   | redis 副本 replication/slave |
+|   S   | redis 哨兵 sentinel          |
+|   C   | 链接 redis 客户端            |
 
 ```shell
 +----+         +----+
@@ -264,10 +264,3 @@ int processCommand(client *c) {
 * [Replication](https://redis.io/topics/replication)
 * [redis 脑裂等极端情况分析](https://www.cnblogs.com/yjmyzz/p/redis-split-brain-analysis.html)
 * [redis 3.2.8 的源码注释](https://github.com/menwengit/redis_source_annotation)
-
----
-
-> 🔥 文章来源：[《[redis 源码走读] sentinel 哨兵 - 脑裂处理方案》](https://wenfh2020.com/2019/12/27/redis-split-brain/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>

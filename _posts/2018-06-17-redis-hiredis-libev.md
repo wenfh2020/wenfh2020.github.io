@@ -73,10 +73,3 @@ test begin time: 2018-06-17 08:17:43, 1529194663712890
 test end time: 2018-06-17 08:17:44, 1529194664952655, interval: 1239765  
 disconnect call back, status = 0
 ```
-
----
-
-> 🔥 文章来源：[《hiredis + libev 异步测试》](https://wenfh2020.com/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
