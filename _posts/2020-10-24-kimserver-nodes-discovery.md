@@ -40,7 +40,45 @@ author: wenfh2020
 
 ---
 
-## 2. 整合 zookeeper-client-c
+### 1.3. zk 节点数据
+
+* zk 节点目录结构，类似 Linux 目录管理，节点管理详细命令请通过 `./zkCli.sh` 执行 `help` 命令。
+
+```shell
+/<node_root>/<node_type>/<node_data>
+```
+
+```shell
+#[wenfh2020:~]$ sudo zkCli
+#ls -R /
+/zookeeper
+# 服务根节点。
+/kimserver
+# 根节点下的节点类型。
+/kimserver/gate
+/kimserver/logic
+# gate 节点类型下的子服务（临时保护节点）。
+/kimserver/gate/kimserver-gate0000000311
+# get /kimserver/gate/kimserver-gate0000000311
+{"path":"/kimserver/gate/kimserver-gate0000000311","type":"gate","ip":"127.0.0.1","port":3344,"worker_cnt":1,"active_time":1606365833.263954}
+```
+
+* 节点数据结构（\<node_data\>）。
+
+```json
+{
+    "path": "/kimserver/gate/kimserver-gate0000000311",
+    "type": "gate",
+    "ip": "127.0.0.1",
+    "port": 3344,
+    "worker_cnt": 1,
+    "active_time": 1606365833.263954
+}
+```
+
+---
+
+## 2. zookeeper-client-c
 
 zookeeper 源码目录下有一个 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c)，工作模式是多线程。而 [kimserver](https://github.com/wenfh2020/kimserver) 是多进程异步服务，要整合一个多线程的 client 进来，又不能破坏原来的异步逻辑，这里确实花了不少心思。
 
@@ -54,29 +92,7 @@ zookeeper 源码目录下有一个 [zookeeper-client-c](https://github.com/apach
 
 ---
 
-## 3. 节点逻辑
-
-### 3.1. zk 端数据
-  
-zk 节点结构，类似 Linux 目录管理，节点管理详细命令请通过 `./zkCli.sh` 执行 `help` 命令。
-
-```shell
-# 启动 client。
-# [...] ./zkCli.sh
-# 查看 kimserver 服务集群的节点目录。
-[zk: localhost:2181(CONNECTED) 0] ls -R /kimserver
-# 服务根节点。
-/kimserver
-# 根节点下的节点类型。
-/kimserver/gate
-# gate 节点类型下的两个子服务（临时保护节点）。
-/kimserver/gate/kimserver-gate0000000310
-/kimserver/gate/kimserver-gate0000000312
-```
-
----
-
-### 3.2. client 端数据
+### 2.1. 日志
 
 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 端日志数据。设置 DEBUG 等级日志，查看调用 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 注册节点的工作流程。
 
@@ -132,7 +148,7 @@ zk 节点结构，类似 Linux 目录管理，节点管理详细命令请通过 
 
 ---
 
-### 3.3. 源码实现
+### 2.2. 源码实现
 
 从上图可以看出，这个功能的实现流程，注册逻辑主要通过 `node_register()` 函数实现，详细实现请查看 [源码](https://github.com/wenfh2020/kimserver/blob/master/src/core/zk_client.cpp)，这里简单介绍一下对应的逻辑。
 
@@ -277,13 +293,7 @@ void Bio::handle_acks() {
 
 ---
 
-## 4. 后记
-
-这个轮子造得有点费劲，还有很多细节有待后续优化。
-
----
-
-## 5. 参考
+## 3. 参考
 
 * [徒手教你使用zookeeper编写服务发现](https://zhuanlan.zhihu.com/p/34156758)
 
