@@ -29,10 +29,10 @@ redis 集群，我们看看 redis 哨兵的高可用模式。
 
 ### 1.2. 故障转移流程
 
-1. 当 redis 集群中 master 出现故障，sentinel 检测到故障，那么 sentinel 需要对集群进行故障转移。
+1. 在 redis 集群中，当 sentinel 检测到 master 出现故障，那么 sentinel 需要对集群进行故障转移。
 2. 当一个 sentinel 发现 master 下线，它会将下线的 master 确认为**主观下线**。
 3. 当多个 sentinel 已经发现该 master 节点下线，那么 sentinel 会将其确认为**客观下线**。
-4. 多个 sentinel 根据一定的逻辑，选出一个 sentinel 作为代表，由它去进行故障转移，将 master 的其它副本 slave 提升为 master 的角色。原来的 master 如果重新激活，它将被降级，从 master 降级为 slave。
+4. 多个 sentinel 根据一定的逻辑，选出一个 sentinel 作为代表，由它去进行故障转移，将 master 最优的一个 slave 提升为新 master 角色。旧  master 如果重新激活，它将被降级为 slave。
 
 ---
 
@@ -72,8 +72,9 @@ redis 集群，我们看看 redis 哨兵的高可用模式。
 
 ### 2.1. sentienl 部署
 
-1. sentinel 节点个数最好 >= 3，节点个数最好是基数。
-2. sentinel 的选举法定人数设置为 $(\frac{n}{2} + 1)$。
+1. sentinel 节点个数最好 >= 3。
+2. sentinel 节点个数最好是基数。
+3. sentinel 的选举法定人数设置为 $(\frac{n}{2} + 1)$。
 
 * 配置
 
@@ -111,7 +112,7 @@ sentinel monitor mymaster 127.0.0.1 6379 2
 Configuration: quorum = 2
 ```
 
-假如 M1 机器与其它机器断开链接了，S2 和 S3 两个 sentinel 能相互链接，sentinel 能正常进行故障转移，sentinel 将 R2 提升为新的 master 角色。但是客户端 C1 链接到 M1 的客户端依然正常读写，这样仍然会出现问题，所以我们不得不对 M1 进行限制。
+假如 M1 机器与其它机器断开链接了，S2 和 S3 两个 sentinel 能相互链接，sentinel 能正常进行故障转移，sentinel 将 R2 提升为新的 master 角色 [M2]。但是客户端 C1 链接到 M1 的客户端依然正常读写，这样仍然会出现问题，所以我们不得不对 M1 进行限制。
 
 ```shell
          +----+
@@ -164,10 +165,10 @@ Configuration: quorum = 2
 ```
 
 ```shell
-# master 至少有 N 个副本连接。
-min-slaves-to-write 1
-# 数据复制和同步的延迟不能超过 M 秒。
-min-slaves-max-lag 10
+# master 至少有 x 个副本连接。
+min-slaves-to-write x
+# 数据复制和同步的延迟不能超过 x 秒。
+min-slaves-max-lag x
 ```
 
 > **注意：高版本 redis 已经修改这个两个选项**
