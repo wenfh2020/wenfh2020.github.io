@@ -8,7 +8,7 @@
 # Site settings
 title: ' '
 brief-intro: ' '
-baseurl: "" # the subpath of your site, e.g. /blog
+baseurl: "https://wenfh2020.com/" # the subpath of your site, e.g. /blog
 url: "https://wenfh2020.com/" # the base hostname & protocol for your site
 
 permalink: /:year/:month/:day/:title/
