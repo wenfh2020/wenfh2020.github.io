@@ -40,9 +40,17 @@ layout: default
                 </li>
             </ul>
         </div>
+        <div class="post-widgets">
+            <div id="needsharebutton-postbottom">
+                <span class="btn">
+                    <i class="fa fa-share-alt" aria-hidden="true"></i>
+                    <img src="/images/network-share-icon.png" alt="分享" height="24" width="24">
+                </span>
+            </div>
+        </div>
         <hr />
         <div class="reward-container">
-            <div> 如果觉得文章不错，随意打赏，谢谢 🤝 </div>
+            <div> 大爷，赏个钱呗~ </div>
             <button
                 onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
                 打赏
@@ -183,3 +191,30 @@ layout: default
     }());
 </script>
 <script src="{{ "/js/pageContent.js " | prepend: site.baseurl }}" charset="utf-8"></script>
+
+<script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-needmoreshare2@1/needsharebutton.min.js"></script>
+<script>
+    pbOptions = {};
+    pbOptions.iconStyle = "default";
+    pbOptions.boxForm = "horizontal";
+    pbOptions.position = "topCenter";
+    pbOptions.networks = "Wechat";
+    new needShareButton('#needsharebutton-postbottom', pbOptions);
+</script>
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/gh/theme-next/theme-next-needmoreshare2@1/needsharebutton.min.css">
+<style>
+    #needsharebutton-postbottom {
+        cursor: pointer;
+        height: 26px;
+        margin-top: 10px;
+        position: relative;
+    }
+
+    #needsharebutton-postbottom .btn {
+        /* border: 1px solid $btn-default-border-color; */
+        border-radius: 3px;
+        display: initial;
+        padding: 1px 4px;
+    }
+</style>
