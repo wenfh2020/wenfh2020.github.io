@@ -176,6 +176,7 @@ layout: default
                     {% endfor %}
                 </ul>
             </div>
+            <div class="comments" id="gitalk-container"></div>
         </div>
     </div>
 </div>
@@ -218,3 +219,41 @@ layout: default
         padding: 1px 4px;
     }
 </style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+<script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+
+<!-- 
+<script>
+    NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+        NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+            var gitalk = new Gitalk({
+                clientID: 'cbffd8a945287feb204b',
+                clientSecret: '29c4c663a2bf092979d3ba1002acbe4e5fd95990',
+                repo: 'wenfh2020.github.io',
+                owner: 'wenfh2020',
+                admin: ['wenfh2020'],
+                id: location.pathname,
+                language: 'zh-CN',
+                distractionFreeMode: true
+            });
+            gitalk.render('gitalk-container');
+        }, window.Gitalk);
+    });
+</script> -->
+
+<script type="text/javascript">
+    var title = location.pathname.substr(0, 50);//截取路径的前50个字符作为标识符
+    var gitalk = new Gitalk({
+
+        // gitalk的主要参数
+        clientID: 'cbffd8a945287feb204b',
+        clientSecret: '29c4c663a2bf092979d3ba1002acbe4e5fd95990',
+        repo: 'wenfh2020.github.io',
+        owner: 'wenfh2020',
+        admin: ['wenfh2020'],
+        id: title,//因为这里不能超过50字符，所以做了处理，当超过50时自动截取前50
+        language: 'zh-CN',
+    });
+    gitalk.render('gitalk-container');
+</script>
