@@ -185,3 +185,11 @@ void Network::on_repeat_timer(void* privdata) {
     ...
 }
 ```
+
+---
+
+## 5. 参考
+
+* [protobuf / json 数据转换](https://wenfh2020.com/2020/10/28/protobuf-convert-json/)
+* [[kimserver] 配置文件 config.json](https://wenfh2020.com/2020/12/02/kimserver-config/)
+* [[kimserver] 分布式系统 - 节点发现](https://wenfh2020.com/2020/10/24/kimserver-nodes-discovery/)
