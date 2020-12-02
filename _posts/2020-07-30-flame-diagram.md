@@ -35,6 +35,8 @@ stackcollapse-perf.pl perf.unfold &> perf.folded
 flamegraph.pl perf.folded > perf.svg
 ```
 
+> 🔥 生成火焰图视频教程 [《生成火焰图（Generate flame diagram）》](https://www.bilibili.com/video/BV1My4y1q7YK/)
+
 ---
 
 ## 2. 火焰图
