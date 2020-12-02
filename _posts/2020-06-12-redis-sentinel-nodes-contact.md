@@ -64,6 +64,8 @@ struct redisCommand sentinelcmds[] = {
 
 > 箭头代表节点 connect 的方向，箭头上面的数字是 fd，可以根据 strace 日志，对号入座。fd 从小到大，展示了创建链接的时序。
 
+![抓包工作流程](/images/2020-09-17-15-29-12.png){:data-action="zoom"}
+
 ---
 
 #### 1.3.1. 配置
@@ -105,8 +107,6 @@ sentinel known-sentinel mymaster 127.0.0.1 26378 989f0e00789a0b41cff738704ce8b04
 16259:X 17 Sep 2020 14:17:52.168 * +sentinel sentinel de0ffb0d63f77605db3fccb959f67b65b8fdb529 127.0.0.1 26377 @ mymaster 127.0.0.1 6379
 16259:X 17 Sep 2020 14:17:52.370 * +sentinel sentinel 989f0e00789a0b41cff738704ce8b04bad306714 127.0.0.1 26378 @ mymaster 127.0.0.1 6379
 ```
-
-![抓包工作流程](/images/2020-09-17-15-29-12.png){:data-action="zoom"}
 
 ---
 
