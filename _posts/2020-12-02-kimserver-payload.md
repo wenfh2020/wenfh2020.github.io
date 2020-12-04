@@ -6,7 +6,7 @@ tags: kimserver payload
 author: wenfh2020
 ---
 
-简单统计进程的工作负载信息，将信息以 json 数据格式保存在 zookeeper，方便后台页面对分布式系统节点管理。
+简单统计进程负载信息，信息以 json 格式保存在 zookeeper，方便后台页面管理节点。
 
 
 
@@ -18,7 +18,7 @@ author: wenfh2020
 
 ## 1. 负载统计数据结构
 
-数据结构：payload.proto，用 protobuf 来设计数据结构，方便数据的读写，protobuf 可以转 json（参考 [《protobuf / json 数据转换》](https://wenfh2020.com/2020/10/28/protobuf-convert-json/)）。
+数据结构：payload.proto，用 protobuf 来设计数据结构，方便数据读写，并且 protobuf 可以转 json（参考 [《protobuf / json 数据转换》](https://wenfh2020.com/2020/10/28/protobuf-convert-json/)）。
 
 ```protobuf
 /* 节点信息。*/
@@ -58,7 +58,7 @@ message PayloadStats {
 
 1. 子进程统计负载信息。
 2. 子进程定时将负载信息发送给父进程。
-3. 父进程统计自己的负载信息和多个子进程的负载信息。
+3. 父进程统计自己的以及多个子进程上报的负载信息。
 4. 父进程定时将统计信息转化为 json 数据，更新到 zookeeper 对应节点。
 
 ![负载统计流程](/images/2020-12-02-23-22-36.png){:data-action="zoom"}
@@ -69,8 +69,8 @@ message PayloadStats {
 
 ### 3.1. 创建负载节点
 
-1. 节点向中心管理 zookeeper 注册节点。
-2. 节点注册成功后获得节点名称，在 zookeeper 负载目录创建对应目录方便更新负载信息。
+1. 进程向 zookeeper 注册节点。
+2. 节点注册成功后获得节点名称，在 zookeeper 对应目录更新负载信息。
 
 ---
 
@@ -172,7 +172,7 @@ get /kimserver/payload/gate/kim-gate-gate0000000078
 详细源码实现，请参考 `core/network.cpp` （[github](https://github.com/wenfh2020/kimserver/blob/master/src/core/network.cpp)）
 
 ```c++
-/* 时钟定时执行。 */
+/* 时钟定时执行（默认每秒一次）。 */
 void Network::on_repeat_timer(void* privdata) {
     if (is_manager()) {
         ...
