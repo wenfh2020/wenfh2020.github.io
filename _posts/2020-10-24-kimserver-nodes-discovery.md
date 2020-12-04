@@ -296,10 +296,3 @@ void Bio::handle_acks() {
 ## 3. 参考
 
 * [徒手教你使用zookeeper编写服务发现](https://zhuanlan.zhihu.com/p/34156758)
-
----
-
-> 🔥 文章来源：[《[kimserver] 分布式系统 - 节点发现》](https://wenfh2020.com/2020/10/24/kimserver-nodes-discovery/)
->
-> 👍 大家觉得文章对你有些作用！ 如果想 <font color=green>赞赏</font>，可以用微信扫描下面的二维码，感谢!
-<div align=center><img src="/images/2020-08-06-15-49-47.png" width="120"/></div>
