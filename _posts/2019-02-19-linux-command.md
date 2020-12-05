@@ -621,6 +621,17 @@ shit + p
 
 ### 8.6. iotop
 
+```shell
+[root:...rver/src/test/test_pressure]# iotop -botq |grep kim-
+16:12:21  5201 be/4 root        0.00 B/s    2.05 M/s  0.00 %  0.00 % kim-gate_w_1
+16:12:21  5202 be/4 root        0.00 B/s 1031.49 K/s  0.00 %  0.00 % kim-gate_w_2
+16:12:21  5208 be/4 root        0.00 B/s 2023.31 K/s  0.00 %  0.00 % kim-logic_w_1
+16:12:22  5195 be/4 root        0.00 B/s    3.78 K/s  0.00 %  0.00 % kim-gate   .
+16:12:22  5201 be/4 root        0.00 B/s    2.26 M/s  0.00 %  0.00 % kim-gate_w_1
+16:12:22  5202 be/4 root        0.00 B/s    2.91 M/s  0.00 %  0.00 % kim-gate_w_2
+16:12:22  5208 be/4 root        0.00 B/s 1721.45 K/s  0.00 %  0.00 % kim-logic_w_1
+```
+
 ![image-20191112212348819](/images/image-20191112212348819.png){: data-action="zoom"}
 
 ---
@@ -642,6 +653,8 @@ vmstat 1 每秒输出一次统计结果
 不是 swap 空间占用性能就会下降，要看 si so 频率。
 
 ![image-20191113090543751](/images/image-20191113090543751.png){: data-action="zoom"}
+
+> 参考 [《Linux vmstat命令详解》](https://www.cnblogs.com/ftl1012/p/vmstat.html)
 
 ---
 
