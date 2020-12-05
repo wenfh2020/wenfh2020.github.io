@@ -132,41 +132,41 @@ address: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked
 
 * 测试源码变量内存分布情况（上面是高地址，下面是低地址）：
 
-| 虚拟内存分布 | 变量                       |
-| :----------- | :------------------------- |
-| stack        | stack_int_not_init         |
-| stack        | stack_int_init_0           |
-| stack        | stack_int_1                |
-| stack        | stack_int_2                |
-| stack        | stack_int_3                |
-| heap         | heap3                      |
-| heap         | heap2                      |
-| heap         | heap1                      |
-| .bss         | global_static_int_0        |
-| .bss         | global_static_int_not_init |
-| .bss         | static_stack_int_0         |
-| .bss         | static_stack_int_not_init  |
-| .bss         | global_int_init_0          |
-| .bss         | global_int_not_init        |
-| .data        | global_pointer_not_init    |
-| .data        | global_static_int_2        |
-| .data        | global_static_int_1        |
-| .data        | static_stack_int_4         |
-| .data        | static_stack_int_3         |
-| .data        | static_stack_int_2         |
-| .data        | static_stack_int_1         |
-| .data        | global_int_3               |
-| .data        | global_int_2               |
-| .data        | global_int_1               |
-| .rodata      | global_const_string_2      |
-| .rodata      | global_const_string_1      |
-| .text        | print_sort_ret             |
-| .text        | test_heap                  |
-| .text        | test_stack                 |
-| .text        | test_global                |
-| .text        | test_static                |
-| .text        | main                       |
-| .text        | test_code                  |
+|  类型   | 变量                       |
+| :-----: | :------------------------- |
+|  stack  | stack_int_not_init         |
+|  stack  | stack_int_init_0           |
+|  stack  | stack_int_1                |
+|  stack  | stack_int_2                |
+|  stack  | stack_int_3                |
+|  heap   | heap3                      |
+|  heap   | heap2                      |
+|  heap   | heap1                      |
+|  .bss   | global_static_int_0        |
+|  .bss   | global_static_int_not_init |
+|  .bss   | static_stack_int_0         |
+|  .bss   | static_stack_int_not_init  |
+|  .bss   | global_int_init_0          |
+|  .bss   | global_int_not_init        |
+|  .data  | global_pointer_not_init    |
+|  .data  | global_static_int_2        |
+|  .data  | global_static_int_1        |
+|  .data  | static_stack_int_4         |
+|  .data  | static_stack_int_3         |
+|  .data  | static_stack_int_2         |
+|  .data  | static_stack_int_1         |
+|  .data  | global_int_3               |
+|  .data  | global_int_2               |
+|  .data  | global_int_1               |
+| .rodata | global_const_string_2      |
+| .rodata | global_const_string_1      |
+|  .text  | print_sort_ret             |
+|  .text  | test_heap                  |
+|  .text  | test_stack                 |
+|  .text  | test_global                |
+|  .text  | test_static                |
+|  .text  | main                       |
+|  .text  | test_code                  |
 {:.table-striped}
 
 ---

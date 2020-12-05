@@ -79,7 +79,7 @@ static void redisAeReadEvent(aeEventLoop *el, int fd, void *privdata, int mask) 
 
 > 在一些致力于敏捷研发的团队，用 callback 写异步逻辑不是一个明智的做法，非性能瓶颈，不建议使用异步逻辑去写业务。毕竟快速交付项目，推进业务，才是目标。而且很多时候，增加几台机器的成本，远远低于增加一个员工。
 
-[github 测试源码](https://github.com/wenfh2020/kimserver/blob/master/src/module/cmd_test_redis.h)
+[github 测试源码](https://github.com/wenfh2020/kimserver/blob/master/src/modules/module_test/cmd_test_redis.h)
 
 ```c++
 namespace kim {
