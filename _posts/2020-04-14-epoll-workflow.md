@@ -27,6 +27,8 @@ author: wenfh2020
 
 ### 1.1. 事件结构
 
+* epoll_event。
+
 ```c
 // epoll.h
 typedef union epoll_data {
@@ -37,19 +39,28 @@ typedef union epoll_data {
 } epoll_data_t;
 
 struct epoll_event {
-  uint32_t events;   // epoll 事件
-  epoll_data_t data; // 用户数据
+  uint32_t events;   /* Epoll events */
+  epoll_data_t data; /* User data variable */
 } __EPOLL_PACKED;
 ```
 
----
+* events。
 
-| epoll 事件 | 描述                   |
-| :--------- | :--------------------- |
-| EPOLLIN    | 可读。                 |
-| EPOLLOUT   | 可写。                 |
-| EPOLLERR   | 该文件描述符发生错误。 |
-| EPOLLHUP   | 该文件描述符被挂断。   |
+| events   | 描述                   |
+| :------- | :--------------------- |
+| EPOLLIN  | 可读。                 |
+| EPOLLOUT | 可写。                 |
+| EPOLLERR | 该文件描述符发生错误。 |
+| EPOLLHUP | 该文件描述符被挂断。   |
+
+* data。
+
+```shell
+The data member of the epoll_event structure specifies data that the
+       kernel should save and then return (via epoll_wait(2)) when this file
+       descriptor becomes ready.
+```
+
 
 ---
 
