@@ -78,6 +78,8 @@ flamegraph.pl perf.folded > perf.svg
 
 ## 3. 定位问题
 
+### 3.1. 问题一
+
 <div align=center><img src="/images/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
 
 上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 `vsnprintf`，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致高等级的日志虽然没有被记录，仍然执行了 `vsnprintf` 操作。后面将判断放在 `vsnprintf` 前，重复进行测试，占 1.54%。 性能提高 5 个百分点——good!
@@ -95,6 +97,14 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
     return log_raw(file_name, file_line, func_name, level, msg);
 }
 ```
+
+---
+
+### 3.2. 问题二
+
+如果不是火焰图，你无法想象 `std::list::size()` 这个接口时间复杂度竟然是 O(N)。
+
+![火焰图问题二](/images/2020-12-11-17-43-59.png){:data-action="zoom"}
 
 ---
 
