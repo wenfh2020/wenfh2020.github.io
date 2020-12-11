@@ -187,6 +187,8 @@ ae.o            ae_kqueue.o     config.h
 
 ### 3.2. Makefile 文件内容
 
+参考 [test_libco](https://github.com/wenfh2020/test_libco) Makefile 配置。
+
 ```shell
 LIBCO_DIR = libco
 TEST_DIR = $(shell pwd)
