@@ -168,6 +168,8 @@ ae.o            ae_kqueue.o     config.h
 
 ## 3. 编译子文件夹
 
+参考 [test_libco](https://github.com/wenfh2020/test_libco) Makefile 配置。
+
 ### 3.1. 目录
 
 ```shell
@@ -186,8 +188,6 @@ ae.o            ae_kqueue.o     config.h
 ---
 
 ### 3.2. Makefile 文件内容
-
-参考 [test_libco](https://github.com/wenfh2020/test_libco) Makefile 配置。
 
 ```shell
 LIBCO_DIR = libco
