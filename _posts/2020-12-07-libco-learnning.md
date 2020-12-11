@@ -59,6 +59,7 @@ libco 是轻量级的协程库，看完下面几个帖子，应该能搞懂它�
 * 测试目标：测试 libco 协程性能，以及是否能将 mysqlclient 同步接口进行异步改造。
 * 测试系统：CentOS Linux release 7.7.1908 (Core)
 * 测试源码：[github](https://github.com/wenfh2020/test_libco.git)。
+* 测试视频：[gdb & libco & mysql](https://www.bilibili.com/video/bv1QV41187wz)
 
 ---
 
