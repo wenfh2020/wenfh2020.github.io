@@ -51,3 +51,9 @@ author: wenfh2020
 ## 4. 小结
 
 从上面几个图，思路从复杂到简单，直到逻辑碎片被串联起来，这样多线程的 lib 添加进来后，不会破坏 [kimserver](https://github.com/wenfh2020/kimserver) 异步服务原来的逻辑。
+
+---
+
+## 5. 参考
+
+* [zookeeper-client-c 异步/同步工作方式](https://wenfh2020.com/2020/10/17/zookeeper-c-client/)

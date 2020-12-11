@@ -166,7 +166,45 @@ ae.o            ae_kqueue.o     config.h
 
 ---
 
-## 3. 参考
+## 3. 编译子文件夹
+
+### 3.1. 目录
+
+```shell
+# tree -L 2
+.
+├── Makefile
+├── Makefile.test
+├── libco
+│   ├── CMakeLists.txt
+│   ├── LICENSE.txt
+│   ├── Makefile
+| ...
+└── ...
+```
+
+---
+
+### 3.2. Makefile 文件内容
+
+```shell
+LIBCO_DIR = libco
+TEST_DIR = $(shell pwd)
+
+.PHONY : build
+
+build:
+	cd $(LIBCO_DIR) && make -f Makefile
+	cd $(TEST_DIR) && make -f Makefile.test
+
+clean:
+	cd $(LIBCO_DIR) && make clean -f Makefile
+	cd $(TEST_DIR) && make clean -f Makefile.test
+```
+
+---
+
+## 4. 参考
 
 * 《跟我一起学 Makefile》
 * [Make 命令教程](http://www.ruanyifeng.com/blog/2015/02/make.html)
