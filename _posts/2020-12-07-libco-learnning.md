@@ -61,6 +61,8 @@ libco 是轻量级的协程库，看完下面几个帖子，应该能搞懂它�
 * 测试源码：[github](https://github.com/wenfh2020/test_libco.git)。
 * 测试视频：[gdb & libco & mysql](https://www.bilibili.com/video/bv1QV41187wz)
 
+<div align=center><img src="/images/2020-12-11-21-41-13.png" data-action="zoom" width="60%"/></div>
+
 ---
 
 ### 4.1. 测试源码
