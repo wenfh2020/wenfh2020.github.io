@@ -218,8 +218,9 @@ int main(int args, char** argv) {
 1. mysql 异步读写需要 mariadb 的 client 才能支持。
 2. mysql 异步与同步 client 性能差距不大，关键在于“异步”和“同步”。
 3. 从火焰图可以看到 mysqlclient 感觉还是比较耗费性能，占了一半资源，如果是分布式系统，这种数据库的访问还是放在独立的节点比较好，这样在同一个进程里业务逻辑处理能得到更多的资源。
-
 ![火焰图](/images/2020-12-13-08-54-57.png){:data-action="zoom"}
+4. mariadb 的异步 client 复杂度还是有点高，使用的话，还需要造轮子，这使得不少人望而却步。
+5. 如果你正在使用鹅厂的轻量级协程库：[libco](https://github.com/Tencent/libco)，使用同步的 mysql client 就能达到异步的效果：[《libco 协程库学习，测试连接 mysql》](https://wenfh2020.com/2020/12/07/libco-learnning/)。
 
 ---
 
