@@ -57,11 +57,11 @@ sudo make && make install
 
 ## 3. 性能
 
-测试数据： 10000。
-
+测试数据： 100,000。
 测试场景：单进程，单线程。
+测试结果：看数据表吧，因为读写 sql 命令比较简单，测试结果只作参考吧。
 
-用 Mac 机器本地压力测试，对比同步异步工作情况。单链接，同步异步读写相差不大，但是单线程异步客户端支持多条链接同时工作，这样性能就上来了。
+* Mac （8 核，16G 内存）
 
 | links | driver | read / s | write / s |
 | :---- | :----- | :------- | :-------- |
@@ -72,11 +72,22 @@ sudo make && make install
 
 ---
 
+* Centos（双核，4G 内存）
+
+| links | driver | read / s | write / s |
+| :---- | :----- | :------- | :-------- |
+| 1     | sync   | 6730.01  | 6985.49   |
+| 1     | async  | 5379.34  | 5827.66   |
+| 2     | async  | 8009.77  | 8774.84   |
+| 5     | async  | 8788.27  | 9544.37   |
+
+---
+
 ## 4. 源码
 
 ### 4.1. 原理
 
-虽然是异步非阻塞操作，mysql 不像 redis 那样支持批量处理命令（pipline）。而且异步 client 端发送一个命令，需要等待 mysql 处理完成后返回结果，再发送下一个，所以单链接的异步处理本质上也是串行的，与同步比较，并没有什么优势可言。但是异步处理，支持多个链接并行工作，具体参考上述压测结果。
+虽然是异步非阻塞操作，mysql 不像 redis 那样支持批量处理命令（pipline）。而且异步 client 端发送命令，每一个命令需要等待 mysql 处理完成后返回结果，再发送下一个，所以单链接的异步处理本质上也是串行的，与同步比较，并没有什么优势可言。但是异步处理，支持多个链接“并行”工作，具体参考上述压测结果。
 
 测试项目的异步链接池基于 `libev` 对链接事件进行管理，我们来看看**读数据**的流程逻辑：
 
@@ -129,6 +140,13 @@ bool async_query(const char* node, MysqlQueryCallbackFn* fn, const char* sql, vo
 ### 4.4. 状态机工作流程
 
 ```c
+bool MysqlAsyncConn::init(const db_info_t* db_info, struct ev_loop* loop) {
+    ...
+    /* 设置 mysql client 异步熟悉。 */
+    mysql_options(&m_mysql, MYSQL_OPT_NONBLOCK, 0);
+    ...
+}
+
 void MysqlAsyncConn::wait_for_mysql(struct ev_loop* loop, ev_io* w, int event) {
     switch (m_state) {
         case STATE::CONNECT_WAITING:
@@ -195,7 +213,17 @@ int main(int args, char** argv) {
 
 ---
 
-## 5. 参考
+## 5. 小结
+
+1. mysql 异步读写需要 mariadb 的 client 才能支持。
+2. mysql 异步与同步 client 性能差距不大，关键在于“异步”和“同步”。
+3. 从火焰图可以看到 mysqlclient 感觉还是比较耗费性能，占了一半资源，如果是分布式系统，这种数据库的访问还是放在独立的节点比较好，这样在同一个进程里业务逻辑处理能得到更多的资源。
+
+![火焰图](/images/2020-12-13-08-54-57.png){:data-action="zoom"}
+
+---
+
+## 6. 参考
 
 * [kimserver](https://github.com/wenfh2020/kimserver)
 * [mysql_async](https://github.com/liujian0616/mysql_async/)
