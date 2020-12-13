@@ -132,11 +132,28 @@ int main(int argc, char** argv) {
 
 ## 5. hook
 
+在 Centos 系统，查看 hook 是否成功，除了测试打印日志，其实还有其它比较直观的方法。
+
+---
+
+### 5.1. strace
+
+用 strace 查看底层的调用，我们看到 `mysql_real_connect` 内部的 connect，被 hook 成功，connect 前，被替换为 libco 的 connect 了。socket 在 connect 前，被修改为 `O_NONBLOCK` 。
+
+```shell
+socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 4
+fcntl(4, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(4, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
+connect(4, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("127.0.0.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
+```
+
+---
+
+### 5.2. gdb
+
 上神器 gdb，在 co_hook_sys_call.cpp 文件的 read 和 write 函数下断点。
 
 命中断点，查看函数调用堆栈，libco 在 Centos 系统能成功 hook 住 mysqlclient 的阻塞接口。
-
-> demo 在 Centos 下测试成功，MacOS 失败，能力有限，暂时找不到原因。。。
 
 ```shell
 #0  read (fd=fd@entry=9, buf=buf@entry=0x71fc30, nbyte=nbyte@entry=19404) at co_hook_sys_call.cpp:299
@@ -153,9 +170,9 @@ int main(int argc, char** argv) {
 
 ---
 
-### 5.1. 压测结果
+## 6. 压测结果
 
-从测试结果看，单进程单线程，多个协程是同时进行的，并发量也随着协程个数增加而增加，跟测试预期一样。
+从测试结果看，单进程单线程，多个协程是同时进行的，“并发”量也随着协程个数增加而增加，跟测试预期一样。
 
 ```shell
 # ./test_libco 1 10000
@@ -176,15 +193,16 @@ total cnt: 30000, total time: 2.370038, avg: 12658.024719
 
 ---
 
-## 6. 小结
+## 7. 小结
 
 * 通过学习其他大神的帖子，和走读源码，终于对协程有了比较清晰的认知。
 * 测试 libco，Centos 功能正常，但 MacOS 下不能成功 Hook 住阻塞接口。
+* libco 是轻量级的，它主要应用于高并发的 IO 密集型场景，所以你看到它绑定了多路复用模型。从测试来看，虽然支持 MacOS 和 Linux，但是只有 Linux 是好用的。
 * libco 很不错，所以我选择 golang 🐶。
 
 ---
 
-## 7. 参考
+## 8. 参考
 
 * [云风 coroutine 协程库源码分析](https://www.cyhone.com/articles/analysis-of-cloudwu-coroutine/)
 * [微信 libco 协程库源码分析](https://www.cyhone.com/articles/analysis-of-libco/)
