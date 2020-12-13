@@ -61,7 +61,11 @@ libco 是轻量级的协程库，看完下面几个帖子，应该能搞懂它�
 * 测试源码：[github](https://github.com/wenfh2020/test_libco.git)。
 * 测试视频：[gdb & libco & mysql](https://www.bilibili.com/video/bv1QV41187wz)
 
-<div align=center><img src="/images/2020-12-11-21-41-13.png" data-action="zoom" width="60%"/></div>
+<div align=center>
+<a href="https://www.bilibili.com/video/bv1QV41187wz">
+<img src="/images/2020-12-11-21-41-13.png" border="0" width="60%">
+</a>
+</div>
 
 ---
 
@@ -141,6 +145,7 @@ int main(int argc, char** argv) {
 用 strace 查看底层的调用，我们看到 `mysql_real_connect` 内部的 connect，被 hook 成功，connect 前，被替换为 libco 的 connect 了。socket 在 connect 前，被修改为 `O_NONBLOCK` 。
 
 ```shell
+# strace -s 512 -o /tmp/libco.log ./test_libco 1 1
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 4
 fcntl(4, F_GETFL)                       = 0x2 (flags O_RDWR)
 fcntl(4, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
