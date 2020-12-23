@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "libco 协程库学习，测试连接 mysql"
+title:  "[libco] 协程库学习，测试连接 mysql"
 categories: c/c++
 tags: libco mysql mysqlclient
 author: wenfh2020
@@ -21,7 +21,7 @@ author: wenfh2020
 
 ## 1. 概述
 
-libco 是轻量级的协程库，看完下面几个帖子，应该能搞懂它的工作原理。
+libco 是轻量级的协程库，看完下面几个帖子，应该能大致搞懂它的工作原理。
 
 1. [微信开源C++协程库Libco—原理与应用](https://blog.didiyun.com/index.php/2018/11/23/libco/)
 2. [漫谈微信libco协程设计及实现（万字长文）](https://runzhiwang.github.io/2019/06/21/libco/)
