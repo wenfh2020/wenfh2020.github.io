@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[libco] 协程库学习，测试连接 mysql"
-categories: c/c++
+categories: libco
 tags: libco mysql mysqlclient
 author: wenfh2020
 ---

@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[libco] 协程切换原理的理解思路"
-categories: c/c++
+categories: libco
 tags: libco coroutines switch
 author: wenfh2020
 ---
