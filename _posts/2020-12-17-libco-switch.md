@@ -107,7 +107,7 @@ struct coctx_t {
 
 * libco 协程运行在分配的堆空间上。
 
-<div align=center><img src="/images/2020-12-23-09-39-24.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020-12-23-13-00-59.png" data-action="zoom"/></div>
 
 * 协程运行时内存布局。
 
