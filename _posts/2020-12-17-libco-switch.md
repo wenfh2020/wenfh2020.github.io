@@ -105,9 +105,9 @@ struct coctx_t {
 };
 ```
 
-* libco 协程运行在分配的堆空间上。
+* 协程函数运行时内存空间。
 
-<div align=center><img src="/images/2020-12-23-13-00-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020-12-23-15-53-33.png" data-action="zoom"/></div>
 
 * 协程运行时内存布局。
 
@@ -164,7 +164,7 @@ struct coctx_t {
 
 ## 5. lldb 调试
 
-调试测试程序，观察协程切换寄存器数据和内存数据的变化。
+调试测试程序（[github](https://github.com/wenfh2020/test_libco)），观察协程切换寄存器数据和内存数据的变化。
 
 ```shell
 [root:.../other/coroutine/test_libco]# lldb test_libco -- 1 1                                          (main✱) 
@@ -276,7 +276,7 @@ frame #1: 0x0000000000402ecf test_libco`co_swap(curr=0x00000000020de590, pending
 * 写了一通，感觉没有把协程切换原理描述清楚，这里只整理了我自己看源码时的思路，很多细节没有补充进来，也可能有些地方没理解正确。
 * 虽然写了多年代码，但是汇编知识早已还给了老师，操作系统知识也是模糊的，都是边看边查，边写日志。
 * 通过 Libco 的源码学习，感觉终于比较深入理解协程是啥玩意了。
-* 要弄明白协程的工作流程，只看源码和资料是不够的，感觉这东西实在太抽象了，还是动手画图，上调试器观察寄存器和内存数据吧。
+* 协程的工作流程，感觉这东西实在太抽象了，不是三言两语能描述清楚，只看源码和资料也是不够的，还是动手画图，写测试例子，上调试器观察寄存器和内存数据吧。
 
 ---
 
@@ -285,3 +285,6 @@ frame #1: 0x0000000000402ecf test_libco`co_swap(curr=0x00000000020de590, pending
 * [《x86_64 函数运行时栈帧内存布局》](https://wenfh2020.com/2020/12/17/stack/)
 * [《x86-64 下函数调用及栈帧原理》](https://zhuanlan.zhihu.com/p/27339191)
 * [最近都流行实现 Coroutine 么？](https://zhuanlan.zhihu.com/p/32431200)
+* [libco协程库上下文切换原理详解](https://zhuanlan.zhihu.com/p/27409164)
+* [微信开源C++协程库Libco—原理与应用](https://blog.didiyun.com/index.php/2018/11/23/libco/)
+* [漫谈微信libco协程设计及实现（万字长文）](https://runzhiwang.github.io/2019/06/21/libco/)
