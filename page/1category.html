@@ -14,7 +14,7 @@ type: page
         <ul>
             {% for category in site.categories %}
             <h2 id="{{category | first}}">{{category | first}}</h2>
-            {% for posts in category  %}
+            {% for posts in category %}
             {% for post in posts %}
             {% if post.url %}
             <li>
@@ -54,4 +54,4 @@ type: page
         </div>
     </div>
 </div>
-<script src="{{ "/js/pageContent.js " | prepend: site.baseurl }}" charset="utf-8"></script>
+<script src="{{ " /js/pageContent.js " | prepend: site.baseurl }}" charset="utf-8"></script>

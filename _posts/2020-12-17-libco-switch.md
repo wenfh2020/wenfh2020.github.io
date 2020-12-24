@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "[libco] 协程切换原理的理解思路"
+title:  "[libco] 协程切换理解思路"
 categories: libco
-tags: libco coroutines switch
+tags: libco swap coroutines
 author: wenfh2020
 ---
 
@@ -19,28 +19,7 @@ author: wenfh2020
 
 ## 1. 协程切换
 
-正常情况下，函数代码从头到尾串行执行的，直到函数生命期结束。而协程切换却能将当前运行的函数，切换到另外一个函数运行，这是协程的神奇之处。
-
-```c
-void co_fnB() {
-    fnB1();
-    fnB2();
-    switch();
-    fnB3();
-}
-
-void co_fnA() {
-    fnA1();
-    fnA2();
-    switch();
-    fnA3();
-}
-
-void main() {
-    co_fnA();
-    co_fnB();
-}
-```
+正常情况下，函数代码从头到尾串行执行，直到函数生命期结束。而协程切换却能将当前运行的函数，切换到另外一个函数运行，这是协程的神奇之处。
 
 <div align=center><img src="/images/2020-12-23-12-01-52.png" data-action="zoom"/></div>
 

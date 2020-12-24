@@ -32,8 +32,8 @@ layout: default
                 </li>
                 <li class="post-copyright-link">
                     <strong>本文链接：</strong>
-                    <a href="{{ page.url | prepend: site.baseurl }}"
-                        title="{{page.title}}">{{ site.post_site }}{{ page.url }}</a>
+                    <a href="{{ page.url | prepend: site.baseurl }}" title="{{page.title}}">{{ site.post_site }}{{
+                        page.url }}</a>
                 </li>
                 <li class="post-copyright-license">
                     <strong>版权声明： </strong>转载请注明出处，谢谢！
@@ -68,38 +68,36 @@ layout: default
         {% assign postHasSimilar = false %}
         {% for tag in post.tags %}
         {% for thisTag in page.tags %}
-        {% if postHasSimilar == false and hasSimilar.size < 6 and post != page and tag == thisTag %}
-        {% if hasSimilar.size == 0 %}
-        <h2 id="similar_posts">文章推荐</h2>
-        <ul>
+        {% if postHasSimilar == false and hasSimilar.size < 6 and post !=page and tag==thisTag %} {% if
+            hasSimilar.size==0 %} <h2 id="similar_posts">文章推荐</h2>
+            <ul>
+                {% endif %}
+                <li class="relatedPost">
+                    <a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}
+                        {% if post.series %}
+                        (Series: {{ post.series }})
+                        {% endif %}
+                    </a>
+                </li>
+                {% capture hasSimilar %}{{ hasSimilar }}*{% endcapture %}
+                {% assign postHasSimilar = true %}
+                {% endif %}
+                {% endfor %}
+                {% endfor %}
+                {% endfor %}
+                {% if hasSimilar.size > 0 %}
+            </ul>
             {% endif %}
-            <li class="relatedPost">
-                <a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}
-                    {% if post.series %}
-                    (Series: {{ post.series }})
-                    {% endif %}
-                </a>
-            </li>
-            {% capture hasSimilar %}{{ hasSimilar }}*{% endcapture %}
-            {% assign postHasSimilar = true %}
-            {% endif %}
-            {% endfor %}
-            {% endfor %}
-            {% endfor %}
-            {% if hasSimilar.size > 0 %}
-        </ul>
-        {% endif %}
 
-        {% include previousAndNext.html %}
+            {% include previousAndNext.html %}
 
-        <!-- <h2 id="comments">Comments</h2>
+            <!-- <h2 id="comments">Comments</h2>
         {% include comments.html %} -->
-        <div id="gitalk-container"></div>
+            <div id="gitalk-container"></div>
     </div>
     <button class="anchor"><i class="fa fa-anchor"></i></button>
     <div class="right">
         <div class="wrap">
-
             <!-- Content -->
             <div class="side content">
                 <div>
@@ -134,22 +132,26 @@ layout: default
                     近期文章
                 </div>
                 <ul class="content-ul" recent>
-                    {% for post in site.posts offset: 0 limit: 8  %}
+                    {% for post in site.posts offset: 0 limit: 8 %}
                     <li><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></li>
                     {% endfor %}
                 </ul>
             </div>
             <br />
-            <div class="side content">
+            <div class="side">
                 <div>
                     <i class="fa fa-th-list"></i>
                     文集
                 </div>
-                <ul id="content-side" class="content-ul">
+                <ul id="categories-list" class="content-ul" cate>
                     {% for category in site.categories%}
-                    <li>
-                        <a data-scroll href="{{ root_url }}/{{ site.category_dir }}#{{ category | first }}">
-                            {{ category | first }} ({{ category | last | size }})
+                    <li class="categories-list-item">
+                        <a href="{{ root_url }}/{{ site.category_dir }}#{{ category | first }}"
+                            cate="{{ category | first }}">
+                            <span class="name">
+                                {{ category | first }}
+                            </span>
+                            <span class="badge">({{ category | last | size }})</span>
                         </a>
                     </li>
                     {% endfor %}
@@ -189,7 +191,7 @@ layout: default
         }
     }());
 </script>
-<script src="{{ "/js/pageContent.js " | prepend: site.baseurl }}" charset="utf-8"></script>
+<script src="{{ " /js/pageContent.js " | prepend: site.baseurl }}" charset="utf-8"></script>
 
 <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-needmoreshare2@1/needsharebutton.min.js"></script>
 <script>
@@ -254,4 +256,39 @@ layout: default
         language: 'zh-CN',
     });
     gitalk.render('gitalk-container');
+</script>
+
+<script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+
+<script>
+    (function () {
+        var cat_map = {
+            libco: 10000,
+            redis: 9900,
+            'c/c++': 9800,
+            Linux: 9700,
+            kimserver: 9600,
+            '网络': 9500,
+            '科技': -1,
+            '随笔': -2
+        };
+
+        var get_score = function (key) {
+            var score = cat_map[$.trim(key)];
+            // console.log(score);
+            return (typeof (score) != "undefined") ? score : 0;
+        }
+
+        var sortDom = function ($domlist) {
+            var $item = $domlist.find('.categories-list-item');
+            var $newList = Array.prototype.sort.call($item, function (a, b) {
+                return get_score($(b).find('.name').html()) - get_score($(a).find('.name').html());
+            });
+            return $newList;
+        }
+
+        var $domlist = $("#categories-list");
+        var $result = sortDom($domlist);
+        $("#categories-list").html($result);
+    })();
 </script>

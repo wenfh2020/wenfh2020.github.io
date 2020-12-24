@@ -77,11 +77,10 @@ layout: default
           <i class="fa fa-th-list"></i>
           文集
         </div>
-        <ul class="content-ul" cate>
+        <ul id="categories-list" class="content-ul" cate>
           {% for category in site.categories %}
-          <li>
-            <a href="{{ root_url }}/{{ site.category_dir }}#{{ category | first }}" class="categories-list-item"
-              cate="{{ category | first }}">
+          <li class="categories-list-item">
+            <a href="{{ root_url }}/{{ site.category_dir }}#{{ category | first }}" cate="{{ category | first }}">
               <span class="name">
                 {{ category | first }}
               </span>
@@ -174,3 +173,40 @@ layout: default
 </div>
 <!-- <script src="{{ "/js/scroll.min.js " | prepend: site.baseurl }}" charset="utf-8"></script> -->
 <!-- <script src="{{ "/js/pageContent.js " | prepend: site.baseurl }}" charset="utf-8"></script> -->
+
+<script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+
+<!-- 添加文集排序，有待优化，cat_map 写到 _config.yml -->
+<script>
+  (function () {
+    /* 数值越大，越靠前。 */
+    var cat_map = {
+      libco: 10000,
+      redis: 9900,
+      'c/c++': 9800,
+      Linux: 9700,
+      kimserver: 9600,
+      '网络': 9500,
+      '科技': -1,
+      '随笔': -2
+    };
+
+    var get_score = function (key) {
+      var score = cat_map[$.trim(key)];
+      // console.log(score);
+      return (typeof (score) != "undefined") ? score : 0;
+    }
+
+    var sortDom = function ($domlist) {
+      var $item = $domlist.find('.categories-list-item');
+      var $newList = Array.prototype.sort.call($item, function (a, b) {
+        return get_score($(b).find('.name').html()) - get_score($(a).find('.name').html());
+      });
+      return $newList;
+    }
+
+    var $domlist = $("#categories-list");
+    var $result = sortDom($domlist);
+    $("#categories-list").html($result);
+  })();
+</script>
