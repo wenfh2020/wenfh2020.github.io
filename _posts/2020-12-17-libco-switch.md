@@ -6,7 +6,7 @@ tags: libco swap coroutines
 author: wenfh2020
 ---
 
-协程切换，可以理解为函数运行时上下文的切换。
+协程切换，可以理解为函数运行时上下文切换。
 
 
 
