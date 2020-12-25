@@ -2,7 +2,7 @@
 layout: post
 title:  "Centos7 vim 编码环境 (C++/golang)"
 categories: tool
-tags: vim golang c++ centos
+tags: vim golang c++ code centos
 author: wenfh2020
 ---
 
