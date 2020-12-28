@@ -18,7 +18,9 @@ author: wenfh2020
 
 ---
 
-<div align=center><img src="/images/2020-12-28-14-19-57.png" data-action="zoom"/></div>
+## 1. 协程调度
+
+<div align=center><img src="/images/2020-12-28-15-23-42.png" data-action="zoom"/></div>
 
 * 协程数组，保存当前正在执行协程，pCallStack[0] 是主协程，一般情况下数组大小为 2，除非在协程里嵌套创建唤醒新的协程，这个协程数组大小才会一直被累加 `env->iCallStackSize++`，嵌套深度达到 `128` 就会堆栈溢出，这种应用场景嵌应该不常见。
 
@@ -71,3 +73,9 @@ static int CoRoutineFunc(stCoRoutine_t *co,void *) {
     return 0;
 }
 ```
+
+---
+
+## 2. 参考
+
+* [万字长文\|漫谈libco协程设计及实现](https://zhuanlan.zhihu.com/p/73679393)
