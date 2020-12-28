@@ -6,7 +6,7 @@ tags: libco dispatch
 author: wenfh2020
 ---
 
-一般情况下，主协程与其它子协程通过 `co_resume` 和 `co_yield` 交替调度工作。
+libco 通过 `co_resume` 和 `co_yield` 交替调度协程。
 
 
 
