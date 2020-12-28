@@ -22,18 +22,25 @@ author: wenfh2020
 
 <div align=center><img src="/images/2020-12-28-15-23-42.png" data-action="zoom"/></div>
 
-* 协程数组，保存当前正在执行协程，pCallStack[0] 是主协程，一般情况下数组大小为 2，除非在协程里嵌套创建唤醒新的协程，这个协程数组大小才会一直被累加 `env->iCallStackSize++`，嵌套深度达到 `128` 就会堆栈溢出，这种应用场景嵌应该不常见。
+### 1.1. 协程数组
+
+pCallStack 协程数组，保存当前正在执行协程（<font color=red>注意</font>：并不是所有协程）。
+
+pCallStack[0] 是主协程，`env->pCallStack[env->iCallStackSize - 1]` 是当前协程。
+  
+一般情况下数组大小为 2，子协程在主协程里创建。除非在子协程里嵌套创建唤醒新的协程，这个协程数组大小才会一直被累加 `env->iCallStackSize++`，直到嵌套深度达到 `128` 才会出现堆栈溢出，这种应用场景嵌应该不常见。
 
 ```c++
 struct stCoRoutineEnv_t {
     stCoRoutine_t *pCallStack[128]; /* 协程数组。 */
+    int iCallStackSize;             /* 协程数组元素个数。 */
     ...
 };
 ```
 
 ---
 
-* 启动协程 resume。
+### 1.2. 启动协程 co_resume
 
 ```c
 void co_resume(stCoRoutine_t *co) {
@@ -47,7 +54,7 @@ void co_resume(stCoRoutine_t *co) {
 
 ---
 
-* 挂起协程 yield。
+### 1.3. 挂起协程 co_yield
 
 ```c++
 void co_yield_env(stCoRoutineEnv_t *env) {
@@ -60,12 +67,13 @@ void co_yield_env(stCoRoutineEnv_t *env) {
 
 ---
 
-* 协程执行函数。
+### 1.4. 协程执行函数
 
 ```c
 static int CoRoutineFunc(stCoRoutine_t *co,void *) {
     if (co->pfn) {
-        co->pfn( co->arg );
+        /* pfn 协程执行函数。 */
+        co->pfn(co->arg);
     }
     co->cEnd = 1;
     stCoRoutineEnv_t *env = co->env;
