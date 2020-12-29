@@ -26,7 +26,7 @@ author: wenfh2020
 ## 2. 脚本使用
 
 ```shell
-./script your_path
+./script <file_path>
 ```
 
 ---
