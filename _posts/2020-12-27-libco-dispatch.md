@@ -22,6 +22,8 @@ libco 通过 `co_resume` 和 `co_yield` 交替调度协程。
 
 <div align=center><img src="/images/2020-12-28-15-23-42.png" data-action="zoom"/></div>
 
+---
+
 ### 1.1. 协程数组
 
 pCallStack 协程数组，保存当前正在执行协程（<font color=red>注意</font>：并不是所有协程）。
