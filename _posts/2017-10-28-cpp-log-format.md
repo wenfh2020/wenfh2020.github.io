@@ -171,3 +171,50 @@ FILE* zoo_get_log_stream();
 
 #endif /*ZK_LOG_H_*/
 ```
+
+---
+
+## 4. fprintf 线程安全吗
+
+因为 [redis 的日志实现](https://github.com/redis/redis/blob/1f5a73a530915f6f6326047effc796218af22cf6/src/server.c#L1079) 是用 `fprintf` 将文件内容序列化的，不知道对于多线程它是否安全，查了一下 glibc 的实现源码，发现有上锁和解锁的逻辑。
+
+```c
+/* https://github.com/lattera/glibc/blob/master/stdio-common/fprintf.c */
+int
+__fprintf (FILE *stream, const char *format, ...)
+{
+  va_list arg;
+  int done;
+
+  va_start (arg, format);
+  done = vfprintf (stream, format, arg);
+  va_end (arg);
+
+  return done;
+}
+```
+
+```c
+/* https://github.com/lattera/glibc/blob/master/stdio-common/vfprintf.c */
+
+/* The function itself.  */
+int
+vfprintf (FILE *s, const CHAR_T *format, va_list ap)
+{
+    ...
+  /* Lock stream.  */
+#ifdef USE_IN_LIBIO
+  __libc_cleanup_region_start ((void (*) (void *)) &_IO_funlockfile, s);
+  _IO_flockfile (s);
+#else
+  __libc_cleanup_region_start ((void (*) (void *)) &__funlockfile, s);
+  __flockfile (s);
+#endif
+    ...
+all_done:
+  /* Unlock the stream.  */
+  __libc_cleanup_region_end (1);
+
+  return done;
+}
+```
