@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 5. 主协程监控就绪事件，等待通知唤醒工作协程。
 
 ```shell
-co_create -> co_resume -> CoRoutineFunc -> co_handler_mysql_query -> socket -> fcntl -> connect -> epoll_ctl(EPOLL_CTL_ADD) -> co_yield
+co_create -> co_resume -> CoRoutineFunc -> co_handler_mysql_query -> socket -> fcntl(O_NONBLOCK) -> connect -> epoll_ctl(EPOLL_CTL_ADD) -> co_yield
 
 epoll_wait -> co_resume -> co_handler_mysql_query --> epoll_ctl(EPOLL_CTL_DELETE)
 ```
@@ -334,7 +334,7 @@ void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
 
 ## 4. 后记
 
-1. 协程切换跳来跳去，不明白协程切换原理的同学，感觉比异步回调还难理解。libco 将切换部分逻辑封装起来了。使用者基本不需要费脑理解业务层如何调用接口进行协程切换。
+1. 协程切换跳来跳去，不明白协程切换原理的同学，感觉比异步回调还难理解。libco 将切换部分逻辑封装起来了，使用者在做业务开发时，基本不需要费脑理解 libco 内部是如何调用接口进行协程切换。
 
 2. 关于 libco 的时钟和多路复用驱动逻辑实现，其实 `libev` 实现得不错的，如果能将 `libev` 和 `libco` 整合，应该会少一些造轮子的工夫。但是 `libev` 也有一定的学习成本，而自己造轮子可控，要权衡利弊。
 
