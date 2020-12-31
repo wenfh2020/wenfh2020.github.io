@@ -180,6 +180,9 @@ FILE* zoo_get_log_stream();
 
 ```c
 /* https://github.com/lattera/glibc/blob/master/stdio-common/fprintf.c */
+
+/* Write formatted output to STREAM from the format string FORMAT.  */
+/* VARARGS2 */
 int
 __fprintf (FILE *stream, const char *format, ...)
 {
@@ -192,6 +195,13 @@ __fprintf (FILE *stream, const char *format, ...)
 
   return done;
 }
+ldbl_hidden_def (__fprintf, fprintf)
+ldbl_strong_alias (__fprintf, fprintf)
+
+/* We define the function with the real name here.  But deep down in
+   libio the original function _IO_fprintf is also needed.  So make
+   an alias.  */
+ldbl_weak_alias (__fprintf, _IO_fprintf)
 ```
 
 ```c
