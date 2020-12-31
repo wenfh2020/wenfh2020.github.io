@@ -218,3 +218,9 @@ all_done:
   return done;
 }
 ```
+
+---
+
+## 5. 参考
+
+* [多线程下的fwrite和write](https://cloud.tencent.com/developer/article/1412015)
