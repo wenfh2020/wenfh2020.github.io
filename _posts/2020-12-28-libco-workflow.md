@@ -8,12 +8,12 @@ author: wenfh2020
 
 libco 设计初衷：为了方便编写高性能网络服务。
 
-高性能网络服务主要有两个点：IO 非阻塞 + 多路复用事件驱动。
+高性能网络服务主要有两个点：IO 非阻塞 + 多路复用技术。
 
 1. libco 使用 hook 技术解决非阻塞问题。
 2. libco 事件驱动使用 (epoll/kevent)。
 
-但是 `非阻塞 + 多路复用事件驱动` 这个是异步回调实现方式，对用户开发非常不友好，所以协程的引入就是为了解决这个问题：用同步写代码方式实现异步功能，既保证了系统性能，又避免了复杂的异步回调逻辑。
+但是 `非阻塞 + 多路复用技术` 这个是异步回调实现方式，对用户开发非常不友好，所以协程的引入就是为了解决这个问题：用同步写代码方式实现异步功能，既保证了系统性能，又避免了复杂的异步回调逻辑。
 
 ---
 
@@ -243,6 +243,7 @@ int co_poll_inner(stCoEpoll_t *ctx, struct pollfd fds[], nfds_t nfds, int timeou
     } else {
         /* 将当前协程挂起，唤醒其它协程。等待事件驱动事件通知或者时钟过期。 */
         co_yield_env(co_get_curr_thread_env());
+        /* 协程挂起后被唤醒，从这行代码开始执行。 */
         iRaiseCnt = arg.iRaiseCnt;
     }
     ...
@@ -278,47 +279,28 @@ int co_poll_inner(stCoEpoll_t *ctx, struct pollfd fds[], nfds_t nfds, int timeou
 ```c
 void OnPollProcessEvent(stTimeoutItem_t *ap) {
     stCoRoutine_t *co = (stCoRoutine_t *)ap->pArg;
+    /* 唤醒协程。 */
     co_resume(co);
 }
-```
 
-```c
 void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
     ...
     for (;;) {
-        /* 捞出就绪事件。 */
+        /* 主协程通过 epoll_wait 捞出就绪事件。 */
         int ret = co_epoll_wait(ctx->iEpollFd, result, stCoEpoll_t::_EPOLL_SIZE, 1);
 
         stTimeoutItemLink_t *active = (ctx->pstActiveList);
         stTimeoutItemLink_t *timeout = (ctx->pstTimeoutList);
-
-        memset(timeout, 0, sizeof(stTimeoutItemLink_t));
-
-        for (int i = 0; i < ret; i++) {
-            stTimeoutItem_t *item = (stTimeoutItem_t *)result->events[i].data.ptr;
-            if (item->pfnPrepare) {
-                item->pfnPrepare(item, result->events[i], active);
-            } else {
-                AddTail(active, item);
-            }
-        }
-
-        unsigned long long now = GetTickMS();
+        ...
+        /* 主协程捞出过期事件。 */
         TakeAllTimeout(ctx->pTimeout, now, timeout);
-
-        stTimeoutItem_t *lp = timeout->head;
-        while (lp) {
-            //printf("raise timeout %p\n",lp);
-            lp->bTimeout = true;
-            lp = lp->pNext;
-        }
-
+        ...
         Join<stTimeoutItem_t, stTimeoutItemLink_t>(active, timeout);
 
         lp = active->head;
         while (lp) {
             ...
-            /* 处理到期事件。 */
+            /* 主协程挂起当前协程，切换到对应子协程，处理到期事件和就绪事件结果。 */
             if (lp->pfnProcess) {
                 lp->pfnProcess(lp);
             }
