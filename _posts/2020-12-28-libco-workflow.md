@@ -6,7 +6,7 @@ tags: libco workflow
 author: wenfh2020
 ---
 
-libco 设计初衷：为了方便编写高性能网络服务。
+libco 设计初衷：为了方便编写 C++ 高性能网络服务。
 
 高性能网络服务主要有两个点：IO 非阻塞 + 多路复用技术。
 
