@@ -24,11 +24,11 @@ author: wenfh2020
 
 * 硬件设备。
 
-![设备](/images/2020-11-08-11-42-55.png){:data-action="zoom"}
+<div align=center><img src="/images/2021-01-07-09-31-49.png" data-action="zoom"/></div>
 
 * 工作流程。
 
-![mqtt 解决方案](/images/2020-11-08-11-31-48.png){:data-action="zoom"}
+<div align=center><img src="/images/2020-11-08-11-31-48.png" data-action="zoom"/></div>
 
 ---
 
