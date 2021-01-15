@@ -142,7 +142,7 @@ bool async_query(const char* node, MysqlQueryCallbackFn* fn, const char* sql, vo
 ```c
 bool MysqlAsyncConn::init(const db_info_t* db_info, struct ev_loop* loop) {
     ...
-    /* 设置 mysql client 异步熟悉。 */
+    /* 设置 mysql client 异步属性。 */
     mysql_options(&m_mysql, MYSQL_OPT_NONBLOCK, 0);
     ...
 }
