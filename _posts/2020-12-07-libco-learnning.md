@@ -214,8 +214,9 @@ total cnt: 1000000, total time: 125.832877, avg: 7947.048692
 * 压测源码（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/test/test_mysql_mgr/test_mysql_mgr.cpp)）。
 * mysql 连接池简单实现（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/core/mysql/db_mgr.cpp)）。
 * 压测发现每个 mysql 连接只能独立运行在固定的协程里，否则大概率会出现问题。
+* libco hook 技术虽然将 mysqlclient 阻塞接口设置为非阻塞，但是每个 mysqlclient 连接，必须一次只能处理一个命令，像同步那样！非阻塞只是方便协程切换到其它空闲协程进行工作，充分利用原来阻塞等待的时间。而且 mysqlclient 本来就是按照同步的逻辑来写的，一个连接，一次只能处理一个包，不可能被你设置为非阻塞后，一次往 mysql server 发 N 个包，这样肯定会出现不可预料的问题。
 * libco 协程切换成本不高，主要是 mysqlclient 耗费性能，参考火焰图。
-* 压测频繁地申请内存空间也耗费了不少性能（参考火焰图的 __brk），尝试添加 jemalloc 优化，发现 jemalloc 与 libco 一起用在 Linux 竟然出现死锁。
+* 压测频繁地申请内存空间也耗费了不少性能（参考火焰图的 __brk），尝试添加 jemalloc 优化，发现 jemalloc 与 libco 一起用在 Linux 竟然出现死锁！！！
 
 <div align=center><img src="/images/2021-01-16-13-30-28.png" data-action="zoom"/></div>
 
@@ -223,10 +224,10 @@ total cnt: 1000000, total time: 125.832877, avg: 7947.048692
 
 ## 8. 小结
 
-* 通过学习其他大神的帖子，和走读源码，终于对协程有了比较清晰的认知。
+* 通过学习其他大神的帖子，走读源码，写测试代码，终于对协程有了比较清晰的认知。
 * 测试 libco，Centos 功能正常，但 MacOS 下不能成功 Hook 住 mysqlclient 阻塞接口。
 * libco 是轻量级的，它主要应用于高并发的 IO 密集型场景，所以你看到它绑定了多路复用模型。
-* 虽然测试效果不错，如果你考虑用 libco 去造一个 mysql 连接池，实际使用那不是一件容易的事。
+* 虽然测试效果不错，如果你考虑用 libco 去造一个 mysql 连接池，还有不少工作要做。
 * libco 很不错，所以我选择 golang 🐶。
 
 ---

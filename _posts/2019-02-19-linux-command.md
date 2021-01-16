@@ -594,12 +594,26 @@ printf "%-10s %-11s" "end:" $end_time
 
 ### 7.4. xargs
 
-是给命令传递参数的一个过滤器
+是给命令传递参数的一个过滤器。
 
 ```shell
 find /etc -name "*.conf" | xargs ls –l
 cat url-list.txt | xargs wget –c
 find / -name *.jpg -type f -print | xargs tar -cvzf images.tar.gz
+```
+
+---
+
+### 7.5. mysql 常用命令
+
+不同平台下，启动 mysql 服务。
+
+```shell
+# MacOS
+brew services start mysql
+
+# centos7
+systemctl start mysqld
 ```
 
 ---
