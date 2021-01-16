@@ -422,7 +422,34 @@ scp /Users/wenfh2020/src/other/c_test/normal/proc/main.cpp root@120.25.44.163:/h
 
 ---
 
-### 6.2. nslookup
+### 6.2. rsync
+
+```shell
+#!/bin/sh
+
+work_path=$(dirname $0)
+cd $work_path
+work_path=$(pwd)
+
+rsync -avz --exclude="*.o" \
+    --exclude=".git" \
+    --exclude=".vscode" \
+    --exclude="*.so" \
+    --exclude="*.a" \
+    --exclude="*.log" \
+    --exclude="co_kimserver" \
+    --exclude="test/test_log/test_log" \
+    --exclude="test/test_mysql_mgr/test_mysql_mgr" \
+    --exclude="test/test_tcp/test_tcp" \
+    --exclude="test/test_tcp/test_tcp_pressure" \
+    --exclude="test/test_mysql/test_mysql" \
+    --exclude="test/test_timer/test_timer" \
+    ~/src/other/coroutine/co_kimserver/ root@192.168.0.155:/home/other/coroutine/back
+```
+
+---
+
+### 6.3. nslookup
 
 查域名对应的 ip
 
@@ -439,7 +466,7 @@ Address: 120.25.83.163
 
 ---
 
-### 6.3. ssh
+### 6.4. ssh
 
 ```shell
 ssh -p22 root@120.25.44.163
@@ -447,7 +474,7 @@ ssh -p22 root@120.25.44.163
 
 ---
 
-### 6.4. tcpdump
+### 6.5. tcpdump
 
 Linux tcpdump [命令](https://www.runoob.com/linux/linux-comm-tcpdump.html)用于倾倒网络传输数据
 
@@ -477,7 +504,7 @@ tcpdump -i eth0 host api.fyber.com and port 80 -w 123.cap
 
 ---
 
-### 6.5. wget
+### 6.6. wget
 
 ```shell
 wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.rpm
@@ -485,7 +512,7 @@ wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.r
 
 ---
 
-### 6.6. netstat
+### 6.7. netstat
 
 netstat 命令用于显示网络状态
 
@@ -508,7 +535,7 @@ netstat -nat|grep -i "80"|wc -l
 
 ---
 
-### 6.7. lsof
+### 6.8. lsof
 
 * 查询端口对应的信息
 
@@ -524,7 +551,7 @@ lsof -p <pid>
 
 ---
 
-### 6.8. nc
+### 6.9. nc
 
 ```shell
 # 启动监听 8333 端口的服务。
