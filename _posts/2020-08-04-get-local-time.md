@@ -20,8 +20,7 @@ author: wenfh2020
 ```c
 #include <sys/time.h>
 
-int
-gettimeofday(struct timeval *tp, struct timezone *tzp);
+int gettimeofday(struct timeval *tp, struct timezone *tzp);
 
 struct timeval {
     time_t       tv_sec;   /* seconds since Jan. 1, 1970 */
@@ -31,7 +30,9 @@ struct timeval {
 
 ---
 
-## 2. 毫秒
+## 2. 单位
+
+### 2.1. 毫秒
 
 ```c
 long long mstime() {
@@ -47,7 +48,7 @@ long long mstime() {
 
 ---
 
-## 3. 微秒
+### 2.2. 微秒
 
 ```c
 long long ustime() {
@@ -64,7 +65,7 @@ long long ustime() {
 
 ---
 
-## 4. 秒（double）
+### 2.3. 秒（double）
 
 ```c
 double time_now() {
@@ -72,4 +73,44 @@ double time_now() {
     gettimeofday(&tv, 0);
     return ((tv).tv_sec + (tv).tv_usec * 1e-6);
 }
+```
+
+---
+
+## 3. 格式化
+
+[年]-[月]-[日] [时]-[分]-[秒].[毫秒]
+
+```c++
+#include <sys/time.h>
+#include <unistd.h>
+#include <iostream>
+
+void format() {
+    int off;
+    time_t t;
+    char buf[64];
+    struct tm* tm;
+    struct timeval tv;
+
+    t = time(NULL);
+    tm = localtime(&t);
+    gettimeofday(&tv, NULL);
+    off = strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", tm);
+    std::cout << "[" << buf << "]" << std::endl;
+
+    snprintf(buf + off, sizeof(buf) - off, ".%03d", (int)tv.tv_usec / 1000);
+    std::cout << "[" << buf << "]" << std::endl;
+}
+
+int main() {
+    format();
+    return 0;
+}
+```
+
+```shell
+# g++ test_time.cpp -o test_time && ./test_time
+[2020-10-16 10:07:22]
+[2020-10-16 10:07:22.916]
 ```
