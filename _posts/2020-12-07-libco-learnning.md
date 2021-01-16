@@ -179,6 +179,8 @@ connect(4, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("127.0.0
 
 从测试结果看，单进程单线程，多个协程是“同时”进行的，“并发”量也随着协程个数增加而增加，跟测试预期一样。
 
+> 这里只测试协程的"并发性"，实际应用应该是用户比较多，每个用户的 sql 命令比较少的。
+
 ```shell
 # ./test_libco 1 10000
 id: 0, test cnt: 10000, cur spend time: 1.778823
@@ -198,16 +200,38 @@ total cnt: 30000, total time: 2.370038, avg: 12658.024719
 
 ---
 
-## 7. 小结
+## 7. mysql 连接池
+
+用 libco 共享栈简单造了个连接池，在 Linux 压力测试单进程 10w 个协程，每个协程读 10 个 sql 命令（相当于 1000w 个包），并发处理能力 8k/s，在可接受范围内。
+
+<div align=center><img src="/images/2021-01-16-14-22-53.png" data-action="zoom"/></div>
+
+```shell
+# ./test_mysql_mgr r 100000 10
+total cnt: 1000000, total time: 125.832877, avg: 7947.048692
+```
+
+* 压测源码（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/test/test_mysql_mgr/test_mysql_mgr.cpp)）。
+* mysql 连接池简单实现（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/core/mysql/db_mgr.cpp)）。
+* 压测发现每个 mysql 连接只能独立运行在固定的协程里，否则大概率会出现问题。如果只在有限的协程里处理 mysql 读写。
+* libco 协程切换成本不高，主要是 mysqlclient 耗费性能，参考火焰图。
+* 压测频繁地申请内存空间也耗费了不少性能（参考火焰图的 __brk），尝试添加 jemalloc 优化，发现 jemalloc 与 libco 一起用在 Linux 竟然出现死锁。
+
+<div align=center><img src="/images/2021-01-16-13-30-28.png" data-action="zoom"/></div>
+
+---
+
+## 8. 小结
 
 * 通过学习其他大神的帖子，和走读源码，终于对协程有了比较清晰的认知。
 * 测试 libco，Centos 功能正常，但 MacOS 下不能成功 Hook 住阻塞接口。
 * libco 是轻量级的，它主要应用于高并发的 IO 密集型场景，所以你看到它绑定了多路复用模型。从测试来看，虽然支持 MacOS 和 Linux，但是只有 Linux 是好用的。
+* 虽然测试效果不错，如果你考虑用 libco 去造一个 mysql 连接池，实际使用那不是一件容易的事。
 * libco 很不错，所以我选择 golang 🐶。
 
 ---
 
-## 8. 参考
+## 9. 参考
 
 * [云风 coroutine 协程库源码分析](https://www.cyhone.com/articles/analysis-of-cloudwu-coroutine/)
 * [微信 libco 协程库源码分析](https://www.cyhone.com/articles/analysis-of-libco/)
