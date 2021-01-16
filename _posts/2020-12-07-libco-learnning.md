@@ -213,7 +213,7 @@ total cnt: 1000000, total time: 125.832877, avg: 7947.048692
 
 * 压测源码（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/test/test_mysql_mgr/test_mysql_mgr.cpp)）。
 * mysql 连接池简单实现（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/core/mysql/db_mgr.cpp)）。
-* 压测发现每个 mysql 连接只能独立运行在固定的协程里，否则大概率会出现问题。如果只在有限的协程里处理 mysql 读写。
+* 压测发现每个 mysql 连接只能独立运行在固定的协程里，否则大概率会出现问题。
 * libco 协程切换成本不高，主要是 mysqlclient 耗费性能，参考火焰图。
 * 压测频繁地申请内存空间也耗费了不少性能（参考火焰图的 __brk），尝试添加 jemalloc 优化，发现 jemalloc 与 libco 一起用在 Linux 竟然出现死锁。
 
