@@ -59,27 +59,13 @@ brew install zookeeper
 * 启动 zk 服务。（服务默认端口：2181）
 
 ```shell
-# sudo zkServer start
-ZooKeeper JMX enabled by default
-Using config: /usr/local/etc/zookeeper/zoo.cfg
-Starting zookeeper ... STARTED  
+sudo zkServer start
 ```
 
 * 启动 zk client，连接 zk 服务。
 
 ```shell
-# sudo zkCli
-/usr/bin/java
-Connecting to localhost:2181
-Welcome to ZooKeeper!
-JLine support is enabled
-
-WATCHER::
-
-WatchedEvent state:SyncConnected type:None path:null
-[zk: localhost:2181(CONNECTED) 0] ls /kimserver
-[access, db]
-[zk: localhost:2181(CONNECTED) 1]
+sudo zkCli
 ```
 
 ---
