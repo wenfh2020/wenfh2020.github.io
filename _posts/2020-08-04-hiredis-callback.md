@@ -88,7 +88,7 @@ int main (int argc, char **argv) {
 hiredis 异步通信上下文 `redisAsyncContext` 结构，三个回调接口分别是：
 
 1. 链接回调 `redisConnectCallback`。
-2. 断开链接回调 `redisConnectCallback`。
+2. 断开链接回调 `redisDisconnectCallback`。
 3. 正常数据通信回调 `redisCallbackFn`。
 
 ```c
