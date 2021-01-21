@@ -202,7 +202,7 @@ total cnt: 30000, total time: 2.370038, avg: 12658.024719
 
 ## 7. mysql 连接池
 
-用 libco 共享栈简单造了个连接池，在 Linux 压力测试单进程 10w 个协程，每个协程读 10 个 sql 命令（相当于 1000w 个包），并发处理能力 8k/s，在可接受范围内。
+用 libco 共享栈简单造了个连接池，在 Linux 压力测试单进程 10w 个协程，每个协程读 10 个 sql 命令（相当于 100w 个包），并发处理能力 8k/s，在可接受范围内。
 
 <div align=center><img src="/images/2021-01-17-14-11-30.png" data-action="zoom"/></div>
 
@@ -214,7 +214,7 @@ total cnt: 1000000, total time: 125.832877, avg: 7947.048692
 * 压测源码（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/test/test_mysql_mgr/test_mysql_mgr.cpp)）。
 * mysql 连接池简单实现（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/core/mysql/mysql_mgr.cpp)）。
 * 压测发现每个 mysql 连接只能独立运行在固定的协程里，否则大概率会出现问题。
-* libco hook 技术虽然将 mysqlclient 阻塞接口设置为非阻塞，但是每个 mysqlclient 连接，必须一次只能处理一个命令，像同步那样！非阻塞只是方便协程切换到其它空闲协程进行工作，充分利用原来阻塞等待的时间。而且 mysqlclient 本来就是按照同步的逻辑来写的，一个连接，一次只能处理一个包，不可能被你设置为非阻塞后，一次往 mysql server 发 N 个包，这样肯定会出现不可预料的问题。
+* libco hook 技术虽然将 mysqlclient 阻塞接口设置为非阻塞，但是每个 mysqlclient 连接，必须一次只能处理一个命令，像同步那样！非阻塞只是方便协程切换到其它空闲协程继续工作，充分利用原来阻塞等待的时间。而且 mysqlclient 本来就是按照同步的逻辑来写的，一个连接，一次只能处理一个包，不可能被你设置为非阻塞后，一次往 mysql server 发 N 个包，这样肯定会出现不可预料的问题。
 * libco 协程切换成本不高，主要是 mysqlclient 耗费性能，参考火焰图。
 * 压测频繁地申请内存空间也耗费了不少性能（参考火焰图的 __brk），尝试添加 jemalloc 优化，发现 jemalloc 与 libco 一起用在 Linux 竟然出现死锁！！！
 
