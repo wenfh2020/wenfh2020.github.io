@@ -34,6 +34,9 @@ author: wenfh2020
 
 我们看看 redis 的 callback 逻辑。（[github 源码](https://github.com/redis/redis/blob/unstable/src/sentinel.c)）
 
+> 详细请参考：《[[redis 源码走读] 事件 - 文件事件](https://wenfh2020.com/2020/04/09/redis-ae-file/
+)》《[epoll 多路复用 I/O工作流程](https://wenfh2020.com/2020/04/14/epoll-workflow/)》
+
 * 事件结构。
 
 ```c
