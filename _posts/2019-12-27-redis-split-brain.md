@@ -7,7 +7,7 @@ author: wenfh2020
 mathjax: true
 --- 
 
-由于网络问题，集群节点失去联系。主从节点数据不同步；重新平衡选举，产生多个主服务，导致数据不一致。
+由于网络问题，集群节点失去联系，集群进行故障转移，产生多个主服务，导致节点数据不一致。
 
 
 
@@ -21,9 +21,11 @@ mathjax: true
 
 ### 1.1. 概述
 
-redis 集群，我们看看 redis 哨兵的高可用模式。
+我们看看 redis 哨兵的高可用模式。
 
-集群有三种 redis 角色：sentinel/master/slave，三种角色通过 tcp 链接，相互建立联系。sentinel 作为高可用集群管理者，它的功能主要是：检查故障，发现故障，故障转移。
+集群有三种 redis 角色：sentinel/master/slave，三种角色通过 tcp 链接，相互建立联系。
+
+sentinel 作为高可用集群管理者，它的功能主要是：检查故障，发现故障，故障转移。
 
 ---
 
@@ -32,7 +34,9 @@ redis 集群，我们看看 redis 哨兵的高可用模式。
 1. 在 redis 集群中，当 sentinel 检测到 master 出现故障，那么 sentinel 需要对集群进行故障转移。
 2. 当一个 sentinel 发现 master 下线，它会将下线的 master 确认为**主观下线**。
 3. 当多个 sentinel 已经发现该 master 节点下线，那么 sentinel 会将其确认为**客观下线**。
-4. 多个 sentinel 根据一定的逻辑，选出一个 sentinel 作为代表，由它去进行故障转移，将 master 最优的一个 slave 提升为新 master 角色。旧  master 如果重新激活，它将被降级为 slave。
+4. 多个 sentinel 根据一定的逻辑，选举出一个 sentinel 作为代表，由它去进行故障转移，将原来连接已客观下线 master 最优的一个 slave 提升为新 master 角色。旧  master 如果重新激活，它将被降级为 slave。
+
+> 详细请参考：《[[redis 源码走读] sentinel 哨兵 - 故障转移](https://wenfh2020.com/2020/09/27/redis-sentinel-failover/)》
 
 ---
 
