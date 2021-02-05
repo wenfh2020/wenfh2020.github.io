@@ -6,7 +6,9 @@ tags: kimserver async mysql pool
 author: wenfh2020
 ---
 
-感觉 `mysql` 非阻塞异步链接很小众，能够搜索出来的资料不多。只要做单进程的异步服务，就绕不开数据库。很幸运，`mariadb` 提供了异步接口，在 github 上找到一个项目（[mysql_async](https://github.com/liujian0616/mysql_async)）是结合 libev 实现的异步项目，正合我意！接下来对其进行改造。
+`mysql` 非阻塞异步 client 比较小众，能搜索出来的资料不多。
+
+只要做单进程的异步服务，就绕不开 mysql 数据库操作。很幸运，`mariadb` 提供了异步接口，在 github 上找到一个项目（[mysql_async](https://github.com/liujian0616/mysql_async)）是结合 libev 实现的异步项目，正合我意！接下来对其进行改造。
 
 
 
