@@ -17,7 +17,9 @@ siege 是一个轻量级的压力测试工具，http 测试方便实用。
 
 ## 1. 概述
 
-压力测试是服务开发中十分重要的一环，需要测试服务在高并发的环境下功能的稳定性以及性能的瓶颈，根据测试结果输出详细的测试数据，有针对性地对服务进行优化。
+压测是服务开发中十分重要的一环，需要测试服务在高并发环境下，功能的稳定性以及性能瓶颈，并根据测试结果输出详细的测试数据，有针对性地对服务进行优化。
+
+---
 
 ## 2. 测试机器
 
@@ -31,13 +33,9 @@ siege 是一个轻量级的压力测试工具，http 测试方便实用。
 
 ## 3. Siege
 
-它是一款开源的压力测试工具，设计用于评估WEB应用在压力下的承受能力。可以根据配置对一个WEB站点进行多用户的并发访问，记录每个用户所有请求过程的相应时间，并在一定数量的并发访问下重复进行。
-
----
-
 ### 3.1. 安装
 
-通过 yum install siege 命令可以安装，但是一般会根据系统源进行下载，下载的版本比较低，建议根据下列操作步骤安装最新版本。
+通过 `yum install siege` 命令可以安装默认版本；或者下载对应版本安装。
 
 ```shell
 wget http://download.joedog.org/siege/siege-4.0.4.tar.gz
@@ -61,7 +59,7 @@ man siege
 * 具体参数使用事例。
 
 ```shell
-siege  -c 并发用户数 -r 循环次数 --header "http协议头设置"  '请求链接'
+siege  -c 并发用户数 -r 循环次数 --header "http协议头设置" '请求链接'
 ```
 
 ---
@@ -98,22 +96,7 @@ siege -c 500 -r 100 --header "Cookie:token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
 
 ### 3.3. 测试结果
 
-| 选项                    | 描述                 |
-| :---------------------- | :------------------- |
-| Transactions            | 已完成的事务总数     |
-| Availability            | 完成的成功率         |
-| Elapsed time            | 总共使用的时间       |
-| Data transferred        | 响应中数据的总大小   |
-| Response time           | 显示网络连接的速度   |
-| Transaction rate        | 平均每秒完成的事务数 |
-| Throughput              | 平均每秒传送的数据量 |
-| Concurrency             | 实际最高并发链接数   |
-| Successful transactions | 成功处理的次数       |
-| Failed transactions     | 失败处理的次数       |
-| Longest transaction     | 最长事务处理的时间   |
-| Shortest transaction    | 最短事务处理时间     |
-
-结果：
+siege 命令测试结果。
 
 ```shell
 Transactions:                 500000 hits
@@ -129,6 +112,23 @@ Failed transactions:               0
 Longest transaction:            3.03
 Shortest transaction:           0.00
 ```
+
+---
+
+| 选项                    | 描述                 |
+| :---------------------- | :------------------- |
+| Transactions            | 已完成的事务总数     |
+| Availability            | 完成的成功率         |
+| Elapsed time            | 总共使用的时间       |
+| Data transferred        | 响应中数据的总大小   |
+| Response time           | 显示网络连接的速度   |
+| Transaction rate        | 平均每秒完成的事务数 |
+| Throughput              | 平均每秒传送的数据量 |
+| Concurrency             | 实际最高并发链接数   |
+| Successful transactions | 成功处理的次数       |
+| Failed transactions     | 失败处理的次数       |
+| Longest transaction     | 最长事务处理的时间   |
+| Shortest transaction    | 最短事务处理时间     |
 
 ---
 
