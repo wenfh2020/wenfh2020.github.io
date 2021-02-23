@@ -27,6 +27,8 @@ client 提供了两种接口：同步 / 异步。同步和异步接口都是通�
 ```shell
 yum install -y ant
 yum install -y cppunit-devel
+yum install -y cmake
+yum install -y libtool
 # 下载的是 2018 年的版本，最新版本根据文档，执行 ant 命令会失败。
 wget https://github.com/apache/zookeeper/archive/release-3.4.13.tar.gz
 tar zxf release-3.4.13.tar.gz
