@@ -92,7 +92,7 @@ wget https://archive.apache.org/dist/zookeeper/zookeeper-3.5.6/apache-zookeeper-
 tar zxf apache-zookeeper-3.5.6-bin.tar.gz
 cd apache-zookeeper-3.5.6-bin
 cd conf
-cp simple_zoo.cfg zoo.cfg
+cp zoo_sample.cfg zoo.cfg
 cd ../bin
 # 注意用这个命令启动可以实时显示日志，启动失败方便查找问题。
 ./zkServer.sh start-foreground
