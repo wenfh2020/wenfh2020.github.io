@@ -6,7 +6,7 @@ tags: flame diagram performance
 author: wenfh2020
 ---
 
-火焰图是 svg 格式的矢量图，基于 `perf` 软件性能分析工具。通过对软件在系统上的工作行为记录进行采样。并将数据进行图形化，从而得出比较直观的可视化数据矢量图。
+火焰图是 svg 格式的矢量图，基于 `perf` 软件性能分析工具。通过对软件在系统上的工作行为记录进行采样。并将数据进行图形化，从而获得比较直观的可视化数据矢量图。
 
 
 
@@ -16,9 +16,29 @@ author: wenfh2020
 
 ---
 
-## 1. perf 采样
+## 1. 概述
 
-* 基于 Linux 平台的 `perf` 采样脚本（[fg.sh - github 源码](https://github.com/wenfh2020/shell/blob/master/fg.sh)），对指定进程（pid）进行采样，生成火焰图 `perf.svg`。
+基于 Linux 平台的 `perf` 采样脚本（[fg.sh](https://github.com/wenfh2020/shell/blob/master/fg.sh)），对指定进程进行采样，生成火焰图 `perf.svg`。
+
+> 🔥 生成火焰图视频教程 [《生成火焰图（Generate flame diagram）》](https://www.bilibili.com/video/BV1My4y1q7YK/)
+
+---
+
+### 1.1. 安装 perf 和 FlameGraph
+
+```shell
+yum install perf
+cd /usr/local/src
+git clone https://github.com/brendangregg/FlameGraph.git
+ln -s /usr/local/src/FlameGraph/flamegraph.pl /usr/local/bin/flamegraph.pl
+ln -s /usr/local/src/FlameGraph/stackcollapse-perf.pl /usr/local/bin/stackcollapse-perf.pl 
+```
+
+---
+
+### 1.2. 脚本
+
+* [fg.sh](https://github.com/wenfh2020/shell/blob/master/fg.sh) 。
 
 ```shell
 #!/bin/sh
@@ -35,7 +55,11 @@ stackcollapse-perf.pl perf.unfold &> perf.folded
 flamegraph.pl perf.folded > perf.svg
 ```
 
-> 🔥 生成火焰图视频教程 [《生成火焰图（Generate flame diagram）》](https://www.bilibili.com/video/BV1My4y1q7YK/)
+* 命令。
+
+```shell
+./fg.sh <pid>
+```
 
 ---
 
