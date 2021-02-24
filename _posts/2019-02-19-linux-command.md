@@ -78,11 +78,10 @@ service iptables stop
 
 ---
 
-### 1.8. 开放端口号
+### 1.8. 开放端口
 
 ```shell
 # centos
-
 vi /etc/sysconfig/iptables
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 19007 -j ACCEPT
 systemctl restart iptables.service
@@ -142,7 +141,21 @@ date -d @1361542596 +"%Y-%m-%d %H:%M:%S"
 
 ---
 
-### 1.15. 进程绝对路径
+### 1.15. 同步时间
+
+```shell
+# 修改中国时间
+rm -rf /etc/localtime
+ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+# 同步远程时间。
+yum install -y ntpdate
+ntpdate ntp.aliyun.com
+```
+
+---
+
+### 1.16. 进程绝对路径
 
 ```shell
 top -c
@@ -157,7 +170,7 @@ ps -ef
 
 ### 2.1. awk
 
-awk 动作 文件名
+awk [操作] [文件名]
 
 ```shell
 echo 'this is a test' | awk '{print $0}'
@@ -174,7 +187,7 @@ ps -ef | grep gdb | grep -v grep | awk '{print $3}' | xargs sudo kill -9
 
 ### 2.2. sed
 
-字符串处理
+字符串处理。
 
 * linux
 
