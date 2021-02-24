@@ -31,7 +31,7 @@ yum install perf
 cd /usr/local/src
 git clone https://github.com/brendangregg/FlameGraph.git
 ln -s /usr/local/src/FlameGraph/flamegraph.pl /usr/local/bin/flamegraph.pl
-ln -s /usr/local/src/FlameGraph/stackcollapse-perf.pl /usr/local/bin/stackcollapse-perf.pl 
+ln -s /usr/local/src/FlameGraph/stackcollapse-perf.pl /usr/local/bin/stackcollapse-perf.pl
 ```
 
 ---
