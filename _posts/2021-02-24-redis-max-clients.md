@@ -16,36 +16,7 @@ Linux 系统，每个进程有打开文件数量限制，所以 redis 作为一�
 
 ---
 
-## 1. 进程最大打开文件数量
-
-当进程打开文件数量超出限制，系统将会给进程发送信号（例如：SIGSTOP 信号），强制其退出。
-
-`ulimit -a` 查看 `open files` 信息。
-
-```shell
-# ulimit -a
-core file size          (blocks, -c) 0
-data seg size           (kbytes, -d) unlimited
-scheduling priority             (-e) 0
-file size               (blocks, -f) unlimited
-pending signals                 (-i) 14959
-max locked memory       (kbytes, -l) 64
-max memory size         (kbytes, -m) unlimited
-# 默认进程最大打开文件数量。
-open files                      (-n) 1024
-pipe size            (512 bytes, -p) 8
-POSIX message queues     (bytes, -q) 819200
-real-time priority              (-r) 0
-stack size              (kbytes, -s) 8192
-cpu time               (seconds, -t) unlimited
-max user processes              (-u) 14959
-virtual memory          (kbytes, -v) unlimited
-file locks                      (-x) unlimited
-```
-
----
-
-## 2. 进程启动设置限制
+## 1. redis 设置限制
 
 Linux 系统一切皆文件，所以 socket 本质也是文件，redis 作为服务程序，它会打开多种不同类型的文件，例如：客户端连接，listen 监听，日志，父子进程管道通信连接，等等。但是客户端连接是外部接入，不可控，所以重点要限制它的数量。
 
@@ -53,10 +24,11 @@ redis 对文件数量限制主要分两类:
 
 * client 连接数量：server.maxclients。
 * 程序正常运行预计需要打开文件的数量（listen，日志，管道...）：CONFIG_MIN_RESERVED_FDS。
+  > #define CONFIG_MIN_RESERVED_FDS 32
 
 ---
 
-### 2.1. 配置
+### 1.1. 配置
 
 * redis.conf 默认设置 10000 个。
 
@@ -75,18 +47,20 @@ redis 对文件数量限制主要分两类:
 # maxclients 10000
 ```
 
+---
+
+### 1.2. 源码实现
+
 ```c
+/* 默认配置。 */
 standardConfig configs[] = {
     ...
     /* Unsigned int configs */
     createUIntConfig("maxclients", NULL, MODIFIABLE_CONFIG, 1, UINT_MAX, server.maxclients, 10000, INTEGER_CONFIG, NULL, updateMaxclients),
     ...
 }
-```
 
-* 启动。
-
-```c
+/* 程序启动。 */
 int main(int argc, char **argv) {
     ...
     initServer();
@@ -103,7 +77,11 @@ void initServer(void) {
 
 ---
 
-`adjustOpenFilesLimit` 是限制设置的具体实现，限制数量不能超过 `ulimit -a` 里的 `open files`，在这个基础上，尽可能设置一个最优的限制数量，这个文件数量是 server.maxclients + CONFIG_MIN_RESERVED_FDS。
+`adjustOpenFilesLimit` 是限制设置的具体实现。限制数量不能超过系统默认最大打开的文件数，在这个基础上，尽可能设置一个最优的限制数量。
+
+设置预期是： server.maxclients + CONFIG_MIN_RESERVED_FDS，但是有可能会比这个数值小。
+
+> 例如默认配置 maxclients 是 10000，但是系统默认只支持 1024，那么实际限制的客户端连接数肯定要小于 1024。
 
 ```c
 #define CONFIG_MIN_RESERVED_FDS 32
@@ -184,7 +162,9 @@ void adjustOpenFilesLimit(void) {
 
 ---
 
-## 3. 关闭超量连接
+## 2. 关闭超量连接
+
+当接入 redis 的客户端接入数量超过限制，它会将新的客户端接入连接关闭。
 
 ```c
 static void acceptCommonHandler(connection *conn, int flags, char *ip) {
@@ -199,3 +179,76 @@ static void acceptCommonHandler(connection *conn, int flags, char *ip) {
     ...
 }
 ```
+
+---
+
+## 3. 系统文件限制
+
+当进程打开文件数量超出限制，系统将会给进程发送信号（例如：SIGSTOP 信号），强制其退出。
+
+---
+
+### 3.1. 查看限制
+
+`ulimit -a` 查看 `open files` 信息。
+
+```shell
+# ulimit -a
+core file size          (blocks, -c) 0
+data seg size           (kbytes, -d) unlimited
+scheduling priority             (-e) 0
+file size               (blocks, -f) unlimited
+pending signals                 (-i) 14959
+max locked memory       (kbytes, -l) 64
+max memory size         (kbytes, -m) unlimited
+# 默认进程最大打开文件数量。
+open files                      (-n) 1024
+pipe size            (512 bytes, -p) 8
+POSIX message queues     (bytes, -q) 819200
+real-time priority              (-r) 0
+stack size              (kbytes, -s) 8192
+cpu time               (seconds, -t) unlimited
+max user processes              (-u) 14959
+virtual memory          (kbytes, -v) unlimited
+file locks                      (-x) unlimited
+```
+
+---
+
+### 3.2. 修改限制
+
+#### 3.2.1. 临时生效
+
+```shell
+ulimit -n <number>
+```
+
+---
+
+#### 3.2.2. 永久生效
+
+修改配置完成，需要退出终端，重新进入新的终端才会生效。
+
+* 修改 limits.conf：
+
+```shell
+# vi /etc/security/limits.conf
+* soft nofile 65536
+* hard nofile 65536
+```
+
+* 修改 profile。
+
+```shell
+# vi /etc/profile
+ulimit -n 65535
+# source /etc/profile
+```
+
+---
+
+## 4. 小结
+
+* redis 最大客户端连接数，默认 10000。
+* redis 最大客户端连接数，可以从 redis.conf 的 maxclients 选项里配置。
+* redis 最大客户端连接数，要在系统文件数量限制基础上配置才会符合预期，否则只能限制到比预期小的数据。
