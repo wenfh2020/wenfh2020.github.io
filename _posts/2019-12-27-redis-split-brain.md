@@ -7,7 +7,7 @@ author: wenfh2020
 mathjax: true
 --- 
 
-由于网络问题，集群节点失去联系，集群进行故障转移，产生多个主服务，导致节点数据不一致。
+哨兵模式的 redis 集群，原来只有一个主服务，经过故障转移后，产生多个主服务，这样脑裂现象出现了。
 
 
 
@@ -33,7 +33,7 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 
 1. 在 redis 集群中，当 sentinel 检测到 master 出现故障，那么 sentinel 需要对集群进行故障转移。
 2. 当一个 sentinel 发现 master 下线，它会将下线的 master 确认为**主观下线**。
-3. 当多个 sentinel 已经发现该 master 节点下线，那么 sentinel 会将其确认为**客观下线**。
+3. 当“法定个数”（quorum）sentinel 已经发现该 master 节点下线，那么 sentinel 会将其确认为**客观下线**。
 4. 多个 sentinel 根据一定的逻辑，选举出一个 sentinel 作为代表，由它去进行故障转移，将原来连接已客观下线 master 最优的一个 slave 提升为新 master 角色。旧  master 如果重新激活，它将被降级为 slave。
 
 > 详细请参考：《[[redis 源码走读] sentinel 哨兵 - 故障转移](https://wenfh2020.com/2020/09/27/redis-sentinel-failover/)》
@@ -116,7 +116,7 @@ sentinel monitor mymaster 127.0.0.1 6379 2
 Configuration: quorum = 2
 ```
 
-假如 M1 机器与其它机器断开链接了，S2 和 S3 两个 sentinel 能相互链接，sentinel 能正常进行故障转移，sentinel 将 R2 提升为新的 master 角色 [M2]。但是客户端 C1 链接到 M1 的客户端依然正常读写，这样仍然会出现问题，所以我们不得不对 M1 进行限制。
+假如 M1 机器与其它机器断开链接了，S2 和 S3 两个 sentinel 能相互链接，sentinel 能正常进行故障转移，sentinel 将 R2 提升为新的 master 角色 [M2]。但是客户端 C1 仍然能读写 M1，这样仍然会出现问题，所以我们不得不对 M1 进行限制。
 
 ```shell
          +----+

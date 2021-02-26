@@ -39,4 +39,5 @@ source-file ~/.tmux.conf
 
 ## 2. 参考
 
+* [tmux 常用快捷键](https://wenfh2020.com/2020/11/05/tmux/)
 * [How to switch to the previous pane by any shortcut in tmux?](https://stackoverflow.com/questions/31980036/how-to-switch-to-the-previous-pane-by-any-shortcut-in-tmux)
