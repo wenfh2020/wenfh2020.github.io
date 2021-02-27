@@ -98,7 +98,7 @@ DNS1=114.114.114.114
 ```shell
 systemctl stop NetworkManager
 systemctl disable NetworkManager
-systemctl start network.service
+systemctl restart network.service
 ```
 
 * 测试网络。
