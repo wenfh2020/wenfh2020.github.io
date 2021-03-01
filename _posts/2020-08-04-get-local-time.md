@@ -114,3 +114,43 @@ int main() {
 [2020-10-16 10:07:22]
 [2020-10-16 10:07:22.916]
 ```
+
+---
+
+## 4. 性能
+
+### 4.1. 问题
+
+高并发系统里，从火焰图里看到：平平无奇的 `mstime()` 接口，却是资源吃货！
+
+<div align=center><img src="/images/2021-03-01-13-10-57.png" data-action="zoom"/></div>
+
+---
+
+### 4.2. 优化
+
+一般业务，对时间精度要求不高。可以按照两个方面优化：
+
+* 放在时钟里定时设置。
+* 根据使用频率设置。
+
+```c++
+class Network {
+    ...
+protected:
+    int m_time_index = 0;
+    uint64_t m_now_time = 0;
+
+    void on_repeat_timer() {
+         m_now_time = mstime();
+    }
+
+    uint64_t now() {
+        if ((++m_time_index % 10) == 0) {
+            m_now_time = mstime();
+        }
+        return m_now_time;
+    }
+    ...
+};
+```
