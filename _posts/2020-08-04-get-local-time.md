@@ -154,3 +154,13 @@ protected:
     ...
 };
 ```
+
+---
+
+有空的同学，可以阅读一下 `libev` 的源码，看看它是怎么获取当前时间的。
+
+```c
+ev_tstamp ev_now (struct ev_loop *loop) {
+  return ((loop)->ev_rt_now);
+}
+```
