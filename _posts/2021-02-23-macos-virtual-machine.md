@@ -155,3 +155,15 @@ plugins=0
 
 * [linux ssh 虚拟机下CentOS7开启SSH连接](https://blog.csdn.net/mengzuchao/article/details/80261836)。
 * [[shell] ssh 快捷登录](https://wenfh2020.com/2020/01/07/ssh-quick-login/)
+
+---
+
+如果 ssh DNS 解析慢，可以修改配置。
+
+```shell
+# vi /etc/ssh/sshd_config
+UseDNS no
+# GSSAPI options
+GSSAPIAuthentication no
+# service sshd restart
+```

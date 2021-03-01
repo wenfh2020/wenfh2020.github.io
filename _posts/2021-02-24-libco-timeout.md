@@ -1,12 +1,12 @@
 ---
 layout: post
-title:  "[libco] libco 空跑为啥也耗 CPU"
+title:  "[libco] libco 不干活也费 CPU"
 categories: libco
 tags: libco workflow
 author: wenfh2020
 ---
 
-如题，在 Linux 系统，libco 调用 epoll_wait 有点用力过猛，虽然 libco 针对大并发，但是有些小问题的处理，显得比较粗糙。
+在 Linux 系统，libco 调用 epoll_wait 有点用力过猛，虽然 libco 针对大并发，但是小问题的处理，略显粗糙。
 
 
 

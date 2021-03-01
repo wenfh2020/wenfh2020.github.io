@@ -293,6 +293,9 @@ tree /dir/ -L 1
 ```shell
 # 查看文件夹大小。
 du -sh dir
+
+# 从大到小排列文件。
+du | sort -n -k1 
 ```
 
 ---
