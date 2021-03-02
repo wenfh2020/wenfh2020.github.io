@@ -6,7 +6,9 @@ tags: redis raft
 author: wenfh2020
 ---
 
-raft 一致性算法，它是分布式系统中一种高可用算法策略。只单纯看论文算法，很难掌握它的工作流程，有兴趣的话，可以阅读 redis sentinel 哨兵源码实现，当理解了 sentinel 的工作原理后，raft 算法自然就理解了。
+raft 一致性算法，它是分布式系统中一种高可用算法策略，只单纯看算法论文，很难掌握它的工作流程。
+
+有兴趣的朋友，可以阅读 redis sentinel 源码，当理解了 sentinel 的工作原理，raft 算法自然理解了。
 
 
 
@@ -18,9 +20,11 @@ raft 一致性算法，它是分布式系统中一种高可用算法策略。只
 
 ## 1. 算法文档
 
-* raft 算法官网[《The Raft Consensus Algorithm》](https://raft.github.io/)（连接可能需要翻墙）
+* raft 算法官网[《The Raft Consensus Algorithm》](https://raft.github.io/)
 * raft 算法中文翻译[《寻找一种易于理解的一致性算法（扩展版）》](https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md)
 * raft 算法[《动画 ppt》](http://thesecretlivesofdata.com/raft/)
+
+> 上面有些连接可能需要翻墙。
 
 ---
 
