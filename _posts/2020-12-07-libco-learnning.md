@@ -202,7 +202,7 @@ total cnt: 30000, total time: 2.370038, avg: 12658.024719
 
 ## 7. mysql 连接池
 
-用 libco 共享栈简单造了个连接池，在 Linux 压力测试单进程 10w 个协程，每个协程读 10 个 sql 命令（相当于 100w 个包），并发处理能力 8k/s，在可接受范围内。
+用 libco 在项目（[co_kimserver](https://github.com/wenfh2020/co_kimserver)）里，简单造了个连接池。Linux 压力测试单进程 10w 个协程，每个协程读 10 个 sql 命令（相当于 100w 个包），并发处理能力 8k/s，在可接受范围内。
 
 <div align=center><img src="/images/2021-01-17-14-11-30.png" data-action="zoom"/></div>
 

@@ -54,11 +54,23 @@ source ~/.zshrc
 
 ## 2. tmux
 
-参考 [tmux 常用快捷键](https://wenfh2020.com/2020/11/05/tmux/)。
+参考： [tmux 常用快捷键](https://wenfh2020.com/2020/11/05/tmux/)。
 
 ---
 
-## 3. mysql
+## 3. vimplus
+
+参考：[超级强大的vim配置(vimplus)--续集](https://www.cnblogs.com/highway-9/p/5984285.html)
+
+```shell
+git clone https://github.com/chxuan/vimplus.git ~/.vimplus
+cd ~/.vimplus
+./install.sh
+```
+
+---
+
+## 4. mysql
 
 * 服务端：脚本一键安装。mysql 安装包默认是 5.6.22 版本，mysql 用户名和密码是 root，可自行修改脚本配置。
 
