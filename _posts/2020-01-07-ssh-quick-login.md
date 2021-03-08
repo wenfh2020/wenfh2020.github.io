@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[shell] ssh 快捷登录"
-categories: Linux
+categories: 系统
 tags: Linux quick login
 author: wenfh2020
 --- 
