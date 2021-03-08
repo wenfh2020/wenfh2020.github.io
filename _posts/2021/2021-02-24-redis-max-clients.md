@@ -77,11 +77,9 @@ void initServer(void) {
 
 ---
 
-`adjustOpenFilesLimit` 是限制设置的具体实现。限制数量不能超过系统默认最大打开的文件数，在这个基础上，尽可能设置一个最优的限制数量。
+`adjustOpenFilesLimit` 是限制设置的具体实现。通过 `setrlimit` 函数设置进程的文件数限制，尽可能设置一个最优的限制数量。
 
 设置预期是： server.maxclients + CONFIG_MIN_RESERVED_FDS，但是有可能会比这个数值小。
-
-> 例如默认配置 maxclients 是 10000，但是系统默认只支持 1024，那么实际限制的客户端连接数肯定要小于 1024。
 
 ```c
 #define CONFIG_MIN_RESERVED_FDS 32
@@ -119,6 +117,7 @@ void adjustOpenFilesLimit(void) {
 
                 limit.rlim_cur = bestlimit;
                 limit.rlim_max = bestlimit;
+                /* 设置进程能打开的最大文件数。 */
                 if (setrlimit(RLIMIT_NOFILE,&limit) != -1) break;
                 setrlimit_error = errno;
 
@@ -182,7 +181,7 @@ static void acceptCommonHandler(connection *conn, int flags, char *ip) {
 
 ---
 
-## 3. 系统文件限制
+## 3. 系统文件限制配置
 
 当进程打开文件数量超出限制，系统将会给进程发送信号（例如：SIGSTOP 信号），强制其退出。
 
@@ -251,4 +250,10 @@ ulimit -n 65535
 
 * redis 最大客户端连接数，默认 10000。
 * redis 最大客户端连接数，可以从 redis.conf 的 maxclients 选项里配置。
-* redis 最大客户端连接数，要在系统文件数量限制基础上配置才会符合预期，否则只能限制到比预期小的数据。
+* redis 最大客户端连接数，可以通过 `setrlimit` 函数修改当前进程的文件资源限制，也可以通过修改系统资源配置，从而修改进程文件限制。
+
+---
+
+## 5. 参考
+
+* [进程环境之getrlimit和setrlimit函数](https://www.cnblogs.com/nufangrensheng/p/3509262.html)

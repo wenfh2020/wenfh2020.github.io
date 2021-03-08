@@ -55,7 +55,7 @@ struct stCoRoutine_t *co_create_env(stCoRoutineEnv_t *env, const stCoRoutineAttr
 
 基于上述独立栈的缺点，共享栈应运而生。
 
-1. 共享栈协程，协程在创建的时候，就被分配在**指定的**共享栈内存块上工作。
+1. 共享栈协程，协程在创建时，被分配在**指定的**共享栈内存块上工作。
 2. 当然只有正在执行的协程，才会使用共享栈，当它被（yield）切换出来后，它需要保存协程上下文：寄存器数据 + 内存数据，所以共享栈上的**使用部分**（不是整个共享栈空间）会被拷贝出来。
 3. 同理新切入的协程，需要将以前保存的内存上下文，重新拷贝到共享栈上工作。
 4. 内存拷贝不是必然的，因为有多个共享内存块，每个块上都会有不同协程在工作，只有当相同共享栈上的协程切换才会出现内存拷贝。
@@ -120,14 +120,14 @@ void co_swap(stCoRoutine_t *curr, stCoRoutine_t *pending_co) {
         pending_co->stack_mem->occupy_co = pending_co;
 
         env->occupy_co = occupy_co;
-        /* 不一定需要内存拷贝啊，新切换的协程，可能落在其它的共享栈上。*/
+        /* 不一定需要内存拷贝啊，新切换的协程，可能落在其它共享栈上。*/
         if (occupy_co && occupy_co != pending_co) {
             /* 当前协程被切出来了，需要从共享栈上保存它的内存上下文。 */
             save_stack_buffer(occupy_co);
         }
     }
 
-    // 协程切换，切换上下文。
+    /* 协程切换，切换上下文。 */
     coctx_swap(&(curr->ctx), &(pending_co->ctx));
 
     //stack buffer may be overwrite, so get again;
