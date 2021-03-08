@@ -94,7 +94,7 @@ static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
 
 ### 2.2. epoll_wait
 
-内核检测到 fd 有事件发送，通过 epoll_wait 唤醒进程，将 fd 对应事件从内核层拷贝发送（__put_user）到用户层。
+内核检测到 fd 有事件发生，唤醒进程，epoll_wait 将 fd 对应事件从内核拷贝到（__put_user）到用户层。
 
 ```c
 /* eventpoll.c */
@@ -184,13 +184,13 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep,
 
 ## 3. 开源
 
-既然 epoll_data 是一个 union 值，那么我们日常使用，应该如何传参？我们参考一下开源是如何处理的。
+epoll_data 是一个 union 值，应该如何传参？我们参考一下其它开源项目是如何处理的。
 
 ### 3.1. libco
 
 Linux 系统的 epoll_wait 回调数据，data 是一个 stTimeoutItem_t 指针。
 
-传指针最大的问题是：如果其程序逻辑出现问题，程序在 epoll_wait 回调前，把指针释放了，那么 epoll_wait 回调后传回来的指针，可能指向无效的区域，存在安全隐患。
+传指针最大的问题是：如果其程序逻辑出现问题，程序在 epoll_wait 回调前，把指针释放了，那么 epoll_wait 回调后传回来的指针，可能指向无效区域，存在安全隐患。
 
 ```c
 /* co_coroutine.cpp */
@@ -215,9 +215,9 @@ void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
 
 ### 3.2. redis
 
-redis epoll 的 data 传的是 fd。
+epoll_event.data 传的是 fd。
 
-我们日常使用，fd 并不是用户的唯一标识，因为当旧的 fd 被 close 掉后，它会被系统回收重复使用，导致新来的用户可能重用原来的 fd，如果逻辑处理不好，也有出问题的概率。
+我们日常使用，fd 并不是用户的唯一标识，因为当旧的 fd 被 close 掉后，它会被系统回收重复使用，导致新来的用户可能重用原来的 fd，如果逻辑处理不好，也可能会出现问题。
 
 ```c
 /* ae_epoll.c */
@@ -247,7 +247,7 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
 
 ### 3.3. libev
 
-libev epoll 的 data 传的是 fd 和索引的组合，这样添加一个索引对数据进行保护，感觉更安全一些。
+libev epoll_event.data 传的是 fd 和索引的组合，这样添加一个索引对数据进行保护，感觉更安全一些。
 
 ```c
 /* ev_poll.c */
@@ -291,8 +291,8 @@ epoll_poll (EV_P_ ev_tstamp timeout) {
 
 ## 4. 小结
 
-* 走读源码，可以深层次理解作者代码设计思路，通过对比，巩固自己的知识网络。
-* 现实使用，我们可以参考大师的源码去实现逻辑，权衡利弊。
+* 走读源码，可以深层次理解作者代码设计思路，通过对比，加深对代码的理解。
+* 现实使用，我们可以参考开源的实现。
 
 ---
 
