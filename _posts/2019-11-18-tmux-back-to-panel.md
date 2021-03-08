@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "tmux 返回前一个 panel 快捷键"
-categories: tool
+categories: 工具
 tags: tmux prev pannel
 author: wenfh2020
 ---

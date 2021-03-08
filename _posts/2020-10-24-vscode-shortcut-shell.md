@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "vscode 一键（快捷键）执行脚本命令"
-categories: tool
+categories: 工具
 tags: vscode shell shortcuts
 author: wenfh2020
 ---

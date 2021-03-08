@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "vim c++ 代码自动格式化配置"
-categories: tool
+categories: 工具
 tags: vim c++ code format
 author: wenfh2020
 ---

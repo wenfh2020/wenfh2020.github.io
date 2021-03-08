@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Siege HTTP 压力测试"
-categories: tool
+categories: 工具
 tags: siege pressure
 author: wenfh2020
 ---

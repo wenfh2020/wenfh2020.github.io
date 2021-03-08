@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Centos7 常用软件安装"
-categories: tool
+categories: 工具
 tags: centos install
 author: wenfh2020
 ---
