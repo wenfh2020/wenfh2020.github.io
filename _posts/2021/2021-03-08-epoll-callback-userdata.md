@@ -1,12 +1,12 @@
 ---
 layout: post
-title:  "深入理解 epoll 回调用户参数"
+title:  "深入理解 epoll 回调用户数据"
 categories: 网络
 tags: epoll Linux
 author: wenfh2020
 ---
 
-epoll 多路复用驱动是异步事件处理，既然是异步，那么它提供了异步用户参数（`epoll_data`），方便事件回调到用户状态机代码。
+epoll 多路复用驱动是异步事件处理，它提供了用户数据（`epoll_data`），方便事件回调到用户状态机代码。
 
 
 
@@ -17,10 +17,10 @@ epoll 多路复用驱动是异步事件处理，既然是异步，那么它提�
 
 ## 1. epoll_data
 
-我们来看看 epoll 的异步事件和事件处理接口，`epoll_data` 是用户数据，内核并不会处理，只与对应的 fd 绑定，当 fd 产生事件后，epoll_wait 会回调回来，方便用户从对应的回调事件中，处理用户代码对应的状态机。
+我们来看看 epoll 事件和接口，`epoll_data` 是用户数据，内核并不会处理，只与对应的 fd 绑定，当 fd 产生事件后，epoll_wait 会回调回来，方便事件回调到用户状态机代码。
 
 ```c
-/* 异步事件 */
+/* 用户数据。*/
 typedef union epoll_data {
   void *ptr;
   int fd;
@@ -28,6 +28,7 @@ typedef union epoll_data {
   uint64_t u64;
 } epoll_data_t;
 
+/* 异步事件。 */
 struct epoll_event {
   uint32_t events;   /* Epoll events */
   epoll_data_t data; /* User data variable */
@@ -83,10 +84,13 @@ static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
     ...
     if (!(epi = kmem_cache_alloc(epi_cache, GFP_KERNEL)))
         return -ENOMEM;
+    ...
     /* 监控的事件信息被添加到 epi 红黑树节点。 */
+    ep_set_ffd(&epi->ffd, tfile, fd);
     epi->event = *event;
     ...
     ep_rbtree_insert(ep, epi);
+    ...
 }
 ```
 
@@ -188,9 +192,9 @@ epoll_data 是一个 union 值，应该如何传参？我们参考一下其它�
 
 ### 3.1. libco
 
-Linux 系统的 epoll_wait 回调数据，data 是一个 stTimeoutItem_t 指针。
+Linux 系统的 epoll_wait 回调数据，data 是一个 `stTimeoutItem_t` 指针。
 
-传指针最大的问题是：如果其程序逻辑出现问题，程序在 epoll_wait 回调前，把指针释放了，那么 epoll_wait 回调后传回来的指针，可能指向无效区域，存在安全隐患。
+传指针缺点：如果程序在 epoll_wait 回调前，把指针释放了，那么 epoll_wait 回调后回传的指针失效。
 
 ```c
 /* co_coroutine.cpp */
@@ -217,7 +221,7 @@ void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
 
 epoll_event.data 传的是 fd。
 
-我们日常使用，fd 并不是用户的唯一标识，因为当旧的 fd 被 close 掉后，它会被系统回收重复使用，导致新来的用户可能重用原来的 fd，如果逻辑处理不好，也可能会出现问题。
+传 fd 缺点：我们日常使用，fd 并不是用户的唯一标识，因为当旧的 fd 被 close 掉后，它会被系统回收重复使用，导致新来的用户可能重用原来的 fd，如果逻辑处理不好，也可能会出现问题。
 
 ```c
 /* ae_epoll.c */
