@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "MacOS 通过虚拟机（Virtual Function）安装 Centos7"
-categories: 工具
+categories: tool
 tags: macos virtual machine centos7
 author: wenfh2020
 ---

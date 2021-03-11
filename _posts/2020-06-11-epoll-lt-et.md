@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[epoll 源码走读] LT 与 ET 模式区别"
-categories: 网络
+categories: network
 tags: epoll LT ET difference
 author: wenfh2020
 ---

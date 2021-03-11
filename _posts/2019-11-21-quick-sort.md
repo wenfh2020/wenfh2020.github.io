@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[算法导论] 快速排序"
-categories: 算法
+categories: algorithm
 tags: quick sort
 author: wenfh2020
 mathjax: true

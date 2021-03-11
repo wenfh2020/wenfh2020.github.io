@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[shell] sed 插入多行文本"
-categories: 系统
+categories: system
 tags: shell sed
 author: wenfh2020
 ---

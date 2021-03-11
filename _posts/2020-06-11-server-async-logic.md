@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "高性能服务异步通信逻辑"
-categories: 网络
+categories: network
 tags: async
 author: wenfh2020
 ---

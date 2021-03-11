@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Linux 常用命令"
-categories: 系统
+categories: system
 tags: Linux command
 author: wenfh2020
 ---

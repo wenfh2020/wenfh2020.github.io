@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[epoll 源码走读] epoll 实现原理"
-categories: 网络
+categories: network
 tags: epoll Linux
 author: wenfh2020
 ---

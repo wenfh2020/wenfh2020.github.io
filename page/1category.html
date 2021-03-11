@@ -5,14 +5,41 @@ permalink: /category/
 icon: th-list
 type: page
 ---
+<!-- 
+        {% capture tags %}
+        {% for tag in site.tags %}
+        {{ tag[0] }}
+        {% endfor %}
+        {% endcapture %}
+        {% assign sortedtags = tags | split:' ' | sort %}
 
+
+{% comment %}
+#
+#  Change date order by adding '| reversed'
+#  To sort by title or other variables use {% assign sorted_posts = category[1] | sort: 'title' %}
+#
+{% endcomment %}
+{% assign sorted_cats = site.categories | sort %}
+{% for category in sorted_cats %}
+{% assign sorted_posts = category[1] | reversed %}
+<h2 id="{{category[0] | uri_escape | downcase }}">{{category[0] | capitalize}}</H2>
+<ul>
+  {% for post in sorted_posts %}
+    <li><a href="{{ site.url }}{{ site.baseurl }}{{  post.url }}">{{  post.title }}</a></li>
+  {% endfor %}
+</ul>
+{% endfor %}
+-->
 
 <div class="page clearfix">
     <div class="left">
         <h1>{{page.title}}</h1>
         <hr>
         <ul>
-            {% for category in site.categories %}
+            <!-- https://www.e-learn.cn/topic/416702 -->
+            {% assign sorted_cats = site.categories | sort %}
+            {% for category in sorted_cats %}
             <h2 id="{{category | first}}">{{category | first}}</h2>
             {% for posts in category %}
             {% for post in posts %}
@@ -40,7 +67,8 @@ type: page
                     文集
                 </div>
                 <ul id="content-side" class="content-ul">
-                    {% for category in site.categories%}
+                    {% assign sorted_cats = site.categories | sort %}
+                    {% for category in sorted_cats %}
                     <li>
                         <a data-scroll href="#{{ category | first }}">
                             {{ category | first }} ({{ category | last | size }})

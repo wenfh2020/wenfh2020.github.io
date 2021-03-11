@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[算法导论] 归并排序"
-categories: 算法
+categories: algorithm
 tags: merge sort
 author: wenfh2020
 mathjax: true

@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "抓包分析 tcp 握手和挥手"
-categories: 网络
+categories: network
 tags: tcp handshakes waves
 author: wenfh2020
 ---

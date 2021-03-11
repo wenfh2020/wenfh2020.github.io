@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "HTTP 状态码"
-categories: 网络
+categories: network
 tags: http status code
 author: wenfh2020
 --- 

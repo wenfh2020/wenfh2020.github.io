@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "惊群效应理解"
-categories: 网络
+categories: network
 tags: thundering herd
 author: wenfh2020
 ---

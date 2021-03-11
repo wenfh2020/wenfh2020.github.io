@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "软件性能检测--火焰图🔥"
-categories: 工具
+categories: tool
 tags: flame diagram performance
 author: wenfh2020
 ---

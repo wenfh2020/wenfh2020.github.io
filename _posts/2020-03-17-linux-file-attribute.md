@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Linux 文件目录权限"
-categories: 系统
+categories: system
 tags: linux file right
 author: wenfh2020
 ---

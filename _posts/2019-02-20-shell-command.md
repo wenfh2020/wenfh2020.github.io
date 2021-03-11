@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[shell] shell 常用语法"
-categories: 系统
+categories: system
 tags: shell command
 author: wenfh2020
 --- 
