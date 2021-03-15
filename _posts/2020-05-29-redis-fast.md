@@ -7,7 +7,7 @@ author: wenfh2020
 mathjax: true
 ---
 
-天下武功，唯快不破。redis 为什么那么快？redis 单进程并发 10w+ ([《hiredis + libev 异步测试》](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本章从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
+redis 为啥那么快？redis 单进程轻松并发 10w+ ([《hiredis + libev 异步测试》](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本章从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
 
 
 
@@ -26,11 +26,11 @@ redis 核心逻辑在单进程主线程里实现。
 
 * 数据存储在内存。
 
-  > redis 的应用场景，一般作为缓存，它的数据存储在内存，而 cpu 访问内存速度非常快。
+  > redis 一般作为缓存，它的数据存储在内存，而 cpu 访问内存速度非常快。
 
 * 哈希表。
   
-  > redis 数据库是 Nosql 数据库，它的数据访问模式是 `key - value`，数据索引是哈希表，搜索数据的时间复杂度是 $O(1)$。
+  > redis 是 Nosql 数据库，数据访问模式是 `key - value`，数据索引是哈希表，搜索数据的时间复杂度是 $O(1)$。
 
 * 多路复用技术。
 
@@ -42,18 +42,9 @@ redis 核心逻辑在单进程主线程里实现。
 
 * pipeline。
   
-  > 管道技术支持一次处理多个 commands。减少了通信的 RTT (Round-Trip Time) 往返时间。详细参考官方文档 《[Using pipelining to speedup Redis queries](https://redis.io/topics/pipelining)》
-
----
-
-> 有的朋友说，单线程节省了锁带来的开销，我认为这也是其中一个原因，但它并不是快的主要原因。
->
-> 单线程实现主逻辑最主要作用：
-> 
-> 1. redis 是 io 密集型应用，而不是计算密集型。
-> 2. 单线程减少锁带来的开发维护复杂度，节约了人力成本。
-> 
-> 尽管这样，利用多核优势，在多线程中实现 key 粒度的读写锁，或许这是 redis 未来需要优化的一个方向。
+  > 支持客户端一次发送多个命令。减少了客户端和服务端通信的 RTT (Round-Trip Time) 往返时间；一次发送和接收多个数据，减少了 read()/write() 内核函数的调用，降低系统性能损耗。
+  >
+  > 详细请参考官方文档：《[Using pipelining to speedup Redis queries](https://redis.io/topics/pipelining)》
 
 ---
 
@@ -73,7 +64,7 @@ redis 有部分场景需要子进程和子线程辅助。
 
 ## 2. 多进程
 
-redis 主服务是单进程的。单进程不能充分利用系统 cpu 核心。可以通过多开实例提高系统的并发能力。
+redis 主服务是单进程的。单进程不能充分利用系统 cpu 核心，可以通过多开实例提高系统的并发能力。
 
 ---
 
