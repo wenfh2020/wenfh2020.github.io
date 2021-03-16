@@ -136,7 +136,7 @@ sentinel known-sentinel mymaster 127.0.0.1 26378 989f0e00789a0b41cff738704ce8b04
 
 > 从日志中看，有几个命令是一起 `sendto` 发送出去的，因为 sentinel 通过 `hiredis` 作为连接的 client，绑定了 redis 的多路复用异步通信。通过接口写入的命令是异步操作，会先写入发送缓冲区，当触发写事件，才会将发送缓冲区数据发送出去。所以你看到很多命令不是一条一条发出去的，同理，`recvfrom` 收到的回复包，hiredis 触发读事件后，才去读数据，所以很多时候接收的命令也是几条一起读出来。
 >
-> 这是 pipline 批量处理，详细原理请参考 《[[hiredis 源码走读] 异步回调机制剖析](https://wenfh2020.com/2020/08/04/hiredis-callback/)》。
+> 这是 pipeline 批量处理，详细原理请参考 《[[hiredis 源码走读] 异步回调机制剖析](https://wenfh2020.com/2020/08/04/hiredis-callback/)》。
 
 ```shell
 # strace -s 512 -o /tmp/sentinel.log ./redis-sentinel sentinel.conf
