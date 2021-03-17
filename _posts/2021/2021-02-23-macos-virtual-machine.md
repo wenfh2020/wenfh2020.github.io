@@ -167,3 +167,9 @@ UseDNS no
 GSSAPIAuthentication no
 # service sshd restart
 ```
+
+---
+
+### 2.4. 磁盘扩容
+
+参考 [Mac VMware Fusion 中修改 centos7 虚拟机的磁盘空间、扩容](https://www.jianshu.com/p/38eaf0c0a77d)。
