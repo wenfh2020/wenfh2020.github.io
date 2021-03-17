@@ -170,6 +170,20 @@ GSSAPIAuthentication no
 
 ---
 
-### 2.4. 磁盘扩容
+### 2.4. 防火墙
+
+参考： [CentOS 7 ：Failed to start IPv4 firewall with iptables.](https://blog.csdn.net/ls1645/article/details/78750561)
+
+```shell
+# 防火墙状态
+systemctl status firewalld
+
+# 关闭防火墙
+systemctl stop firewalld.service
+```
+
+---
+
+### 2.5. 磁盘扩容
 
 参考 [Mac VMware Fusion 中修改 centos7 虚拟机的磁盘空间、扩容](https://www.jianshu.com/p/38eaf0c0a77d)。

@@ -18,7 +18,7 @@ author: wenfh2020
 
 ## 1. 概述
 
-libco 虽然支持海量协程，但是单进程单线程，同一时刻只支持一个协程在工作。在一个时间段内，它通过调度使得协程不停切换，实现协程“并发”功能。
+[libco](https://github.com/Tencent/libco) 虽然支持海量协程，但是单线程，同一时刻只支持一个协程在工作。在一个时间段内，它通过调度使协程不停切换，实现协程“并发”功能。
 
 协程“栈”空间，有独立栈，也有共享栈。这个“栈”添加了引号，其实它是在堆上分配的，因为它的协程函数工作原理与普通函数工作原理差不多，所以才叫“栈”。
 
@@ -58,11 +58,11 @@ struct stCoRoutine_t *co_create_env(stCoRoutineEnv_t *env, const stCoRoutineAttr
 1. 共享栈协程，协程在创建时，被分配在**指定的**共享栈内存块上工作。
 2. 当然只有正在执行的协程，才会使用共享栈，当它被（yield）切换出来后，它需要保存协程上下文：寄存器数据 + 内存数据，所以共享栈上的**使用部分**（不是整个共享栈空间）会被拷贝出来。
 3. 同理新切入的协程，需要将以前保存的内存上下文，重新拷贝到共享栈上工作。
-4. 内存拷贝不是必然的，因为有多个共享内存块，每个块上都会有不同协程在工作，只有当相同共享栈上的协程切换才会出现内存拷贝。
+4. 内存拷贝不是必然的，因为有多个共享内存块，每个块都会被指派给多个协程，只有当相同共享栈上的协程切换才会出现内存拷贝。
 
-<div align=center><img src="/images/2021-03-08-09-48-56.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-03-17-13-46-03.png" data-action="zoom"/></div>
 
-* 共享栈协程栈空间指向指定共享栈空间。
+* 共享栈，协程栈空间指向指定共享栈空间。
 
 ```c
 struct stCoRoutine_t *co_create_env(stCoRoutineEnv_t *env, const stCoRoutineAttr_t *attr, pfn_co_routine_t pfn, void *arg) {
@@ -107,6 +107,7 @@ void co_swap(stCoRoutine_t *curr, stCoRoutine_t *pending_co) {
 
     //get curr stack sp
     char c;
+    /* 记录当前协程空间栈底位置，因为函数局部变量都是通过压栈进入内存的，地址从高到低） */
     curr->stack_sp = &c;
 
     if (!pending_co->cIsShareStack) {
