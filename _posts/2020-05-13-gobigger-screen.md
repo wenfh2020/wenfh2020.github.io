@@ -33,9 +33,9 @@ author: wenfh2020
 
 我购买的型号是非触控屏，据说 mbp 不支持触控（去某宝问一下客服），而且我也没有这个需求。
 
-![便携装备](/images/2020-05-26-09-47-30.png){:data-action="zoom"}
+![便携装备](/images/2020-05-26-09-47-30.jpeg){:data-action="zoom"}
 
-![使用体验](/images/2020-06-10-18-50-21.png){:data-action="zoom"}
+![使用体验](/images/2020-06-10-18-50-21.jpeg){:data-action="zoom"}
 
 ---
 
@@ -107,12 +107,20 @@ author: wenfh2020
   
   > 某宝上的支架是鸡肋，轻便的很难固定，容易固定的又不轻便。下面这个支架怎么样？还行吧~~🐶
 
-<div align=center><img src="/images/2020-12-20-23-25-15.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020-12-20-23-25-15.jpeg" data-action="zoom"/></div>
 
 ---
 
-## 5. 总结
+## 5. 屏幕位置
 
-便携屏，我目前只用来做笔记本副屏，没有体验过手机，游戏机等等的链接，所以其它的就不做评价了。
+根据需要排列显示器位置：鼠标拖动显示器到合适位置。
+
+<div align=center><img src="/images/2021-03-17-12-10-12.png" data-action="zoom"/></div>
+
+---
+
+## 6. 总结
+
+便携屏，我目前只用来做笔记本副屏，没有体验过手机，游戏机等等接入。
 
 坦白说，非刚需，这个价钱，不如买个大显示器。刚需不差钱的，可以入手 `iPad Pro 12.9 英寸`。我是刚需，家里没矿，Gobigger 基本满足我的需求，小问题可以消化，凑合着用。

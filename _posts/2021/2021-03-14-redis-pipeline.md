@@ -6,16 +6,16 @@ tags: redis hiredis pipeline
 author: wenfh2020
 ---
 
-pipeline 官方文档：[Using pipelining to speedup Redis queries](https://redis.io/topics/pipelining)。
+redis pipeline 官方文档：[Using pipelining to speedup Redis queries](https://redis.io/topics/pipelining)。
 
 ---
 
-redis 是 c/s 模式 tcp 通信服务。它支持客户端单命令发送给服务处理，也支持客户端将多个命令一次性发送。后者就是 pipeline 技术。
+redis 是 c/s 模式 tcp 通信服务。它支持客户端单命令发送给服务处理，也支持客户端将多个命令打包发送，后者就是 pipeline 技术。
 
 pipeline 好处：
 
 1. 避免频繁发包/接包，避免时间（RTT (Round Trip Time））都浪费在通信路上。
-2. 避免性能损耗，发包/接包，read() / write() 调用内核接口非常耗资源，所以每次发多个请求包，每次回复多个回复包将减少资源损耗。——避免大巴车每次只载几个人...
+2. 避免性能损耗，发包/接包，read() / write() 调用内核接口非常耗资源，所以每次将多个命令打包发送，每次接收多个回复包（回复集合）将减少资源损耗。——避免大巴车每次只载几个人...
 
 
 
