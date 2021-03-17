@@ -18,7 +18,7 @@ author: wenfh2020
 
 ## 1. 概述
 
-[libco](https://github.com/Tencent/libco) 虽然支持海量协程，但是单线程，同一时刻只支持一个协程在工作。在一个时间段内，它通过调度使协程不停切换，实现协程“并发”功能。
+[libco](https://github.com/Tencent/libco) 虽然支持海量协程，但是单线程，同一时刻只支持一个协程在工作。在一个时间段内，它通过调度，使多个协程不停切换，从而实现协程“并发”功能。
 
 协程“栈”空间，有独立栈，也有共享栈。这个“栈”添加了引号，其实它是在堆上分配的，因为它的协程函数工作原理与普通函数工作原理差不多，所以才叫“栈”。
 
@@ -29,8 +29,8 @@ author: wenfh2020
 协程独立栈默认使用 128k 内存空间，简单方便，一般程序使用也足够了，但是它也有缺点：
 
 1. 如果某个协程函数使用空间超过 128 k，那么内存会溢出，导致进程崩溃。（当然共享栈也会，但是没那么容易溢出。）
-2. 协程独立栈虽然默认只需要 128 k 内存支持，绝大多数应用场景使用内存比这个少，每个协程分配固定的资源，还是有点浪费了。
-3. libco 号称支持千万级协程，如果每个协程都是独立栈，那得废多少内存。
+2. 协程独立栈虽然默认只需要 128 k 内存，但是绝大多数使用场景，内存比这个少，每个协程分配固定的资源，还是有点浪费了。
+3. libco 号称支持千万级协程，如果每个协程都是独立栈，那得废多少内存？！
 
 ```c
 struct stCoRoutine_t *co_create_env(stCoRoutineEnv_t *env, const stCoRoutineAttr_t *attr, pfn_co_routine_t pfn, void *arg) {
@@ -88,7 +88,7 @@ static stStackMem_t *co_get_stackmem(stShareStack_t *share_stack) {
 }
 ```
 
-* co_swap 函数很特别，`coctx_swap` 上面代码还是是协程 A，下面部分就是协程 B 了。
+* co_swap 协程切换函数很特别，`coctx_swap` 上面代码还是是协程 A，下面部分就是协程 B 了。
 
 ```c
 void co_swap(stCoRoutine_t *curr, stCoRoutine_t *pending_co) {
