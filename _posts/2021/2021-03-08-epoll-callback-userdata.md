@@ -6,7 +6,7 @@ tags: epoll Linux
 author: wenfh2020
 ---
 
-epoll 多路复用驱动是异步事件处理，它提供了用户数据（`epoll_data`），方便事件回调到用户状态机代码。
+epoll 多路复用驱动是异步事件处理，它提供了用户数据（`epoll_data`），方便事件触发后回调给用户处理。
 
 
 
@@ -17,7 +17,7 @@ epoll 多路复用驱动是异步事件处理，它提供了用户数据（`epol
 
 ## 1. epoll_data
 
-我们来看看 epoll 事件和接口，`epoll_data` 是用户数据，内核并不会处理，只与对应的 fd 绑定，当 fd 产生事件后，epoll_wait 会回调回来，方便事件回调到用户状态机代码。
+我们来看看 epoll 事件和接口，`epoll_data` 是用户数据，内核并不会处理，只与对应的 fd 绑定，当 fd 产生事件后，epoll_wait 会回调回来。
 
 ```c
 /* 用户数据。*/
@@ -28,7 +28,7 @@ typedef union epoll_data {
   uint64_t u64;
 } epoll_data_t;
 
-/* 异步事件。 */
+/* 事件。 */
 struct epoll_event {
   uint32_t events;   /* Epoll events */
   epoll_data_t data; /* User data variable */
@@ -48,9 +48,11 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 
 走读 [epoll 源码](https://github.com/torvalds/linux/blob/master/fs/eventpoll.c)，简单走一下 epoll 事件的添加和回调流程。
 
+> 参考：《[[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)》
+
 ### 2.1. epoll_ctl
 
-监控的 fd，被添加到内核红黑树节点进行监控。
+监控的 fd 事件信息，被添加到内核红黑树节点进行监控。
 
 ```c
 /* eventpoll.c */
@@ -98,7 +100,7 @@ static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
 
 ### 2.2. epoll_wait
 
-内核检测到 fd 有事件发生，唤醒进程，epoll_wait 将 fd 对应事件从内核拷贝到（__put_user）到用户层。
+内核检测到 fd 有事件发生，唤醒进程，epoll_wait 将 fd 对应事件从内核拷贝（__put_user）到用户层。
 
 ```c
 /* eventpoll.c */
@@ -142,6 +144,7 @@ static int ep_send_events(struct eventpoll *ep,
     return esed.res;
 }
 
+/* 遍历事件就绪列表。 */
 static __poll_t ep_scan_ready_list(struct eventpoll *ep,
                    __poll_t (*sproc)(struct eventpoll *,
                              struct list_head *,
@@ -161,9 +164,9 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
     ...
 }
 
-static __poll_t ep_send_events_proc(struct eventpoll *ep,
-                    struct list_head *head, void *priv)
-{
+static __poll_t ep_send_events_proc(
+    struct eventpoll *ep, struct list_head *head, void *priv) {
+
     struct ep_send_events_data *esed = priv;
     ...
     struct epoll_event __user *uevent = esed->events;

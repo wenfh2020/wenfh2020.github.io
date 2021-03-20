@@ -19,9 +19,11 @@ author: wenfh2020
 
 ## 1. 安装
 
-* server
+### 1.1. server
 
-脚本一键安装。安装包默认是 5.6.22 版本，mysql 用户名和密码是 root，可自行修改脚本配置。
+* mysql 5.6
+
+  脚本一键安装。安装包默认是 5.6.22 版本，mysql 用户名和密码是 root，可自行修改脚本配置。
 
 ```shell
 wget https://raw.githubusercontent.com/wenfh2020/shell/master/mysql/mysql_setup.sh
@@ -30,7 +32,29 @@ chmod +x mysql_setup.sh
 service mysqld start
 ```
 
-* mysqlclient
+* mysql 5.7。
+
+```shell
+cd /usr/local/src
+wget https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm
+rpm -ivh mysql57-community-release-el7-11.noarch.rpm
+yum install -y mysql-server
+systemctl start mysqld
+# 开机启动。
+systemctl enable mysqld
+# 获取临时密码。
+cat /var/log/mysqld.log|grep 'A temporary password'
+# 登录修改密码。
+mysql -u root -p
+# 允许设置密码。
+mysql> alter user user() identified by "root";
+# 设置新密码。
+mysql> update mysql.user set authentication_string=password('root') where user='root' and Host ='localhost';
+```
+
+---
+
+### 1.2. mysqlclient
 
 ```shell
 yum install mysql -y
@@ -103,6 +127,8 @@ mysql> CREATE TABLE `test_async_mysql` (
 mysql> insert into mytest.test_async_mysql (value) values ('hello world');
 ```
 
+---
+
 ### 2.2. slave
 
 * 修改配置 my.cnf，然后重启。
@@ -146,7 +172,162 @@ mysql> show slave status\G
 
 ---
 
-## 3. 远程访问
+## 3. 慢日志
+
+参考：[Mysql数据库慢查询日志的使用](https://zhuanlan.zhihu.com/p/113429595)
+
+---
+
+### 3.1. 配置
+
+#### 3.1.1. 修改配置文件
+
+通过修改配置文件设置，永久生效。
+
+* 查找 mysql 配置文件。
+
+```shell
+find / -name 'my.cnf'
+/usr/local/mysql/my.cnf
+```
+
+* 修改配置文件内容。
+
+```shell
+# vim /usr/local/mysql/my.cnf
+slow_query_log=ON
+long_query_time=1
+slow_query_log_file=/data/mysql/localhost-slow.log
+```
+
+* 重新启动
+
+```shell
+service mysqld restart
+```
+
+---
+
+#### 3.1.2. 命令设置
+
+通过命令设置，临时生效。
+
+* 查询慢日志设置。
+
+```shell
+mysql> show variables like 'slow%';
++---------------------+--------------------------------+
+| Variable_name       | Value                          |
++---------------------+--------------------------------+
+| slow_launch_time    | 2                              |
+| slow_query_log      | OFF                            |
+| slow_query_log_file | /data/mysql/localhost-slow.log |
++---------------------+--------------------------------+
+```
+
+* 开启慢日志。
+
+```shell
+mysql> set global slow_query_log ='ON';
+mysql> show variables like 'slow_query_log';
++----------------+-------+
+| Variable_name  | Value |
++----------------+-------+
+| slow_query_log | ON    |
++----------------+-------+
+```
+
+* 显示慢日志超时时间。
+
+```shell
+mysql> show variables like 'long%';
++-----------------+-----------+
+| Variable_name   | Value     |
++-----------------+-----------+
+| long_query_time | 10.000000 |
++-----------------+-----------+
+```
+
+* 设置慢日志超时时间。
+
+```shell
+# 设置。
+mysql> set long_query_time=1;
+Query OK, 0 rows affected (0.00 sec)
+
+# 效果。
+mysql> show variables like 'long%';
++-----------------+----------+
+| Variable_name   | Value    |
++-----------------+----------+
+| long_query_time | 1.000000 |
++-----------------+----------+
+```
+
+---
+
+### 3.2. 分析
+
+#### 3.2.1. 日志文件
+
+```shell
+mysql> select count(*) from mytest.test_async_mysql;
++----------+
+| count(*) |
++----------+
+|  3117853 |
++----------+
+1 row in set (31.03 sec)
+```
+
+```shell
+➜  src more /data/mysql/localhost-slow.log
+...
+# Time: 210319 16:24:12
+# User@Host: root[root] @ localhost []  Id:    50
+# Query_time: 31.034545  Lock_time: 0.000166 Rows_sent: 1  Rows_examined: 3117853
+SET timestamp=1616142252;
+select count(*) from mytest.test_async_mysql;
+```
+
+---
+
+#### 3.2.2. mysqldumpslow
+
+参考：[mysql慢日志 :slow query log 分析数据](https://blog.csdn.net/saga_gallon/article/details/72897332)
+
+```shell
+mysqldumpslow /data/mysql/localhost-slow.log
+
+
+Reading mysql slow query log from /data/mysql/localhost-slow.log
+Count: 3  Time=301.42s (904s)  Lock=0.00s (0s)  Rows=0.0 (0), root[root]@[127.0.0.1]
+  update mytest.test_async_mysql set value = 'S' where id = N
+
+Count: 1  Time=31.03s (31s)  Lock=0.00s (0s)  Rows=1.0 (1), root[root]@localhost
+  select count(*) from mytest.test_async_mysql
+```
+
+---
+
+## 4. explain 优化
+
+参考：[【MySQL优化】——看懂explain](https://blog.csdn.net/jiadajing267/article/details/81269067)
+
+```shell
+mysql> explain select count(*) from mytest.test_async_mysql;
++----+-------------+------------------+-------+---------------+---------+---------+------+---------+-------------+
+| id | select_type | table            | type  | possible_keys | key     | key_len | ref  | rows    | Extra       |
++----+-------------+------------------+-------+---------------+---------+---------+------+---------+-------------+
+|  1 | SIMPLE      | test_async_mysql | index | NULL          | PRIMARY | 4       | NULL | 2743104 | Using index |
++----+-------------+------------------+-------+---------------+---------+---------+------+---------+-------------+
+```
+
+---
+
+## 5. 功能
+
+### 5.1. 远程访问
 
 允许 `mytest` 用户远程访问。
 
@@ -159,7 +340,136 @@ mysql> flush privileges;
 
 ---
 
-## 4. 参考
+### 5.2. 连接情况
 
+* 当前所有连接。`show PROCESSLIST / show full PROCESSLIST`。
+
+```shell
+mysql> show PROCESSLIST;
++------+------+-----------------+--------+---------+------+----------+------------------+
+| Id   | User | Host            | db     | Command | Time | State    | Info             |
++------+------+-----------------+--------+---------+------+----------+------------------+
+|  945 | root | 127.0.0.1:24046 | mytest | Query   |    0 | starting | show PROCESSLIST |
+| 1387 | root | 127.0.0.1:35109 | mysql  | Sleep   |  816 |          | NULL             |
+| 1388 | root | 127.0.0.1:35111 | mysql  | Sleep   |  816 |          | NULL             |
+...
+```
+
+* 查看最大连接数。
+
+```shell
+mysql> show variables like '%max_connections%';
++-----------------+-------+
+| Variable_name   | Value |
++-----------------+-------+
+| max_connections | 151   |
++-----------------+-------+
+```
+
+* 设置最大连接数。
+
+```shell
+mysql> set GLOBAL max_connections = 200;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> show variables like '%max_connections%';
++-----------------+-------+
+| Variable_name   | Value |
++-----------------+-------+
+| max_connections | 200   |
++-----------------+-------+
+```
+
+* 当前使用连接数。
+
+```shell
+mysql> show global status like 'Max_used_connections';
++----------------------+-------+
+| Variable_name        | Value |
++----------------------+-------+
+| Max_used_connections | 102   |
++----------------------+-------+
+```
+
+---
+
+## 6. 命令
+
+### 6.1. 数据库
+
+* 展示数据库。
+
+```shell
+show databases;
+```
+
+* 选择数据库。
+
+```shell
+use <xxx>
+```
+
+* 建库。
+
+```shell
+CREATE DATABASE IF NOT EXISTS mytest DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_general_ci;
+```
+
+---
+
+### 6.2. 表
+
+* 展示数据库表。
+
+```shell
+show tables;
+```
+
+* 建表。
+
+```shell
+CREATE TABLE `test_async_mysql` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `value` varchar(32) NOT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4; 
+```
+
+* 查数据。
+
+```shell
+select value from mytest.test_async_mysql where id = 1;
+```
+
+* 插入数据。
+
+```shell
+insert into mytest.test_async_mysql (value) values ('hello world');
+```
+
+* 改数据。
+
+```shell
+update mytest.test_async_mysql set value = 'hello world 2' where id = 1;
+```
+
+* 删除数据。
+
+```shell
+delete from mytest.test_async_mysql where id = 1;
+```
+
+---
+
+## 7. 参考
+
+* [CentOS 7.4使用yum源安装MySQL 5.7.20](http://www.linuxidc.com/Linux/2017-12/149614.htm)
+* [You must reset your password using ALTER USER statement before executing thi](https://blog.csdn.net/qq_38366063/article/details/100736999)
 * [Mysql 主从复制配置](https://www.jianshu.com/p/8b95dba5b191)
 * [is not allowed to connect to this mysql server](https://blog.csdn.net/iiiiiilikangshuai/article/details/100905996)
+* [MySQL 连接数满情况的处理](https://www.jianshu.com/p/6689474434f7)
+* [MySQL连接数Max_used_connections过多处理方法](https://blog.csdn.net/chenludaniel/article/details/102752598)
+* [Mysql数据库慢查询日志的使用](https://zhuanlan.zhihu.com/p/113429595)
+* [mysql慢日志 :slow query log 分析数据](https://blog.csdn.net/saga_gallon/article/details/72897332)
+* [数据库 | mysql慢日志查询](https://zhuanlan.zhihu.com/p/85565647)
+* [【MySQL优化】——看懂explain](https://blog.csdn.net/jiadajing267/article/details/81269067)
