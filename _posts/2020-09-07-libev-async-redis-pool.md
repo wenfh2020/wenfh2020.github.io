@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[kimserver] libev + hiredis redis 异步连接池"
-categories: kimserver redis
+categories: kimserver redis hiredis
 tags: redis hiredis pool
 author: wenfh2020
 ---

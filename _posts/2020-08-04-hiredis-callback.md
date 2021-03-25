@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[hiredis 源码走读] 异步回调机制剖析"
-categories: redis
+categories: redis hiredis
 tags: hiredis redis callback
 author: wenfh2020
 ---

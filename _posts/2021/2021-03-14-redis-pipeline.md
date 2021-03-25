@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[hiredis 源码走读] redis pipeline"
-categories: redis
+categories: redis hiredis
 tags: redis hiredis pipeline
 author: wenfh2020
 ---
@@ -21,7 +21,7 @@ pipeline 优点：
 
 pipeline 缺点：
 
-redis 集群，数据将根据各种形式分片到不同实例，所以客户端如果将各个节点的数据读写命令，打包发往一个 redis 节点，往往无法达到预期，所以在使用前要做好方案调研，避免掉坑里。
+redis 集群，数据根据各种形式分片到不同实例，所以客户端如果将各个节点的数据读写命令，打包发往一个 redis 节点，往往无法达到预期，所以在使用前要做好方案调研，避免掉坑里。
 
 
 

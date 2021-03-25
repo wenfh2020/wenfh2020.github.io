@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "hiredis + libev 异步测试"
-categories: redis
+categories: redis hiredis
 tags: redis hiredis libev
 author: wenfh2020
 ---

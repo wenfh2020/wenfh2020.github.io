@@ -17,9 +17,9 @@ author: wenfh2020
 
 ---
 
-## 1. 日志事例
+## 1. 日志示例
 
-* 事例代码：
+* 示例代码：
 
 ```shell
 LOG_ERR("check file failed, task id = %d, error = %d", iTaskID, iErrCode);
@@ -35,7 +35,7 @@ LOG_ERR("check file failed, task id = %d, error = %d", iTaskID, iErrCode);
 
 ## 2. 日志宏定义
 
-字符串格式化数据如何作为参数传递，研究了不少时间~ 为啥要将日志函数定义为宏呢，主要是因为 __FILE__ 和 __LINE__ 这两个参数，只有通过宏，才能正确记录哪个文件，哪一行的日志。
+字符串格式化数据如何作为参数传递，研究了不少时间~ 为啥要将日志函数定义为宏呢，主要是因为 \__FILE__ 和 \__LINE__ 这两个参数，只有通过宏，才能正确记录哪个文件，哪一行的日志。
 
 ---
 
