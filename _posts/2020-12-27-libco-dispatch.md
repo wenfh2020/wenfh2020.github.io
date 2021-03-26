@@ -20,7 +20,7 @@ libco 通过 `co_resume` 和 `co_yield` 交替调度协程。
 
 ## 1. 协程调度
 
-<div align=center><img src="/images/2020-12-28-15-23-42.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-03-26-18-33-08.png" data-action="zoom"/></div>
 
 ---
 
