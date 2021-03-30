@@ -95,7 +95,7 @@ void sentinelFailoverStateMachine(sentinelRedisInstance *ri) {
 kill_redis
 # 开启所有 sentinel 进程。
 start_sentinels
-# 打印 sentinel 进行信息。
+# 打印 sentinel 进程信息。
 redis_info redis-sentinel
 # 开启所有 redis 进程。
 start_redis

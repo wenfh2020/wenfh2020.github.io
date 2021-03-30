@@ -170,6 +170,8 @@ void sentinelEvent(int level, char *type, sentinelRedisInstance *ri, const char 
 1. 调用指定路径的脚本文件。
 2. 给调用的脚本进程传递参数。
 
+> 换句话说：sentinel 会将事件（参数）传递到你的脚本，脚本只需要处理感兴趣的事件即可。
+
 * sentinel.conf 配置。
 
 ```shell

@@ -21,9 +21,7 @@ mathjax: true
 
 ### 1.1. 概述
 
-我们看看 redis 哨兵的高可用模式。
-
-集群有三种 redis 角色：sentinel/master/slave，三种角色通过 tcp 链接，相互建立联系。
+哨兵模式的 redis 集群有三种角色：sentinel/master/slave，它们通过 tcp 链接，相互建立联系。
 
 sentinel 作为高可用集群管理者，它的功能主要是：检查故障，发现故障，故障转移。
 
@@ -66,7 +64,7 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 ```shell
 +----+           +------+
 | M1 |----//-----| [M1] |
-| S1 |           | S2   |
+| S1 |           |  S2  |
 +----+           +------+
 ```
 
@@ -85,7 +83,6 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 ```shell
 # sentinel.conf
 # sentinel monitor <master-name> <ip> <redis-port> <quorum>
-sentinel monitor mymaster 127.0.0.1 6379 2
 ```
 
 * quorum
@@ -93,6 +90,11 @@ sentinel monitor mymaster 127.0.0.1 6379 2
 \<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过一定`法定人数`选举某人为代表，那么他就成为 sentinel 的代表，代表负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 $(\frac{n}{2} + 1)$ 比较合理。
 
 > 如果 sentinel 个数总数为 3，那么最好 quorum == 2，这样最接近真实：少数服从多数，不会出现两个票数一样的代表同时被选上，进行故障转移。
+>
+>```shell
+># sentinel.conf
+>sentinel monitor mymaster >127.0.0.1 6379 2
+>```
 
 ---
 
@@ -178,8 +180,8 @@ min-slaves-max-lag x
 > **注意：高版本 redis 已经修改这个两个选项**
 >
 >```shell
-># min-replicas-to-write 3
-># min-replicas-max-lag 10
+># min-replicas-to-write x
+># min-replicas-max-lag x
 >```
 
 ---
@@ -258,7 +260,7 @@ int processCommand(client *c) {
 * redis 脑裂主要表现为，同一个 redis 集群，出现多个 master，导致 redis 集群出现数据不一致。
 * 解决方案主要通过 sentinel 哨兵的配置和 redis 的配置去解决问题。
 * 上述方案也是有不足的地方，例如 redis 配置限制可能会受到副本个数的影响，所以具体设置，要看具体的业务场景。主要是怎么通过比较小的代价去解决问题，或者降低出现问题的概率。
-* redis 虽然已经发布了 gossip 协议的无中心集群，sentinel 哨兵模式还是比较常用的，我们不建议直接使用 sentinel，可以使用 codis 这样的第三方代理，还是挺方便实用的。
+* redis 虽然已经发布了 gossip 协议的无中心集群，sentinel 哨兵模式还是比较常用的，我们不建议直接使用 sentinel，可以考虑使用 codis。
 
 ---
 
