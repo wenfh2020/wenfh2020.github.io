@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[libco] libco 时钟（时间轮）"
+title:  "[libco] libco 定时器（时间轮）"
 categories: libco
 tags: libco timer
 author: wenfh2020
