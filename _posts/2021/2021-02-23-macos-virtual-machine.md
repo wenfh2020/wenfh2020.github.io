@@ -31,6 +31,10 @@ MacOS 用虚拟机：VMWare Fusion 12。
   
   百度网盘密码：ng68
 
+* 序列号。
+  
+  > [VMware Fusion Pro 12.0.0最新序列号](https://www.xuchengen.cn/475)。
+
 ---
 
 ## 2. Centos7 系统安装

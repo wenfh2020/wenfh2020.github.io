@@ -35,6 +35,8 @@ libco 定时器也被称为时间轮（右图）：因为数组数据结构，�
 
 <div align=center><img src="/images/2021-03-30-14-03-54.png" data-action="zoom"/></div>
 
+> 图片来源：[processon](https://www.processon.com/view/6062b09e1e085332583e7783)
+
 ---
 
 ## 2. 定时器源码分析
@@ -165,6 +167,20 @@ void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
 
 ---
 
-## 3. 参考
+## 3. 缺点
+
+* 时间轮数组默认大小是 60 * 1000。以毫秒为单位，最大时间间隔是一分钟，但是如果超过了一分钟以内的事件，效率就降低了，例如 session，它的过期时间就经常超过 1 分钟。
+* libco 的定时器设计主要是为了它内部协程切换使用，添加一个定时事件以后，无法通过查找方式，删除指定时间事件，只有等到事件触发了，事件才会从双向链表中删除。
+* 综合上述两个问题，这也很好解析了，为啥有的开源通过小堆去维护定时器，例如 libev。
+
+---
+
+## 4. 小结
+
+libco 的定时器设计非常优秀，在一定的范围内，非常高效，虽然有些小缺点，但是瑕不掩瑜。
+
+---
+
+## 5. 参考
 
 * [libco 的定时器实现：时间轮](cyhone.com/articles/time-wheel-in-libco/)

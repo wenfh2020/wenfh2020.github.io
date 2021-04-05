@@ -327,7 +327,7 @@ man find
 ```
 
 ```shell
-find path -option [ print ]   [ -exec -ok command ] {} \;
+find path -option [print] [-exec -ok command] {} \;
 ```
 
 | 选项                    | 描述                                         |
@@ -361,6 +361,9 @@ find . -type f -exec dos2unix {} \;
 
 # 查找有执行权限文件
 find . -perm -111
+
+# 查找指定文件，将文件拷贝到指定目录。
+find . -name '*.so' -type f -exec cp -f {} ../../bin/modules \;
 ```
 
 ---
