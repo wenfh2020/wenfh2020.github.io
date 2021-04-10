@@ -4,7 +4,6 @@ title:  "redis 为啥这么快"
 categories: redis
 tags: redis fast
 author: wenfh2020
-mathjax: true
 ---
 
 redis 为啥那么快？redis 单进程轻松并发 10w+ ([《hiredis + libev 异步测试》](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本章从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
@@ -30,7 +29,7 @@ redis 核心逻辑在单进程主线程里实现。
 
 * 哈希表。
   
-  > redis 是 Nosql 数据库，数据访问模式是 `key - value`，数据索引是哈希表，搜索数据的时间复杂度是 $O(1)$。
+  > redis 是 Nosql 数据库，数据访问模式是 `key - value`，数据索引是哈希表，搜索数据的时间复杂度是 O(1)。
 
 * 多路复用技术。
 

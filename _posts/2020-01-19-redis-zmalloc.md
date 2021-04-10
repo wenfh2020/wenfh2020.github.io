@@ -6,20 +6,21 @@ tags: redis zmalloc
 author: wenfh2020
 ---
 
-redis 内存管理实现，有三种方式：
+redis 内存管理实现，有三种方案：
 
 1. `jemalloc` (谷歌)
 2. `tcmalloc` （facebook）
 3. `libc` （系统）
 
-其中 `jemalloc`， `tcmalloc` 是第三方的实现，`libc` 的实现相对简单，没有做成一个内存池。没有像 `nginx`那样，有自己的内存管理链表。频繁向内核申请内存不是明智的做法。作者应该是推荐使用 `tcmallic` 或 `jemalloc`。
+其中 `jemalloc`， `tcmalloc` 是第三方的实现，`libc` 的实现做了一些简单的封装。
+
 
 
 
 * content
 {:toc}
 
-## 1. 内存管理
+## 1. 内存池方案
 
 ```c
 // 理解宏对相关库的引入使用。
@@ -58,10 +59,6 @@ redis 内存管理实现，有三种方式：
 #endif
 #endif
 ```
-
----
-c 语言比较精简的内存池，可以参考 `nginx` 的[实现](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c)。nginx 这种简单的链式内存池，虽然避免了频繁从内核分配内存，也容易产生内存碎片。即便是 glibc 的 slab 实现内存管理，也不能很好地解决内存碎片问题。所以内存池就是个复杂的问题。在 redis 上要很好地解决该问题，必然会提高整个项目的复杂度，与其自己造轮子，不如用优秀的第三方库：`tcmalloc`, `jemalloc`
->[[nginx 源码走读] 内存池](https://wenfh2020.com/2020/01/21/nginx-pool/)
 
 ---
 
@@ -168,13 +165,6 @@ size_t zmalloc_used_memory(void) {
 
 ---
 
-## 3. 测试
-
-`jemalloc, tcmalloc, libc` 到底哪个库比较好用，是马是驴拉出来溜溜才能知道，要根据线上情况进行评估。
-> 可以用 `redis-benchmark` 压力测试。
-
----
-
-## 4. 参考
+## 3. 参考
 
 * [关于redis源码的内存分配,jemalloc,tcmalloc,libc](https://blog.csdn.net/libaineu2004/article/details/79400357)

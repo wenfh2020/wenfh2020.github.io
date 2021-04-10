@@ -4,7 +4,6 @@ title:  "[redis 源码走读] sentinel 哨兵 - 原理"
 categories: redis
 tags: redis sentinel
 author: wenfh2020
-mathjax: true
 ---
 
 redis 有主从数据复制功能。多个实例通过读写分离，使得单进程的 redis 可以充分利用多核性能。
@@ -51,7 +50,7 @@ sentinel 只要配置 redis 主服务（master）信息即可与三个角色建�
 sentinel monitor mymaster 127.0.0.1 6379 2
 ```
 
->\<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过一定`法定人数`选举某人为领导，那么他就成为 sentinel 的领导，领导负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 $(\frac{n}{2} + 1)$ 比较合理。
+>\<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过一定`法定人数`选举某人为领导，那么他就成为 sentinel 的领导，领导负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 (n/2 + 1) 比较合理。
 
 ![节点关联](/images/2020-06-09-21-09-04.png){:data-action="zoom"}
 

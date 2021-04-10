@@ -4,10 +4,9 @@ title:  "[libco] libco 定时器（时间轮）"
 categories: libco
 tags: libco timer
 author: wenfh2020
-mathjax: true
 ---
 
-[libco](https://github.com/Tencent/libco) 定时器核心数据结构：数组 + 链表，有点像哈希表，通过空间换时间，查询数据时间复杂度为 $O(1)$。
+[libco](https://github.com/Tencent/libco) 定时器核心数据结构：数组 + 链表，有点像哈希表，通过空间换时间，查询数据时间复杂度为 O(1)。
 
 libco 定时器也被称为时间轮，我们看看这个 “轮” 是怎么转的。
 

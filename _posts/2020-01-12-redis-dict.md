@@ -4,10 +4,9 @@ title:  "[redis 源码走读] 字典(dict)"
 categories: redis
 tags: redis dict
 author: wenfh2020
-mathjax: true
 ---
 
-redis 是 key-value 的 NoSQL 数据库，dict 是基础数据结构，dict 总体来说是一个`哈希表`，哈希表 $O(1)$ 的时间复杂度，能高效进行数据读取。
+redis 是 key-value 的 NoSQL 数据库，dict 是基础数据结构，dict 总体来说是一个`哈希表`，哈希表 O(1) 的时间复杂度，能高效进行数据读取。
 
 dict 还有动态扩容/缩容功能，能灵活高效地使用机器内存。
 
@@ -72,7 +71,7 @@ typedef struct dictType {
 
 ## 2. 时间复杂度（读数据）
 
-查找数据，哈希表 $O(1)$ 时间复杂度，但是哈希表也会存在碰撞问题，所以哈希索引指向的列表长度也会影响效率。
+查找数据，哈希表 O(1) 时间复杂度，但是哈希表也会存在碰撞问题，所以哈希索引指向的列表长度也会影响效率。
 
 ```c
 #define dictHashKey(d, key) (d)->type->hashFunction(key)

@@ -4,7 +4,6 @@ title:  "[libco] 删除协程的正确姿势"
 categories: libco
 tags: libco release coroutine
 author: wenfh2020
-mathjax: true
 ---
 
 如果你认为只需要简单调用 `co_release` 就能将 [libco](https://github.com/Tencent/libco) 的协程删除，那等待你的可能就是定时炸弹 💣。

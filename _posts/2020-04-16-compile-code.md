@@ -4,7 +4,6 @@ title:  "gcc/make/Makefile 源码编译"
 categories: c/c++
 tags: make Makefile gcc compile
 author: wenfh2020
-# mathjax: true
 ---
 
 本章主要说 c 语言。源码工作流程：程序员编写代码 -> 编译 -> 产生二进制执行文件 -> 文件加载到系统运行。编译这个环节，其实是一个高级语言翻译成低级语言过程：高级语言 -> 汇编 -> 机器语言。

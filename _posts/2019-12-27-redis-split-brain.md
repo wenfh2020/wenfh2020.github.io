@@ -4,10 +4,9 @@ title:  "[redis 源码走读] sentinel 哨兵 - 脑裂处理方案"
 categories: redis
 tags: split brain redis sentinel
 author: wenfh2020
-mathjax: true
---- 
+---
 
-哨兵模式的 redis 集群，原来只有一个主服务，经过故障转移后，产生多个主服务，这样脑裂现象出现了。
+哨兵模式的 redis 集群，假如原来只有一个主服务，经过故障转移后，产生多个主服务，这样脑裂现象出现了。
 
 
 
@@ -76,7 +75,7 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 
 1. sentinel 节点个数最好 >= 3。
 2. sentinel 节点个数最好是基数。
-3. sentinel 的选举法定人数设置为 $(\frac{n}{2} + 1)$。
+3. sentinel 的选举法定人数设置为 (n/2 + 1)。
 
 * 配置
 
@@ -87,7 +86,7 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 
 * quorum
 
-\<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过一定`法定人数`选举某人为代表，那么他就成为 sentinel 的代表，代表负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 $(\frac{n}{2} + 1)$ 比较合理。
+\<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过一定`法定人数`选举某人为代表，那么他就成为 sentinel 的代表，代表负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 (n/2 + 1) 比较合理。
 
 > 如果 sentinel 个数总数为 3，那么最好 quorum == 2，这样最接近真实：少数服从多数，不会出现两个票数一样的代表同时被选上，进行故障转移。
 >
@@ -257,7 +256,7 @@ int processCommand(client *c) {
 
 ## 3. 小结
 
-* redis 脑裂主要表现为，同一个 redis 集群，出现多个 master，导致 redis 集群出现数据不一致。
+* redis 脑裂主要表现为：同一个 redis 集群，原来的 master，经过故障转移后，出现多个 master。
 * 解决方案主要通过 sentinel 哨兵的配置和 redis 的配置去解决问题。
 * 上述方案也是有不足的地方，例如 redis 配置限制可能会受到副本个数的影响，所以具体设置，要看具体的业务场景。主要是怎么通过比较小的代价去解决问题，或者降低出现问题的概率。
 * redis 虽然已经发布了 gossip 协议的无中心集群，sentinel 哨兵模式还是比较常用的，我们不建议直接使用 sentinel，可以考虑使用 codis。
