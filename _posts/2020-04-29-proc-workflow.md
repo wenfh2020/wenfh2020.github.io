@@ -77,9 +77,9 @@ start1 (ARG_DUMMIES argc, argp)
 
 > 图片来源 《深入理解计算机系统》8.2.3 私有地址空间
 
-<div align=center><img src="/images/2020-12-25-14-57-19.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-04-10-11-10-30.png" data-action="zoom"/></div>
 
-> 图片来源：[linux下同一个进程的不同线程之间如何共享虚拟地址空间？](https://www.bilibili.com/video/BV1vz4y1C7vq)
+> 图片来源：《深入理解计算机系统》- 第九章 - 虚拟内存
 
 ---
 
@@ -87,3 +87,6 @@ start1 (ARG_DUMMIES argc, argp)
 
 * 《深入理解计算机系统》
 * 《UNIX 环境高级编程》
+* [linux下同一个进程的不同线程之间如何共享虚拟地址空间？](https://www.bilibili.com/video/BV1vz4y1C7vq)
+* [【os浅尝】话说虚拟内存~](http://127.0.0.1:4000/2020/04/29/proc-workflow/)
+

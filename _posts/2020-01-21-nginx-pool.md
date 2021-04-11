@@ -6,7 +6,7 @@ tags: nginx pool
 author: wenfh2020
 ---
 
-nginx 内存池源码([ngx_palloc.c](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c))，通过链式管理大小内存块，实现内存管理。
+nginx 内存池 ([ngx_palloc.c](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c)) 主要对**小内存**的申请管理，避免频繁与底层交互，从而降低性能开销。
 
 
 
@@ -15,7 +15,13 @@ nginx 内存池源码([ngx_palloc.c](https://github.com/nginx/nginx/blob/master/
 
 ---
 
-## 1. 图示
+## 1. 概述
+
+nginx 内存池通过链式管理大小内存块，实现内存管理，大致流程：
+
+* 内存池先申请一个小块的内存空间，当外部申请小内存时，内存池就在小块的空间上进行划分。
+* 当小块的内存空间不够时，内存池会申请新的一块小块空间，放进链表里进行管理，外部新的小内存申请将会在新的小内存块上划分。
+* 当外部向内存池申请大块空间时，内存池直接向系统申请空间，不会在原来的小内存块上进行划分，大内存块放进另一个链表里进行管理。
 
 ![nginx 内存池](/images/2020-04-25-17-15-19.png){: data-action="zoom"}
 
