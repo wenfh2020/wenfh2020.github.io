@@ -6,9 +6,7 @@ tags: libco timer
 author: wenfh2020
 ---
 
-[libco](https://github.com/Tencent/libco) 定时器核心数据结构：数组 + 链表，有点像哈希表，通过空间换时间，查询数据时间复杂度为 O(1)。
-
-libco 定时器也被称为时间轮，我们看看这个 “轮” 是怎么转的。
+[libco](https://github.com/Tencent/libco) 定时器核心数据结构：数组 + 链表，有点像哈希表，通过空间换时间。libco 定时器也被称为时间轮，我们看看这个 “轮” 是怎么转的。
 
 
 
@@ -96,6 +94,8 @@ int AddTimeout(stTimeout_t *apTimeout, stTimeoutItem_t *apItem, unsigned long lo
         diff = apTimeout->iItemSize - 1;
         ...
     }
+
+    /* 通过取模，将定时器事件存储到数组对应的双向链表里。 */
     AddTail(apTimeout->pItems + (apTimeout->llStartIdx + diff) % apTimeout->iItemSize, apItem);
     return 0;
 }
@@ -132,7 +132,7 @@ void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
         unsigned long long now = GetTickMS();
         TakeAllTimeout(ctx->pTimeout, now, timeout);
         ...
-        /* 标识这个时间是到期事件，因为 fd 事件和事件耦合在一起了（!^_^）。 */
+        /* 标识这个时间是到期事件，因为 fd 事件和时间事件耦合在一起了（!^_^）。 */
         stTimeoutItem_t *lp = timeout->head;
         while (lp) {
             lp->bTimeout = true;
@@ -145,6 +145,7 @@ void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
         while (lp) {
             /* 遍历处理活跃事件。（fd 事件，到期事件。） */
             PopHead<stTimeoutItem_t, stTimeoutItemLink_t>(active);
+            /* 处理时间时间，到期的先处理，没到期的重新添加回去。 */
             if (lp->bTimeout && now < lp->ullExpireTime) {
                 /* 因为时间轮数组只有 60000 个下标，一般存储 1 分钟以内的到期事件，
                  * 但是超过 1 分钟到期的事件也支持存储，这样有可能这些事件经过取模，
@@ -170,7 +171,7 @@ void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
 
 * 时间轮数组默认大小是 60 * 1000。以毫秒为单位，最大时间间隔是一分钟，但是如果处理超过一分钟的过期事件，效率就降低了，例如 session，它的过期时间就经常超过 1 分钟。
 * libco 的定时器设计主要是为了它内部协程切换使用，添加一个定时事件以后，很难通过查找方式，删除指定时间事件，只有等到事件触发了，事件才会从双向链表中删除。
-* 定时器对外部使用不友好，貌似只有创建协程，在协程处理函数内部通过 poll 实现，这样的话，使用成本还挺大的。
+* 定时器对外部使用不友好，貌似只有创建协程，在协程处理函数内部通过 poll 实现。而且通过协程去实现定时器，成本太大了，一个协程结构体就几 K 的内存空间了，所以我自己在处理 session 过期的时候，不得不造了个轻量级的定时器轮子：[基于 stl map 的定时器](https://wenfh2020.com/2021/04/08/timers/)。
 * 综合上述几个问题，这也很好解析了，为啥有的开源通过小堆去维护定时器，例如 libev。
 
 ---
