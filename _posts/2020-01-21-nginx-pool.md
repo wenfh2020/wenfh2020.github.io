@@ -8,6 +8,8 @@ author: wenfh2020
 
 nginx 内存池 ([ngx_palloc.c](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c)) 主要对**小内存**的申请管理，避免频繁与底层交互，从而降低性能开销。
 
+它是轻量级内存池，小内存主要分配策略主要是**下次适配**：从上次查询地方开始，遇到下一个合适的块停止。
+
 
 
 * content
@@ -521,3 +523,4 @@ nginx 的内存池实现足够精简高效，但是依然有些问题不能兼�
 * [nginx源码分析--内存对齐处理](https://blog.csdn.net/unix21/article/details/12913287)
 * [利用cpu缓存实现高性能程序](https://cloud.tencent.com/developer/article/1449440)
 * [ngx_align_ptr](https://blog.csdn.net/mangobar/article/details/52668859)
+* [读书会|《深入理解计算机系统》- 虚拟内存](https://www.bilibili.com/video/BV1gN411975F?p=16)

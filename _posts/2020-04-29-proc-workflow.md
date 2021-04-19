@@ -23,7 +23,7 @@ author: wenfh2020
 
 ### 1.1. 编译加载
 
-![编译流程](/images/2020-04-28-12-54-46.png){: data-action="zoom" }
+<div align=center><img src="/images/2021-04-11-10-31-05.png" data-action="zoom"/></div>
 
 ---
 
