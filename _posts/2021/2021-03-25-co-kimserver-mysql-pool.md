@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[co_kimserver] mysql 连接池"
+title:  "[co_kimserver] libco mysql 连接池"
 categories: co_kimserver libco
 tags: mysql pool libco
 author: wenfh2020

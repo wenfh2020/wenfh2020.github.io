@@ -6,7 +6,13 @@ tags: redis ziplist
 author: wenfh2020
 ---
 
-点赞作者：redis 源码，注释很多而且很详细。看压缩列表源码前，可以先看看 ziplist.c 文件顶部注释，基本可以了解该数据结构设计。压缩列表有点像数据序列化，根据一定的逻辑，去掉数据冗余内存，对数据进行存储，以便节省系统内存使用空间。
+压缩列表`ziplist`是一个双向链表，设计主要是为了节省内存。
+
+保存字符串，数值两种类型（ It stores both strings and integer values），列表内部实现主要是对一块连续内存进行管理，列表支持列表头尾的插入或弹出结点操作。因为写操作涉及到内存重新分配，所以复杂度需要根据当前使用内存的使用情况而定，一般情况下，不建议存储大量数据。
+
+`sorted set` 根据数据长度，就分别用 `ziplist` 和 `skiplist` 两种数据结构进行保存。
+
+> The ziplist is a specially encoded dually linked list that is designed to be very memory efficient. It stores both strings and integer values, where integers are encoded as actual integers instead of a series of characters. It allows push and pop operations on either side of the list in O(1) time. However, because every operation requires a reallocation of the memory used by the ziplist, the actual complexity is related to the amount of memory used by the ziplist.
 
 
 
@@ -15,15 +21,10 @@ author: wenfh2020
 {:toc}
 
 ---
-压缩列表`ziplist`是一个双向链表，设计主要是为了节省内存。保存字符串，数值两种类型（ It stores both strings and integer values），列表内部实现主要是对一块连续内存进行管理，列表支持列表头尾的插入或弹出结点操作。因为写操作涉及到内存重新分配，所以复杂度需要根据当前使用内存的使用情况而定，一般情况下，不建议存储大量数据。`sorted set` 根据数据长度，就分别用 `ziplist` 和 `skiplist` 两种数据结构进行保存。
-
-> The ziplist is a specially encoded dually linked list that is designed to be very memory efficient. It stores both strings and integer values, where integers are encoded as actual integers instead of a series of characters. It allows push and pop operations on either side of the list in O(1) time. However, because every operation requires a reallocation of the memory used by the ziplist, the actual complexity is related to the amount of memory used by the ziplist.
-
----
 
 ## 1. 原理
 
-压缩原理：举个例子，`int a = 0` a 是一个整型变量，占 4 个字节。但是 a = 0，0 这个数字只需要一个 bit 保存就足够了，如果用 4 个字节（32 bit）内存去保存就有点浪费了。按照这个思路，大致可以理解压缩策略是怎么样的，详细信息看文档和源码吧。
+压缩原理：举个例子，`int a = 0`，a 是一个整型变量，占 4 个字节。但是 a = 0，0 这个数字只需要一个 bit 保存就足够了，如果用 4 个字节（32 bit）内存去存储就有点浪费了。按照这个思路，大致可以理解压缩策略是怎么样的，详细信息看文档和源码吧。
 > 压缩数据管理有点像数据序列化，序列化数据平常数据的传输经常用到，可以了解下 `protobuf` 源码，看看数据是怎么打包的。压缩列表除了数据序列化外，还需要对数据进行插入删除等操作，需要增加一些额外的结构进行内存管理。
 
 ---
@@ -32,7 +33,8 @@ author: wenfh2020
 
 ### 2.1. 列表结构
 
-**头 + 结点 + 尾**
+**头 + 结点集合 + 尾**：
+
 `<zlbytes> <zltail> <zllen> <entry> <entry> ... <entry> <zlend>`
 
 ![结构](/images/2020-02-20-16-44-19.png){: data-action="zoom"}
@@ -584,7 +586,5 @@ int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
 ## 6. 参考
 
 * [gdb中看内存(x命令)](https://blog.csdn.net/yasi_xi/article/details/9263955)
-
 * [Redis的一个历史bug及其后续改进](https://segmentfault.com/a/1190000018878466?utm_source=tag-newest)
-
 * [Ziplist: insertion bug under particular conditions fixed.](https://github.com/wenfh2020/redis/commit/c495d095ae495ea5253443ee4562aaa30681a854?diff=unified)

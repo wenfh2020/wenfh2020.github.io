@@ -1,14 +1,14 @@
 ---
 layout: post
-title:  "stl + glibc 内存泄漏"
+title:  "剖析 stl + glibc “内存泄漏” 原因"
 categories: c/c++
-tags: timer map stl
+tags: stl glibc memory leak
 author: wenfh2020
 ---
 
-最近压力测试一个项目，top 发现某进程内存一直占用着不释放，折腾了很久才定位到 glibc 内部内存泄漏。
+最近项目增加了一个模块，在 Centos 系统压测，进程一直不释放内存。因为新增代码量不多，经过排查，发现 stl + glibc 这个经典组合竟然有问题，见鬼了！
 
-水平有限，不知道深层原因，解决方案，定时执行 malloc_trim(0) 强制释放空闲空间。
+通过调试（[Centos 调试 glibc 视频](https://www.bilibili.com/video/BV1864y1i7PQ/)）和查阅 [glibc 源码](https://ftp.gnu.org/pub/gnu/glibc/)，好不容易才搞明白它 "泄漏" 的原因。
 
 
 
@@ -19,16 +19,11 @@ author: wenfh2020
 
 ---
 
-## 1. 测试实例
+## 1. 现象
 
-写了个测试实例，在 Centos 系统测试，进程一直不释放内存。
+上测试源码看看：
 
-测试源码，用了 std::list 数据结构，如果不使用 stl，用数组就没有这问题，真的见鬼了。
-
-最后如何定位到 glibc 内部泄漏呢？测试程序换 jemalloc 内存池就没有出现这个问题，所以基本可以确认出问题的位置。
-
-<div align=center><img src="/images/2021-04-08-16-40-23.png" data-action="zoom"/></div>
-
+<div align=center><img src="/images/2021-04-21-14-09-49.png" data-action="zoom"/></div>
 
 ```c
 /* g++ -g -std='c++11' example_pressure.cpp -o ep111  && ./ep111 10000 */
@@ -65,9 +60,13 @@ int main(int argc, char** argv) {
 }
 ```
 
-## 2. valgrind
+---
 
-用 valgrind 检查不出问题出在哪。std::list 内部应该有内存池数据没有释放，但是也只占用了一点内存 `480,000 bytes`。
+## 2. 分析
+
+### 2.1. valgrind
+
+用 valgrind 检查出来的结果，没有释放的部分应该是 `free_list` 没有调用 clear 导致，但显然不符合预期。
 
 ```shell
 [root:.../coroutine/test_libco/libco]# valgrind  --leak-check=full --show-leak-kinds=all ./ep111 20000
@@ -100,14 +99,466 @@ int main(int argc, char** argv) {
 
 ---
 
-## 3. 解决方案
+### 2.2. pmap
 
-定时执行 malloc_trim(0) 强制释放空闲空间。Centos 用户层向内核申请空间，默认通过 glibc，glibc 有内存池，避免频繁访问内核，消耗资源。
+用 pmap 命令查看进程，发现 640600K 这一块 [ anon ] 内存很大，应该是这个地方“泄漏”了。
 
-深层原因：参考帖子： [一次"内存泄漏"引发的血案](https://www.jianshu.com/p/38a4bcf564d5)
+<div align=center><img src="/images/2021-04-21-14-19-25.png" data-action="zoom"/></div>
+
+> 图片来源：《深入理解计算机系统》
+
+```shell
+# pmap -p 3321
+3321:   ./ep111 10000
+0000000000400000      8K r-x-- ep111
+0000000000601000      4K r---- ep111
+0000000000602000      4K rw--- ep111
+# 640600K 这里数值很大，应该是泄漏的地方了。
+000000000180d000 640600K rw---   [ anon ]
+00007ff2a8ce5000   1804K r-x-- libc-2.17.so
+00007ff2a8ea8000   2048K ----- libc-2.17.so
+00007ff2a90a8000     16K r---- libc-2.17.so
+00007ff2a90ac000      8K rw--- libc-2.17.so
+00007ff2a90ae000     20K rw---   [ anon ]
+00007ff2a90b3000     84K r-x-- libgcc_s-4.8.5-20150702.so.1
+00007ff2a90c8000   2044K ----- libgcc_s-4.8.5-20150702.so.1
+00007ff2a92c7000      4K r---- libgcc_s-4.8.5-20150702.so.1
+00007ff2a92c8000      4K rw--- libgcc_s-4.8.5-20150702.so.1
+00007ff2a92c9000   1028K r-x-- libm-2.17.so
+00007ff2a93ca000   2044K ----- libm-2.17.so
+00007ff2a95c9000      4K r---- libm-2.17.so
+00007ff2a95ca000      4K rw--- libm-2.17.so
+00007ff2a95cb000    932K r-x-- libstdc++.so.6.0.19
+00007ff2a96b4000   2044K ----- libstdc++.so.6.0.19
+00007ff2a98b3000     32K r---- libstdc++.so.6.0.19
+00007ff2a98bb000      8K rw--- libstdc++.so.6.0.19
+00007ff2a98bd000     84K rw---   [ anon ]
+00007ff2a98d2000    136K r-x-- ld-2.17.so
+00007ff2a9ae0000     20K rw---   [ anon ]
+00007ff2a9af2000      4K rw---   [ anon ]
+00007ff2a9af3000      4K r---- ld-2.17.so
+00007ff2a9af4000      4K rw--- ld-2.17.so
+00007ff2a9af5000      4K rw---   [ anon ]
+00007ffd62611000    132K rw---   [ stack ]
+00007ffd62799000      8K r-x--   [ anon ]
+ffffffffff600000      4K r-x--   [ anon ]
+ total           653144K
+```
 
 ---
 
-## 4. 参考
+### 2.3. malloc 内存信息
 
+通过查看 malloc 分配的内存信息，发现 std::list::clear 后，程序已经全部释放内存。
+
+但是这些已经释放掉的内存是否全部交还给系统了呢？
+
+没有！glibc 缓存起来了。`system bytes = 655974400` 刚好与 `pmap` 查到的堆分配内存大小一致。
+
+* malloc_stats 打印 glibc 分配内存信息。
+
+```c
+/* example_pressure.cpp */
+...
+void print_mem_info(const char* s) {
+    printf("------------------------\n");
+    printf("-- %s\n", s);
+    printf("------------------------\n");
+    malloc_stats();
+}
+
+int main(int argc, char** argv) {
+    ...
+    int cnt = atoi(argv[1]);
+    std::list<char*> free_list;
+
+    print_mem_info("begin");
+
+    for (int i = 0; i < cnt; i++) {
+        char* m = new char[1024 * 64];
+        memset(m, 'a', 1024 * 64);
+        free_list.push_back(m);
+    }
+
+    print_mem_info("alloc blocks");
+
+    for (auto& v : free_list) {
+        delete[] v;
+    }
+
+    print_mem_info("free blocks");
+
+    free_list.clear();
+    print_mem_info("clear list.");
+    ...
+}
+```
+
+* 最后已经全部释放（free）内存，但是 glibc 仍然没有把内存归还系统。
+
+```shell
+# system bytes：glibc 向系统申请的内存大小。
+# in use bytes：用户进程通过 malloc 向 glibc 申请分配的内存大小。
+```
+
+```shell
+# g++ -g -std='c++11' example_pressure.cpp -o ep111 && ./ep111 10000
+------------------------
+-- begin
+------------------------
+Arena 0:
+system bytes     =          0
+in use bytes     =          0
+...
+------------------------
+-- alloc blocks
+------------------------
+Arena 0:
+system bytes     =  655974400 
+in use bytes     =  655840000
+...
+------------------------
+-- free blocks
+------------------------
+Arena 0:
+system bytes     =  655974400
+in use bytes     =     320000
+...
+------------------------
+-- clear list.
+------------------------
+Arena 0:
+system bytes     =  655974400
+in use bytes     =          0
+...
+```
+
+---
+
+## 3. glibc 问题分析
+
+> 当前文章紧贴测试 demo，分析问题。上述测试 demo 是单线程的，而且分配的空间都是小内存（而且小于 128 k）。
+
+至于 free 掉的内存 glibc 为什么没有返还给系统，通过走读和调试 glibc 源码后，发现 `malloc_state.top` 这个 `top chunk` 对问题解决起着关键作用。
+
+详细参考：[glibc内存管理ptmalloc源代码分析.pdf](https://paper.seebug.org/papers/Archive/refs/heap/glibc%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86ptmalloc%E6%BA%90%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90.pdf)。
+
+---
+
+### 3.1. 系统内存分配流程
+
+* 因为上述例子是单线程的，而且申请的内存小于 128k，所以用户态向内核申请空间通过 `sbrk` 而不是 mmap。
+
+<div align=center><img src="/images/2021-04-14-17-13-58.png" data-action="zoom"/></div>
+
+> 图片来源：[Linux内核内存管理算法Buddy和Slab](https://cloud.tencent.com/developer/article/1106795)
+
+---
+
+### 3.2. glibc malloc 内存块结构
+
+* malloc_chunk。malloc 的内存块，通过 malloc_chunk 进行管理。
+
+```c
+/*
+  This struct declaration is misleading (but accurate and necessary).
+  It declares a "view" into memory allowing access to necessary
+  fields at known offsets from a given base. See explanation below.
+*/
+struct malloc_chunk {
+    INTERNAL_SIZE_T prev_size; /* Size of previous chunk (if free).  */
+    INTERNAL_SIZE_T size;      /* Size in bytes, including overhead. */
+
+    struct malloc_chunk* fd; /* double links -- used only if free. */
+    struct malloc_chunk* bk;
+
+    /* Only used for large blocks: pointer to next larger size.  */
+    struct malloc_chunk* fd_nextsize; /* double links -- used only if free. */
+    struct malloc_chunk* bk_nextsize;
+};
+```
+
+这个结构比较特别，已分配出去的内存结构，结构是下面这样的。
+
+malloc 返回的内存是 (`mem`)，事实上，它前面有两个 `size_t` 大小的空间保存了 `chunk` 相关大小数据。
+
+而 fd, bk, fd_next_size, bk_nextsize 这几个成员，只有空闲块才会用到。
+
+```shell
+    chunk-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            |             Size of previous chunk, if allocated              |
+            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            |             Size of chunk, in bytes                     |A|M|P|
+      mem-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            |             User data starts here...                          .
+            .                                                               .
+            .             (malloc_usable_size() bytes)                      .
+            .                                                               |
+nextchunk-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            |             Size of chunk                                     |
+            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+* malloc_state。可以理解为主线程的缓存管理者，那些 free 接口释放的内存，会根据一定的策略缓存起来，或者返还系统。因为 glibc 本来就是一个内存池，为了提高内存分配效率，它需要通过一定的策略，将部分内存缓存起来，避免用户态和内核态频繁进行交互。缓存起来的内存块，通过 fastbinsY 和 bins 这些数组维护起来，数组保存的是空闲内存块链表。`top` 这个内存块指向 `top chunk`，它对于理解 glibc 从系统申请内存，返还内存给系统有着关键作用。
+
+```c
+typedef struct malloc_chunk* mchunkptr;
+typedef struct malloc_chunk* mfastbinptr;
+
+struct malloc_state {
+    ...
+    mfastbinptr fastbinsY[NFASTBINS];
+
+    /* Base of the topmost chunk -- not otherwise kept in a bin */
+    mchunkptr top;
+
+    /* Normal bins packed as described above */
+    mchunkptr bins[NBINS * 2 - 2];
+    ...
+};
+```
+
+| 结构成员  | 描述                                                                                                                                                                                                                                                      |
+| :-------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| fastbinsY | 拥有 10 (NFASTBINS) 个元素的数组，用于存放每个 fast chunk 链表头指针，所以 fast bins 最多包含 10 个 fast chunk 的单向链表。                                                                                                                               |
+| top       | 是一个 chunk 指针，指向分配区的 top chunk。                                                                                                                                                                                                               |
+| bins      | 用于存储 unstored bin，small bins 和 large bins 的 chunk 链表头，small bins 一共 62 个，large bins 一共 63 个，加起来一共 125 个 bin。而 NBINS 定义为 128，其实 bin[0]和 bin[127] 都不存在，bin[1]为 unsorted bin 的 chunk 链表头，所以实际只有 126bins。 |
+
+---
+
+### 3.3. sbrk 系统分配回收内存
+
+测试 demo 分配小内存，当 glibc 内存池缓存不足时，glibc 会通过 sbrk 向系统申请内存给 `malloc_state.top`，也就是 `top chunk`，从它那里划分一块出来返回给用户进程。
+
+当 `top chunk` 内存达到一个回收值时，它才会通过 sbrk 返还内存给系统。所以说 `malloc_state.top` 是解决问题的关键。
+
+很多时候，通过 free 释放的内存块，它不是紧贴 `top chunk` 那一块内存，所以 `top chunk` 的大小没有改变，或者变化不大，没有达到回收的临界值，所以不会被回收。但是有时候即便回收的内存紧贴 `top chunk`，但是被释放的内存太小了，以至于 glibc 为了保证小内存的分配效率，而缓存起来，没有被 `top chunk` 合并。
+
+例如下图图 2，就是测试 demo 图 1 的内存布局。堆内存是从低位向高位分配，但是如果 n2 内存没有被 free 掉，或者 n2 被 free 掉后，glibc 为了效率，重新缓存起来了，那么即便 n2 之前的堆内存全部 free 掉了，glibc 也不会将内存归还系统的。
+
+---
+
+glibc 可能早已预见了这样的场景，所以提供了 `malloc_trim` 这样的接口。将 `n2` 这样的小内存从 `fast bins` 缓存里取出来进行合并，整理。这样，零散的内存很可能会因为这些小内存块的合并成大块的连续内存。这样 `top chunk` 很大概率会跟那些空闲的内存碎片连接成为一个连续的大块内存，达到回收的标准。
+
+<div align=center><img src="/images/2021-04-26-20-43-19.png" data-action="zoom"/></div>
+
+---
+
+通过上述分析，我们可以知道，为啥 glibc 会出现"内存泄漏"了。那为啥 stl + glibc 搭配出现`内存泄漏`的概率那么高呢？stl 内部不少类都有动态内存管理，就像图 2 的 `n2` 这个小内存块，如果缓存起来，一直不释放，那么其它内存块即使释放，glibc 也很大几率不会将内存返还系统。其实这不只是 stl 的问题，这应该是 glibc 内存池设计的问题。
+
+这里测试 demo，std::list 节点也会向 glibc 申请了很多小内存，std::list::clear 后，节点被 free 掉，但是却被 glibc 缓存起来了，并没有触发 `top chunk` 的内存合并。所以 `top chunk` 的大小一直没有达到释放的标准，所以 glibc 的缓存一直没有归还系统。
+
+---
+
+### 3.4. 源码分析
+
+* 分配内存。如果内存池没有足够内存，malloc 通过 sbrk 向系统申请一块虚拟内存给 `top chunk`，然后再从这块内存上分配合适的内存出去。
+
+```c
+static void* _int_malloc(mstate av, size_t bytes) {
+    ...
+use_top:
+    victim = av->top;
+    size = chunksize(victim);
+
+    /* 如果内存池没有匹配的缓存，那么从当前 top chunk 内存块划一块内存处理分配。 */
+    if ((unsigned long)(size) >= (unsigned long)(nb + MINSIZE)) {
+        remainder_size = size - nb;
+        remainder = chunk_at_offset(victim, nb);
+        av->top = remainder;
+        set_head(victim, nb | PREV_INUSE | (av != &main_arena ? NON_MAIN_ARENA : 0));
+        set_head(remainder, remainder_size | PREV_INUSE);
+
+        check_malloced_chunk(av, victim, nb);
+        void* p = chunk2mem(victim);
+        if (__builtin_expect(perturb_byte, 0))
+            alloc_perturb(p, bytes);
+        return p;
+    }
+    /* 如果上面的 top chunk 没有足够的内存分配，那么考虑将 fast chunks 缓存的小块内存进行合并，
+     *（在这里缓存的小内存块有可能前后都有比较大的空闲内存块，相互合并后，可能会合并出比较大的空闲空间。）
+       看看是否能合并出足够的空间，提供分配。 */
+    else if (have_fastchunks(av)) {
+        malloc_consolidate(av);
+        /* restore original bin index */
+        if (in_smallbin_range(nb))
+            idx = smallbin_index(nb);
+        else
+            idx = largebin_index(nb);
+    }
+    else {
+        /* 经过上面两个步骤后，如果还是没有足够的内存，只有向系统底层申请内存。 */
+        void* p = sysmalloc(nb, av);
+        if (p != NULL && __builtin_expect(perturb_byte, 0))
+            alloc_perturb(p, bytes);
+        return p;
+    }
+    ...
+}
+
+#ifndef MORECORE
+#define MORECORE sbrk
+#endif
+
+static void* sysmalloc(INTERNAL_SIZE_T nb, mstate av) {
+    ...
+    if (contiguous(av))
+        size -= old_size;
+    size = (size + pagemask) & ~pagemask;
+    ...
+    if (size > 0)
+        brk = (char*)(MORECORE(size));
+    ...
+    /* Cannot merge with old top, so add its size back in */
+    if (contiguous(av))
+        size = (size + old_size + pagemask) & ~pagemask;
+    ...
+    /* finally, do the allocation */
+    p = av->top;
+    size = chunksize(p);
+
+    /* 经过 sbrk 内存分配，top chunk 已经有足够的内存空间了，那么从它那里划分 nb 大小的内存分配出去。 */
+    if ((unsigned long)(size) >= (unsigned long)(nb + MINSIZE)) {
+        remainder_size = size - nb;
+        remainder = chunk_at_offset(p, nb);
+        av->top = remainder;
+        set_head(p, nb | PREV_INUSE | (av != &main_arena ? NON_MAIN_ARENA : 0));
+        set_head(remainder, remainder_size | PREV_INUSE);
+        check_malloced_chunk(av, p, nb);
+        return chunk2mem(p);
+    }
+    ...
+}
+```
+
+* 释放内存。
+
+```c
+#define FASTBIN_CONSOLIDATION_THRESHOLD (65536UL)
+
+static void _int_free(mstate av, mchunkptr p, int have_lock) {
+    ...
+    /* 小内存块有可能被缓存起来。 */
+    if ((unsigned long)(size) <= (unsigned long)(get_max_fast())
+#if TRIM_FASTBINS
+        /*
+            If TRIM_FASTBINS set, don't place chunks
+            bordering top into fastbins
+       */
+        && (chunk_at_offset(p, size) != av->top)
+#endif
+    ) {
+        /* 小内存块缓存到 fastbin. */
+        ...
+    }
+    ...
+    else if (!chunk_is_mmapped(p)) {
+        /* free 掉的内存，可能很大，也可能因为前后有空闲块，合并成一个大空闲块，
+         * 达到释放的临界值，尝试释放的标准。 */
+        if ((unsigned long)(size) >= FASTBIN_CONSOLIDATION_THRESHOLD) {
+            if (have_fastchunks(av))
+                malloc_consolidate(av);
+
+            if (av == &main_arena) {
+#ifndef MORECORE_CANNOT_TRIM
+                if ((unsigned long)(chunksize(av->top)) >= (unsigned long)(mp_.trim_threshold))
+                    systrim(mp_.top_pad, av);
+#endif
+            }
+            ...
+        }
+        ...
+    }
+}
+
+#ifndef MORECORE
+#define MORECORE sbrk
+#endif
+
+static int systrim(size_t pad, mstate av) {
+    ...
+    pagesz = GLRO(dl_pagesize);
+    top_size = chunksize(av->top);
+
+    /* 但只能释放 top chunk 这个块超出标准那部分（以页为单位）。 */
+    extra = (top_size - pad - MINSIZE - 1) & ~(pagesz - 1);
+
+    if (extra > 0) {
+        current_brk = (char*)(MORECORE(0));
+        if (current_brk == (char*)(av->top) + top_size) {
+            /* 按页回收 top 多出来的内存。 */
+            MORECORE(-extra);
+            ...
+        }
+    }
+    ...
+}
+```
+
+* 回收空闲内存。
+
+```c
+static int mtrim(mstate av, size_t pad) {
+    /* 整理合并 fastbin 缓存的空闲小内存块。 */
+    malloc_consolidate(av);
+    ...
+#ifndef MORECORE_CANNOT_TRIM
+    return result | (av == &main_arena ? systrim(pad, av) : 0);
+#else
+    return result;
+#endif
+}
+
+static void malloc_consolidate(mstate av) {
+    ...
+    if (get_max_fast() != 0) {
+        clear_fastchunks(av);
+        unsorted_bin = unsorted_chunks(av);
+        maxfb = &fastbin(av, NFASTBINS - 1);
+        fb = &fastbin(av, 0);
+        do {
+            p = atomic_exchange_acq(fb, 0);
+            if (p != 0) {
+                do {
+                    ...
+                    if (nextchunk != av->top) {
+                        ...
+                    } else {
+                        /* top chunk 有可能会因为空闲小内存的回收合并而增加，达到释放的标准。 */
+                        size += nextsize;
+                        set_head(p, size | PREV_INUSE);
+                        av->top = p;
+                    }
+
+                } while ((p = nextp) != 0);
+            }
+        } while (fb++ != maxfb);
+    }
+    ...
+}
+```
+
+---
+
+## 4. 解决方案
+
+比较简单的解决方案：定时执行 malloc_trim(0) 强制回收整理小内存。其它或者尝试使用 jemalloc 和 tcmalloc 替换 ptmalloc。
+
+---
+
+## 5. 参考
+
+* [glibc内存管理ptmalloc源代码分析.pdf](https://paper.seebug.org/papers/Archive/refs/heap/glibc%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86ptmalloc%E6%BA%90%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90.pdf)
+* [PART 1: UNDERSTANDING THE GLIBC HEAP IMPLEMENTATION（链接需要翻墙）](https://azeria-labs.com/heap-exploitation-part-1-understanding-the-glibc-heap-implementation/)
+* [PART 2: UNDERSTANDING THE GLIBC HEAP IMPLEMENTATION（链接需要翻墙）](https://azeria-labs.com/heap-exploitation-part-2-glibc-heap-free-bins/)
 * [一次"内存泄漏"引发的血案](https://www.jianshu.com/p/38a4bcf564d5)
+* [有感于STL的内存管理](https://www.cnblogs.com/skiwnchiwns/p/10345191.html)
+* [malloc(3) — Linux manual page（链接需要翻墙）](https://man7.org/linux/man-pages/man3/malloc.3.html)
+* [download glibc code](https://ftp.gnu.org/pub/gnu/glibc/)
+* [centos7 安装debuginfo调试glibc源码](https://blog.51cto.com/happytree007/2148988)
+* [malloc_trim(3) — Linux manual page](https://man7.org/linux/man-pages/man3/malloc_trim.3.html)
+* [CentOS 安装 debuginfo-install](https://www.cnblogs.com/john-h/p/6113567.html)
+* [深入理解 malloc](https://hanfeng.ink/post/understand_glibc_malloc/)
+* [linux内存管理概论（二）](http://lizengkun.cn/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/memory-management/)
+* [十问 Linux 虚拟内存管理 ( 一 )](https://cloud.tencent.com/developer/article/1004428)
+* [十问 Linux 虚拟内存管理 ( 二 )](https://cloud.tencent.com/developer/article/1004429)

@@ -6,7 +6,7 @@ tags: linux memory slab buddy
 author: wenfh2020
 ---
 
-学习 Linux 内核内存分配算法,简单查阅了一下相关的内核源码和收集了部分资料（大部分资料来源于广大网友）。
+学习 Linux 内核内存分配算法，简单查阅了一下相关的内核源码和收集了部分资料（大部分资料来源于广大网友）。
 
 
 
@@ -18,7 +18,13 @@ author: wenfh2020
 
 ## 1. 设备
 
+* 设备关系。
+
 <div align=center><img src="/images/2021-04-19-13-11-50.png" data-action="zoom"/></div>
+
+> 图片来源：《深入理解计算机系统》- 第一章 - 计算机漫游
+
+* 存储关系。
 
 <div align=center><img src="/images/2021-04-19-13-13-12.png" data-action="zoom"/></div>
 
@@ -27,6 +33,8 @@ author: wenfh2020
 ---
 
 ## 2. 内存布局
+
+* 存储。
 
 <div align=center><img src="/images/2021-04-19-13-14-58.png" data-action="zoom"/></div>
 
@@ -42,7 +50,7 @@ author: wenfh2020
 
 > 图片来源：[Linux 内存管理窥探（2）：内存模型](https://blog.csdn.net/zhoutaopower/article/details/86710017)
 
-* 内存布局。
+* 虚拟内存。
 
 <div align=center><img src="/images/2021-04-15-10-26-18.png" data-action="zoom"/></div>
 
@@ -56,7 +64,7 @@ author: wenfh2020
 
 > 图片来源：《深入理解计算机系统》- 第九章 - 虚拟内存
 
-* mmu
+* MMU 地址翻译。
 
 <div align=center><img src="/images/2021-04-19-13-19-47.png" data-action="zoom"/></div>
 
