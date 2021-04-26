@@ -332,13 +332,13 @@ struct malloc_state {
 
 当 `top chunk` 内存达到一个回收值时，它才会通过 sbrk 返还内存给系统。所以说 `malloc_state.top` 是解决问题的关键。
 
-很多时候，通过 free 释放的内存块，它不是紧贴 `top chunk` 那一块内存，所以 `top chunk` 的大小没有改变，或者变化不大，没有达到回收的临界值，所以不会被回收。但是有时候即便回收的内存紧贴 `top chunk`，但是被释放的内存太小了，以至于 glibc 为了保证小内存的分配效率，而缓存起来，没有被 `top chunk` 合并。
+很多时候，通过 free 释放的内存块，它不是紧贴 `top chunk` 那一块内存，所以 `top chunk` 的大小没有改变，或者变化不大，没有达到回收的阈值，所以空闲内存不会被返还系统。有时候即便回收的内存紧贴 `top chunk`，但是被释放的内存太小了，以至于 glibc 为了保证小内存的分配效率，而将其缓存起来，没有被 `top chunk` 合并。
 
 例如下图图 2，就是测试 demo 图 1 的内存布局。堆内存是从低位向高位分配，但是如果 n2 内存没有被 free 掉，或者 n2 被 free 掉后，glibc 为了效率，重新缓存起来了，那么即便 n2 之前的堆内存全部 free 掉了，glibc 也不会将内存归还系统的。
 
 ---
 
-glibc 可能早已预见了这样的场景，所以提供了 `malloc_trim` 这样的接口。将 `n2` 这样的小内存从 `fast bins` 缓存里取出来进行合并，整理。这样，零散的内存很可能会因为这些小内存块的合并成大块的连续内存。这样 `top chunk` 很大概率会跟那些空闲的内存碎片连接成为一个连续的大块内存，达到回收的标准。
+glibc 可能早已预见了这样的场景，所以提供了 `malloc_trim` 这样的接口。将 `n2` 这样的小内存从 `fast bins` 缓存里取出来进行合并，整理。这样，零散的内存碎片很可能会因为这些小内存碎片，合并成大块的连续内存。这样 `top chunk` 很大概率会跟那些空闲的内存碎片连接成为一个连续的大块内存，达到回收的标准。
 
 <div align=center><img src="/images/2021-04-26-20-43-19.png" data-action="zoom"/></div>
 
@@ -346,7 +346,7 @@ glibc 可能早已预见了这样的场景，所以提供了 `malloc_trim` 这�
 
 通过上述分析，我们可以知道，为啥 glibc 会出现"内存泄漏"了。那为啥 stl + glibc 搭配出现`内存泄漏`的概率那么高呢？stl 内部不少类都有动态内存管理，就像图 2 的 `n2` 这个小内存块，如果缓存起来，一直不释放，那么其它内存块即使释放，glibc 也很大几率不会将内存返还系统。其实这不只是 stl 的问题，这应该是 glibc 内存池设计的问题。
 
-这里测试 demo，std::list 节点也会向 glibc 申请了很多小内存，std::list::clear 后，节点被 free 掉，但是却被 glibc 缓存起来了，并没有触发 `top chunk` 的内存合并。所以 `top chunk` 的大小一直没有达到释放的标准，所以 glibc 的缓存一直没有归还系统。
+这里测试 demo，std::list 节点也会向 glibc 申请了很多小内存，std::list::clear 执行后，std::list 全部节点被 free 掉了，因为 std::list 每个节点才 32 个字节，它们被 glibc 缓存起来了，并没有触发 `top chunk` 的内存合并。所以 `top chunk` 的大小一直没有超过返还系统的阈值，所以 glibc 的缓存一直没有归还系统。
 
 ---
 
@@ -434,12 +434,16 @@ static void* sysmalloc(INTERNAL_SIZE_T nb, mstate av) {
 * 释放内存。
 
 ```c
+#ifndef DEFAULT_MXFAST
+#define DEFAULT_MXFAST (64 * SIZE_SZ / 4)
+#endif
+
 #define FASTBIN_CONSOLIDATION_THRESHOLD (65536UL)
 
 static void _int_free(mstate av, mchunkptr p, int have_lock) {
     ...
-    /* 小内存块有可能被缓存起来。 */
-    if ((unsigned long)(size) <= (unsigned long)(get_max_fast())
+    /* 小内存块有可能被缓存起来，例如 std::list 32 个字节的节点。 */
+    if ((unsigned long)(size) <= (unsigned long)(get_max_fast()) /* DEFAULT_MXFAST */
 #if TRIM_FASTBINS
         /*
             If TRIM_FASTBINS set, don't place chunks
@@ -486,7 +490,7 @@ static int systrim(size_t pad, mstate av) {
     if (extra > 0) {
         current_brk = (char*)(MORECORE(0));
         if (current_brk == (char*)(av->top) + top_size) {
-            /* 按页回收 top 多出来的内存。 */
+            /* 以页为单位回收 top chunk 多出来的内存。 */
             MORECORE(-extra);
             ...
         }
@@ -524,7 +528,7 @@ static void malloc_consolidate(mstate av) {
                     if (nextchunk != av->top) {
                         ...
                     } else {
-                        /* top chunk 有可能会因为空闲小内存的回收合并而增加，达到释放的标准。 */
+                        /* top chunk 有可能会因为空闲小内存的回收合并而增加，超过返还系统的阈值。 */
                         size += nextsize;
                         set_head(p, size | PREV_INUSE);
                         av->top = p;
@@ -542,7 +546,9 @@ static void malloc_consolidate(mstate av) {
 
 ## 4. 解决方案
 
-比较简单的解决方案：定时执行 malloc_trim(0) 强制回收整理小内存。其它或者尝试使用 jemalloc 和 tcmalloc 替换 ptmalloc。
+比较简单的解决方案：定时执行 malloc_trim(0) 强制回收整理小空闲内存块。
+
+其它方案可以考虑使用 jemalloc 和 tcmalloc 替换 ptmalloc。
 
 ---
 
