@@ -237,17 +237,17 @@ in use bytes     =          0
 
 ## 3. glibc 问题分析
 
-> 当前文章紧贴测试 demo，分析问题。上述测试 demo 是单线程的，而且分配的空间都是小内存（而且小于 128 k）。
+`ptmalloc2` 是目前 Linux 用户空间默认的内存分配器，源码集成在 glibc 里。
 
-至于 free 掉的内存 glibc 为什么没有返还给系统，通过走读和调试 glibc 源码后，发现 `malloc_state.top` 这个 `top chunk` 对问题解决起着关键作用。
+`ptmalloc2` 支持多线程，它为多个线程提供了多个 `arena` 分区（见下面 malloc_state）管理内存：主分区和非主分区（main_arena/non_main_arena）。因为本文 demo 是单线程，所以我们这里只讨论 `main_arena` 场景，详细请参考文档：[glibc内存管理ptmalloc源代码分析.pdf](https://paper.seebug.org/papers/Archive/refs/heap/glibc%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86ptmalloc%E6%BA%90%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90.pdf)。
 
-详细参考：[glibc内存管理ptmalloc源代码分析.pdf](https://paper.seebug.org/papers/Archive/refs/heap/glibc%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86ptmalloc%E6%BA%90%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90.pdf)。
+至于 free 掉的内存 glibc 为啥没有返还给系统，通过走读和调试它的源码后，发现 `malloc_state.top` 这个 `top chunk` 对问题解决起着关键作用。
 
 ---
 
 ### 3.1. 系统内存分配流程
 
-* 因为上述例子是单线程的，而且申请的内存小于 128k，所以用户态向内核申请空间通过 `sbrk` 而不是 mmap。
+* `ptmalloc2` 主要通过 `sbrk` 和 `mmap` 这两个函数，向内核申请内存空间。因为上述例子是单线程的，而且申请的内存小于 128k，所以用户空间向内核申请内存通过 `sbrk` 而不是 `mmap`。
 
 <div align=center><img src="/images/2021-04-14-17-13-58.png" data-action="zoom"/></div>
 
@@ -255,9 +255,9 @@ in use bytes     =          0
 
 ---
 
-### 3.2. glibc malloc 内存块结构
+### 3.2. 关键内存结构
 
-* malloc_chunk。malloc 的内存块，通过 malloc_chunk 进行管理。
+* malloc_chunk。`ptmalloc2` 每次会根据需要向内核申请一大块内存空间，并根据需要将其划分为大小不等的内存块，无论是大内存空间或者小内存片段全部都以 chunk 形式存在，方便维护管理。
 
 ```c
 /*
@@ -280,26 +280,26 @@ struct malloc_chunk {
 
 这个结构比较特别，已分配出去的内存结构，结构是下面这样的。
 
-malloc 返回的内存是 (`mem`)，事实上，它前面有两个 `size_t` 大小的空间保存了 `chunk` 相关大小数据。
+malloc 给用户返回内存是 `mem` 的地址，事实上，它前面有两个 `size_t` 大小的空间分别保存了 `chunk` 前一个 `chunk` 大小，当前 `chunk` 大小。只有在前一个 `chunk` 空闲时，这个 prev_size 才会有效。
 
 而 fd, bk, fd_next_size, bk_nextsize 这几个成员，只有空闲块才会用到。
 
 ```shell
-    chunk-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            |             Size of previous chunk, if allocated              |
-            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            |             Size of chunk, in bytes                     |A|M|P|
-      mem-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            |             User data starts here...                          .
-            .                                                               .
-            .             (malloc_usable_size() bytes)                      .
-            .                                                               |
-nextchunk-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            |             Size of chunk                                     |
-            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       chunk--> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                |             Size of previous chunk, if allocated              |
+                +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                |             Size of chunk, in bytes                     |A|M|P|
+         mem--> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                |             User data starts here...                          .
+                .                                                               .
+                .             (malloc_usable_size() bytes)                      .
+                .                                                               |
+   nextchunk--> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                |             Size of chunk                                     |
+                +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-* malloc_state。可以理解为线程的内存池管理者，那些 free 接口释放的内存，会根据一定的策略缓存起来，或者返还系统。因为 glibc 本来就是一个内存池，为了提高内存分配效率，它需要通过一些策略，将部分内存缓存起来，避免用户态和内核态频繁进行交互。缓存起来的内存块，通过 fastbinsY 和 bins 这些数组维护起来，数组保存的是空闲内存块链表。`top` 这个内存块指向 `top chunk`，它对于理解 glibc 从系统申请内存，返还内存给系统有着关键作用。
+* malloc_state。可以理解为线程的内存池分区（`arena`），那些 free 接口释放的内存，会根据一定的策略缓存起来，或者返还系统。因为 `ptmalloc2` 本来就是一个内存池，为了提高内存分配效率，它需要通过一些策略，将部分内存缓存起来，避免用户态和内核态频繁进行交互。缓存起来的内存块，通过 fastbinsY 和 bins 这些数组维护起来，数组保存的是空闲内存块链表。`top` 这个内存块指向 `top chunk`，它对于理解 glibc 从系统申请内存，返还内存给系统有着关键作用。
 
 ```c
 typedef struct malloc_chunk* mchunkptr;
@@ -318,11 +318,11 @@ struct malloc_state {
 };
 ```
 
-| 结构成员  | 描述                                                                                                                                                                                                                                                      |
-| :-------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| fastbinsY | 拥有 10 (NFASTBINS) 个元素的数组，用于存放每个 fast chunk 链表头指针，所以 fast bins 最多包含 10 个 fast chunk 的单向链表。                                                                                                                               |
-| top       | 是一个 chunk 指针，指向分配区的 top chunk。                                                                                                                                                                                                               |
-| bins      | 用于存储 unstored bin，small bins 和 large bins 的 chunk 链表头，small bins 一共 62 个，large bins 一共 63 个，加起来一共 125 个 bin。而 NBINS 定义为 128，其实 bin[0]和 bin[127] 都不存在，bin[1]为 unsorted bin 的 chunk 链表头，所以实际只有 126bins。 |
+| 成员      | 描述                                                                                                                                                                                                                                                         |
+| :-------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| fastbinsY | 拥有 10 (NFASTBINS) 个元素的数组，用于存放每个 fast chunk 链表头指针，所以 fast bins 最多包含 10 个 fast chunk 的单向链表。                                                                                                                                  |
+| top       | 是一个 chunk 指针，指向分配区的 top chunk。                                                                                                                                                                                                                  |
+| bins      | 用于存储 unstored bin，small bins 和 large bins 的 chunk 链表头，small bins 一共 62 个，large bins 一共 63 个，加起来一共 125 个 bin。而 NBINS 定义为 128，其实 bin[0] 和 bin[127] 都不存在，bin[1] 为 unsorted bin 的 chunk 链表头，所以实际只有 126 bins。 |
 
 ---
 
@@ -330,23 +330,33 @@ struct malloc_state {
 
 测试 demo 分配小内存，当 glibc 内存池缓存不足时，glibc 会通过 sbrk 向系统申请内存给 `malloc_state.top`，也就是 `top chunk`，从它那里划分一块出来返回给用户进程。
 
-当 `top chunk` 内存达到一个回收值时，它才会通过 sbrk 返还内存给系统。所以说 `malloc_state.top` 是解决问题的关键。
-
-很多时候，通过 free 释放的内存块，它不是紧贴 `top chunk` 那一块内存，所以 `top chunk` 的大小没有改变，或者变化不大，没有达到回收的阈值，所以空闲内存不会被返还系统。有时候即便回收的内存紧贴 `top chunk`，但是被释放的内存太小了，以至于 glibc 为了保证小内存的分配效率，而将其缓存起来，没有被 `top chunk` 合并。
-
-例如下图图 2，就是测试 demo 图 1 的内存布局。堆内存是从低位向高位分配，但是如果 n2 内存没有被 free 掉，或者 n2 被 free 掉后，glibc 为了效率，重新缓存起来了，那么即便 n2 之前的堆内存全部 free 掉了，glibc 也不会将内存归还系统的。
+当 `top chunk` 内存达到一个回收阈值时，它才会通过 sbrk 返还内存给系统。所以说理解 `malloc_state.top` 是解决问题的关键。
 
 ---
 
-glibc 可能早已预见了这样的场景，所以提供了 `malloc_trim` 这样的接口。将 `n2` 这样的小内存从 `fast bins` 缓存里取出来进行合并，整理。这样，零散的内存碎片很可能会因为这些小内存碎片，合并成大块的连续内存。这样 `top chunk` 很大概率会跟那些空闲的内存碎片连接成为一个连续的大块内存，达到回收的标准。
+很多时候，通过 free 释放的内存块，它不是紧贴 `top chunk` 那一块内存，所以被释放的内存并没有合并到 `top chunk`，而 `top chunk` 的大小没有改变，没有达到返还系统的阈值，所以空闲内存不会被返还系统。有时候即便回收的内存紧贴 `top chunk`，但是被释放的内存太小了，以至于内存池为了保证小内存的分配效率，而将其缓存起来，没有被 `top chunk` 合并。
 
-<div align=center><img src="/images/2021-04-26-20-43-19.png" data-action="zoom"/></div>
+例如下图图 2，就是测试 demo 图 1 的内存布局。堆内存是从低位向高位分配，但是如果 n2 内存没有被 free 掉，或者 n2 被 free 掉后，内存池为了效率，将其缓存起来了，并没有合并到 `top chunk`，那么即便 n2 之前的堆内存全部 free 掉了，内存池也不会将内存归还系统的。
 
 ---
 
-通过上述分析，我们可以知道，为啥 glibc 会出现"内存泄漏"了。那为啥 stl + glibc 搭配出现`内存泄漏`的概率那么高呢？stl 内部不少类都有动态内存管理，就像图 2 的 `n2` 这个小内存块，如果缓存起来，一直不释放，那么其它内存块即使释放，glibc 也很大几率不会将内存返还系统。其实这不只是 stl 的问题，这应该是 glibc 内存池设计的问题。
+看来是这些小空闲内存块惹的祸。所以我们需要在某一时刻对这些小空闲内存块进行处理。
 
-这里测试 demo，std::list 节点也会向 glibc 申请了很多小内存，std::list::clear 执行后，std::list 全部节点被 free 掉了，因为 std::list 每个节点才 32 个字节，它们被 glibc 缓存起来了，并没有触发 `top chunk` 的内存合并。所以 `top chunk` 的大小一直没有超过返还系统的阈值，所以 glibc 的缓存一直没有归还系统。
+* `ptmalloc2` 可能早已预见了这样的场景，所以提供了 `malloc_trim` 这样的接口。将 `n2` 这样的小内存从 `fast bins` 缓存里取出来进行合并整理。这样，零散的内存碎片很可能会因为这些小内存碎片，合并成大块的连续内存。这样 `top chunk` 很大概率会跟那些空闲的内存碎片连接成为一个连续的大块内存，达到回收的标准。
+
+* 正常情况下，内存池是不会主动去处理的，当内存池没有足够的空闲缓存块满足外部分配需求时，而且 `top chunk` 也不够空间分配了，内存池会尝试处理 `fast bins` 里的这些小内存，看看能否合并出足够的大空间满足分配需求。详见下面源码分析章节。
+
+<div align=center><img src="/images/2021-04-27-09-13-26.png" data-action="zoom"/></div>
+
+---
+
+通过上述分析，我们可以知道，为啥 glibc 会出现"内存泄漏"了。那为啥 stl + glibc 搭配出现`内存泄漏`的概率那么高呢？stl 内部不少类都有动态内存管理，就像图 2 的 `n2` 这个小内存块，如果缓存起来，一直不释放，那么其它内存块即使释放，`ptmalloc2` 也很大几率不会将内存返还系统。
+
+其实这不只是 stl 的问题，即便不用 stl，用户实现复杂的业务逻辑，也很可能会因为一个小内存块不释放，导致 `ptmalloc2` 不能将空闲内存返还系统。
+
+---
+
+这里测试 demo，std::list 节点也会向 glibc 申请很多小内存，std::list::clear 执行后，std::list 全部节点被 free 掉了，因为 std::list 每个节点才占 32 个字节 chunk（64 位系统），它们被 `ptmalloc2` 缓存起来了，并没有触发 `top chunk` 的内存合并。所以 `top chunk` 的大小一直没有超过返还系统的阈值，所以 `ptmalloc2` 的缓存一直没有归还系统。
 
 ---
 
@@ -417,7 +427,7 @@ static void* sysmalloc(INTERNAL_SIZE_T nb, mstate av) {
     p = av->top;
     size = chunksize(p);
 
-    /* 经过 sbrk 内存分配，top chunk 已经有足够的内存空间了，那么从它那里划分 nb 大小的内存分配出去。 */
+    /* 经过 sbrk 内存分配，top chunk 已经有足够的内存空间了，那么从它那里将 nb 大小的内存划分出去。 */
     if ((unsigned long)(size) >= (unsigned long)(nb + MINSIZE)) {
         remainder_size = size - nb;
         remainder = chunk_at_offset(p, nb);
@@ -484,7 +494,7 @@ static int systrim(size_t pad, mstate av) {
     pagesz = GLRO(dl_pagesize);
     top_size = chunksize(av->top);
 
-    /* 但只能释放 top chunk 这个块超出标准那部分（以页为单位）。 */
+    /* 释放 top chunk 这个块超出阈值那部分（以页为单位）。 */
     extra = (top_size - pad - MINSIZE - 1) & ~(pagesz - 1);
 
     if (extra > 0) {
