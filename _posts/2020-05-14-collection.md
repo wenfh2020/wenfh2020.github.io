@@ -92,3 +92,4 @@ author: wenfh2020
 * [github + jekyll 博客](https://github.com/Gaohaoyang/gaohaoyang.github.io)
   [本博客](https://wenfh2020.com/2020/02/17/make-blog/)主要采用这个模版搭建。搭建框架，请参考[这个文档](https://github.com/wonderseen/wonderseen.github.io)的搭建流程。
 * [The GNU C Library (glibc)](https://www.gnu.org/software/libc/)
+* [如何使用cgdb + qemu调试linux内核模块](https://blog.didiyun.com/index.php/2020/08/03/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8cgdb-qemu%E8%B0%83%E8%AF%95linux%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/)

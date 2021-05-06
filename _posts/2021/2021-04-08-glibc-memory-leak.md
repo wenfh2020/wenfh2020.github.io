@@ -420,7 +420,17 @@ in use bytes     =         32 # ptmalloc2 已经分配出去给用户使用的�
 
 ---
 
-### 3.4. 源码分析
+### 3.4. malloc_trim
+
+上面已经剖析了小内存不回收，可能会影响内存池内存返还系统。如果小内存一直不被程序释放，那怎么办？malloc_trim！
+
+我们知道，程序是申请的内存是虚拟内存，系统寻址是通过虚拟地址转换为物理地址。所以我们可以保留虚拟内存，但是释放物理内存，等到程序真正使用需要的物理内存时，再通过断页的方式，重新加载。这样就可以就可以减少系统整体的物理内存使用。
+
+> 详细请参考下面 malloc_trim 的源码实现：__madvise 函数的调用。
+
+---
+
+### 3.5. 源码分析
 
 * 分配内存。如果内存池没有足够内存，malloc 通过 sbrk 向系统申请一块虚拟内存给 `top chunk`，然后再从这块内存上分配合适的内存出去。
 
@@ -569,13 +579,52 @@ static int systrim(size_t pad, mstate av) {
 }
 ```
 
-* 回收空闲内存。
+* 回收空闲内存。整理合并 `fast bins` 缓存的小内存块；或者回收达到一定数值的空闲内存块，通过 `__madvise` 告诉系统这些内存虽然不能从虚拟内存清除，但是可以先将其从物理内存清除，减少物理内存的使用，当虚拟内存使用到时，再通过缺页中断方式重新加载。
 
 ```c
+/*
+  ------------------------------ malloc_trim ------------------------------
+*/
 static int mtrim(mstate av, size_t pad) {
     /* 整理合并 fastbin 缓存的空闲小内存块。 */
     malloc_consolidate(av);
-    ...
+
+    const size_t ps = GLRO(dl_pagesize);
+    int psindex = bin_index(ps);
+    const size_t psm1 = ps - 1;
+
+    int result = 0;
+    for (int i = 1; i < NBINS; ++i)
+        if (i == 1 || i >= psindex) {
+            mbinptr bin = bin_at(av, i);
+
+            for (mchunkptr p = last(bin); p != bin; p = p->bk) {
+                INTERNAL_SIZE_T size = chunksize(p);
+
+                if (size > psm1 + sizeof(struct malloc_chunk)) {
+                    /* See whether the chunk contains at least one unused page.  */
+                    char* paligned_mem = (char*)(((uintptr_t)p + sizeof(struct malloc_chunk) + psm1) & ~psm1);
+
+                    assert((char*)chunk2mem(p) + 4 * SIZE_SZ <= paligned_mem);
+                    assert((char*)p + size > paligned_mem);
+
+                    /* This is the size we could potentially free.  */
+                    size -= paligned_mem - (char*)p;
+
+                    if (size > psm1) {
+#ifdef MALLOC_DEBUG
+                        /* When debugging we simulate destroying the memory content.  */
+                        memset(paligned_mem, 0x89, size & ~psm1);
+#endif
+                        /* 回收达到一定数值的空闲内存块，将其从物理内存清除。 */
+                        __madvise(paligned_mem, size & ~psm1, MADV_DONTNEED);
+
+                        result = 1;
+                    }
+                }
+            }
+        }
+
 #ifndef MORECORE_CANNOT_TRIM
     return result | (av == &main_arena ? systrim(pad, av) : 0);
 #else
@@ -635,6 +684,7 @@ static void malloc_consolidate(mstate av) {
 
 ## 6. 参考
 
+* [深入理解 malloc](https://hanfeng.ink/post/understand_glibc_malloc/)
 * [Glibc内存管理-ptmalloc2](https://www.cnblogs.com/mysky007/p/12349508.html)
 * [glibc内存管理ptmalloc源代码分析.pdf](https://paper.seebug.org/papers/Archive/refs/heap/glibc%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86ptmalloc%E6%BA%90%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90.pdf)
 * [PART 1: UNDERSTANDING THE GLIBC HEAP IMPLEMENTATION（链接需要翻墙）](https://azeria-labs.com/heap-exploitation-part-1-understanding-the-glibc-heap-implementation/)
@@ -646,7 +696,6 @@ static void malloc_consolidate(mstate av) {
 * [centos7 安装debuginfo调试glibc源码](https://blog.51cto.com/happytree007/2148988)
 * [malloc_trim(3) — Linux manual page](https://man7.org/linux/man-pages/man3/malloc_trim.3.html)
 * [CentOS 安装 debuginfo-install](https://www.cnblogs.com/john-h/p/6113567.html)
-* [深入理解 malloc](https://hanfeng.ink/post/understand_glibc_malloc/)
 * [linux内存管理概论（二）](http://lizengkun.cn/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/memory-management/)
 * [十问 Linux 虚拟内存管理 ( 一 )](https://cloud.tencent.com/developer/article/1004428)
 * [十问 Linux 虚拟内存管理 ( 二 )](https://cloud.tencent.com/developer/article/1004429)
