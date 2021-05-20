@@ -663,17 +663,7 @@ static void malloc_consolidate(mstate av) {
 
 ---
 
-## 4. 分配和释放流程
-
-### 4.1. 分配
-
-1. 检查 fast bin 是否有满足需求的内存块，如果有就返回。
-2. 检查 small bins 是否有满足需求的内存块，如果有就返回，否则检查 fast bins 是否有数据，对其进行合并整理到 unsorted bins。
-3. 遍历 unsorted bins 内存块链表。
-
----
-
-## 5. 解决方案
+## 4. 解决方案
 
 * 避免内存泄漏。malloc/new 出来的内存，一定要 free/delete 掉。
 * 避免分阶段分配内存，后面分配的内存，长期驻留在程序不释放。
@@ -682,7 +672,7 @@ static void malloc_consolidate(mstate av) {
 
 ---
 
-## 6. 参考
+## 5. 参考
 
 * [深入理解 malloc](https://hanfeng.ink/post/understand_glibc_malloc/)
 * [Glibc内存管理-ptmalloc2](https://www.cnblogs.com/mysky007/p/12349508.html)

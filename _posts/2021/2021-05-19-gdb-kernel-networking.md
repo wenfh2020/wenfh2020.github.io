@@ -8,6 +8,8 @@ author: wenfh2020
 
 最近在看 Linux 内核的网络部分源码，在 MacOS 上搭建调试环境，通过 gdb 调试，熟悉内核网络接口的工作流程。
 
+> 调试环境搭建，请参考视频：[gdb 调试 Linux 内核网络源码](https://www.bilibili.com/video/bv1cq4y1E79C)，其它具体的环境搭建命令细节，请参考本文内容。
+
 
 
 
@@ -75,6 +77,7 @@ apt install build-essential flex bison libssl-dev libelf-dev libncurses-dev -y
 # 设置调试的编译菜单。
 make menuconfig
 
+# 下面选项如果没有选上的，选上，然后 save 保存设置，退出 exit。
 Kernel hacking  --->
      Compile-time checks and compiler options  ---> 
          [*] Compile the kernel with debug info
@@ -160,6 +163,7 @@ vim gdb/remote.c
 make -j8
 cp gdb/gdb /usr/bin/
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 0 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 100
 ```
 
 * 调试 tcp 网络通信。
@@ -174,6 +178,8 @@ vim Makefile
 # cp test_reply.c ../../../menu/test.c
 # cp syswrapper.h ../../../menu
 
+make
+
 cd ../../../menu
 make rootfs
 cd ../linux-5.0.1/linuxnet/lab3
@@ -186,11 +192,13 @@ qemu-system-x86_64 -kernel ../../arch/x86/boot/bzImage -initrd ../rootfs.img -ap
 ```shell
 cd /root/linux-5.0.1
 gdb ./vmlinux
-# 下断点
+# 下断点。
 b tcp_v4_connect
 b inet_csk_accept
 c
 ```
+
+用户可以根据自己的需要去下断点，也可以修改 linuxnet 源码进行调试。
 
 <div align=center><img src="/images/2021-05-19-17-43-51.png" data-action="zoom"/></div>
 
@@ -200,3 +208,4 @@ c
 
 * [构建调试Linux内核网络代码的环境MenuOS系统](https://www.cnblogs.com/AmosYang6814/p/12027988.html)
 * [初始化MenuOS的网络设置，跟踪分析TCP协议](https://www.lanqiao.cn/courses/1198/learning/?id=9010)
+* [mengning/net](https://github.com/mengning/net/tree/master/doc)
