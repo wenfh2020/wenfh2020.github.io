@@ -2,7 +2,7 @@
 layout: post
 title:  "gdb 调试 Linux 内核网络源码"
 categories: system
-tags: gdb Linux qemu networking  
+tags: gdb Linux qemu networking kernel
 author: wenfh2020
 ---
 
@@ -104,8 +104,10 @@ vim Makefile
 # 修改编译项：
 # qemu-system-x86_64 -kernel ../linux-5.0.1/arch/x86/boot/bzImage -initrd ../rootfs.img
 
-# 编译测试项目。
+# 安装模拟器 qemu 和编译环境。
 apt install qemu libc6-dev-i386
+
+# 编译测试项目。
 make rootfs
 
 # 调试 kernel
@@ -209,3 +211,4 @@ c
 * [构建调试Linux内核网络代码的环境MenuOS系统](https://www.cnblogs.com/AmosYang6814/p/12027988.html)
 * [初始化MenuOS的网络设置，跟踪分析TCP协议](https://www.lanqiao.cn/courses/1198/learning/?id=9010)
 * [mengning/net](https://github.com/mengning/net/tree/master/doc)
+* [QEMU 网络配置一把梭 [archived]](https://wzt.ac.cn/2019/09/10/QEMU-networking/)

@@ -156,6 +156,8 @@ net.ipv4.tcp_max_tw_buckets = 5000
 
 ## 5. 参考
 
+* [从linux源码看socket的close](https://my.oschina.net/alchemystar/blog/1821680)
+* [TCP三次握手源码分析](https://www.cnblogs.com/seanloveslife/p/12103830.html)
 * [为什么tcp 连接断开只有3个包？](https://www.zhihu.com/question/55890292)
 * [TCP_Relative_Sequence_Numbers](https://wiki.wireshark.org/TCP_Relative_Sequence_Numbers)
 * 《TCP/IP 详解卷 1：协议》
