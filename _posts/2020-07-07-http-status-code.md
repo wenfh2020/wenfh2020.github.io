@@ -16,7 +16,15 @@ author: wenfh2020
 
 ---
 
-## 1. 状态码
+## 1. 状态码概要
+
+<div align=center><img src="/images/2021-06-08-08-33-00.png" data-action="zoom"/></div>
+
+> 图片来源：《网络是怎样连接的》
+
+---
+
+## 2. 状态码
 
 ```c
 #define STATUS_CODE(code, str) \
@@ -85,7 +93,8 @@ static const char* status_string(int code) {
 
 ---
 
-## 2. 参考
+## 3. 参考
 
+* 《网络是怎样连接的》
 * [HTTP返回状态码简介](https://blog.csdn.net/zhang18330699274/article/details/77621419)
 * [HTTP Transfer-Encoding 介绍](https://blog.csdn.net/Dancen/article/details/89957486)

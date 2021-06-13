@@ -223,11 +223,9 @@ int main(int args, char** argv) {
 
 1. mysql client 异步读写需要 mariadb client 支持。
 2. mysql 异步与同步 client，单连接性能差距不大，区别在于：异步是非阻塞的，同步是阻塞的。
-3. 从火焰图可以看到异步 mysqlclient 还是比较耗费性能，占了一半资源，如果是分布式系统，这种数据库读写操作放在独立节点比较好，这样在同一个进程里业务逻辑能得到更多的资源。
-![火焰图](/images/2020-12-13-08-54-57.png){:data-action="zoom"}
-4. mariadb 异步 client 使用复杂度还是有点高，需要造轮子，这不是一件简单的事。
-5. 如果你正在使用鹅厂的轻量级协程库：[libco](https://github.com/Tencent/libco)，使用同步的 mysql client 能达到异步效果：[《libco 协程库学习，测试连接 mysql》](https://wenfh2020.com/2020/12/07/libco-learnning/)，但是当你实际使用，可能又会遇到新的坑，太难了...
-6. 我认为无论多牛的技术，首先需要使用简单才行，所以折腾过 C/C++，你才会发现为啥越来越多人拥抱 golang；它有强大的生态，一个 `go get` 就能轻松获得一个高质量的数据库连接池🙃，而且性能还不错。所以很多成熟的套件，压根不需要你重新去造轮子。
+3. mariadb 异步 client 使用复杂度还是有点高，需要造轮子，这不是一件简单的事。
+4. 如果你正在使用鹅厂的轻量级协程库：[libco](https://github.com/Tencent/libco)，使用同步的 mysql client 能达到异步效果：[《libco 协程库学习，测试连接 mysql》](https://wenfh2020.com/2020/12/07/libco-learnning/)，但是当你实际使用，可能又会遇到新的坑，太难了...
+5. 我认为无论多牛的技术，首先需要使用简单才行，所以折腾过 C/C++，你才会发现为啥越来越多人拥抱 golang；它有强大的生态，一个 `go get` 就能轻松获得一个高质量的数据库连接池🙃，而且性能还不错。所以很多成熟的套件，压根不需要你重新去造轮子。
 
 ---
 
