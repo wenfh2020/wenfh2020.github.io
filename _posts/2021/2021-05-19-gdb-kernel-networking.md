@@ -23,7 +23,7 @@ author: wenfh2020
 ## 1. 目标
 
 * 目标：gdb 调试 Linux 内核网络部分源码。
-* 环境：macos + vmware+ ubuntu + qemu + gdb + linux kernel。
+* 环境：macos + vmware + ubuntu + qemu + gdb + linux kernel。
 * 参考：[构建调试Linux内核网络代码的环境MenuOS系统](https://www.cnblogs.com/AmosYang6814/p/12027988.html)。
 
 <div align=center><img src="/images/2021-05-19-16-08-52.png" data-action="zoom"/></div>
@@ -186,6 +186,8 @@ cd ../../../menu
 make rootfs
 cd ../linux-5.0.1/linuxnet/lab3
 # qemu-system-x86_64 -kernel ../../arch/x86/boot/bzImage -initrd ../rootfs.img
+
+make rootfs
 
 # 调试
 qemu-system-x86_64 -kernel ../../arch/x86/boot/bzImage -initrd ../rootfs.img -append nokaslr -S -s

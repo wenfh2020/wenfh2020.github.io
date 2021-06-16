@@ -1089,7 +1089,7 @@ out_unlock:
 ## 9. 参考
 
 * [Linux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
-* [inux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
+* [epoll实现探究](https://mcll.top/2020/01/09/epoll%E5%8E%9F%E7%90%86/)
 * [Buddy memory allocation (伙伴内存分配器)](https://blog.codingnow.com/2011/12/buddy_memory_allocation.html)
 * [Linux内存管理，内存寻址](https://zhuanlan.zhihu.com/p/74947007)
 * [EPOLL内核原理极简图文解读](https://blog.csdn.net/linkedin_38454662/article/details/73337208)
