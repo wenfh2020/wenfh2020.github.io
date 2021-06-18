@@ -25,6 +25,8 @@ author: wenfh2020
 
 <div align=center><img src="/images/2021-04-09-09-13-49.png" data-action="zoom"/></div>
 
+> 火焰图参考：[软件性能检测--火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
+
 ---
 
 ## 2. 源码分析

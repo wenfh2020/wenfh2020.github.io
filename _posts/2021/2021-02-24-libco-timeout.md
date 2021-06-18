@@ -82,3 +82,5 @@ int main() {
 ### 3.3. 性能火焰图
 
 <div align=center><img src="/images/2021-02-24-09-52-08.png" data-action="zoom"/></div>
+
+> 火焰图参考：[软件性能检测--火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)

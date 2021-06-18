@@ -34,6 +34,8 @@ stackcollapse-perf.pl perf.unfold &> perf.folded
 flamegraph.pl perf.folded > perf.svg
 ```
 
+> 火焰图参考：[软件性能检测--火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
+
 ---
 
 ## 2. 结果

@@ -125,6 +125,8 @@ int main() {
 
 <div align=center><img src="/images/2021-03-01-13-10-57.png" data-action="zoom"/></div>
 
+> 火焰图参考：[软件性能检测--火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
+
 ---
 
 ### 4.2. 优化
