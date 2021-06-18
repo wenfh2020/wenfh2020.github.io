@@ -234,7 +234,7 @@ node_t* Nodes::get_node_in_hash(const std::string& node_type, const std::string&
 
 ![火焰图负载](/images/2020-12-01-12-27-23.png){:data-action="zoom"}
 
-> 火焰图参考：[软件性能检测--火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
+> 火焰图参考：[如何生成火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
 
 ---
 
