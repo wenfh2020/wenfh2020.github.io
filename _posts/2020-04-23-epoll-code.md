@@ -44,7 +44,9 @@ epoll 应用，适合海量用户，一个时间段内部分活跃的用户群�
 
 * 使用流程。
 
-![epoll 使用流程](/images/2020-05-11-16-57-43.png){:data-action="zoom"}
+<div align=center><img src="/images/2021-06-21-16-25-36.png" data-action="zoom"/></div>
+
+> 图片来源：《[epoll 多路复用 I/O工作流程](https://wenfh2020.com/2020/04/14/epoll-workflow/)》
 
 ---
 
