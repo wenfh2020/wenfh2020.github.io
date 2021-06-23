@@ -157,8 +157,9 @@ plugins=0
 
 参考：
 
-* [linux ssh 虚拟机下CentOS7开启SSH连接](https://blog.csdn.net/mengzuchao/article/details/80261836)。
+* [linux ssh 虚拟机下CentOS7开启SSH连接](https://blog.csdn.net/mengzuchao/article/details/80261836)
 * [[shell] ssh 快捷登录](https://wenfh2020.com/2020/01/07/ssh-quick-login/)
+* [linux下scp报Permission denied错误的解决](https://blog.csdn.net/qq_39212193/article/details/81273046)
 
 ---
 
