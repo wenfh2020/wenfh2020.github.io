@@ -8,8 +8,6 @@ author: wenfh2020
 
 最近看了这两本书 《网络是怎样连接的》 和 《图解 TCP_IP》，书本图文结合，通俗易懂。重温和扫盲了不少网络知识点，深感基础实在太重要了！
 
-<div align=center><img src="/images/2021-06-13-07-37-38.png" data-action="zoom"/></div>
-
 
 
 
@@ -17,6 +15,8 @@ author: wenfh2020
 {:toc}
 
 ---
+
+<div align=center><img src="/images/2021-06-13-07-37-38.png" data-action="zoom"/></div>
 
 ## 1. 网络通信流程
 
