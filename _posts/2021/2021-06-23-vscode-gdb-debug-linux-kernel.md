@@ -18,9 +18,9 @@ author: wenfh2020
 
 ---
 
-## 1. 部署调试环境
+## 1. 搭建调试环境
 
-参考博客：[gdb 调试 Linux 内核网络源码](https://wenfh2020.com/2021/05/19/gdb-kernel-networking/)（[视频](https://www.bilibili.com/video/bv1cq4y1E79C) ）
+要搭建 vscode + gdb 调试 Linux 内核环境，首选要搭建：**[gdb 调试 Linux 内核源码](https://wenfh2020.com/2021/05/19/gdb-kernel-networking/)（[视频](https://www.bilibili.com/video/bv1cq4y1E79C)**，然后再配置 vscode 进行测试调试。
 
 ---
 
