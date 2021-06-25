@@ -26,7 +26,7 @@ author: wenfh2020
 
 ## 2. vscode 配置
 
-### 2.2. vscode 插件
+### 2.1. vscode 插件
 
 * ms-vscode.cpptools
 
@@ -42,7 +42,7 @@ author: wenfh2020
 
 ---
 
-### 2.1. 项目调试配置
+### 2.2. 项目调试配置
 
 <div align=center><img src="/images/2021-06-23-13-15-06.png" data-action="zoom"/></div>
 
@@ -72,8 +72,43 @@ author: wenfh2020
 
 ---
 
-## 3. 小结
+## 3. 测试调试
 
-流程比较简单，vscode 插件安装完，启动调试即可。
+### 3.1. 虚拟机操作
+
+```shell
+# 虚拟机进入 linux 内核源码目录。
+cd /root/linux-5.0.1
+
+# 从 github 下载内核测试源码。
+git clone https://github.com/wenfh2020/kernel_test.git
+
+# 进入测试源码目录。
+cd kernel_test/test_epoll_tcp_server
+# make 编译
+make
+# 通过 qume 启动内核测试用例。
+make rootfs
+# 在 qume 窗口输入小写字符 's', 启动测试用例服务程序。
+s
+# 在 qume 窗口输入小写字符 'c', 启动测试用例客户端程序。
+c
+
+# 通过 qemu 命令启动内核测试用例进行调试。
+qemu-system-x86_64 -kernel ../../arch/x86/boot/bzImage -initrd ../rootfs.img -append nokaslr -S -s
+# 在 qume 窗口输入小写字符 's', 启动测试用例服务程序。
+s
+# 在 qume 窗口输入小写字符 'c', 启动测试用例客户端程序。
+c
+```
+
+---
+
+### 3.2. 实体机操作
+
+1. vscode 连接远程虚拟机。
+2. vscode 打开虚拟机 Linux 内核源码。
+3. vscode 在 Linux 内核源码的 eventpoll.c 文件，对对应接口（epoll_create, epoll_wait, epoll_ctl）下断点。
+4. F5 快捷键启动 vscode 调试。
 
 <div align=center><img src="/images/2021-06-23-12-48-59.jpeg" data-action="zoom"/></div>
