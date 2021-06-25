@@ -6,7 +6,7 @@ tags: vscode gdb debug linux kernel
 author: wenfh2020
 ---
 
-前段时间才搭建起来 gdb 调试 linux 内核调试环境（参考视频：[gdb 调试 Linux 内核网络源码](https://www.bilibili.com/video/bv1cq4y1E79C) ），但是 gdb 命令调试效率不高。磨刀不误砍柴工，所以折腾一下 **vscode**，使调试人性化一点。
+前段时间才搭建起来 [gdb 调试 Linux 内核网络源码](https://wenfh2020.com/2021/05/19/gdb-kernel-networking/)（[视频](https://www.bilibili.com/video/bv1cq4y1E79C) ），但是 gdb 命令调试效率不高。磨刀不误砍柴工，所以折腾一下 **vscode**，使调试人性化一点。
 
 
 
@@ -20,7 +20,7 @@ author: wenfh2020
 
 ## 1. 部署调试环境
 
-部署流程参考：[gdb 调试 Linux 内核网络源码（附视频）](https://wenfh2020.com/2021/05/19/gdb-kernel-networking/)
+参考博客：[gdb 调试 Linux 内核网络源码](https://wenfh2020.com/2021/05/19/gdb-kernel-networking/)（[视频](https://www.bilibili.com/video/bv1cq4y1E79C) ）
 
 ---
 
