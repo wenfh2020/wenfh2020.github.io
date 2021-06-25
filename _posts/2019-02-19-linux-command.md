@@ -15,6 +15,14 @@ Centos 等 Linux 平台常用命令，记录起来，方便使用。
 
 ---
 
+<div align=center><img src="/images/2021-06-26-06-17-04.png" data-action="zoom"/></div>
+
+> 图片来源于网络。
+
+<div align=center><img src="/images/2021-06-26-06-17-30.jpeg" data-action="zoom"/></div>
+
+> 图片来源于网络。
+
 ## 1. 系统
 
 ### 1.1. 机器启动
@@ -652,31 +660,31 @@ shift + m
 shit + p 
 ```
 
-![image-20191113091943326](/images/image-20191113091943326.png){: data-action="zoom"}
+<div align=center><img src="/images/image-20191113091943326.png" data-action="zoom"/></div>
 
 ---
 
 ### 8.2. htop
 
-![image-20191112180503405](/images/image-20191112180503405.png){: data-action="zoom"}
+<div align=center><img src="/images/image-20191112180503405.png" data-action="zoom"/></div>
 
 ---
 
 ### 8.3. iftop
 
-![image-20191112175351966](/images/image-20191112175351966.png){: data-action="zoom"}
+<div align=center><img src="/images/image-20191112175351966.png" data-action="zoom"/></div>
 
 ---
 
 ### 8.4. nload
 
-![image-20191112180429804](/images/image-20191112180429804.png){: data-action="zoom"}
+<div align=center><img src="/images/image-20191112180429804.png" data-action="zoom"/></div>
 
 ---
 
 ### 8.5. nethogs
 
-![image-20191112175719733](/images/image-20191112175719733.png){: data-action="zoom"}
+<div align=center><img src="/images/image-20191112175719733.png" data-action="zoom"/></div>
 
 ---
 
@@ -693,7 +701,7 @@ shit + p
 16:12:22  5208 be/4 root        0.00 B/s 1721.45 K/s  0.00 %  0.00 % kim-logic_w_1
 ```
 
-![image-20191112212348819](/images/image-20191112212348819.png){: data-action="zoom"}
+<div align=center><img src="/images/image-20191112212348819.png" data-action="zoom"/></div>
 
 ---
 
@@ -713,7 +721,7 @@ vmstat 1 每秒输出一次统计结果
 
 不是 swap 空间占用性能就会下降，要看 si so 频率。
 
-![image-20191113090543751](/images/image-20191113090543751.png){: data-action="zoom"}
+<div align=center><img src="/images/image-20191113090543751.png" data-action="zoom"/></div>
 
 > 参考 [《Linux vmstat命令详解》](https://www.cnblogs.com/ftl1012/p/vmstat.html)
 
