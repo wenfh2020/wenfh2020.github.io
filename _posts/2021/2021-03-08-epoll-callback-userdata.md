@@ -6,7 +6,36 @@ tags: epoll Linux
 author: wenfh2020
 ---
 
-epoll 多路复用驱动是异步事件处理，它提供了用户数据（`epoll_data`），方便事件触发后回调给用户处理。
+epoll 多路复用驱动是异步事件处理，在用户层它提供了用户数据（`epoll_data`），方便事件触发后回调给用户处理。
+
+* glibc
+
+```c
+/* sys/epoll.h */
+typedef union epoll_data
+{
+  void *ptr;
+  int fd;
+  uint32_t u32;
+  uint64_t u64;
+} epoll_data_t;
+
+struct epoll_event
+{
+  uint32_t events;    /* Epoll events */
+  epoll_data_t data;  /* User data variable */
+} __EPOLL_PACKED;
+```
+
+* 内核
+
+```c
+/* eventpoll.h */
+struct epoll_event {
+    __poll_t events;
+    __u64 data;
+} EPOLL_PACKED;
+```
 
 
 
@@ -191,13 +220,15 @@ static __poll_t ep_send_events_proc(
 
 ## 3. 开源
 
-epoll_data 是一个 union 值，应该如何传参？我们参考一下其它开源项目是如何处理的。
+epoll_data 在用户层是一个 union 值，那么用户应该如何传参？我们参考一下其它开源项目是如何处理的。
+
+---
 
 ### 3.1. libco
 
 Linux 系统的 epoll_wait 回调数据，data 是一个 `stTimeoutItem_t` 指针。
 
-传指针缺点：如果程序在 epoll_wait 回调前，把指针释放了，那么 epoll_wait 回调后回传的指针失效。
+传指针缺点：如果程序在 epoll_wait 回调前，把指针释放了，那么 epoll_wait 回调后回传的指针就变成<font color=red> 野指针 </font>了。
 
 ```c
 /* co_coroutine.cpp */
@@ -254,7 +285,7 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
 
 ### 3.3. libev
 
-libev epoll_event.data 传的是 fd 和索引的组合，这样添加一个索引对数据进行保护，感觉更安全一些。
+libev epoll_event.data 传的是 fd 和索引的（uint64_t）组合，这样添加一个索引对数据进行保护，感觉更安全一些。
 
 ```c
 /* ev_poll.c */
@@ -271,26 +302,84 @@ epoll_modify (EV_P_ int fd, int oev, int nev) {
 static void
 epoll_poll (EV_P_ ev_tstamp timeout) {
   ...
-  for (i = 0; i < eventcnt; ++i) {
-      struct epoll_event *ev = epoll_events + i;
+    for (i = 0; i < eventcnt; ++i) {
+        struct epoll_event *ev = epoll_events + i;
 
-      int fd = (uint32_t)ev->data.u64; /* mask out the lower 32 bits */
-      int want = anfds [fd].events;
-      ...
-      /*
-       * check for spurious notification.
-       * this only finds spurious notifications on egen updates
-       * other spurious notifications will be found by epoll_ctl, below
-       * we assume that fd is always in range, as we never shrink the anfds array
-       */
-      if (ecb_expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32)))
-        {
-          /* recreate kernel state */
-          postfork |= 2;
-          continue;
+        int fd = (uint32_t)ev->data.u64; /* mask out the lower 32 bits */
+        int want = anfds [fd].events;
+        ...
+        /*
+        * check for spurious notification.
+        * this only finds spurious notifications on egen updates
+        * other spurious notifications will be found by epoll_ctl, below
+        * we assume that fd is always in range, as we never shrink the anfds array
+        */
+        if (ecb_expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32))) {
+            /* recreate kernel state */
+            postfork |= 2;
+            continue;
         }
-      ...
-  }
+        ...
+    }
+}
+```
+
+---
+
+### 3.4. nginx
+
+nginx epoll_event.data 传的是指针，这样也会存在“野指针”的风险，它与 libco 不同的地方，nginx 处理这个指针，根据内存对齐规则，利用指针末位一个 bit 的标识进行保护，以此来检查 fd 的时效性。
+
+```c
+struct ngx_event_s {
+    ...
+    /* used to detect the stale events in kqueue and epoll */
+    unsigned         instance:1;
+    ...
+};
+
+static ngx_int_t
+ngx_epoll_add_event(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags) {
+    ...
+    struct epoll_event ee;
+    ...
+    ee.events = events | (uint32_t)flags;
+    ee.data.ptr = (void *) ((uintptr_t) c | ev->instance);
+    ...
+    if (epoll_ctl(ep, op, c->fd, &ee) == -1) {
+        ngx_log_error(NGX_LOG_ALERT, ev->log, ngx_errno,
+                      "epoll_ctl(%d, %d) failed", op, c->fd);
+        return NGX_ERROR;
+    }
+    ...
+}
+
+static ngx_int_t
+ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags) {
+    ...
+    events = epoll_wait(ep, event_list, (int) nevents, timer);
+    ...
+    for (i = 0; i < events; i++) {
+        c = event_list[i].data.ptr;
+
+        instance = (uintptr_t) c & 1;
+        c = (ngx_connection_t *) ((uintptr_t) c & (uintptr_t) ~1);
+
+        rev = c->read;
+
+        /* 检查 instance 值。 */
+        if (c->fd == -1 || rev->instance != instance) {
+            /*
+             * the stale event from a file descriptor
+             * that was just closed in this iteration
+             */
+            ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
+                           "epoll: stale event %p", c);
+            continue;
+        }
+        ...
+    }
+    ...
 }
 ```
 
@@ -298,6 +387,7 @@ epoll_poll (EV_P_ ev_tstamp timeout) {
 
 ## 4. 小结
 
+* 其实无论传什么参数，做底层的事件驱动逻辑，需要缜密的思维，只要逻辑错误，无论传的是啥参数一样会出现错误。
 * 走读源码，可以深层次理解作者代码设计思路，通过对比，加深对代码的理解。
 * 现实使用，我们可以参考开源的实现。
 
@@ -305,5 +395,6 @@ epoll_poll (EV_P_ ev_tstamp timeout) {
 
 ## 5. 参考
 
+* [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
 * [《epoll 多路复用 I/O工作流程》](https://wenfh2020.com/2020/04/14/epoll-workflow/)
 * [《[epoll 源码走读] epoll 实现原理》](https://wenfh2020.com/2020/04/23/epoll-code/)

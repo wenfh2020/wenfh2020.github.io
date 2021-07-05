@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "vscode + gdb 远程调试 linux 内核源码"
+title:  "vscode + gdb 远程调试 linux 内核源码（附视频）"
 categories: system
 tags: vscode gdb debug linux kernel
 author: wenfh2020

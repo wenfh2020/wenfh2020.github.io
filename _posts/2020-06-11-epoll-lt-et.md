@@ -8,6 +8,9 @@ author: wenfh2020
 
 走读内核源码，看看 epoll 的 LT 和 ET 模式区别。
 
+1. et/lt 模式，事件通知方式不同，lt 通知多次直到处理事件完毕，et 只通知一次，不管事件是否处理完毕。
+2. et 模式，可以避免共享 "epoll fd" 场景下，发生类似惊群问题。
+
 > 详细信息可以参考文章《[[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)》，现在将部分代码提取出来。
 
 
@@ -21,7 +24,7 @@ author: wenfh2020
 
 核心逻辑在 `ep_send_events_proc` 函数里实现，关键在 **就绪列表**。
 
-* epoll 监控的 fd 产生事件，fd 信息被添加进就绪列表。
+* epoll 监控的 fd 产生用户关注的事件，fd (epi)节点信息被添加进就绪列表。
 * epoll_wait 发现有就绪事件，进程持续执行，或者被唤醒工作。
 * epoll 将 fd 信息从就绪列表中删除。
 * fd 对应就绪事件信息从内核空间拷贝到用户空间。
@@ -44,13 +47,13 @@ static int do_epoll_wait(int epfd, struct epoll_event __user *events,
     ...
 }
 
-// 检查就绪队列，如果就绪队列有就绪事件，就将事件信息从内核空间发送到用户空间。
+/* 检查就绪队列，如果就绪队列有就绪事件，就将事件信息从内核空间发送到用户空间。 */
 static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events, int maxevents, long timeout) {
     ...
-    // 检查就绪队列，如果有就绪事件就进入发送环节。
+    /* 检查就绪队列，如果有就绪事件就进入发送环节。 */
     ...
 send_events:
-    // 有就绪事件就发送到用户空间，否则继续获取数据直到超时。
+    /* 有就绪事件就发送到用户空间，否则继续获取数据直到超时。 */
     if (!res && eavail && !(res = ep_send_events(ep, events, maxevents)) &&
         !timed_out)
         goto fetch_events;
@@ -64,7 +67,7 @@ static int ep_send_events(struct eventpoll *ep,
     esed.maxevents = maxevents;
     esed.events = events;
 
-    // 遍历事件就绪列表，发送就绪事件到用户空间。
+    /* 遍历事件就绪列表，发送就绪事件到用户空间。 */
     ep_scan_ready_list(ep, ep_send_events_proc, &esed, 0, false);
     return esed.res;
 }
@@ -74,9 +77,9 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
                        struct list_head *, void *),
                   void *priv, int depth, bool ep_locked) {
     ...
-    // 将就绪队列分片链接到 txlist 链表中。
+    /* 将就绪队列分片链接到 txlist 链表中。 */
     list_splice_init(&ep->rdllist, &txlist);
-    // 执行 ep_send_events_proc
+    /* 执行 ep_send_events_proc */
     res = (*sproc)(ep, &txlist, priv);
     ...
 }
@@ -88,19 +91,19 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
         if (esed->res >= esed->maxevents)
             break;
         ...
-        // 先从就绪队列中删除 epi，如果是 LT 模式，就绪事件还没处理完，再把它添加回去。
+        /* 先从就绪队列中删除 epi，如果是 LT 模式，就绪事件还没处理完，再把它添加回去。 */
         list_del_init(&epi->rdllink);
 
-        // 获取 epi 对应 fd 的就绪事件。
+        /* 获取 epi 对应 fd 的就绪事件。 */
         revents = ep_item_poll(epi, &pt, 1);
         if (!revents)
-            // 如果没有就绪事件就返回（这时候，epi 已经从就绪列表中删除了。）
+            /* 如果没有就绪事件就返回（这时候，epi 已经从就绪列表中删除了。） */
             continue;
 
-        // 内核空间向用户空间传递数据。__put_user 成功拷贝返回 0。
+        /* 内核空间向用户空间传递数据。__put_user 成功拷贝返回 0。 */
         if (__put_user(revents, &uevent->events) ||
             __put_user(epi->event.data, &uevent->data)) {
-            // 如果拷贝失败，继续保存在就绪列表里。
+            /* 如果拷贝失败，继续保存在就绪列表里。 */
             list_add(&epi->rdllink, head);
             ep_pm_stay_awake(epi);
             if (!esed->res)
@@ -108,11 +111,11 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
             return 0;
         }
 
-        // 成功处理就绪事件的 fd 个数。
+        /* 成功处理就绪事件的 fd 个数。 */
         esed->res++;
         uevent++;
         if (epi->event.events & EPOLLONESHOT)
-            // #define EP_PRIVATE_BITS (EPOLLWAKEUP | EPOLLONESHOT | EPOLLET | EPOLLEXCLUSIVE)
+            /* #define EP_PRIVATE_BITS (EPOLLWAKEUP | EPOLLONESHOT | EPOLLET | EPOLLEXCLUSIVE) */
             epi->event.events &= EP_PRIVATE_BITS;
         else if (!(epi->event.events & EPOLLET)) {
             /* lt 模式下，当前事件被处理完后，不会从就绪列表中删除，留待下一次 epoll_wait
@@ -128,6 +131,76 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 ---
 
-## 3. 参考
+## 3. 区别
+
+### 3.1. 通知
+
+如果我们看 `ep_send_events_proc` 源码，最大区别就是，事件通知。
+
+et 模式，只通知一次用户，用户如果继续关注这个事件，那么只能通过 `epoll_ctl` 重新关注事件。
+而 lt 模式，会不停地通知用户，直到用户把事件处理完。那么对比 lt 模式，et 模式用户可以控制得更多一些。
+  
+---
+
+### 3.2. 类似惊群问题
+
+我们仔细看 `ep_scan_ready_list` 源码，当 `ep->rdllist` 不为空时，会唤醒进程。
+
+当多个进程共享同一个 "epoll fd" 时，多个进程同时在等待资源，当某个事件触发时，会唤醒某个进程处理事件；
+
+如果是 lt 模式，fd 事件节点仍然会存在就绪队列中，不管事件是否处理完成，那么唤醒进程 A 处理事件时，如果 B 进程也在等待资源，那么同样的事件有可能将 B 进程也唤醒。
+
+> 多进程共享 epoll fd 框架
+
+<div align=center><img src="/images/2021-07-05-20-44-07.png" data-action="zoom"/></div>
+
+在服务程序中，当进程 A 已经 accept 了某个 socket，如果再唤醒进程 B，显然 B 之前因为没有 accept 到对应的 socket，那处理就会出现问题。
+
+这显然不是用户愿意看到的。所以为了避免发生类似问题，et 模式就有存在的必要，因为 et 模式，只通知用户一次后，就会将事件节点从就绪队列删除。所以同样的 fd 事件，不会唤醒多个进程同时处理。避免了类似的“惊群”问题（注意，这不是惊群，只是像）。
+
+这样，我们就理解 nginx 为什么会使用 et 模式。
+
+```c
+static int ep_send_events(struct eventpoll *ep,
+              struct epoll_event __user *events, int maxevents) {
+    struct ep_send_events_data esed;
+
+    esed.maxevents = maxevents;
+    esed.events = events;
+
+    /* 遍历事件就绪列表，发送就绪事件到用户空间。 */
+    ep_scan_ready_list(ep, ep_send_events_proc, &esed, 0, false);
+    return esed.res;
+}
+
+static __poll_t ep_scan_ready_list(struct eventpoll *ep,
+                  __poll_t (*sproc)(struct eventpoll *,
+                       struct list_head *, void *),
+                  void *priv, int depth, bool ep_locked) {
+    ...
+    /* 将就绪队列分片链接到 txlist 链表中。 */
+    list_splice_init(&ep->rdllist, &txlist);
+    /* 执行 ep_send_events_proc，唤醒 A 处理事件。 */
+    res = (*sproc)(ep, &txlist, priv);
+    ...
+    /* 唤醒 B 进程处理事件。 */
+    if (!list_empty(&ep->rdllist)) {
+        /*
+        * Wake up (if active) both the eventpoll wait list and
+        * the ->poll() wait list (delayed after we release the lock).
+        */
+        if (waitqueue_active(&ep->wq))
+            wake_up_locked(&ep->wq);
+        if (waitqueue_active(&ep->poll_wait))
+            pwake++;
+        }
+    ...
+}
+```
+
+---
+
+## 4. 参考
 
 * [[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)
+* [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)

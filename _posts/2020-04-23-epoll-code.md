@@ -10,6 +10,8 @@ author: wenfh2020
 
 Linux 源码：[Linux 5.7 版本](https://github.com/torvalds/linux/releases/tag/v5.7-rc4)。epoll 核心源码：[eventpoll.h](https://github.com/torvalds/linux/blob/master/include/linux/eventpoll.h) / [eventpoll.c](https://github.com/torvalds/linux/blob/master/fs/eventpoll.c)。
 
+> 搭建 epoll 内核调试环境视频：[vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
+
 
 
 * content
@@ -1090,6 +1092,7 @@ out_unlock:
 
 ## 9. 参考
 
+* [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
 * [Linux下的I/O复用与epoll详解](https://www.cnblogs.com/lojunren/p/3856290.html)
 * [epoll实现探究](https://mcll.top/2020/01/09/epoll%E5%8E%9F%E7%90%86/)
 * [Buddy memory allocation (伙伴内存分配器)](https://blog.codingnow.com/2011/12/buddy_memory_allocation.html)
@@ -1114,3 +1117,4 @@ out_unlock:
 * [《Linux内核设计与实现》读书笔记（十）- 内核同步方法](https://www.cnblogs.com/wang_yb/archive/2013/05/01/3052865.html)
 * [虚拟文件系统VFS](https://www.cnblogs.com/nufangrensheng/p/3579145.html)
 * [epoll用法【整理】](https://www.cnblogs.com/apprentice89/archive/2013/05/06/3063039.html)
+* [再谈Linux epoll惊群问题的原因和解决方案](https://blog.csdn.net/dog250/article/details/80837278)
