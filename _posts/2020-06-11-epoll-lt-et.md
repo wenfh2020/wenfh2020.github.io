@@ -22,11 +22,11 @@ author: wenfh2020
 
 ## 1. 原理
 
-核心逻辑在 `ep_send_events_proc` 函数里实现，关键在 **就绪列表**。
+核心逻辑在 `epoll_wait` 的内核实现 `ep_send_events_proc` 函数里，关键在 <font color=red> 就绪列表 </font>。
 
-* epoll 监控的 fd 产生用户关注的事件，fd (epi)节点信息被添加进就绪列表。
-* epoll_wait 发现有就绪事件，进程持续执行，或者被唤醒工作。
-* epoll 将 fd 信息从就绪列表中删除。
+* 监控的 fd 产生用户关注的事件，内核将 fd (epi)节点信息添加进就绪列表。
+* 内核发现就绪列表有数据，唤醒进程工作。
+* 内核将 fd 信息从就绪列表中删除。
 * fd 对应就绪事件信息从内核空间拷贝到用户空间。
 * 拷贝完成后，检查事件模式是 LT 还是 ET，如果不是 ET，重新将 fd 信息添加回就绪列表，下次重新触发。
 
@@ -152,15 +152,36 @@ et 模式，只通知一次用户，用户如果继续关注这个事件，那�
 
 > 多进程共享 epoll fd 框架
 
-<div align=center><img src="/images/2021-07-05-20-44-07.png" data-action="zoom"/></div>
-
-在服务程序中，当进程 A 已经 accept 了某个 socket，如果再唤醒进程 B，显然 B 之前因为没有 accept 到对应的 socket，那处理就会出现问题。
-
-这显然不是用户愿意看到的。所以为了避免发生类似问题，et 模式就有存在的必要，因为 et 模式，只通知用户一次后，就会将事件节点从就绪队列删除。所以同样的 fd 事件，不会唤醒多个进程同时处理。避免了类似的“惊群”问题（注意，这不是惊群，只是像）。
-
-这样，我们就理解 nginx 为什么会使用 et 模式。
+<div align=center><img src="/images/2021-07-06-10-23-40.png" data-action="zoom"/></div>
 
 ```c
+static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events,
+            int maxevents, long timeout) {
+    ...
+    /* epoll_wait 处理就绪事件前，先添加等待唤醒事件。 */
+    if (!waiter) {
+        waiter = true;
+        init_waitqueue_entry(&wait, current);
+
+        spin_lock_irq(&ep->wq.lock);
+        __add_wait_queue_exclusive(&ep->wq, &wait);
+        spin_unlock_irq(&ep->wq.lock);
+    }
+    ...
+    /* 就绪队列有事件，处理就绪事件逻辑。 */
+    if (!res && eavail &&
+        !(res = ep_send_events(ep, events, maxevents)) && !timed_out)
+        goto fetch_events;
+    ...
+    /* 处理完逻辑，从等待唤醒事件队列，删除自己的等待事件。 */
+    if (waiter) {
+        spin_lock_irq(&ep->wq.lock);
+        __remove_wait_queue(&ep->wq, &wait);
+        spin_unlock_irq(&ep->wq.lock);
+    }
+    ...
+}
+
 static int ep_send_events(struct eventpoll *ep,
               struct epoll_event __user *events, int maxevents) {
     struct ep_send_events_data esed;
@@ -180,27 +201,37 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
     ...
     /* 将就绪队列分片链接到 txlist 链表中。 */
     list_splice_init(&ep->rdllist, &txlist);
-    /* 执行 ep_send_events_proc，唤醒 A 处理事件。 */
+    /* 执行 ep_send_events_proc，唤醒进程 A 处理事件。 */
     res = (*sproc)(ep, &txlist, priv);
     ...
-    /* 唤醒 B 进程处理事件。 */
+    /* 唤醒进程 B 进程处理事件。 */
     if (!list_empty(&ep->rdllist)) {
-        /*
-        * Wake up (if active) both the eventpoll wait list and
-        * the ->poll() wait list (delayed after we release the lock).
-        */
+        /* 如果还有等待资源的进程，唤醒。 */
         if (waitqueue_active(&ep->wq))
             wake_up_locked(&ep->wq);
-        if (waitqueue_active(&ep->poll_wait))
-            pwake++;
-        }
+        ...
+    }
     ...
 }
 ```
 
+在服务程序中，当进程 A 已经被唤醒 accept 到某个 socket 了，内核如果再唤醒进程 B，显然 B 之前因为没有 accept 到对应的 socket，那处理就会出现问题。
+
+这显然不是用户愿意看到的。所以为了避免发生类似问题，et 模式就有存在的必要，因为 et 模式，只通知用户一次后，就会将事件节点从就绪队列删除。所以同样的 fd 事件，不会唤醒多个进程同时处理。避免了类似的“惊群”问题（注意，这不是惊群，只是像）。
+
+这样，我们就理解 nginx 为什么会使用 et 模式。
+
 ---
 
-## 4. 参考
+## 4. 小结
+
+写些小心得吧，使用 epoll 十几年，一直困扰着 LT 与 ET 模式的区别，直到这两年，深入内核源码，才开始慢慢理解它的实现原理，其实真的不是很复杂，可见阅读内核源码的重要性！
+
+这几个月，花了不少力气，将 [内核的调试环境](https://www.bilibili.com/video/bv1yo4y1k7QJ) 搭建起来，一边看内核源码，一边调试验证源码逻辑——感觉忽然开窍了，这就是当你每次处于一个瓶颈，久久不能突破，找不到方向，困惑无助时，忽然柳暗花明，让你重燃程序员这个职业的兴趣，感觉生命更加充实了！
+
+---
+
+## 5. 参考
 
 * [[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)
 * [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
