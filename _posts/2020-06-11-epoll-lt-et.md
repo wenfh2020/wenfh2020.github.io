@@ -34,6 +34,15 @@ author: wenfh2020
 
 ## 2. 源码实现流程
 
+```shell
+epoll_wait
+|-- do_epoll_wait
+    |-- ep_poll
+        |-- ep_send_events
+            |-- ep_scan_ready_list
+                |-- ep_send_events_proc
+```
+
 ```c
 SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
         int, maxevents, int, timeout) {
@@ -137,8 +146,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 如果我们看 `ep_send_events_proc` 源码，最大区别就是，事件通知。
 
-et 模式，只通知一次用户，用户如果继续关注这个事件，那么只能通过 `epoll_ctl` 重新关注事件。
-而 lt 模式，会不停地通知用户，直到用户把事件处理完。那么对比 lt 模式，et 模式用户可以控制得更多一些。
+当用户关注的 fd 事件发生时，et 模式，只通知用户一次，不管这个事件是否已经被用户处理完毕，用户如果继续关注这个事件，那么只能通过 `epoll_ctl` 重新关注事件。而 lt 模式，会不停地通知用户，直到用户把事件处理完毕。那么对比 lt 模式，et 模式用户可以控制得更多一些。
   
 ---
 

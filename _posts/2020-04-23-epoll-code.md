@@ -1118,3 +1118,4 @@ out_unlock:
 * [虚拟文件系统VFS](https://www.cnblogs.com/nufangrensheng/p/3579145.html)
 * [epoll用法【整理】](https://www.cnblogs.com/apprentice89/archive/2013/05/06/3063039.html)
 * [再谈Linux epoll惊群问题的原因和解决方案](https://blog.csdn.net/dog250/article/details/80837278)
+* [从linux源码看epoll](https://my.oschina.net/alchemystar/blog/3008840)
