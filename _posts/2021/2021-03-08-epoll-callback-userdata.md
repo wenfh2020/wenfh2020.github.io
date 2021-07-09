@@ -1,8 +1,8 @@
 ---
 layout: post
 title:  "深入理解 epoll 回调用户数据"
-categories: network
-tags: epoll Linux
+categories: epoll
+tags: epoll
 author: wenfh2020
 ---
 

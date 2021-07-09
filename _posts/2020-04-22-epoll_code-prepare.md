@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "[epoll 源码走读] epoll 源码实现-预备知识"
-categories: network
-tags: epoll Linux
+title:  "[内核源码走读] epoll 源码实现-预备知识"
+categories: kernel epoll
+tags: epoll Linux kernel
 author: wenfh2020
 ---
 

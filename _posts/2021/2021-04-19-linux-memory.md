@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "学习 Linux 内存分配"
-categories: system
+categories: kernel
 tags: linux memory slab buddy
 author: wenfh2020
 ---

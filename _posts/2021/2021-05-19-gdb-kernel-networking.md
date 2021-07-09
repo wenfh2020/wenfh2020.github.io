@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "gdb 调试 Linux 内核网络源码（附视频）"
-categories: system
+categories: kernel
 tags: gdb Linux qemu networking kernel
 author: wenfh2020
 ---

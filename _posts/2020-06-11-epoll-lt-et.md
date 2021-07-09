@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "[epoll 源码走读] LT 与 ET 模式区别"
-categories: network
-tags: epoll LT ET difference
+title:  "[内核源码走读] epoll LT 与 ET 模式区别"
+categories: kernel epoll
+tags: epoll LT ET difference kernel
 author: wenfh2020
 ---
 

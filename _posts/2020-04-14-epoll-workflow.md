@@ -1,8 +1,8 @@
 ---
 layout: post
 title:  "epoll 多路复用 I/O工作流程"
-categories: network
-tags: epoll workflow
+categories: network epoll
+tags: epoll
 author: wenfh2020
 ---
 
