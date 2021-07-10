@@ -53,10 +53,14 @@
 <script src="https://libs.baidu.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
 
 <!-- inside <head> -->
-<link href="https://cdn.jsdelivr.net/npm/zoom-vanilla.js/dist/zoom.css" rel="stylesheet">
+<!-- <link href="https://cdn.jsdelivr.net/npm/zoom-vanilla.js/dist/zoom.css" rel="stylesheet"> -->
+
+<link href="{{ '/zoom-vanilla/css/zoom.css' | prepend: site.baseurl }}" rel="stylesheet">
 
 <!-- before </body> -->
-<script src="https://cdn.jsdelivr.net/npm/zoom-vanilla.js/dist/zoom-vanilla.min.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/zoom-vanilla.js/dist/zoom-vanilla.min.js"></script> -->
+
+<script src="{{ '/zoom-vanilla/dist/zoom-vanilla.min.js' | prepend: site.baseurl }}"></script>
 
 
 <!-- <script src="{{ '/js/bootstrap.min.js' | prepend: site.baseurl }}"></script> -->
