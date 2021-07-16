@@ -2,7 +2,7 @@
 layout: post
 title:  "[内核源码走读] sys-socket"
 categories: kernel
-tags: kernel list epoll
+tags: kernel socket
 author: wenfh2020
 ---
 
@@ -18,7 +18,28 @@ socket 是管理网络通信的对象，适合本地或网络环境的进程间�
 
 ---
 
-## 1. 系统调用
+## 1. 应用层
+
+应用层创建 socket 对象返回整型的文件描述符。详细参考（[文档 - 可能要翻墙](https://man7.org/linux/man-pages/man2/socket.2.html)）
+
+```c
+/* family：被称为协议族，或者协议域。
+ * type：套接字的类型。
+ * protocol：某个协议的类型常值，可以设置为 0。
+*/
+#include <sys/socket.h>
+int socket(int domain/family, int type, int protocol);
+```
+
+<div align=center><img src="/images/2021-07-14-16-13-58.png" data-action="zoom"/></div>
+
+<div align=center><img src="/images/2021-07-14-16-21-37.png" data-action="zoom"/></div>
+
+> 图片来源：《UNIX 网络编程_卷1》
+
+---
+
+## 2. 系统调用
 
 从用户层到内核系统调用流程：user（socket()） --> glibc --> kernel。
 
@@ -38,13 +59,11 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 ---
 
-## 2. socket 结构
+## 3. socket 结构
 
 socket 结构主要分两部分：与文件系统关系密切的部分，与通信关系密切的部分。
 
-<div align=center><img src="/images/2021-07-14-15-06-26.png" data-action="zoom"/></div>
-
-> 图片来自：《Linux 内核源代码情景分析》
+<div align=center><img src="/images/2021-07-16-12-25-35.png" data-action="zoom"/></div>
 
 ```c
 /** ./include/linux/net.h
@@ -80,7 +99,7 @@ struct sock {
 
 ---
 
-## 3. 创建 socket
+## 4. 创建 socket
 
 函数调用关系。
 
@@ -93,10 +112,9 @@ __sys_socket # ./net/socket.c
 #------------------- 文件部分 ---------------------------
             |-- sock_alloc # ./net/socket.c
                 |-- new_inode_pseudo # ./fs/inode.c
-                    |-- new_inode_pseudo # ./fs/inode.c
-                        |-- alloc_inode # ./fs/inode.c
-                            |-- sock_alloc_inode # ./net/socket.c
-                                |-- kmem_cache_alloc
+                    |-- alloc_inode # ./fs/inode.c
+                        |-- sock_alloc_inode # ./net/socket.c
+                            |-- kmem_cache_alloc
 #------------------- 网络部分 ---------------------------
             |-- inet_create # pf->create -- af_inet.c
                 |-- sk_alloc # ./net/core/sock.c
@@ -106,7 +124,7 @@ __sys_socket # ./net/socket.c
                 |-- sock_init_data # ./net/core/sock.c
                     |-- sk_init_common # ./net/core/sock.c
                     |-- timer_setup
-                |-- sk->sk_prot->init(sk) # tcp_v4_init_sock
+                |-- sk->sk_prot->init(sk) # tcp_v4_init_sock  -- ./net/ipv4/tcp_ipv4.c
                     |-- tcp_init_sock
 #------------------- 文件+网络+关联进程 ------------------------
     |-- sock_map_fd # ./net/socket.c
@@ -117,7 +135,6 @@ __sys_socket # ./net/socket.c
             |-- __fd_install # ./fs/file.c
                 |-- fdt = rcu_dereference_sched(files->fdt);
                 |-- rcu_assign_pointer(fdt->fd[fd], file); # file 关联到进程。
-
 ```
 
 ```c
@@ -155,7 +172,9 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 
 ---
 
-### 3.1. 文件部分
+
+
+### 4.1. 文件部分
 
 初始化 socket 文件关系，内核为 socket 定义了一种特殊的文件类型，形成了一种特殊的文件系统：sockfs，系统初始化时，进行安装。
 
@@ -174,19 +193,12 @@ struct vfsmount {
 /* ./net/socket.c */
 static struct vfsmount *sock_mnt __read_mostly;
 
+/* sock 文件类型。 */
 static struct file_system_type sock_fs_type = {
     .name = "sockfs",
     .mount = sockfs_mount,
     .kill_sb = kill_anon_super,
 };
-
-/* 初始化的时候绑定 socket 的信息。*/
-static struct dentry *sockfs_mount(struct file_system_type *fs_type,
-             int flags, const char *dev_name, void *data) {
-    return mount_pseudo_xattr(fs_type, "socket:", &sockfs_ops,
-                  sockfs_xattr_handlers,
-                  &sockfs_dentry_operations, SOCKFS_MAGIC);
-}
 
 /* sock 文件操作。 */
 static const struct super_operations sockfs_ops = {
@@ -258,22 +270,19 @@ kernel_init(void * unused) (/root/linux-5.0.1/init/main.c:1054)
 ```c
 /* ./net/socket.c */
 static int __init sock_init(void) {
-    int err;
-    /* Initialize the network sysctl infrastructure. */
-    err = net_sysctl_init();
-    ...
-    /* Initialize skbuff SLAB cache */
-    skb_init();
-
-    /* Initialize the protocols module. */
-    init_inodecache();
-
-    err = register_filesystem(&sock_fs_type);
     ...
     sock_mnt = kern_mount(&sock_fs_type);
     ...
 }
 core_initcall(sock_init);    /* early initcall */
+
+/* 初始化的时候绑定 socket 的信息。*/
+static struct dentry *sockfs_mount(struct file_system_type *fs_type,
+             int flags, const char *dev_name, void *data) {
+    return mount_pseudo_xattr(fs_type, "socket:", &sockfs_ops,
+                  sockfs_xattr_handlers,
+                  &sockfs_dentry_operations, SOCKFS_MAGIC);
+}
 ```
 
 * 创建 socket_alloc 对象。
@@ -394,7 +403,7 @@ void __fd_install(struct files_struct *files, unsigned int fd,
 
 ---
 
-### 3.2. 网络部分
+### 4.2. 网络部分
 
 协议：socket 层 --> 传输层 --> 网络层。
 
@@ -736,10 +745,11 @@ EXPORT_SYMBOL(tcp_init_sock);
 
 ---
 
-## 4. 参考
+## 5. 参考
 
-* 《UNIX 网络编程卷1》
+* 《UNIX 网络编程_卷1》
 * 《Linux 内核源代码情景分析》
 * [socket(7) — Linux manual page](https://man7.org/linux/man-pages/man7/socket.7.html)
 * [Linux 网络层收发包流程及 Netfilter 框架浅析](https://zhuanlan.zhihu.com/p/93630586?from_voters_page=true)
 * [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
+* [【Linux 内核网络协议栈源码剖析】socket 函数剖析](https://blog.csdn.net/wenqian1991/article/details/46707521)
