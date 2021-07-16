@@ -29,13 +29,13 @@ author: wenfh2020
 
 <div align=center><img src="/images/2021-07-11-17-17-40.png" data-action="zoom"/></div>
 
-> 上述文字主要来源于：《UNIX 网络编程》- 3.4 字节排序函数。
+  > 上述文字主要来源于：《UNIX 网络编程》- 3.4 字节排序函数。
 
 * 网络字节序。
   
   网络字节顺序是TCP/IP中规定好的一种数据表示格式，它与具体的CPU类型、操作系统等无关，从而可以保证数据在不同主机之间传输时能够被正确解释。网络字节顺序采用大端（big-endian）排序方式。
   
-  > 上述文字主要来源于：[网络字节序](https://baike.baidu.com/item/%E7%BD%91%E7%BB%9C%E5%AD%97%E8%8A%82%E5%BA%8F/12610557)。
+> 上述文字主要来源于：[网络字节序](https://baike.baidu.com/item/%E7%BD%91%E7%BB%9C%E5%AD%97%E8%8A%82%E5%BA%8F/12610557)。
 
 ---
 
@@ -125,6 +125,19 @@ __bswap_16 (unsigned short int __bsx) {
 #define __bswap_constant_16(x) \
      ((unsigned short int) ((((x) >> 8) & 0xff) | (((x) & 0xff) << 8)))
 
+```
+
+---
+
+## 3. C 语言实现大小端判断
+
+```c
+int little = 1;
+if (*(char*)(&little) == 0) {
+    printf("big endian\n");
+} else {
+    printf("little endian\n");
+}
 ```
 
 ---

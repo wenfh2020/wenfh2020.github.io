@@ -131,5 +131,6 @@ void Network::read_transfer_fd(int fd) {
 
 ## 4. 参考
 
+* 《UNIX 网络编程卷1》 - 15.7 描述符传递。
 * [linux网络编程之socket（十六）：通过UNIX域套接字传递描述符和 sendmsg/recvmsg 函数](https://blog.csdn.net/jnu_simba/article/details/9079627)
 * [通过UNIX域套接字传递文件描述符](view-source:https://www.bwar.tech/2018/07/17/fd-transfer.html)
