@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码走读] sys-socket"
+title:  "[内核源码走读] 网络协议栈 socket (tcp)"
 categories: kernel
 tags: kernel socket
 author: wenfh2020
@@ -24,9 +24,10 @@ socket 是管理网络通信的对象，适合本地或网络环境的进程间�
 
 ```c
 /* family：被称为协议族，或者协议域。
- * type：套接字的类型。
+ * type：套接字类型。
  * protocol：某个协议的类型常值，可以设置为 0。
-*/
+ * return：返回整型的文件描述符，如果返回 -1 就失败。
+ */
 #include <sys/socket.h>
 int socket(int domain/family, int type, int protocol);
 ```
@@ -63,7 +64,9 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 socket 结构主要分两部分：与文件系统关系密切的部分，与通信关系密切的部分。
 
-<div align=center><img src="/images/2021-07-16-12-25-35.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-07-20-00-12-01.png" data-action="zoom"/></div>
+
+> 图片来源：[sys-socket - linux 内核 socket 结构关系](https://www.processon.com/view/60eea22763768906ea233da0?fromnew=1)
 
 ```c
 /** ./include/linux/net.h
@@ -92,7 +95,26 @@ struct proto_ops {
 }
 
 /* ./include/net/sock.h */
+struct tcp_sock {
+    /* inet_connection_sock has to be the first member of tcp_sock */
+    struct inet_connection_sock inet_conn;
+    ...
+}
+
+struct inet_connection_sock {
+    struct inet_sock icsk_inet;
+    ...
+}
+
+/* ./include/net/inet_sock.h */
+struct inet_sock {
+    /* sk and pinet6 has to be the first two members of inet_sock */
+    struct sock sk;
+    ...
+}
+
 struct sock {
+    struct sock_common __sk_common;
     ...
 };
 ```
@@ -104,7 +126,9 @@ struct sock {
 函数调用关系。
 
 ```shell
-socket # 用户态
+#------------------- *用户态* ---------------------------
+socket
+#------------------- *内核态* ---------------------------
 __x64_sys_socket # 内核系统调用。
 __sys_socket # ./net/socket.c
     |-- sock_create # ./net/socket.c
@@ -171,8 +195,6 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 ```
 
 ---
-
-
 
 ### 4.1. 文件部分
 
@@ -530,8 +552,54 @@ struct proto tcp_prot = {
     .disconnect       = tcp_disconnect,
     .accept           = inet_csk_accept,
     ...
+    .obj_size         = sizeof(struct tcp_sock),
+    ...
 };
 EXPORT_SYMBOL(tcp_prot);
+```
+
+```shell
+# 初始化 tcp 协议。
+proto_register(struct proto * prot, int alloc_slab) (/root/linux-5.0.1/net/core/sock.c:3209)
+inet_init() (/root/linux-5.0.1/net/ipv4/af_inet.c:1907)
+...
+kernel_init(void * unused) (/root/linux-5.0.1/init/main.c:1054)
+```
+
+```c
+static int __init inet_init(void) {
+    ...
+    rc = proto_register(&tcp_prot, 1);
+    ...
+}
+
+/* 为 tcp 协议分配空间。*/
+int proto_register(struct proto *prot, int alloc_slab) {
+    if (alloc_slab) {
+        prot->slab = kmem_cache_create_usercopy(prot->name,
+                    prot->obj_size, 0,
+                    SLAB_HWCACHE_ALIGN | SLAB_ACCOUNT |
+                    prot->slab_flags,
+                    prot->useroffset, prot->usersize,
+                    NULL);
+    ...
+}
+
+/* 分配的空间其实是 tcp_sock，struct proto --> struct proto tcp_prot.obj_size */
+static struct sock *sk_prot_alloc(struct proto *prot, gfp_t priority, int family) {
+    struct sock *sk;
+    struct kmem_cache *slab;
+
+    slab = prot->slab;
+    if (slab != NULL) {
+        sk = kmem_cache_alloc(slab, priority & ~__GFP_ZERO);
+        if (!sk)
+            return sk;
+        if (priority & __GFP_ZERO)
+            sk_prot_clear_nulls(sk, prot->obj_size);
+    }
+    ...
+}
 ```
 
 * 详细源码。
@@ -753,3 +821,5 @@ EXPORT_SYMBOL(tcp_init_sock);
 * [Linux 网络层收发包流程及 Netfilter 框架浅析](https://zhuanlan.zhihu.com/p/93630586?from_voters_page=true)
 * [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
 * [【Linux 内核网络协议栈源码剖析】socket 函数剖析](https://blog.csdn.net/wenqian1991/article/details/46707521)
+* [socket sock inet_sock 等关系](https://blog.csdn.net/sdulibh/article/details/40861769)
+* [socket API 实现（一）—— socket 函数](http://blog.guorongfei.com/2014/10/23/socket-create/)
