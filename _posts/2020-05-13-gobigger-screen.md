@@ -113,9 +113,13 @@ author: wenfh2020
 
 ## 5. 屏幕位置
 
-根据需要排列显示器位置：鼠标拖动显示器到合适位置。
+* 物理位置。根据需要排列显示器位置：鼠标拖动显示器到合适位置。
 
 <div align=center><img src="/images/2021-03-17-12-10-12.png" data-action="zoom"/></div>
+
+* 便携屏竖屏设置。
+
+<div align=center><img src="/images/2021-07-28-11-13-43.png" data-action="zoom"/></div>
 
 ---
 

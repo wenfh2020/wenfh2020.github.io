@@ -8,7 +8,7 @@ author: wenfh2020
 
 走读网络协议栈 listen (tcp) 的（Linux - 5.0.1 [下载](https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.0.1.tar.xz)）内核源码。
 
-listen 功能主要搞清楚两个部分：
+要了解 listen 工作原理，须要搞清楚两个部分：
 
 1. listen socket 数据在内核里是如何存储的。
 2. listen socket 半连接和全连接逻辑。
@@ -20,7 +20,28 @@ listen 功能主要搞清楚两个部分：
 
 ---
 
-## 1. 系统调用
+## 1. 概述
+
+listen 主要做两件事：
+
+1. 将 socket 设置为监听 socket，作为服务端被动等待客户端连接。
+2. backlog 限制全连接队列的大小，还有限制半连接个数。
+
+```c
+#include <sys/socket.h>
+
+/* sockfd：socket's fd。
+ * backlog：全连接队列和半连接队列限制大小。
+ * return：正确返回 0，否则返回 -1。
+ */
+int listen(int sockfd, int backlog);
+```
+
+> 参考：《UNIX 网络编程_卷1》
+
+---
+
+## 2. 系统调用
 
 ```c
 SYSCALL_DEFINE2(listen, int, fd, int, backlog) {
@@ -129,7 +150,7 @@ int inet_hash(struct sock *sk) {
 
 ---
 
-## 2. 哈希表
+## 3. 哈希表
 
 listen 成功，socket.sock 指针将被保存于哈希表中，因为添加了 reuseport 端口重用功能（负载均衡），逻辑变得复杂起来。
 
@@ -145,7 +166,7 @@ reuseport 逻辑，可以看看 linux 这几个 github 补丁的修改：
 
 ---
 
-### 2.1. 数据结构
+### 3.1. 数据结构
 
 * 源码结构。
 
@@ -214,7 +235,7 @@ struct inet_hashinfo {
 
 ---
 
-### 2.2. 哈希存储逻辑
+### 3.2. 哈希存储逻辑
 
 ```c
 /* 本函数主要有两个逻辑：inet_reuseport_add_sock 和 inet_hash2。 */
@@ -319,7 +340,7 @@ static inline u32 ipv4_portaddr_hash(const struct net *net,
 
 ---
 
-### 2.3. 查找 listen socket
+### 3.3. 查找 listen socket
 
 tcp 客户端主动链接服务，第一次握手，服务是如何查找 listen socket 的。
 
@@ -463,7 +484,7 @@ select_by_hash:
 
 ---
 
-## 3. 连接逻辑
+## 4. 连接逻辑
 
 tcp 通信，客户端通过三次握手与服务端建立连接。
 
@@ -477,7 +498,7 @@ tcp 通信，客户端通过三次握手与服务端建立连接。
 
 ---
 
-### 3.1. 数据结构
+### 4.1. 数据结构
 
 ```c
 /* 网络链接逻辑的 socket 结构。 
@@ -530,7 +551,7 @@ struct request_sock {
 
 ---
 
-### 3.2. 半连接
+### 4.2. 半连接
 
 * 当服务端收到客户端第一次握手 syn 请求。
 
@@ -668,7 +689,7 @@ static inline bool sk_acceptq_is_full(const struct sock *sk) {
 
 ---
 
-### 3.3. 全连接队列
+### 4.3. 全连接队列
 
 tcp connect 过程中，已经完成三次握手的连接。
 
@@ -830,7 +851,7 @@ static inline bool reqsk_queue_empty(const struct request_sock_queue *queue) {
 
 ---
 
-## 4. 参考
+## 5. 参考
 
 * [socket API 实现（三）—— listen 函数](http://blog.guorongfei.com/2014/10/27/socket-listen/)
 * [从Linux源码看Socket(TCP)的listen及连接队列](https://my.oschina.net/alchemystar/blog/4672630)
