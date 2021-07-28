@@ -6,7 +6,9 @@ tags: kernel bind
 author: wenfh2020
 ---
 
-走读网络协议栈 bind (tcp) 的（Linux - 5.0.1 [下载](https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.0.1.tar.xz)）内核源码，绑定一个普通端口 5001，走一下流程。
+走读网络协议栈 bind (tcp) 的（Linux - 5.0.1 [下载](https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.0.1.tar.xz)）内核源码。
+
+原理：bind 将IP地址/端口信息绑定在 socket 相关数据结构上，并且根据通过端口映射，将 socket 指针保存在内核哈希表里。
 
 
 
@@ -17,7 +19,7 @@ author: wenfh2020
 
 ## 1. 概述
 
-bind 为创建的 socket 绑定地址端口。（IP/PORT - TCP/UDP）。
+bind 为创建的 socket 绑定IP地址/端口。（IP/PORT - TCP/UDP）。
 
 > bind 详细文档参考（[文档 - 链接可能要翻墙](https://man7.org/linux/man-pages/man2/bind.2.html)）
 
@@ -76,15 +78,21 @@ int __inet_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len,
 
 地址和端口会保存在对应的 socket 结构体中，对应的网络端口信息也会存储在内核的哈希表里。
 
----
-
 ### 3.1. socket 结构关系
 
 <div align=center><img src="/images/2021-07-19-23-54-25.png" data-action="zoom"/></div>
 
 ### 3.2. 哈希表
 
-* 哈希存储相关数据结构信息。
+* 哈希存储IP地址/端口相关数据结构信息。
+  
+  哈希表时间复杂度是 O(1)，非常快。
+  
+  但是这里也有缺点，因为哈希表是由数组和链表的组合结构，自身有冲突链表（哈希链），而且 `inet_bind_bucket` 有 `owners` 链表，保存共享端口的 socket 数据。
+  
+  > <font color=red>【注意】</font> tcp 连接三次握手成功后，在 accpet 调用前， client 的 socket.sock 信息也会保存到 owners，参考 `__inet_inherit_port` 的使用。
+
+  查询数据时，可能需要遍历两个链表，而且在同一个网域下，以端口作为哈希索引，导致不同的 IP 地址相同端口的数据也会在同一个 `inet_bind_bucket` 里。所以 `inet_bind_bucket` 要使用 `fastreuse` 和 `fastreuseport` 去优化，尽量避免链表遍历。
 
 <div align=center><img src="/images/2021-07-19-23-49-14.png" data-action="zoom"/></div>
 
@@ -221,7 +229,7 @@ static inline void sk_add_bind_node(struct sock *sk, struct hlist_head *list) {
 
 ## 4. 内核源码逻辑
 
-* 函数堆栈。
+### 4.1. 函数堆栈
 
 ```c
 inet_bind(struct socket * sock, struct sockaddr * uaddr, int addr_len) (/root/linux-5.0.1/net/ipv4/af_inet.c:436)
@@ -233,7 +241,9 @@ do_syscall_64(unsigned long nr, struct pt_regs * regs) (/root/linux-5.0.1/arch/x
 entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 ```
 
-* 函数调用关系。
+---
+
+### 4.2. 函数调用关系
 
 ```shell
 #------------------- *用户态* ---------------------------
@@ -297,7 +307,11 @@ int __inet_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len,
 }
 ```
 
-* 端口分配和保存逻辑，要注意端口冲突情况。
+---
+
+### 4.3. 端口存储逻辑
+
+端口分配和保存逻辑，要注意端口冲突情况。
 
 ```c
 /* Obtain a reference to a local port for the given sock,
@@ -347,8 +361,7 @@ tb_found:
         if (sk->sk_reuse == SK_FORCE_REUSE)
             goto success;
 
-        if ((tb->fastreuse > 0 && reuse) ||
-            sk_reuseport_match(tb, sk))
+        if ((tb->fastreuse > 0 && reuse) || sk_reuseport_match(tb, sk))
             goto success;
         if (inet_csk_bind_conflict(sk, tb, true, true))
             goto fail_unlock;
@@ -410,13 +423,22 @@ fail_unlock:
 EXPORT_SYMBOL_GPL(inet_csk_get_port);
 ```
 
-* 判断冲突，这个判断端口冲突的逻辑，有点烧脑。首先，冲突的前提条件：新旧 socket 都绑定在相同设备上，而且 ip 地址端口都相同。
+---
 
-    我们可以理解一下 SO_REUSEADDR 和 SO_REUSEPORT 使用场景：
+### 4.4. 端口冲突
 
-    1. SO_REUSEADDR 是为了解决 TCP_TIME_WAIT 问题。
-    2. SO_REUSEPORT 是为了解决惊群问题的，允许多个进程共同使用同一个端口。
-    3. 其它的场景。
+冲突的必要：新旧 socket 都绑定在相同设备上，而且IP地址/端口相同。
+
+这个判断端口冲突的逻辑，有点烧脑，主要检查两个选项场景： SO_REUSEADDR 和 SO_REUSEPORT。
+
+先检查 SO_REUSEADDR 的使用场景，再检查 SO_REUSEPORT 的使用场景。
+
+<div align=center><img src="/images/2021-07-20-13-22-12.png" data-action="zoom"/></div>
+
+> 图片来源：[soreuseport: TCP/IPv4 implementation](https://github.com/torvalds/linux/commit/da5e36308d9f7151845018369148201a5d28b46d?branch=da5e36308d9f7151845018369148201a5d28b46d&diff=split#)
+
+> 1. SO_REUSEADDR 是为了解决前一个 socket 处于 TCP_TIME_WAIT 没完全退出的问题。
+> 2. SO_REUSEPORT 是为了解决惊群问题的，允许多个进程共同使用同一个IP地址/端口。
 
 ```c
 static int inet_csk_bind_conflict(const struct sock *sk,
@@ -439,12 +461,12 @@ static int inet_csk_bind_conflict(const struct sock *sk,
     sk_for_each_bound(sk2, &tb->owners) {
         /* 如果 sk2 也绑定到同一个设备上，那么进行检查。 */
         if (sk != sk2 && (!sk->sk_bound_dev_if || !sk2->sk_bound_dev_if || sk->sk_bound_dev_if == sk2->sk_bound_dev_if)) {
-            /* sk 或者 sk2 没有设置 SO_REUSEADDR，或者 sk2 处于 listen 状态。 */
+            /* 当前或者前一个 socket 没有设置 SO_REUSEADDR，或者前一个 socket 已经处于 listen 状态了。 */
             if ((!reuse || !sk2->sk_reuse || sk2->sk_state == TCP_LISTEN) &&
-                /* sk 或者 sk2 没有设置 SO_REUSEPORT */
+                /* 当前或者前一个 socket 没有设置 SO_REUSEPORT */
                 (!reuseport || !sk2->sk_reuseport || rcu_access_pointer(sk->sk_reuseport_cb) ||
                 /* 或者 sk2 不处于 TCP_TIME_WAIT 状态并且两个 uid 不一样。  */
-                 (sk2->sk_state != TCP_TIME_WAIT && !uid_eq(uid, sock_i_uid(sk2))))) {
+                (sk2->sk_state != TCP_TIME_WAIT && !uid_eq(uid, sock_i_uid(sk2))))) {
                 /* 两个地址一样。 */
                 if (inet_rcv_saddr_equal(sk, sk2, true))
                     break;
@@ -469,4 +491,7 @@ static int inet_csk_bind_conflict(const struct sock *sk,
 * [从Linux源码看Socket(TCP)的bind](https://my.oschina.net/alchemystar/blog/4664316)
 * [socket API 实现（二）—— bind 函数](http://blog.guorongfei.com/2014/10/24/socket-bind/)
 * [Linux network namespace 简单解读](http://www.hyuuhit.com/2019/03/23/netns/)
-* [https://www.cnblogs.com/mjc-blog/p/12176843.html](https://www.cnblogs.com/mjc-blog/p/12176843.html)
+* [如何评测一个软件工程师的计算机网络知识水平与网络编程技能水平？](https://www.cnblogs.com/mjc-blog/p/12176843.html)
+* [Linux 4.6内核对TCP REUSEPORT的优化](https://blog.csdn.net/dog250/article/details/51510823)
+* [bind(2) — Linux manual page](https://man7.org/linux/man-pages/man2/bind.2.html)
+* [connect及bind、listen、accept背后的三次握手](https://www.cnblogs.com/yxzh-ustc/p/12101658.html)

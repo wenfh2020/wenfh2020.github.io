@@ -198,7 +198,11 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 
 ### 4.1. 文件部分
 
-初始化 socket 文件关系，内核为 socket 定义了一种特殊的文件类型，形成了一种特殊的文件系统：sockfs，系统初始化时，进行安装。
+Linux 系统一切皆文件，Linux 通过 vfs（虚拟文件系统）管理文件，内核为 socket 定义了一种特殊的文件类型，形成了一种特殊的文件系统：sockfs，系统初始化时，进行安装。
+
+<div align=center><img src="/images/2021-07-20-07-51-52.png" data-action="zoom"/></div>
+
+> 图片来源：《Linux 内核源代码情景分析》- 第五章 - 文件系统
 
 创建一个 socket，要把 socket 关联到一个已打开文件，方便进程进行管理。
 

@@ -105,9 +105,9 @@ author: wenfh2020
 
 * 便携屏支架。
   
-  > 某宝上的支架是鸡肋，轻便的很难固定，容易固定的又不轻便。下面这个支架怎么样？还行吧~~🐶
+  > 下面这个支架还不错，10 块钱成本不到，横竖屏都支持，感觉还不错🐶
 
-<div align=center><img src="/images/2020-12-20-23-25-15.jpeg" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-07-27-07-04-54.png" data-action="zoom"/></div>
 
 ---
 
