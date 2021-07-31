@@ -94,12 +94,12 @@ bool Manager::create_worker(int worker_index) {
     ...
 }
 
-/* 发送文件描述符：主进程 accpet 客户端的文件描述符，然后将其传输给子进程。 */
+/* 发送文件描述符：主进程 accept 客户端的文件描述符，然后将其传输给子进程。 */
 void Network::accept_and_transfer_fd(int fd) {
     int cport, cfd, family;
     char cip[NET_IP_STR_LEN] = {0};
 
-    /* 主进程 accpet 客户端的接入文件描述符。*/
+    /* 主进程 accept 客户端的接入文件描述符。*/
     cfd = anet_tcp_accept(m_errstr, fd, cip, sizeof(cip), &cport, &family);
     ...
     /* 父进程发送客户端的 cfd 到子进程。 */

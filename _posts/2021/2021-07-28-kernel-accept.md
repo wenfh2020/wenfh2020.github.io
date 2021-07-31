@@ -8,7 +8,7 @@ author: wenfh2020
 
 走读网络协议栈 accept (tcp) 的（Linux - 5.0.1 [下载](https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.0.1.tar.xz)）内核源码。
 
-accept 函数由 tcp 服务器调用，用于从已完成连接队列头返回一个已完成连接。如果已连接队列尾空，阻塞情况下：那么进程将睡眠等待，非阻塞将马上返回 -1，错误码为 EAGAIN。
+accept 函数由 tcp 服务器调用，用于从已完成连接队列头返回一个已完成连接。如果已连接队列为空，阻塞情况下：那么进程将睡眠等待，非阻塞将马上返回 -1，错误码为 EAGAIN。
 
 
 
@@ -70,7 +70,7 @@ __sys_accept4 # net/socket.c - 内核系统调用。
         |-- reqsk_queue_remove # 从 listen socket 全连接队列删除获取一个 request_sock 连接处理。
     |-- sock_graft # socket 与 sock 建立联系。
 |-- inet_getname
-|-- move_addr_to_user # 拷贝 accpet 的连接的 ip/port 到用户层。
+|-- move_addr_to_user # 拷贝 accept 的连接的 ip/port 到用户层。
 |-- fd_install # 文件和进程进行关联。__fd_install(current->files, fd, file);
 ```
 

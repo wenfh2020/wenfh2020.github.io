@@ -1,14 +1,16 @@
 ---
 layout: post
 title:  "剖析 TCP - SO_REUSEPORT"
-categories: network
-tags: reuseport 惊群
+categories: kernel nginx
+tags: reuseport nginx
 author: wenfh2020
 ---
 
 在 TCP 应用中，SO_REUSEPORT 是 TCP 的一个选项设置，它能开启内核功能：网络连接分配负载均衡。
 
 该功能允许多个进程/线程 bind/listen 相同的 IP/PORT，提升了新连接的分配性能。
+
+nginx 开启 reuseport 功能后，性能有立竿见影的提升，我们也会分析一下 nginx 是如何支持 reuseport 功能的。
 
 
 
@@ -138,7 +140,7 @@ TCP 客户端连接服务端，第一次握手，服务端被动收到第一次�
 
 * 服务端被动第一次握手，查找合适的 listener，详看源码（Linux 5.0.1）。
 
-<div align=center><img src="/images/2021-07-31-12-22-46.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-07-31-13-57-48.png" data-action="zoom"/></div>
 
 ```c
 static inline struct sock *__inet_lookup(struct net *net,
@@ -228,39 +230,19 @@ static struct sock *inet_lhash2_lookup(struct net *net,
 
 ---
 
-## 3. 惊群问题
+## 3. nginx
 
-什么是惊群？一个字：**争抢**。
+nginx 是多进程架构模型，在内核还没有添加 reuseport 功能前，nginx 为了解决单个 listener 暴露出来的问题，花了不少心思。
 
-你往群组里发红包，这个红包只发给一个人，但是红包丢到群组里后，大家“争抢”红包，最后只有一个人抢到，一大堆人没抢到~
+2013 年 Linux 内核添加了 reuseport 功能后，nginx 在 2015 年，1.9.1 版本也增加对应功能的支持，nginx 开启 reuseport 功能后，性能是原来的 2-3 倍，效果可谓立竿见影！
 
-SO_REUSEPORT 解决了什么问题？
+> 详细请参考 nginx 官方文档：[Socket Sharding in NGINX Release 1.9.1](https://www.nginx.com/blog/socket-sharding-nginx-release-1-9-1/)
 
-当你要给群组里的人发红包，不如单独给他们发，那大家就不用抢了！
-
----
-
-在系统里，体现在多个进程/线程同时等待资源，当有资源到来时，所有进程/线程被唤醒处理，但只有一个进程/线程能获得资源。这样其它没有获得资源的进程/线程被唤醒，出现空转现象，浪费了系统资源。
-
-SO_REUSEPORT 从内核里，将资源分派给某个等待的进程/线程，唤醒它处理，避免多个进程被唤醒空转。
-
-<div align=center><img src="/images/2021-07-02-23-31-30.png" data-action="zoom"/></div>
+接下来我们看看 nginx 是如何支持 reuseport 的。
 
 ---
 
-## 4. nginx
-
-nginx 是多进程模型，Linux 环境下一般使用 **epoll 事件驱动**。
-
-nginx 在解决惊群事件上，花了不少心思，Linux 内核增加了 SO_REUSEPORT 特性后，nginx 也增加了对应逻辑，这个应该是解决惊群问题比较高效的方案。
-
-我们看看 nginx 是如何处理的。
-
-<div align=center><img src="/images/2021-07-02-23-40-54.png" data-action="zoom"/></div>
-
----
-
-### 4.1. 开启 SO_REUSEPORT
+### 3.1. 开启 SO_REUSEPORT
 
 修改 nginx 配置，在 nginx.conf 里，listen 关键字后面添加 'reuseport'。
 
@@ -284,13 +266,13 @@ http {
 
 ---
 
-### 4.2. 工作流程
+### 3.2. 工作流程
 
 启动测试 nginx，1 master / 4 workers，监听 80 端口。
 
 ---
 
-#### 4.2.1. 进程
+#### 3.2.1. 进程
 
 * 父子进程。
 
@@ -304,8 +286,11 @@ nobody    88998  88994  0 14:57 ?        00:00:00 nginx: worker process
 ```
 
 * 父子进程 LISTEN 80 端口情况。
+
   因为配置文件设置了 `worker_processes 4` 需要启动 4 个子进程，
-  而且 listen 后设置了 reuseport 关键字，所以主进程先创建 4 个 socket 然后设置 SO_REUSEPORT，并进行 bind 和 listen。当 fork 子进程时，子进程拷贝了父进程的这 4 个 socket，所以你看到每个子进程都有相同 LISTEN 的 socket fd（6，7，8，9）。
+  nginx 进程发现配置文件关键字 listen 后添加了 reuseport 关键字，那么主进程先创建 4 个 socket 并设置 SO_REUSEPORT 选项，然后进行 bind 和 listen。
+
+  当 fork 子进程时，子进程拷贝了父进程的这 4 个 socket，所以你看到每个子进程都有相同 LISTEN 的 socket fd（6，7，8，9）。
 
 ```shell
 # lsof -i:80 | grep nginx 
@@ -333,7 +318,11 @@ nginx   88998 nobody    9u  IPv4 909212      0t0  TCP *:http (LISTEN)
 
 ---
 
-#### 4.2.2. 网络初始流程
+#### 3.2.2. 网络初始流程
+
+nginx 是多进程模型，Linux 环境下一般使用 epoll 事件驱动。
+
+<div align=center><img src="/images/2021-07-31-14-18-17.png" data-action="zoom"/></div>
 
 * strace 监控 nginx 进程的系统调用流程。
 
@@ -427,7 +416,7 @@ main
 
 ---
 
-## 5. 参考
+## 4. 参考
 
 * 《Linux 内核源代码情景分析》
 * [多个进程绑定相同端口的实现分析[Google Patch]](http://m.blog.chinaunix.net/uid-10167808-id-3807060.html)

@@ -264,8 +264,11 @@ layout: default
 <script>
     (function () {
         var cat_map = {
+            co_kimserver: 10001,
             libco: 10000,
             redis: 9900,
+            kernel: 9888,
+            epoll: 9880,
             'c/c++': 9800,
             Linux: 9700,
             kimserver: 9600,
@@ -273,6 +276,7 @@ layout: default
             '科技': -1,
             '随笔': -2
         };
+
 
         var get_score = function (key) {
             var score = cat_map[$.trim(key)];

@@ -90,7 +90,7 @@ int __inet_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len,
   
   但是这里也有缺点，因为哈希表是由数组和链表的组合结构，自身有冲突链表（哈希链），而且 `inet_bind_bucket` 有 `owners` 链表，保存共享端口的 socket 数据。
   
-  > <font color=red>【注意】</font> tcp 连接三次握手成功后，在 accpet 调用前， client 的 socket.sock 信息也会保存到 owners，参考 `__inet_inherit_port` 的使用。
+  > <font color=red>【注意】</font> tcp 连接三次握手成功后，在 accept 调用前， client 的 socket.sock 信息也会保存到 owners，参考 `__inet_inherit_port` 的使用。
 
   查询数据时，可能需要遍历两个链表，而且在同一个网域下，以端口作为哈希索引，导致不同的 IP 地址相同端口的数据也会在同一个 `inet_bind_bucket` 里。所以 `inet_bind_bucket` 要使用 `fastreuse` 和 `fastreuseport` 去优化，尽量避免链表遍历。
 

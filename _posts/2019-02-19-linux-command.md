@@ -562,7 +562,13 @@ netstat -nat|grep -i "80"|wc -l
 
 ---
 
-### 6.8. lsof
+### 6.8. ss
+
+参考：[Linux网络状态工具ss命令使用详解](http://www.ttlsa.com/linux-command/ss-replace-netstat/)
+
+---
+
+### 6.9. lsof
 
 * 查询端口对应的信息
 
@@ -578,7 +584,7 @@ lsof -p <pid>
 
 ---
 
-### 6.9. nc
+### 6.10. nc
 
 ```shell
 # 启动监听 8333 端口的服务。

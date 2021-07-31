@@ -48,6 +48,7 @@ SYSCALL_DEFINE2(listen, int, fd, int, backlog) {
     return __sys_listen(fd, backlog);
 }
 
+/* net/socket.c */
 int __sys_listen(int fd, int backlog) {
     struct socket *sock;
     int err, fput_needed;
@@ -70,6 +71,7 @@ int __sys_listen(int fd, int backlog) {
     ...
 }
 
+/* net/ipv4/af_inet.c */
 int inet_listen(struct socket *sock, int backlog) {
     struct sock *sk = sock->sk;
     unsigned char old_state;
@@ -344,10 +346,8 @@ static inline u32 ipv4_portaddr_hash(const struct net *net,
 
 tcp 客户端主动链接服务，第一次握手，服务是如何查找 listen socket 的。
 
-1. __inet_lookup_listener 会对比 inet_hashinfo.istening_hash 与 inet_hashinfo.lhash2 哈希槽上的数据个数，哪个哈希表槽上的数据比较少就从哪个哈希表上查找数据。
-2. 如果是 reuseport 选项，再从 sock_reuseport.socks 数组上找（参考下文）。
-
-<div align=center><img src="/images/2021-07-28-10-03-44.png" data-action="zoom"/></div>
+1. __inet_lookup_listener 从 inet_hashinfo.lhash2 对应的哈希槽上查找数据。
+2. 如果是 reuseport 选项，再从 sock_reuseport.socks 数组上哈希找（参考下文）。
 
 * 堆栈。
 
@@ -406,19 +406,7 @@ struct sock *__inet_lookup_listener(struct net *net,
     result = inet_lhash2_lookup(net, ilb2, skb, doff,
                     saddr, sport, daddr, hnum,
                     dif, sdif);
-    if (result)
-        goto done;
-
-    /* Lookup lhash2 with INADDR_ANY */
-    hash2 = ipv4_portaddr_hash(net, htonl(INADDR_ANY), hnum);
-    ilb2 = inet_lhash2_bucket(hashinfo, hash2);
-
-    result = inet_lhash2_lookup(net, ilb2, skb, doff,
-                    saddr, sport, htonl(INADDR_ANY), hnum,
-                    dif, sdif);
-done:
-    if (unlikely(IS_ERR(result)))
-        return NULL;
+    ...
     return result;
 }
 
@@ -474,7 +462,7 @@ struct sock *reuseport_select_sock(struct sock *sk,
 select_by_hash:
         /* no bpf or invalid bpf result: fall back to hash usage */
         if (!sk2)
-            /* 通过哈希找到对应的数组数据。 */
+            /* 通过哈希获得对应的数组下标，从而获得概率相对平衡的数据。 */
             sk2 = reuse->socks[reciprocal_scale(hash, socks)];
     }
     ...
@@ -668,7 +656,7 @@ static inline void reqsk_queue_added(struct request_sock_queue *queue) {
 
 ```c
 /* include/net/inet_connection_sock.h 
- * 判断半队列是否已满。*/
+ * 判断半连接队列是否已满。*/
 static inline int inet_csk_reqsk_queue_is_full(const struct sock *sk) {
     return inet_csk_reqsk_queue_len(sk) >= sk->sk_max_ack_backlog;
 }
@@ -681,7 +669,7 @@ static inline int reqsk_queue_len(const struct request_sock_queue *queue) {
     return atomic_read(&queue->qlen);
 }
 
-/* 检查全队列是否已满。 */
+/* 检查全连接队列是否已满。 */
 static inline bool sk_acceptq_is_full(const struct sock *sk) {
     return sk->sk_ack_backlog > sk->sk_max_ack_backlog;
 }
@@ -851,7 +839,140 @@ static inline bool reqsk_queue_empty(const struct request_sock_queue *queue) {
 
 ---
 
-## 5. 参考
+## 5. backlog 限制设置
+
+关于全连接和半连接的限制设置，可以参考：[TCP 半连接队列和全连接队列满了会发生什么？又该如何应对？](https://www.cnblogs.com/xiaolincoding/p/12995358.html)，这个帖子说得比较详细和通俗易懂。
+
+---
+
+### 5.1. somaxconn
+
+listen 的 backlog 参数最大不能超过 somaxconn。它用于限制 tcp 的全连接队列和半连接队列的长度。
+
+```shell
+# /etc/sysctl.conf
+net.core.somaxconn = 2048
+# /sbin/sysctl -p
+```
+
+```c
+static struct ctl_table netns_core_table[] = {
+    {
+        .procname      = "somaxconn",
+        .data          = &init_net.core.sysctl_somaxconn,
+        .maxlen        = sizeof(int),
+        .mode          = 0644,
+        .extra1        = &zero,
+        .proc_handler  = proc_dointvec_minmax
+    },
+    { }
+};
+
+int __sys_listen(int fd, int backlog) {
+    struct socket *sock;
+    int err, fput_needed;
+    int somaxconn;
+
+    sock = sockfd_lookup_light(fd, &err, &fput_needed);
+    if (sock) {
+        somaxconn = sock_net(sock->sk)->core.sysctl_somaxconn;
+        /* backlog 最大不能超过 somaxconn。 */
+        if ((unsigned int)backlog > somaxconn)
+            backlog = somaxconn;
+
+        err = security_socket_listen(sock, backlog);
+        if (!err)
+            err = sock->ops->listen(sock, backlog);
+
+        fput_light(sock->file, fput_needed);
+    }
+    return err;
+}
+
+/* include/net/inet_connection_sock.h 
+ * 判断半连接队列是否已满。*/
+static inline int inet_csk_reqsk_queue_is_full(const struct sock *sk) {
+    return inet_csk_reqsk_queue_len(sk) >= sk->sk_max_ack_backlog;
+}
+
+/* 检查全连接队列是否已满。 */
+static inline bool sk_acceptq_is_full(const struct sock *sk) {
+    return sk->sk_ack_backlog > sk->sk_max_ack_backlog;
+}
+```
+
+---
+
+### 5.2. tcp_max_syn_backlog
+
+tcp_max_syn_backlog 在系统配置中设置，用于检查 syn 半连接队列健康情况，当服务端接收到一定数量的 syn 包，要检查新旧包是否有冲突，如有冲突就丢弃新包，这样就要避免洪水攻击。
+
+```shell
+# /etc/sysctl.conf
+net.ipv4.tcp_max_syn_backlog = 2048
+# /sbin/sysctl -p
+```
+
+```c
+static int __net_init tcp_sk_init(struct net *net) {
+    ...
+    net->ipv4.sysctl_max_syn_backlog = max(128, cnt / 256);
+    ...
+}
+
+struct netns_ipv4 {
+    ...
+    int sysctl_max_syn_backlog;
+    ...
+}
+
+static struct ctl_table ipv4_net_table[] = {
+    ...
+    {
+        .procname     = "tcp_max_syn_backlog",
+        .data         = &init_net.ipv4.sysctl_max_syn_backlog,
+        .maxlen       = sizeof(int),
+        .mode         = 0644,
+        .proc_handler = proc_dointvec
+    },
+    ...
+}
+
+/* 服务端收到客户端的第一次握手 syn 包。 */
+int tcp_conn_request(struct request_sock_ops *rsk_ops,
+             const struct tcp_request_sock_ops *af_ops,
+             struct sock *sk, struct sk_buff *skb) {
+    ...
+    if (!want_cookie && !isn) {
+        /* Kill the following clause, if you dislike this way. */
+        if (!net->ipv4.sysctl_tcp_syncookies &&
+            /* 半连接长度如果超过 syn back 长度的 3/4  */
+            (net->ipv4.sysctl_max_syn_backlog - inet_csk_reqsk_queue_len(sk) <
+             (net->ipv4.sysctl_max_syn_backlog >> 2)) &&
+             /* 新旧连接是否有冲突。 */
+            !tcp_peer_is_proven(req, dst)) {
+            /* Without syncookies last quarter of
+             * backlog is filled with destinations,
+             * proven to be alive.
+             * It means that we continue to communicate
+             * to destinations, already remembered
+             * to the moment of synflood.
+             */
+            /* 可能受到 syn 洪水攻击，将 syn 包丢弃。 */
+            pr_drop_req(req, ntohs(tcp_hdr(skb)->source),
+                    rsk_ops->family);
+            goto drop_and_release;
+        }
+
+        isn = af_ops->init_seq(skb);
+    }
+    ...
+}
+```
+
+---
+
+## 6. 参考
 
 * [socket API 实现（三）—— listen 函数](http://blog.guorongfei.com/2014/10/27/socket-listen/)
 * [从Linux源码看Socket(TCP)的listen及连接队列](https://my.oschina.net/alchemystar/blog/4672630)
@@ -861,3 +982,4 @@ static inline bool reqsk_queue_empty(const struct request_sock_queue *queue) {
 * [TCP建立连接过程中半连接队列和全连接队列详解](https://www.jianshu.com/p/386a0c054b52)
 * [TCP三次握手超时处理](https://blog.csdn.net/sinat_20184565/article/details/87865201)
 * [connect及bind、listen、accept背后的三次握手](https://www.cnblogs.com/yxzh-ustc/p/12101658.html)
+* [tcp/ip协议第5讲：tcp的半连接队列和全连接队列](https://www.bilibili.com/video/BV1AK4y177WA)

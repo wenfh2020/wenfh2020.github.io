@@ -189,7 +189,19 @@ struct udphdr {
 
 ---
 
-## 4. 参考
+## 4. 文件描述符
+
+Linux 一切皆文件。
+
+<div align=center><img src="/images/2021-07-07-14-08-09.png" data-action="zoom"/></div>
+
+<div align=center><img src="/images/2021-07-07-14-07-45.png" data-action="zoom"/></div>
+
+> 图片来源：《TCP/IP 卷2：实现》
+
+---
+
+## 5. 参考
 
 * 《网络是怎样连接的》
 * 《图解 TCP_IP》
