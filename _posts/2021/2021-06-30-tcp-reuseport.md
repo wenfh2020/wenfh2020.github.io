@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "剖析 TCP - SO_REUSEPORT"
+title:  "剖析 TCP - SO_REUSEPORT 使用"
 categories: kernel nginx
 tags: reuseport nginx
 author: wenfh2020
@@ -10,7 +10,7 @@ author: wenfh2020
 
 该功能允许多个进程/线程 bind/listen 相同的 IP/PORT，提升了新连接的分配性能。
 
-nginx 开启 reuseport 功能后，性能有立竿见影的提升，我们也会分析一下 nginx 是如何支持 reuseport 功能的。
+nginx 开启 reuseport 功能后，性能有立竿见影的提升，我们结合 nginx 分析一下 reuseport 功能。
 
 
 
@@ -122,7 +122,7 @@ soreuseport 主要解决了两个问题：
 
 其实它还解决了一个很重要的问题：
 
-在 tcp 多线程场景中，（B 图）服务端如果所有新连只保存在一个 listen socket 的全连接队列中，那么多个线程去这个队里获取（accept）新的连接，势必会出现多个线程对一个公共资源的争抢，争抢过程中，大量资源的损耗。
+在 tcp 多线程场景中，（B 图）服务端如果所有新连接只保存在一个 listen socket 的全连接队列中，那么多个线程去这个队里获取（accept）新的连接，势必会出现多个线程对一个公共资源的争抢，争抢过程中，大量资源的损耗。
 
 ---
 
@@ -226,7 +226,7 @@ static struct sock *inet_lhash2_lookup(struct net *net,
 }
 ```
 
-> 参考：[[内核源码走读] 网络协议栈 listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/#33-%E6%9F%A5%E6%89%BE-listen-socket)
+> 参考：[[内核源码] 网络协议栈 listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/#33-%E6%9F%A5%E6%89%BE-listen-socket)
 
 ---
 
@@ -322,7 +322,7 @@ nginx   88998 nobody    9u  IPv4 909212      0t0  TCP *:http (LISTEN)
 
 nginx 是多进程模型，Linux 环境下一般使用 epoll 事件驱动。
 
-<div align=center><img src="/images/2021-07-31-14-18-17.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-07-31-19-20-51.png" data-action="zoom"/></div>
 
 * strace 监控 nginx 进程的系统调用流程。
 
@@ -430,4 +430,4 @@ main
 * [Why does one NGINX worker take all the load?](https://blog.cloudflare.com/the-sad-state-of-linux-socket-balancing/)
 * [深入浅出 Linux 惊群：现象、原因和解决方案](https://blog.csdn.net/Tencent_TEG/article/details/118501694?utm_medium=distribute.pc_feed.none-task-blog-short_term_tag-4.nonecase&depth_1-utm_source=distribute.pc_feed.none-task-blog-short_term_tag-4.nonecase)
 * [Linux 4.6内核对TCP REUSEPORT的优化](https://blog.csdn.net/dog250/article/details/51510823)
-* [[内核源码走读] 网络协议栈 listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)
+* [[内核源码] 网络协议栈 listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)

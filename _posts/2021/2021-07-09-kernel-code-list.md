@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码走读] list 链表"
+title:  "[内核源码] list 链表"
 categories: kernel
 tags: kernel list epoll
 author: wenfh2020

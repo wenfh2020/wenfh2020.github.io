@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码走读] 网络协议栈 bind (tcp)"
+title:  "[内核源码] 网络协议栈 bind (tcp)"
 categories: kernel
 tags: kernel bind
 author: wenfh2020

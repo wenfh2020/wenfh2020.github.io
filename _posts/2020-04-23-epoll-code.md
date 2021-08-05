@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码走读] epoll 实现原理"
+title:  "[内核源码] epoll 实现原理"
 categories: kernel epoll
 tags: epoll Linux kernel
 author: wenfh2020

@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码走读] 网络协议栈 listen (tcp)"
+title:  "[内核源码] 网络协议栈 listen (tcp)"
 categories: kernel
 tags: kernel listen
 author: wenfh2020

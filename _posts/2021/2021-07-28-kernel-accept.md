@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码走读] 网络协议栈 accept (tcp)"
+title:  "[内核源码] 网络协议栈 accept (tcp)"
 categories: kernel
 tags: kernel accept
 author: wenfh2020
@@ -48,6 +48,8 @@ do_syscall_64(unsigned long nr, struct pt_regs * regs) (/root/linux-5.0.1/arch/x
 entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 ```
 
+> 参考：[vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
+
 ---
 
 ### 2.2. 函数调用层次关系
@@ -79,6 +81,6 @@ __sys_accept4 # net/socket.c - 内核系统调用。
 ## 3. 参考
 
 * [socket API 实现（四）—— accept 函数](http://blog.guorongfei.com/2014/10/29/socket-accept/)
-* [[内核源码走读] 网络协议栈 socket (tcp)](https://wenfh2020.com/2021/07/13/kernel-sys-socket/)
-* [[内核源码走读] 网络协议栈 bind (tcp)](https://wenfh2020.com/2021/07/17/kernel-bind/)
-* [[内核源码走读] 网络协议栈 listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)
+* [[内核源码] 网络协议栈 socket (tcp)](https://wenfh2020.com/2021/07/13/kernel-sys-socket/)
+* [[内核源码] 网络协议栈 bind (tcp)](https://wenfh2020.com/2021/07/17/kernel-bind/)
+* [[内核源码] 网络协议栈 listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)
