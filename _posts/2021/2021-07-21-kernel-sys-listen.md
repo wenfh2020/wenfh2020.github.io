@@ -361,6 +361,8 @@ tcp_v4_rcv(struct sk_buff * skb) (/root/linux-5.0.1/net/ipv4/tcp_ipv4.c:1818)
 do_softirq() (/root/linux-5.0.1/kernel/softirq.c:337)
 ```
 
+> 参考：[vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
+
 * 内核源码。
 
 ```c

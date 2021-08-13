@@ -17,7 +17,7 @@ author: wenfh2020
 
 下面将数据库创建，删除，导入，导出数据等重复性比较高的操作整合到 [shell 脚本](https://github.com/wenfh2020/shell/blob/master/db.sh)。
 
-```sql
+```shell
 #!/bin/bash
 # wfh/2018/09/18 - operate for db: create, drop, import, dump.
 
