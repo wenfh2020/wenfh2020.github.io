@@ -313,4 +313,6 @@ int tcp_v4_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len) {
 * [connect及bind、listen、accept背后的三次握手](https://www.cnblogs.com/yxzh-ustc/p/12101658.html)
 * [Linux TCP/IP 协议栈之 Socket的实现分析(Connect客户端发起连接请求)](https://www.cnblogs.com/my_life/articles/6085588.html)
 * [TCP/IP协议栈在Linux内核中的运行时序分析](https://www.cnblogs.com/xingruizhi/p/14331785.html)
-
+* [linux内核tcp协议栈走读记录（一）](https://www.jianshu.com/p/d3b4a0d652ca)
+* [socket API 实现（五）—— connect 函数](http://blog.guorongfei.com/2014/10/30/socket-connect/)
+* [从Linux源码看Socket(TCP)Client端的Connect](https://my.oschina.net/alchemystar/blog/4327484)
