@@ -6,10 +6,7 @@ tags: linux kernel connect
 author: wenfh2020
 ---
 
-走读网络协议栈 accept (tcp) 的（Linux - 5.0.1 [下载](https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.0.1.tar.xz)）内核源码。
-
-connect....。
-
+走读网络协议栈 connect (tcp) 的内核源码（Linux - 5.0.1 [下载](https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.0.1.tar.xz)）。
 
 
 

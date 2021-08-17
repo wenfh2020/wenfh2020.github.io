@@ -154,16 +154,12 @@ int inet_hash(struct sock *sk) {
 
 ## 3. 哈希表
 
-listen 成功，socket.sock 指针将被保存于哈希表中，因为添加了 reuseport 端口重用功能（负载均衡），逻辑变得复杂起来。
-
-reuseport 逻辑，可以看看 linux 这几个 github 补丁的修改：
+listen 成功，socket.sock 指针被保存于哈希表中，因为添加了 reuseport 端口重用功能（负载均衡），逻辑变得复杂起来。reuseport 逻辑，可以看看 linux 这几个补丁的修改：
 
 > 因为墙，github 链接不一定能正常打开~
 
 1. (2013 年) [soreuseport: TCP/IPv4 implementation](https://github.com/torvalds/linux/commit/da5e36308d9f7151845018369148201a5d28b46d)
-
 2. (2016 年) [soreuseport: define reuseport groups](https://github.com/torvalds/linux/commit/ef456144da8ef507c8cf504284b6042e9201a05c)
-
 3. (2017 年) [inet: Add a 2nd listener hashtable (port+addr)](https://github.com/torvalds/linux/commit/61b7c691c7317529375f90f0a81a331990b1ec1b)
 
 ---
