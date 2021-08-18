@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码] 网络协议栈 connect (tcp)"
+title:  "[内核源码] 网络协议栈 - connect (tcp)"
 categories: kernel
 tags: linux kernel connect
 author: wenfh2020
@@ -37,7 +37,7 @@ int connect(int sockfd, const struct sockaddr *servaddr, socklen_t addrlen);
 
 连接需要通过三次握手，握手🤝流程详见下图。
 
-<div align=center><img src="/images/2021-08-08-12-30-55.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 > 参考：《UNIX 网络编程_卷_1》- 2.6.1 三路握手。
 
@@ -122,9 +122,25 @@ static struct inet_protosw inetsw_array[] = {
 #------------------- *用户态* ---------------------------
 connect
 #------------------- *内核态* ---------------------------
-__sys_connect # net/socket.c - 内核系统调用。
+__sys_connect # (net/socket.c)- 内核系统调用。
 |-- sockfd_lookup_light # 根据 fd 查找 listen socket 的 socket 指针。
-|-- sock_alloc # 创建一个新的 socket 对象，因为要从 listen socket 的全连接队列里获取一个就绪的连接。
+|-- inet_stream_connect # (net/ipv4/af_inet.c) socket.proto_ops.connect
+    |-- __inet_stream_connect # (net/ipv4/af_inet.c)
+        |-- tcp_v4_connect # (net/ipv4/tcp_ipv4.c) sock.tcp_prot.connect
+            |-- ip_route_connect # 查找路由，选择合适的目标地址。
+            |-- sk_rcv_saddr_set # 设置源端口地址。
+            |-- sk_daddr_set # 设置目标端口和地址。
+            |-- tcp_set_state(sk, TCP_SYN_SENT); # 设置第一次握手 TCP_SYN_SENT 状态。
+            |-- inet_hash_connect # 保存 sock 到哈希表，如果源端口没有分配，自动分配一个。
+            |-- ip_route_newports # 更新路由缓存信息。
+            |-- tcp_connect # (net/ipv4/tcp_output.c) 发送 SYN 报文。
+                |-- tcp_connect_init # 初始化 tcp_sock
+                |-- sk_stream_alloc_skb # 为数据缓冲区分配空间。
+                |-- tcp_init_nondata_skb # 初始化一个 SYN 包。
+                |-- tcp_send_syn_data # 发送 SYN 报文。
+                    |-- tcp_transmit_skb # 发送报文。
+                |-- inet_csk_reset_xmit_timer # 设置定时器丢包重发。
+        |-- inet_wait_for_connect # (net/ipv4/af_inet.c) 如果同步阻塞，那么等待服务的回复唤醒。
 ```
 
 ```c
@@ -302,7 +318,58 @@ int tcp_v4_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len) {
 
 ---
 
-## 5. 参考
+## 5. 阻塞等待唤醒
+
+网络通信，有异步非阻塞和同步阻塞方式。connect 接口支持这两种方式。
+
+* 应用源码，可以通过 `fcntl` 接口设置 tcp 的阻塞选项，源码示例：
+
+```c
+static int anet_set_block(int fd, bool is_block) {
+    int flags;
+
+    if ((flags = fcntl(fd, F_GETFL)) == -1) {
+        return -1;
+    }
+
+    if (is_block) {
+        flags |= O_NONBLOCK;
+    } else {
+        flags &= ~O_NONBLOCK;
+    }
+
+    if (fcntl(fd, F_SETFL, flags) == -1) {
+       return -1;
+    }
+    return 0;
+}
+```
+
+* 内核源码。如果是非阻塞，connect 被调用后，马上返回，如果是阻塞方式，那么 connect 接口，在发送 SYN 报文后，进程进入睡眠状态，等到三次握手成功后才被进程唤醒。
+
+```c
+/* net/ipv4/af_inet.c */
+int __inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
+              int addr_len, int flags, int is_sendmsg) {
+    ...
+    err = sk->sk_prot->connect(sk, uaddr, addr_len);
+    ...
+    timeo = sock_sndtimeo(sk, flags & O_NONBLOCK);
+    ...
+    if ((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV)) {
+        ...
+        /* 如果是非阻塞，马上返回，否则，等到三次握手成功后进程才被进程唤醒。 */
+        if (!timeo || !inet_wait_for_connect(sk, timeo, writebias))
+            goto out;
+        ...
+    }
+    ...
+}
+```
+
+---
+
+## 6. 参考
 
 * 《UNIX 网络编程_卷_1》
 * [重温网络基础](https://wenfh2020.com/2021/05/08/network-base/)

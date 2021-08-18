@@ -136,7 +136,7 @@ TCP 客户端连接服务端，第一次握手，服务端被动收到第一次�
 
 * 三次握手流程。
 
-<div align=center><img src="/images/2021-08-08-12-30-55.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 * 服务端被动第一次握手，查找合适的 listener，详看源码（Linux 5.0.1）。
 
