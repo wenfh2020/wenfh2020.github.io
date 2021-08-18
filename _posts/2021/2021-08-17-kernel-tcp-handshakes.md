@@ -29,7 +29,7 @@ tcp 通信，客户端和服务端通过三次握手进行连接；握手流程�
 
 ## 2. 源码
 
-<div align=center><img src="/images/2021-08-18-15-29-04.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-08-18-15-42-54.png" data-action="zoom"/></div>
 
 ### 2.1. TCP_SYN_SENT
 
