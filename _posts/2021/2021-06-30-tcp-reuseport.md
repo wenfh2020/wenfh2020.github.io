@@ -138,6 +138,8 @@ TCP 客户端连接服务端，第一次握手，服务端被动收到第一次�
 
 <div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
+> 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
+
 * 服务端被动第一次握手，查找合适的 listener，详看源码（Linux 5.0.1）。
 
 <div align=center><img src="/images/2021-07-31-13-57-48.png" data-action="zoom"/></div>

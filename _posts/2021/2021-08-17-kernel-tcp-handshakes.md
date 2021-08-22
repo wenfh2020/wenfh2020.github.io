@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码] 网络协议栈 - tcp 三次握手"
+title:  "[内核源码] 网络协议栈 - tcp 三次握手状态"
 categories: kernel
 tags: linux kernel handshakes tcp
 author: wenfh2020
@@ -25,11 +25,15 @@ tcp 通信，客户端和服务端通过三次握手进行连接；握手流程�
 
 <div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
+> 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
+
 ---
 
 ## 2. 源码
 
 <div align=center><img src="/images/2021-08-18-15-42-54.png" data-action="zoom"/></div>
+
+> 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 
 ### 2.1. TCP_SYN_SENT
 
@@ -68,7 +72,9 @@ int tcp_v4_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len) {
 
 ### 2.2. TCP_NEW_SYN_RECV
 
-详细参考：[[内核源码] 网络协议栈 - listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)
+服务端收到客户端发送的 SYN 包后，将状态修改为 TCP_NEW_SYN_RECV，为了节省资源，并没有为 `struct sock` 分配空间，而是创建轻量级的连接请求 `struct request_sock`。
+
+> 详细参考：[[内核源码] 网络协议栈 - listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)
 
 * 函数堆栈。
 
@@ -242,9 +248,7 @@ void tcp_finish_connect(struct sock *sk, struct sk_buff *skb) {
 
 ### 2.4. TCP_SYN_RECV
 
-服务端收到客户端第三次握手发过来的 ACK 包，服务端将 TCP 状态从 TCP_NEW_SYN_RECV 修改为 TCP_SYN_RECV。
-
-第一次握手时，服务端内核只为新的连接生成轻量级的 `request_sock` 结构，还没真正创建 `struct sock` 对象，第三次握手成功后，TCP 状态为 TCP_SYN_RECV，才创建 `struct sock`。这样可以提高资源的分配效率。
+服务端收到客户端第三次握手发过来的 ACK 包，服务端将 TCP 状态从 TCP_NEW_SYN_RECV 修改为 TCP_SYN_RECV，然后为连接结构（`struct sock`）分配空间，这样可以提高资源的分配效率。
 
 > 详细参考：[[内核源码] 网络协议栈 - listen (tcp)](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)
 

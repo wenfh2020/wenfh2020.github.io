@@ -35,11 +35,12 @@ int connect(int sockfd, const struct sockaddr *servaddr, socklen_t addrlen);
 
 ## 2. 三次握手
 
-连接需要通过三次握手，握手🤝流程详见下图。
+连接需要通过三次握手（参考：《UNIX 网络编程_卷_1》- 2.6.1 三路握手。），握手🤝流程详见下图。
 
 <div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
-> 参考：《UNIX 网络编程_卷_1》- 2.6.1 三路握手。
+> 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
+
 
 ---
 
@@ -200,28 +201,6 @@ int __inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 ## 4. 连接逻辑
 
 连接的核心逻辑在函数 <font color=red> tcp_v4_connect </font>。
-
-* 相关数据结构。
-
-```c
-struct inet_hashinfo;
-
-struct inet_timewait_death_row {
-    atomic_t tw_count;
-
-    struct inet_hashinfo *hashinfo ____cacheline_aligned_in_smp;
-    int sysctl_max_tw_buckets;
-};
-
-/* include/net/netns/ipv4.h */
-struct netns_ipv4 {
-    ...
-    struct inet_timewait_death_row tcp_death_row;
-    ...
-}
-```
-
-* 逻辑。
 
 ```c
 /* This will initiate an outgoing connection. */

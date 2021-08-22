@@ -69,7 +69,7 @@ socket 结构主要分两部分：与文件系统关系密切的部分，与通�
 > 图片来源：[sys-socket - linux 内核 socket 结构关系](https://www.processon.com/view/60eea22763768906ea233da0?fromnew=1)
 
 ```c
-/** ./include/linux/net.h
+/** include/linux/net.h
  *  struct socket - general BSD socket
  *  @state: socket state (%SS_CONNECTED, etc)
  *  @type: socket type (%SOCK_STREAM, etc)
@@ -89,12 +89,12 @@ struct socket {
     const struct proto_ops  *ops;
 };
 
-/* ./include/linux/net.h */
+/* include/linux/net.h */
 struct proto_ops {
     ...
 }
 
-/* ./include/net/sock.h */
+/* include/net/sock.h */
 struct tcp_sock {
     /* inet_connection_sock has to be the first member of tcp_sock */
     struct inet_connection_sock inet_conn;
@@ -106,7 +106,7 @@ struct inet_connection_sock {
     ...
 }
 
-/* ./include/net/inet_sock.h */
+/* include/net/inet_sock.h */
 struct inet_sock {
     /* sk and pinet6 has to be the first two members of inet_sock */
     struct sock sk;
@@ -130,33 +130,33 @@ struct sock {
 socket
 #------------------- *内核态* ---------------------------
 __x64_sys_socket # 内核系统调用。
-__sys_socket # ./net/socket.c
-    |-- sock_create # ./net/socket.c
-        |-- __sock_create # ./net/socket.c
+__sys_socket # net/socket.c
+    |-- sock_create # net/socket.c
+        |-- __sock_create # net/socket.c
 #------------------- 文件部分 ---------------------------
-            |-- sock_alloc # ./net/socket.c
-                |-- new_inode_pseudo # ./fs/inode.c
-                    |-- alloc_inode # ./fs/inode.c
-                        |-- sock_alloc_inode # ./net/socket.c
+            |-- sock_alloc # net/socket.c
+                |-- new_inode_pseudo # fs/inode.c
+                    |-- alloc_inode # fs/inode.c
+                        |-- sock_alloc_inode # net/socket.c
                             |-- kmem_cache_alloc
 #------------------- 网络部分 ---------------------------
             |-- inet_create # pf->create -- af_inet.c
-                |-- sk_alloc # ./net/core/sock.c
-                    |-- sk_prot_alloc # ./net/core/sock.c
+                |-- sk_alloc # net/core/sock.c
+                    |-- sk_prot_alloc # net/core/sock.c
                         |-- kmem_cache_alloc
                 |-- inet_sk
-                |-- sock_init_data # ./net/core/sock.c
-                    |-- sk_init_common # ./net/core/sock.c
+                |-- sock_init_data # net/core/sock.c
+                    |-- sk_init_common # net/core/sock.c
                     |-- timer_setup
-                |-- sk->sk_prot->init(sk) # tcp_v4_init_sock  -- ./net/ipv4/tcp_ipv4.c
+                |-- sk->sk_prot->init(sk) # tcp_v4_init_sock  -- net/ipv4/tcp_ipv4.c
                     |-- tcp_init_sock
 #------------------- 文件+网络+关联进程 ------------------------
-    |-- sock_map_fd # ./net/socket.c
-        |-- get_unused_fd_flags # ./fs/file.c -- 进程分配空闲 fd。
-        |-- sock_alloc_file # ./net/socket.c
-            |-- alloc_file_pseudo # ./fs/file_table.c
-        |-- fd_install # ./fs/file.c
-            |-- __fd_install # ./fs/file.c
+    |-- sock_map_fd # net/socket.c
+        |-- get_unused_fd_flags # fs/file.c -- 进程分配空闲 fd。
+        |-- sock_alloc_file # net/socket.c
+            |-- alloc_file_pseudo # fs/file_table.c
+        |-- fd_install # fs/file.c
+            |-- __fd_install # fs/file.c
                 |-- fdt = rcu_dereference_sched(files->fdt);
                 |-- rcu_assign_pointer(fdt->fd[fd], file); # file 关联到进程。
 ```
@@ -209,14 +209,14 @@ Linux 系统一切皆文件，Linux 通过 vfs（虚拟文件系统）管理文�
 * 相关结构。
 
 ```c
-/* ./include/linux/mount.h */
+/* include/linux/mount.h */
 struct vfsmount {
     struct dentry *mnt_root;    /* root of the mounted tree */
     struct super_block *mnt_sb;    /* pointer to superblock */
     int mnt_flags;
 } __randomize_layout;
 
-/* ./net/socket.c */
+/* net/socket.c */
 static struct vfsmount *sock_mnt __read_mostly;
 
 /* sock 文件类型。 */
@@ -233,20 +233,20 @@ static const struct super_operations sockfs_ops = {
     .statfs         = simple_statfs,
 };
 
-/* ./include/sock.h 
+/* include/sock.h 
  * sock 与 inode 文件节点关联结构。*/
 struct socket_alloc {
     struct socket socket;
     struct inode vfs_inode;
 };
 
-/* ./include/net/sock.h 
+/* include/net/sock.h 
  * 从文件节点结构获得 socket 成员。*/
 static inline struct socket *SOCKET_I(struct inode *inode) {
     return &container_of(inode, struct socket_alloc, vfs_inode)->socket;
 }
 
-/* ./include/linux/fs.h */
+/* include/linux/fs.h */
 struct file_operations {
     struct module *owner;
     loff_t (*llseek) (struct file *, loff_t, int);
@@ -255,7 +255,7 @@ struct file_operations {
     ...
 } __randomize_layout;
 
-/* ./net/socket.c
+/* net/socket.c
  * Socket files have a set of 'special' operations as well as the generic file ones. These don't appear
  * in the operation structures but are done directly via the socketcall() multiplexor.
  */
@@ -515,7 +515,7 @@ static struct inet_protosw inetsw_array[] = {
 * proto_ops。
 
 ```c
-/* ./net/ipv4/af_inet.c */
+/* net/ipv4/af_inet.c */
 const struct proto_ops inet_stream_ops = {
     .family        = PF_INET,
     .owner         = THIS_MODULE,
@@ -532,7 +532,7 @@ EXPORT_SYMBOL(inet_stream_ops);
 * proto。
 
 ```c
-/* ./include/net/sock.h
+/* include/net/sock.h
  * Networking protocol blocks we attach to sockets.
  * socket layer -> transport layer interface
  */
@@ -546,7 +546,7 @@ struct proto {
     ...
 } __randomize_layout;
 
-/* ./net/ipv4/tcp_ipv4.c */
+/*     net/ipv4/tcp_ipv4.c */
 struct proto tcp_prot = {
     .name             = "TCP",
     .owner            = THIS_MODULE,
