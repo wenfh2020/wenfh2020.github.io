@@ -238,7 +238,8 @@ int tcp_v4_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len) {
     if (!inet_opt || !inet_opt->opt.srr)
         daddr = fl4->daddr;
 
-    /* 如果 socket 在 connect 前没有指定源地址，那么设置路由选择的源地址。 */
+    /* 如果 socket 在 connect 前没有指定源地址，那么设置路由选择的源地址。 
+     * 确认源 ip，选择一个路由，看从哪个网卡出去，就选哪个 IP。 */
     if (!inet->inet_saddr)
         inet->inet_saddr = fl4->saddr;
     sk_rcv_saddr_set(sk, inet->inet_saddr);

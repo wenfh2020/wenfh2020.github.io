@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码] 网络协议栈 - write (tcp) 发送数据"
+title:  "[内核源码] 网络协议栈 - write (tcp) 发送数据（未完待续）"
 categories: kernel
 tags: linux kernel tcp sendmsg write
 author: wenfh2020
@@ -10,6 +10,9 @@ author: wenfh2020
 
 数据发送实现比较复杂，牵涉到 OSI 所有分层，所以需要对每个分层都要有所了解，才能理清工作流程和实现思路。
 
+> 最好的两个参考资料：
+> 1. 书籍：《Linux 内核源码剖析 - TCP/IP 实现》 上下两册。
+> 2. 博客：[Linux网络系统原理笔记](https://blog.csdn.net/qq_33588730/article/details/105177754)
 
 
 
@@ -34,13 +37,14 @@ author: wenfh2020
 ```shell
 __dev_queue_xmit(struct sk_buff * skb, struct net_device * sb_dev) (/root/linux-5.0.1/net/core/dev.c:3891)
 dev_queue_xmit(struct sk_buff * skb) (/root/linux-5.0.1/net/core/dev.c:3897)
+# 网络介质层。
 neigh_hh_output() (/root/linux-5.0.1/include/net/neighbour.h:498)
 neigh_output() (/root/linux-5.0.1/include/net/neighbour.h:506)
-# 数据链路层。
+# 邻居子系统。
 ip_finish_output2(struct net * net, struct sock * sk, struct sk_buff * skb) (/root/linux-5.0.1/net/ipv4/ip_output.c:229)
 NF_HOOK_COND() (/root/linux-5.0.1/include/linux/netfilter.h:278)
 ip_output(struct net * net, struct sock * sk, struct sk_buff * skb) (/root/linux-5.0.1/net/ipv4/ip_output.c:405)
-# ip 层。
+# 网络 ip 层。
 __tcp_transmit_skb(struct sock * sk, struct sk_buff * skb, int clone_it, gfp_t gfp_mask, u32 rcv_nxt) (/root/linux-5.0.1/net/ipv4/tcp_output.c:1032)
 tcp_transmit_skb() (/root/linux-5.0.1/net/ipv4/tcp_output.c:1176)
 tcp_write_xmit(struct sock * sk, unsigned int mss_now, int nonagle, int push_one, gfp_t gfp) (/root/linux-5.0.1/net/ipv4/tcp_output.c:2402)
@@ -48,7 +52,7 @@ __tcp_push_pending_frames(struct sock * sk, unsigned int cur_mss, int nonagle) (
 tcp_push(struct sock * sk, int flags, int mss_now, int nonagle, int size_goal) (/root/linux-5.0.1/net/ipv4/tcp.c:735)
 tcp_sendmsg_locked(struct sock * sk, struct msghdr * msg, size_t size) (/root/linux-5.0.1/net/ipv4/tcp.c:1406)
 tcp_sendmsg(struct sock * sk, struct msghdr * msg, size_t size) (/root/linux-5.0.1/net/ipv4/tcp.c:1443)
-# tcp 网络层。
+# tcp 传输层。
 sock_sendmsg_nosec() (/root/linux-5.0.1/net/socket.c:622)
 sock_sendmsg(struct socket * sock, struct msghdr * msg) (/root/linux-5.0.1/net/socket.c:632)
 sock_write_iter(struct kiocb * iocb, struct iov_iter * from) (/root/linux-5.0.1/net/socket.c:901)
@@ -67,7 +71,7 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 > 参考：[vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
 
-<div align=center><img src="/images/2021-08-27-10-48-23.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-08-28-09-33-38.png" data-action="zoom"/></div>
 
 ---
 
@@ -95,7 +99,7 @@ socket 是 Linux 一种 **特殊文件**，socket 在创建时（`sock_alloc_fil
 /* ./include/linux/fs.h */
 struct file_operations {
     struct module *owner;
-    loff_t (*llseek) (struct file *, loff_t, int);
+    ...
     ssize_t (*read) (struct file *, char __user *, size_t, loff_t *);
     ssize_t (*write) (struct file *, const char __user *, size_t, loff_t *);
     ...
@@ -104,7 +108,7 @@ struct file_operations {
 /* ./net/socket.c */
 static const struct file_operations socket_file_ops = {
     .owner      =    THIS_MODULE,
-    .llseek     =    no_llseek,
+    ...
     .read_iter  =    sock_read_iter,
     .write_iter =    sock_write_iter,
     ...
@@ -311,384 +315,40 @@ struct sock *sk_alloc(struct net *net, int family, gfp_t priority,
 
 ## 4. TCP 层
 
-在分析数据发送前，可以先宏观了解一下，数据发送的一些基本数据结构，以及它们之间的关系。
+### 4.1. sk_buff
+
+socket 数据缓存，sk_buff 用于保存接收或者发送的数据报文信息，目的为了方便网络协议栈的各层间进行无缝传递数据。sk_buff 数据存储的两个区域：
+
+* `data`：连续数据区（数据拷贝）。
+* `skb_shared_info`：共享数据区。
+
+> 详细请参考：《Linux 内核源码剖析 - TCP/IP 实现》- 第三章 - 套接口缓存
+
+<div align=center><img src="/images/2021-08-28-11-06-40.png" data-action="zoom"/></div>
+
+> 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 3.2.3
+
+<div align=center><img src="/images/2021-08-28-11-08-14.png" data-action="zoom"/></div>
+
+> 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 3.2.3
+
+tcp 的数据输出，数据首先是从应用层在流入内核，内核会将应用层传入的数据进行拷贝，拷贝到 `sk_buff` 链表中进行发送，参考下图。
+
+* `sk_write_queue`：发送队列的双向链表头。
+* `sk_send_head`：指向发送队列中下一个要发送的数据包。
+
+<div align=center><img src="/images/2021-08-27-14-11-43.png" data-action="zoom"/></div>
+
+> 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 30.1
 
 ---
 
-### 4.1. 结构关系
+### 4.2. mtu / mss
 
-<div align=center><img src="/images/2021-08-23-17-19-11.png" data-action="zoom"/></div>
+网络上传输的网络包大小是有限制的，理解 MTU 和 MSS 这两个限制概念。
 
-> 图片来源：[浅析TCP协议报文生成过程](https://blog.csdn.net/vipshop_fin_dev/article/details/103931691)
-
----
-
-### 4.2. sk_buffer
-
-```c
-/** 
- * struct sk_buff - socket buffer
- * @next: Next buffer in list
- * @prev: Previous buffer in list
- * @tstamp: Time we arrived/left
- * @rbnode: RB tree node, alternative to next/prev for netem/tcp
- * @sk: Socket we are owned by
- * @dev: Device we arrived on/are leaving by
- * @cb: Control buffer. Free for use by every layer. Put private vars here
- * @_skb_refdst: destination entry (with norefcount bit)
- * @sp: the security path, used for xfrm
- * @len: Length of actual data
- * @data_len: Data length
- * @mac_len: Length of link layer header
- * @hdr_len: writable header length of cloned skb
- * @csum: Checksum (must include start/offset pair)
- * @csum_start: Offset from skb->head where checksumming should start
- * @csum_offset: Offset from csum_start where checksum should be stored
- * @priority: Packet queueing priority
- * @ignore_df: allow local fragmentation
- * @cloned: Head may be cloned (check refcnt to be sure)
- * @ip_summed: Driver fed us an IP checksum
- * @nohdr: Payload reference only, must not modify header
- * @pkt_type: Packet class
- * @fclone: skbuff clone status
- * @ipvs_property: skbuff is owned by ipvs
- * @offload_fwd_mark: Packet was L2-forwarded in hardware
- * @offload_l3_fwd_mark: Packet was L3-forwarded in hardware
- * @tc_skip_classify: do not classify packet. set by IFB device
- * @tc_at_ingress: used within tc_classify to distinguish in/egress
- * @tc_redirected: packet was redirected by a tc action
- * @tc_from_ingress: if tc_redirected, tc_at_ingress at time of redirect
- * @peeked: this packet has been seen already, so stats have been
- *     done for it, don't do them again
- * @nf_trace: netfilter packet trace flag
- * @protocol: Packet protocol from driver
- * @destructor: Destruct function
- * @tcp_tsorted_anchor: list structure for TCP (tp->tsorted_sent_queue)
- * @_nfct: Associated connection, if any (with nfctinfo bits)
- * @nf_bridge: Saved data about a bridged frame - see br_netfilter.c
- * @skb_iif: ifindex of device we arrived on
- * @tc_index: Traffic control index
- * @hash: the packet hash
- * @queue_mapping: Queue mapping for multiqueue devices
- * @xmit_more: More SKBs are pending for this queue
- * @pfmemalloc: skbuff was allocated from PFMEMALLOC reserves
- * @active_extensions: active extensions (skb_ext_id types)
- * @ndisc_nodetype: router type (from link layer)
- * @ooo_okay: allow the mapping of a socket to a queue to be changed
- * @l4_hash: indicate hash is a canonical 4-tuple hash over transport
- *     ports.
- * @sw_hash: indicates hash was computed in software stack
- * @wifi_acked_valid: wifi_acked was set
- * @wifi_acked: whether frame was acked on wifi or not
- * @no_fcs:  Request NIC to treat last 4 bytes as Ethernet FCS
- * @csum_not_inet: use CRC32c to resolve CHECKSUM_PARTIAL
- * @dst_pending_confirm: need to confirm neighbour
- * @decrypted: Decrypted SKB
-  * @napi_id: id of the NAPI struct this skb came from
- * @secmark: security marking
- * @mark: Generic packet mark
- * @vlan_proto: vlan encapsulation protocol
- * @vlan_tci: vlan tag control information
- * @inner_protocol: Protocol (encapsulation)
- * @inner_transport_header: Inner transport layer header (encapsulation)
- * @inner_network_header: Network layer header (encapsulation)
- * @inner_mac_header: Link layer header (encapsulation)
- * @transport_header: Transport layer header
- * @network_header: Network layer header
- * @mac_header: Link layer header
- * @tail: Tail pointer
- * @end: End pointer
- * @head: Head of buffer
- * @data: Data head pointer
- * @truesize: Buffer size
- * @users: User count - see {datagram,tcp}.c
- * @extensions: allocated extensions, valid if active_extensions is nonzero
- */
-
-struct sk_buff {
-    union {
-        struct {
-            /* These two members must be first. */
-            struct sk_buff        *next;
-            struct sk_buff        *prev;
-
-            union {
-                struct net_device    *dev;
-                /* Some protocols might use this space to store information,
-                 * while device pointer would be NULL.
-                 * UDP receive path is one user.
-                 */
-                unsigned long        dev_scratch;
-            };
-        };
-        struct rb_node        rbnode; /* used in netem, ip4 defrag, and tcp stack */
-        struct list_head    list;
-    };
-
-    union {
-        struct sock        *sk;
-        int            ip_defrag_offset;
-    };
-
-    union {
-        ktime_t        tstamp;
-        u64        skb_mstamp_ns; /* earliest departure time */
-    };
-    /*
-     * This is the control buffer. It is free to use for every
-     * layer. Please put your private variables there. If you
-     * want to keep them across layers you have to do a skb_clone()
-     * first. This is owned by whoever has the skb queued ATM.
-     */
-    char            cb[48] __aligned(8);
-
-    union {
-        struct {
-            unsigned long    _skb_refdst;
-            void        (*destructor)(struct sk_buff *skb);
-        };
-        struct list_head    tcp_tsorted_anchor;
-    };
-
-#if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
-    unsigned long         _nfct;
-#endif
-    unsigned int        len,
-                data_len;
-    __u16            mac_len,
-                hdr_len;
-
-    /* Following fields are _not_ copied in __copy_skb_header()
-     * Note that queue_mapping is here mostly to fill a hole.
-     */
-    __u16            queue_mapping;
-
-/* if you move cloned around you also must adapt those constants */
-#ifdef __BIG_ENDIAN_BITFIELD
-#define CLONED_MASK    (1 << 7)
-#else
-#define CLONED_MASK    1
-#endif
-#define CLONED_OFFSET()        offsetof(struct sk_buff, __cloned_offset)
-
-    __u8            __cloned_offset[0];
-    __u8            cloned:1,
-                nohdr:1,
-                fclone:2,
-                peeked:1,
-                head_frag:1,
-                xmit_more:1,
-                pfmemalloc:1;
-#ifdef CONFIG_SKB_EXTENSIONS
-    __u8            active_extensions;
-#endif
-    /* fields enclosed in headers_start/headers_end are copied
-     * using a single memcpy() in __copy_skb_header()
-     */
-    /* private: */
-    __u32            headers_start[0];
-    /* public: */
-
-/* if you move pkt_type around you also must adapt those constants */
-#ifdef __BIG_ENDIAN_BITFIELD
-#define PKT_TYPE_MAX    (7 << 5)
-#else
-#define PKT_TYPE_MAX    7
-#endif
-#define PKT_TYPE_OFFSET()    offsetof(struct sk_buff, __pkt_type_offset)
-
-    __u8            __pkt_type_offset[0];
-    __u8            pkt_type:3;
-    __u8            ignore_df:1;
-    __u8            nf_trace:1;
-    __u8            ip_summed:2;
-    __u8            ooo_okay:1;
-
-    __u8            l4_hash:1;
-    __u8            sw_hash:1;
-    __u8            wifi_acked_valid:1;
-    __u8            wifi_acked:1;
-    __u8            no_fcs:1;
-    /* Indicates the inner headers are valid in the skbuff. */
-    __u8            encapsulation:1;
-    __u8            encap_hdr_csum:1;
-    __u8            csum_valid:1;
-
-#ifdef __BIG_ENDIAN_BITFIELD
-#define PKT_VLAN_PRESENT_BIT    7
-#else
-#define PKT_VLAN_PRESENT_BIT    0
-#endif
-#define PKT_VLAN_PRESENT_OFFSET()    offsetof(struct sk_buff, __pkt_vlan_present_offset)
-    __u8            __pkt_vlan_present_offset[0];
-    __u8            vlan_present:1;
-    __u8            csum_complete_sw:1;
-    __u8            csum_level:2;
-    __u8            csum_not_inet:1;
-    __u8            dst_pending_confirm:1;
-#ifdef CONFIG_IPV6_NDISC_NODETYPE
-    __u8            ndisc_nodetype:2;
-#endif
-
-    __u8            ipvs_property:1;
-    __u8            inner_protocol_type:1;
-    __u8            remcsum_offload:1;
-#ifdef CONFIG_NET_SWITCHDEV
-    __u8            offload_fwd_mark:1;
-    __u8            offload_l3_fwd_mark:1;
-#endif
-#ifdef CONFIG_NET_CLS_ACT
-    __u8            tc_skip_classify:1;
-    __u8            tc_at_ingress:1;
-    __u8            tc_redirected:1;
-    __u8            tc_from_ingress:1;
-#endif
-#ifdef CONFIG_TLS_DEVICE
-    __u8            decrypted:1;
-#endif
-
-#ifdef CONFIG_NET_SCHED
-    __u16            tc_index;    /* traffic control index */
-#endif
-
-    union {
-        __wsum        csum;
-        struct {
-            __u16    csum_start;
-            __u16    csum_offset;
-        };
-    };
-    __u32            priority;
-    int            skb_iif;
-    __u32            hash;
-    __be16            vlan_proto;
-    __u16            vlan_tci;
-#if defined(CONFIG_NET_RX_BUSY_POLL) || defined(CONFIG_XPS)
-    union {
-        unsigned int    napi_id;
-        unsigned int    sender_cpu;
-    };
-#endif
-#ifdef CONFIG_NETWORK_SECMARK
-    __u32        secmark;
-#endif
-
-    union {
-        __u32        mark;
-        __u32        reserved_tailroom;
-    };
-
-    union {
-        __be16        inner_protocol;
-        __u8        inner_ipproto;
-    };
-
-    __u16            inner_transport_header;
-    __u16            inner_network_header;
-    __u16            inner_mac_header;
-
-    __be16            protocol;
-    __u16            transport_header;
-    __u16            network_header;
-    __u16            mac_header;
-
-    /* private: */
-    __u32            headers_end[0];
-    /* public: */
-
-    /* These elements must be at the end, see alloc_skb() for details.  */
-    sk_buff_data_t        tail;
-    sk_buff_data_t        end;
-    unsigned char        *head,
-                *data;
-    unsigned int        truesize;
-    refcount_t        users;
-
-#ifdef CONFIG_SKB_EXTENSIONS
-    /* only useable after checking ->active_extensions != 0 */
-    struct skb_ext        *extensions;
-#endif
-};
-```
-
-```c
-/* This is what the send packet queuing engine uses to pass
- * TCP per-packet control information to the transmission code.
- * We also store the host-order sequence numbers in here too.
- * This is 44 bytes if IPV6 is enabled.
- * If this grows please adjust skbuff.h:skbuff->cb[xxx] size appropriately.
- */
-struct tcp_skb_cb {
-    __u32        seq;        /* Starting sequence number    */
-    __u32        end_seq;    /* SEQ + FIN + SYN + datalen    */
-    union {
-        /* Note : tcp_tw_isn is used in input path only
-         * (isn chosen by tcp_timewait_state_process())
-         *
-         * tcp_gso_segs/size are used in write queue only,
-         * cf tcp_skb_pcount()/tcp_skb_mss()
-         */
-        __u32      tcp_tw_isn;
-        struct {
-            u16    tcp_gso_segs;
-            u16    tcp_gso_size;
-        };
-    };
-    __u8        tcp_flags;    /* TCP header flags. (tcp[13])    */
-
-    __u8        sacked;        /* State flags for SACK. */
-#define TCPCB_SACKED_ACKED   0x01    /* SKB ACK'd by a SACK block */
-#define TCPCB_SACKED_RETRANS 0x02    /* SKB retransmitted */
-#define TCPCB_LOST           0x04    /* SKB is lost */
-#define TCPCB_TAGBITS        0x07    /* All tag bits */
-#define TCPCB_REPAIRED       0x10    /* SKB repaired (no skb_mstamp_ns) */
-#define TCPCB_EVER_RETRANS   0x80    /* Ever retransmitted frame */
-#define TCPCB_RETRANS        (TCPCB_SACKED_RETRANS|TCPCB_EVER_RETRANS| \
-                TCPCB_REPAIRED)
-
-    __u8        ip_dsfield;    /* IPv4 tos or IPv6 dsfield */
-    __u8        txstamp_ack:1, /* Record TX timestamp for ack? */
-                eor:1,         /* Is skb MSG_EOR marked? */
-                has_rxtstamp:1,/* SKB has a RX timestamp */
-                unused:5;
-    __u32       ack_seq;       /* Sequence number ACK'd */
-    union {
-        struct {
-            /* There is space for up to 24 bytes */
-            __u32 in_flight:30,     /* Bytes in flight at transmit */
-                  is_app_limited:1, /* cwnd not fully used? */
-                  unused:1;
-            /* pkts S/ACKed so far upon tx of skb, incl retrans: */
-            __u32 delivered;
-            /* start of send pipeline phase */
-            u64 first_tx_mstamp;
-            /* when we reached the "delivered" count */
-            u64 delivered_mstamp;
-        } tx;   /* only used for outgoing skbs */
-        union {
-            struct inet_skb_parm    h4;
-#if IS_ENABLED(CONFIG_IPV6)
-            struct inet6_skb_parm    h6;
-#endif
-        } header;    /* For incoming skbs */
-        struct {
-            __u32 flags;
-            struct sock *sk_redir;
-            void *data_end;
-        } bpf;
-    };
-};
-
-#define TCP_SKB_CB(__skb)    ((struct tcp_skb_cb *)&((__skb)->cb[0]))
-```
-
----
-
-### 4.3. mtu / mss
-  
-  tcp_send_mss 会计算 MSS 即 Max Segment Size。这个意思是说，在网络上传输的网络包的大小是有限制的，而这个限制在最底层开始就有。MTU（Maximum Transmission Unit，最大传输单元）是二层的一个定义，以以太网为例 MTU 为1500个Byte，前面有6个Byte的目标MAC地址，6个Byte的源 MAC 地址，2个Byte的类型，后面有4个Byte的 CRC 校验，共1518个Byte。在IP层，一个IP数据报在以太网中传输，如果它的长度大于该 MTU 值，就要进行分片传输。
-  
-  在 TCP 层有个 MSS，等于 MTU 减去IP头，再减去 TCP 头，也就是在不分片的情况下，TCP 里面放的最大内容。在这里 max 是 struct sk_buff 的最大数据长度，skb->len 是当前已经占用的skb的数据长度，相减得到当前skb的剩余数据空间。
+* MTU：Maximum Transmission Unit。
+* MSS：Max Segment Size。
 
 <div align=center><img src="/images/2021-06-09-06-44-13.png" data-action="zoom"/></div>
 
@@ -700,11 +360,15 @@ struct tcp_skb_cb {
 
 ---
 
-### 4.4. 数据发送逻辑
+### 4.3. 数据发送逻辑
 
-`tcp_sendmsg_locked` 主要工作是要把用户层的数据填充到发送队列中。
+`tcp_sendmsg_locked` 主要工作是要把用户层的数据填充到内核的发送队列进行发送。
 
 > 源码注释参考：《Linux 内核源码剖析 - TCP/IP 实现》- 下册 - 第 30 章 TCP 的输出。
+
+<div align=center><img src="/images/2021-08-28-13-56-17.png" data-action="zoom"/></div>
+
+> 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 下册 - 30.3.3 传输接口层的实现。
 
 ```c
 int tcp_sendmsg_locked(struct sock *sk, struct msghdr *msg, size_t size) {
@@ -823,6 +487,7 @@ new_segment:
         copied += copy;
         if (!msg_data_left(msg)) {
             if (unlikely(flags & MSG_EOR))
+                /* #define MSG_EOR 0x80 -- End of record */
                 TCP_SKB_CB(skb)->eor = 1;
             /* 用户层数据已经拷贝完毕，进行发送。 */
             goto out;
@@ -889,9 +554,6 @@ out:
 ---
 
 * [Linux socket 数据发送类函数实现(四)](https://blog.csdn.net/u010039418/article/details/82768030)
-* [Linux内核中sk_buff结构详解](https://www.jianshu.com/p/3738da62f5f6)
-* [sk_buff 结构体 以及 完全解释](https://blog.csdn.net/gsls181711/article/details/42001567)
-* [sk_buff 整理笔记（一、数据结构）](https://blog.csdn.net/YuZhiHui_No1/article/details/38666589)
 * [Linux网络系统原理笔记](https://blog.csdn.net/qq_33588730/article/details/105177754)
 * [TCP发送源码学习(1)--tcp_sendmsg](http://sunjiangang.blog.chinaunix.net/uid-9543173-id-3546189.html)
 * [Linux操作系统学习笔记（二十二）网络通信之发包](https://ty-chen.github.io/linux-kernel-tcp-send/)
