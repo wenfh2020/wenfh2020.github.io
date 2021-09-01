@@ -32,10 +32,10 @@ hiredis 是 redis 的一个 c - client，异步通信非常高效。单链接异
 
 ### 1.1. demo
 
-hiredis demo，除了提供访问 redis 的同步异步接口，还支持支持大部分主流事件库，它非常使用。
+hiredis demo，除了提供访问 redis 的同步异步接口，还支持支持大部分主流事件库，它非常实用。
 
 ```shell
-[wenfh2020:~/src/other/hiredis/examples]$ tree
+[wenfh2020: hiredis/examples]$ tree
 .
 ├── CMakeLists.txt
 ├── example-ae.c
@@ -287,7 +287,7 @@ hiredis 异步回调快，是建立在 redis 快的基础上的，详细请参�
 
 hiredis 接口抽象非常好，封装了第三方库访问接口。例如它结合 `libev`，Linux 系统下，libev 默认用 epoll 多路复用技术处理读写事件。用户调用 hiredis 的发送数据接口，并不会马上将数据发送出去，而是先保存在发送缓冲区，然后当 libev 触发写事件，才会将发送缓冲区的数据发送出去。
 
-而 redis 的网络事件也是通过多路复用事件驱动处理，client 当收到写事件，它向 redis 服务发送了一个命令集合，相当于 redis 的 `pipline` 管道技术，将多个命令打包发送。redis 接收处理完，将回复命令集合通过 epoll 触发写事件进行发送。相当于每次通信都能处理多个命令，减少了大量 RTT(Round-Trip Time) 往返时间。
+而 redis 的网络事件也是通过多路复用事件驱动处理，client 当收到写事件，它向 redis 服务发送了一个命令集合，相当于 redis 的 [pipeline 管道技术](https://wenfh2020.com/2021/03/14/redis-pipeline/)，将多个命令打包发送。redis 接收处理完，将回复命令集合通过 epoll 触发写事件进行发送。相当于每次通信都能处理多个命令，减少了大量 RTT (Round-Trip Time) 往返时间。
 
 ```c
 // 向事件库注册 socket 对应的读写事件。
@@ -308,3 +308,4 @@ static int redisLibevAttach(EV_P_ redisAsyncContext *ac) {
 * [redis 为啥这么快](https://wenfh2020.com/2020/05/29/redis-fast/)
 * [高性能服务异步通信逻辑](https://wenfh2020.com/2020/06/11/server-async-logic/)
 * [[redis 源码走读] 多线程通信 I/O](https://wenfh2020.com/2020/04/13/redis-multithreading-mode/)
+* [[hiredis 源码走读] redis pipeline](https://wenfh2020.com/2021/03/14/redis-pipeline/)

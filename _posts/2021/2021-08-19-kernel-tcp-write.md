@@ -37,7 +37,7 @@ author: wenfh2020
 ```shell
 __dev_queue_xmit(struct sk_buff * skb, struct net_device * sb_dev) (/root/linux-5.0.1/net/core/dev.c:3891)
 dev_queue_xmit(struct sk_buff * skb) (/root/linux-5.0.1/net/core/dev.c:3897)
-# 网络介质层。
+# 网络介质层（数据发往设备）。
 neigh_hh_output() (/root/linux-5.0.1/include/net/neighbour.h:498)
 neigh_output() (/root/linux-5.0.1/include/net/neighbour.h:506)
 # 邻居子系统。
@@ -71,7 +71,9 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 > 参考：[vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
 
-<div align=center><img src="/images/2021-08-28-09-33-38.png" data-action="zoom"/></div>
+* 函数调用层次。
+
+<div align=center><img src="/images/2021-09-01-12-07-31.png" data-action="zoom"/></div>
 
 ---
 
@@ -83,11 +85,11 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 ---
 
-## 2. VFS 层
+## 2. 数据发送层次
 
-### 2.1. 文件与socket
+### 2.1. VFS 层
 
-socket 是 Linux 一种 **特殊文件**，socket 在创建时（`sock_alloc_file`）会关联对应的文件处理，所以我们在 TCP 通信过程中，发送数据，用户层调用 `write` 接口，在内核里实际是调用了 `sock_write_iter` 接口。
+* 文件与 socket。socket 是 Linux 一种 **特殊文件**，socket 在创建时（`sock_alloc_file`）会关联对应的文件处理，所以我们在 TCP 通信过程中，发送数据，用户层调用 `write` 接口，在内核里实际是调用了 `sock_write_iter` 接口。
 
 > 详细参考：[《[内核源码] 网络协议栈 - socket (tcp)》](https://wenfh2020.com/2021/07/13/kernel-sys-socket/) - 4.1 文件部分
 
@@ -130,12 +132,10 @@ struct file *sock_alloc_file(struct socket *sock, int flags, const char *dname) 
 
 ---
 
-### 2.2. 系统调用
-
-发送数据从用户层到内核，通过 fd 文件描述符，找到对应的文件，然后再找到与文件关联的对应的 socket，进行发送数据。
+* 数据发送逻辑。发送数据从用户层通过系统调用进入到内核逻辑，通过 fd 文件描述符，找到对应的文件，然后再找到与文件关联的对应的 socket，进行发送数据。
 
 ```shell
-write --> fd --> file --> sock_sendmsg
+write() --> fd --> file --> sock_sendmsg()
 ```
 
 ```c
@@ -208,7 +208,7 @@ int sock_sendmsg(struct socket *sock, struct msghdr *msg) {
 
 ---
 
-## 3. socket 层
+### 2.2. socket 层
 
 fd --> file --> socket --> sock --> tcp
 
@@ -313,9 +313,9 @@ struct sock *sk_alloc(struct net *net, int family, gfp_t priority,
 
 ---
 
-## 4. TCP 层
+### 2.3. TCP 层
 
-### 4.1. sk_buff
+#### 2.3.1. sk_buff
 
 socket 数据缓存，sk_buff 用于保存接收或者发送的数据报文信息，目的为了方便网络协议栈的各层间进行无缝传递数据。sk_buff 数据存储的两个区域：
 
@@ -343,7 +343,7 @@ tcp 的数据输出，数据首先是从应用层在流入内核，内核会将�
 
 ---
 
-### 4.2. mtu / mss
+#### 2.3.2. MTU / MSS
 
 网络上传输的网络包大小是有限制的，理解 MTU 和 MSS 这两个限制概念。
 
@@ -360,11 +360,14 @@ tcp 的数据输出，数据首先是从应用层在流入内核，内核会将�
 
 ---
 
-### 4.3. 数据发送逻辑
+#### 2.3.3. 数据发送逻辑
 
-`tcp_sendmsg_locked` 主要工作是要把用户层的数据填充到内核的发送队列进行发送。
+* `tcp_sendmsg_locked` 主要工作是要把用户层的数据填充到内核的发送队列进行发送。
 
-> 源码注释参考：《Linux 内核源码剖析 - TCP/IP 实现》- 下册 - 第 30 章 TCP 的输出。
+> 源码注释参考：
+> 1. 《Linux 内核源码剖析 - TCP/IP 实现》- 下册 - 第 30 章 TCP 的输出。
+> 2. [TCP的发送系列 — tcp_sendmsg()的实现（一）](https://www.cnblogs.com/aiwz/p/6333235.html)
+> 3. [TCP的发送系列 — tcp_sendmsg()的实现（二）](https://www.cnblogs.com/aiwz/p/6333233.html)
 
 <div align=center><img src="/images/2021-08-28-13-56-17.png" data-action="zoom"/></div>
 
@@ -540,9 +543,479 @@ out:
 }
 ```
 
+* tcp 头部。
+
+```c
+/* include/uapi/linux/tcp.h */
+struct tcphdr {
+    __be16 source;
+    __be16 dest;
+    __be32 seq;
+    __be32 ack_seq;
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    __u16 res1:4,
+        doff:4,
+        fin:1,
+        syn:1,
+        rst:1,
+        psh:1,
+        ack:1,
+        urg:1,
+        ece:1,
+        cwr:1;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    __u16 doff:4,
+        res1:4,
+        cwr:1,
+        ece:1,
+        urg:1,
+        ack:1,
+        psh:1,
+        rst:1,
+        syn:1,
+        fin:1;
+#else
+#error "Adjust your <asm/byteorder.h> defines"
+#endif    
+    __be16  window;
+    __sum16 check;
+    __be16  urg_ptr;
+};
+```
+
+<div align=center><img src="/images/2021-06-11-16-02-53.png" data-action="zoom"/></div>
+
+> 图片来源：《图解 TCP_IP》 -- 6.7 TCP 首部格式
+
+<div align=center><img src="/images/2021-06-08-08-22-52.png" data-action="zoom"/></div>
+
+> 图片来源：《网络是怎样连接的》
+
+* `tcp_transmit_skb` 填充 tcp 头部，将缓存数据进行发送。从上面发送逻辑，如果数据填充到缓冲区后，需要调用接口将数据发送出去，`tcp_push`，`tcp_push_one`，`__tcp_push_pending_frames` 这几个接口内部都要调用 `tcp_write_xmit`，`tcp_write_xmit` 需要将数据通过 `tcp_transmit_skb` 填充 TCP 头部，从传输层发送到 IP 层处理。
+
+<div align=center><img src="/images/2021-08-31-11-37-56.png" data-action="zoom"/></div>
+
+```c
+static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
+               int push_one, gfp_t gfp) {
+    struct tcp_sock *tp = tcp_sk(sk);
+    struct sk_buff *skb;
+    ...
+    while ((skb = tcp_send_head(sk))) {
+        ...
+        if (unlikely(tcp_transmit_skb(sk, skb, 1, gfp)))
+            break;
+        ...
+    }
+    ...
+}
+
+static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
+                gfp_t gfp_mask) {
+    return __tcp_transmit_skb(sk, skb, clone_it, gfp_mask,
+                  tcp_sk(sk)->rcv_nxt);
+}
+
+/* This routine actually transmits TCP packets queued in by
+ * tcp_do_sendmsg().  This is used by both the initial
+ * transmission and possible later retransmissions.
+ * All SKB's seen here are completely headerless.  It is our
+ * job to build the TCP header, and pass the packet down to
+ * IP so it can do the same plus pass the packet off to the
+ * device.
+ *
+ * We are working here with either a clone of the original
+ * SKB, or a fresh unique copy made by the retransmit engine.
+ */
+static int __tcp_transmit_skb(struct sock *sk, struct sk_buff *skb,
+                  int clone_it, gfp_t gfp_mask, u32 rcv_nxt) {
+    const struct inet_connection_sock *icsk = inet_csk(sk);
+    struct inet_sock *inet;
+    struct tcp_sock *tp;
+    struct tcp_skb_cb *tcb;
+    struct tcp_out_options opts;
+    unsigned int tcp_options_size, tcp_header_size;
+    struct sk_buff *oskb = NULL;
+    struct tcp_md5sig_key *md5;
+    struct tcphdr *th;
+    u64 prior_wstamp;
+    int err;
+
+    ...
+    tp = tcp_sk(sk);
+    ...
+
+    inet = inet_sk(sk);
+    tcb = TCP_SKB_CB(skb);
+    memset(&opts, 0, sizeof(opts));
+
+    if (unlikely(tcb->tcp_flags & TCPHDR_SYN))
+        tcp_options_size = tcp_syn_options(sk, skb, &opts, &md5);
+    else
+        tcp_options_size = tcp_established_options(sk, skb, &opts, &md5);
+    tcp_header_size = tcp_options_size + sizeof(struct tcphdr);
+    ...
+    skb_push(skb, tcp_header_size);
+    skb_reset_transport_header(skb);
+
+    skb_orphan(skb);
+    skb->sk = sk;
+    skb->destructor = skb_is_tcp_pure_ack(skb) ? __sock_wfree : tcp_wfree;
+    skb_set_hash_from_sk(skb, sk);
+    refcount_add(skb->truesize, &sk->sk_wmem_alloc);
+
+    skb_set_dst_pending_confirm(skb, sk->sk_dst_pending_confirm);
+
+    /* Build TCP header and checksum it. */
+    th = (struct tcphdr *)skb->data;
+    th->source         = inet->inet_sport;
+    th->dest           = inet->inet_dport;
+    th->seq            = htonl(tcb->seq);
+    th->ack_seq        = htonl(rcv_nxt);
+    *(((__be16 *)th) + 6) = htons(((tcp_header_size >> 2) << 12) | tcb->tcp_flags);
+
+    th->check          = 0;
+    th->urg_ptr        = 0;
+
+    /* The urg_mode check is necessary during a below snd_una win probe */
+    if (unlikely(tcp_urg_mode(tp) && before(tcb->seq, tp->snd_up))) {
+        if (before(tp->snd_up, tcb->seq + 0x10000)) {
+            th->urg_ptr = htons(tp->snd_up - tcb->seq);
+            th->urg = 1;
+        } else if (after(tcb->seq + 0xFFFF, tp->snd_nxt)) {
+            th->urg_ptr = htons(0xFFFF);
+            th->urg = 1;
+        }
+    }
+
+    tcp_options_write((__be32 *)(th + 1), tp, &opts);
+    skb_shinfo(skb)->gso_type = sk->sk_gso_type;
+    if (likely(!(tcb->tcp_flags & TCPHDR_SYN))) {
+        th->window = htons(tcp_select_window(sk));
+        tcp_ecn_send(sk, skb, th, tcp_header_size);
+    } else {
+        /* RFC1323: The window in SYN & SYN/ACK segments
+         * is never scaled.
+         */
+        th->window = htons(min(tp->rcv_wnd, 65535U));
+    }
+    ...
+    /* ip_queue_xmit */
+    err = icsk->icsk_af_ops->queue_xmit(sk, skb, &inet->cork.fl);
+    ...
+    return err;
+}
+```
+
 ---
 
-## 5. 参考
+### 2.4. IP 层
+
+* IPv4 IP 头部。
+
+```c
+/* include/uapi/linux/ip.h */
+struct iphdr {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    __u8    ihl:4,
+            version:4;
+#elif defined (__BIG_ENDIAN_BITFIELD)
+    __u8    version:4,
+            ihl:4;
+#else
+#error "Please fix <asm/byteorder.h>"
+#endif
+    __u8    tos;
+    __be16  tot_len;
+    __be16  id;
+    __be16  frag_off;
+    __u8    ttl;
+    __u8    protocol;
+    __sum16 check;
+    __be32  saddr;
+    __be32  daddr;
+    /*The options start here. */
+};
+```
+
+<div align=center><img src="/images/2021-06-11-13-43-59.png" data-action="zoom"/></div>
+
+>《图解 TCP_IP》 -- 4.7 IPv4 首部
+
+<div align=center><img src="/images/2021-06-08-08-40-07.png" data-action="zoom"/></div>
+
+> 图片来源：《网络是怎样连接的》
+
+* IP 层数据发送逻辑。选取路由，填充 IP 头，调用 `ip_local_out` 发送 IP 包。
+
+```c
+/* net/ipv4/ip_output.c */
+static inline int ip_queue_xmit(struct sock *sk, struct sk_buff *skb,
+                struct flowi *fl) {
+    return __ip_queue_xmit(sk, skb, fl, inet_sk(sk)->tos);
+}
+
+
+/* Note: skb->sk can be different from sk, in case of tunnels */
+int __ip_queue_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
+            __u8 tos) {
+    struct inet_sock *inet = inet_sk(sk);
+    struct net *net = sock_net(sk);
+    struct ip_options_rcu *inet_opt;
+    struct flowi4 *fl4;
+    struct rtable *rt;
+    struct iphdr *iph;
+    int res;
+    ...
+    inet_opt = rcu_dereference(inet->inet_opt);
+    fl4 = &fl->u.ip4;
+    rt = skb_rtable(skb);
+    if (rt)
+        goto packet_routed;
+
+    /* 选取路由。
+     * Make sure we can route this packet. */
+    rt = (struct rtable *)__sk_dst_check(sk, 0);
+    if (!rt) {
+        __be32 daddr;
+
+        /* Use correct destination address if we have options. */
+        daddr = inet->inet_daddr;
+        if (inet_opt && inet_opt->opt.srr)
+            daddr = inet_opt->opt.faddr;
+
+        /* If this fails, retransmit mechanism of transport layer will
+         * keep trying until route appears or the connection times
+         * itself out.
+         */
+        rt = ip_route_output_ports(net, fl4, sk,
+                       daddr, inet->inet_saddr,
+                       inet->inet_dport,
+                       inet->inet_sport,
+                       sk->sk_protocol,
+                       RT_CONN_FLAGS_TOS(sk, tos),
+                       sk->sk_bound_dev_if);
+        if (IS_ERR(rt))
+            goto no_route;
+        sk_setup_caps(sk, &rt->dst);
+    }
+    skb_dst_set_noref(skb, &rt->dst);
+
+packet_routed:
+    ...
+    /* 创建 IP 头，往里面填充数据。
+     * OK, we know where to send it, allocate and build IP header. */
+    skb_push(skb, sizeof(struct iphdr) + (inet_opt ? inet_opt->opt.optlen : 0));
+    skb_reset_network_header(skb);
+    iph = ip_hdr(skb);
+    *((__be16 *)iph) = htons((4 << 12) | (5 << 8) | (tos & 0xff));
+    if (ip_dont_fragment(sk, &rt->dst) && !skb->ignore_df)
+        iph->frag_off = htons(IP_DF);
+    else
+        iph->frag_off = 0;
+    iph->ttl      = ip_select_ttl(inet, &rt->dst);
+    iph->protocol = sk->sk_protocol;
+    ip_copy_addrs(iph, fl4);
+
+    /* Transport layer set skb->h.foo itself. */
+    if (inet_opt && inet_opt->opt.optlen) {
+        iph->ihl += inet_opt->opt.optlen >> 2;
+        ip_options_build(skb, &inet_opt->opt, inet->inet_daddr, rt, 0);
+    }
+
+    ip_select_ident_segs(net, skb, sk,
+                 skb_shinfo(skb)->gso_segs ?: 1);
+    ...
+    /* 发送 IP 包。 */
+    res = ip_local_out(net, sk, skb);
+    ...
+}
+
+int ip_local_out(struct net *net, struct sock *sk, struct sk_buff *skb) {
+    int err;
+
+    err = __ip_local_out(net, sk, skb);
+    if (likely(err == 1))
+        err = dst_output(net, sk, skb);
+
+    return err;
+}
+
+int __ip_local_out(struct net *net, struct sock *sk, struct sk_buff *skb) {
+    struct iphdr *iph = ip_hdr(skb);
+    iph->tot_len = htons(skb->len);
+    ip_send_check(iph);
+    ...
+    skb->protocol = htons(ETH_P_IP);
+    /* 截获数据包，对数据包进行干预，例如 ip_tables。 */
+    return nf_hook(NFPROTO_IPV4, NF_INET_LOCAL_OUT,
+               net, sk, skb, NULL, skb_dst(skb)->dev,
+               dst_output);
+}
+
+/* Output packet to network from transport.  */
+static inline int dst_output(struct net *net, struct sock *sk, struct sk_buff *skb) {
+    return skb_dst(skb)->output(net, sk, skb);
+}
+
+int ip_output(struct net *net, struct sock *sk, struct sk_buff *skb) {
+    struct net_device *dev = skb_dst(skb)->dev;
+
+    IP_UPD_PO_STATS(net, IPSTATS_MIB_OUT, skb->len);
+
+    skb->dev = dev;
+    skb->protocol = htons(ETH_P_IP);
+
+    return NF_HOOK_COND(NFPROTO_IPV4, NF_INET_POST_ROUTING,
+                net, sk, skb, NULL, dev,
+                ip_finish_output,
+                !(IPCB(skb)->flags & IPSKB_REROUTED));
+}
+```
+
+---
+
+### 2.5. MAC 层
+
+IP 层调用 `ip_finish_output` 进入 MAC 层，对 skb 添加二层头（填充 MAC 信息）。
+
+而数据发往下一跳的 MAC 地址，需要发送 arp 报文获取，这些操作会在 `邻居子系统` 里实现。然后，数据再从 MAC 层通过 `dev_queue_xmit` 发往设备层。
+
+> 参考：《Linux 内核源码剖析 - TCP/IP 实现》- 上册 - 第十七章 邻居子系统
+
+---
+
+因为在以太网上传输 IP 数据报时，以太网设备并不能识别（IPv4） 32 位 IP 地址，而是以 48 位以太网地址传输以太网数据包的。以太网帧本体的前端是以太网的首部，它总共占 14 个字节。分别是 6 个字节的目标 MAC 地址，6 个字节的源 MAC 地址以及 2 个字节的上层协议类型。紧随帧头后面的是数据。一个数据帧所能容纳的最大数据范围是 46 ~ 1500 个字节。帧尾是一个叫做 FCS（Frame Check Sequence，帧检验序列）的 4 个字节。
+
+<div align=center><img src="/images/2021-09-01-11-40-03.png" data-action="zoom"/></div>
+
+> 内容和图片来源 《图解 TCP_IP》 - 3.3.3 以太网的历史。
+
+```c
+static int ip_finish_output(struct net *net, struct sock *sk, struct sk_buff *skb) {
+    ...
+    return ip_finish_output2(net, sk, skb);
+}
+
+static int ip_finish_output2(struct net *net, struct sock *sk, struct sk_buff *skb) {
+    struct dst_entry *dst = skb_dst(skb);
+    struct rtable *rt = (struct rtable *)dst;
+    struct net_device *dev = dst->dev;
+    unsigned int hh_len = LL_RESERVED_SPACE(dev);
+    struct neighbour *neigh;
+    u32 nexthop;
+    ...
+    /* 获取下一跳。从 struct rtable 路由表里面找到下一跳 */
+    nexthop = (__force u32) rt_nexthop(rt, ip_hdr(skb)->daddr);
+    /* 获取邻居子系统（下一跳肯定在和本机在同一个局域网中。）*/
+    neigh = __ipv4_neigh_lookup_noref(dev, nexthop);
+    if (unlikely(!neigh))
+        neigh = __neigh_create(&arp_tbl, &nexthop, dev, false);
+    if (!IS_ERR(neigh)) {
+        ...
+        /* 通过邻居子系统输出，将下一跳的 MAC 头填充到 skb 缓存中，并将数据发送到设备层。 
+         * 如果下一跳的 MAC 地址还没有，需要通过发送 arp 包获取。*/
+        res = neigh_output(neigh, skb);
+        ...
+    }
+    ...
+}
+
+/* include/net/neighbour.h */
+static inline int neigh_output(struct neighbour *n, struct sk_buff *skb) {
+    /* struct hh_cache 结构用来缓存二层首部。 */
+    const struct hh_cache *hh = &n->hh;
+
+    if ((n->nud_state & NUD_CONNECTED) && hh->hh_len)
+        /* 如果目的路由缓存了链路层的首部，快速输出到下一层。 */
+        return neigh_hh_output(hh, skb);
+    else
+        /* neigh_resolve_output。
+         * 还没有二层信息缓存，需要发送 arp 获取，然后再发到下一层。*/
+        return n->output(n, skb);
+}
+
+/* net/core/neighbour.c */
+int neigh_resolve_output(struct neighbour *neigh, struct sk_buff *skb) {
+    int rc = 0;
+
+    /* neigh_event_send 确保输出的邻居状态有效，才能发送数据包。 */
+    if (!neigh_event_send(neigh, skb)) {
+        int err;
+        struct net_device *dev = neigh->dev;
+        unsigned int seq;
+
+        /* 缓存二层头。 */
+        if (dev->header_ops->cache && !neigh->hh.hh_len)
+            neigh_hh_init(neigh);
+
+        do {
+            ...
+            /* 填充 MAC 包头 */
+            err = dev_hard_header(skb, dev, ntohs(skb->protocol),
+                          neigh->ha, NULL, skb->len);
+        } while (read_seqretry(&neigh->ha_lock, seq));
+
+        if (err >= 0)
+            rc = dev_queue_xmit(skb);
+        ...
+    }
+    ...
+}
+
+static inline int neigh_hh_output(const struct hh_cache *hh, struct sk_buff *skb) {
+    unsigned int hh_alen = 0;
+    unsigned int seq;
+    unsigned int hh_len;
+
+    /* 填充二层头到 skb. */
+    do {
+        seq = read_seqbegin(&hh->hh_lock);
+        hh_len = hh->hh_len;
+        if (likely(hh_len <= HH_DATA_MOD)) {
+            hh_alen = HH_DATA_MOD;
+
+            /* skb_push() would proceed silently if we have room for
+             * the unaligned size but not for the aligned size:
+             * check headroom explicitly.
+             */
+            if (likely(skb_headroom(skb) >= HH_DATA_MOD)) {
+                /* this is inlined by gcc */
+                memcpy(skb->data - HH_DATA_MOD, hh->hh_data,
+                       HH_DATA_MOD);
+            }
+        } else {
+            hh_alen = HH_DATA_ALIGN(hh_len);
+
+            if (likely(skb_headroom(skb) >= hh_alen)) {
+                memcpy(skb->data - hh_alen, hh->hh_data,
+                       hh_alen);
+            }
+        }
+    } while (read_seqretry(&hh->hh_lock, seq));
+    ...
+    __skb_push(skb, hh_len);
+    return dev_queue_xmit(skb);
+}
+```
+
+---
+
+### 2.6. 设备层
+
+数据从应用层发出，经过各种包装，来到设备层，通过 `dev_queue_xmit` 发送到硬件输出。
+
+`dev_queue_xmit` 处理逻辑：若支持流量控制，则将等待输出的数据包根据规则加入到输出网络设备队列中排队，并在合适的时机激活网络输出软中断，依次将报文从队列中取出通过网络设备输出。若不支持流量控制，则直接将数据包从网络设备输出。
+
+> 详细内容请参考：《Linux 内核源码剖析 - TCP/IP 实现》- 上册 - 第八章 - 接口层的输出。
+
+<div align=center><img src="/images/2021-09-01-11-13-13.png" data-action="zoom"/></div>
+
+> 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 上册 - 第八章 - 接口层的输出。
+
+---
+
+## 3. 参考
 
 * 《图解 TCP_IP》
 * 《网络是怎样连接的》
@@ -550,15 +1023,12 @@ out:
 * 《Linux 内核源码剖析 - TCP/IP 实现》
 * [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
 * [[内核源码] 网络协议栈 - socket (tcp)](https://wenfh2020.com/2021/07/13/kernel-sys-socket/)
-
----
-
-* [Linux socket 数据发送类函数实现(四)](https://blog.csdn.net/u010039418/article/details/82768030)
 * [Linux网络系统原理笔记](https://blog.csdn.net/qq_33588730/article/details/105177754)
+* [浅析TCP协议报文生成过程](https://blog.csdn.net/vipshop_fin_dev/article/details/103931691)
+* [Linux socket 数据发送类函数实现(四)](https://blog.csdn.net/u010039418/article/details/82768030)
 * [TCP发送源码学习(1)--tcp_sendmsg](http://sunjiangang.blog.chinaunix.net/uid-9543173-id-3546189.html)
 * [Linux操作系统学习笔记（二十二）网络通信之发包](https://ty-chen.github.io/linux-kernel-tcp-send/)
 * [TCP数据发送之TSO/GSO](https://blog.csdn.net/xiaoyu_750516366/article/details/85461457)
 * [linux tcp GSO和TSO实现](https://www.cnblogs.com/lvyilong316/p/6818231.html)
-* [浅析TCP协议报文生成过程](https://blog.csdn.net/vipshop_fin_dev/article/details/103931691)
 * [Linux Kernel TCP/IP Stack\|Linux网络硬核系列](https://mp.weixin.qq.com/s/63HBz8DGPjLeNd43kaOunw)
 * [TCP的发送系列 — tcp_sendmsg()的实现（一）](https://www.cnblogs.com/aiwz/p/6333235.html)
