@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码] 网络协议栈 - write (tcp) 发送数据（未完待续）"
+title:  "[内核源码] 网络协议栈 - write (tcp) 发送数据"
 categories: kernel
 tags: linux kernel tcp sendmsg write
 author: wenfh2020
