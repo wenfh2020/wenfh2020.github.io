@@ -89,18 +89,18 @@ git clone https://github.com/wenfh2020/kernel_test.git
 cd kernel_test/test_epoll_tcp_server
 # make 编译
 make
-# 通过 qume 启动内核测试用例。
+# 通过 qemu 启动内核测试用例。
 make rootfs
-# 在 qume 窗口输入小写字符 's', 启动测试用例服务程序。
+# 在 qemu 窗口输入小写字符 's', 启动测试用例服务程序。
 s
-# 在 qume 窗口输入小写字符 'c', 启动测试用例客户端程序。
+# 在 qemu 窗口输入小写字符 'c', 启动测试用例客户端程序。
 c
 
 # 通过 qemu 命令启动内核测试用例进行调试。
 qemu-system-x86_64 -kernel ../../arch/x86/boot/bzImage -initrd ../rootfs.img -append nokaslr -S -s
-# 在 qume 窗口输入小写字符 's', 启动测试用例服务程序。
+# 在 qemu 窗口输入小写字符 's', 启动测试用例服务程序。
 s
-# 在 qume 窗口输入小写字符 'c', 启动测试用例客户端程序。
+# 在 qemu 窗口输入小写字符 'c', 启动测试用例客户端程序。
 c
 ```
 

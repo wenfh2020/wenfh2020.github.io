@@ -17,7 +17,7 @@ author: wenfh2020
 
 **图难于其易，为大于其细，天下难事，必作于易，天下大事，必作于细。** -- 《道德经》
 
-**你若盛开，蝴蝶自来！你若精彩，天自安排**
+**你若盛开，蝴蝶自来！你若精彩，天自安排。**
 
 ## 1. 常用查询
 
@@ -37,6 +37,9 @@ author: wenfh2020
 
 * [云风的 BLOG](https://blog.codingnow.com/)
 * [峰云就她了](http://xiaorui.cc/)
+* [public0821](https://segmentfault.com/u/public0821)
+* [Ty Chen](https://ty-chen.github.io/)
+* [书忆江南](https://blog.csdn.net/qq_33588730/article/details/105177754)
 
 ---
 

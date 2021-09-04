@@ -24,7 +24,7 @@ author: wenfh2020
 
 ## 1. 通信分层
 
-* OSI 模型。
+* OSI 模型 / TCP/IP 分层模型。详细分层原理请参考：[网络分层概述](https://segmentfault.com/a/1190000008741770#comment-area)。
 
 <div align=center><img src="/images/2021-06-11-13-36-24.png" data-action="zoom"/></div>
 
@@ -1025,10 +1025,10 @@ static inline int neigh_hh_output(const struct hh_cache *hh, struct sk_buff *skb
 * [[内核源码] 网络协议栈 - socket (tcp)](https://wenfh2020.com/2021/07/13/kernel-sys-socket/)
 * [Linux网络系统原理笔记](https://blog.csdn.net/qq_33588730/article/details/105177754)
 * [浅析TCP协议报文生成过程](https://blog.csdn.net/vipshop_fin_dev/article/details/103931691)
-* [Linux socket 数据发送类函数实现(四)](https://blog.csdn.net/u010039418/article/details/82768030)
 * [TCP发送源码学习(1)--tcp_sendmsg](http://sunjiangang.blog.chinaunix.net/uid-9543173-id-3546189.html)
 * [Linux操作系统学习笔记（二十二）网络通信之发包](https://ty-chen.github.io/linux-kernel-tcp-send/)
 * [TCP数据发送之TSO/GSO](https://blog.csdn.net/xiaoyu_750516366/article/details/85461457)
 * [linux tcp GSO和TSO实现](https://www.cnblogs.com/lvyilong316/p/6818231.html)
 * [Linux Kernel TCP/IP Stack\|Linux网络硬核系列](https://mp.weixin.qq.com/s/63HBz8DGPjLeNd43kaOunw)
 * [TCP的发送系列 — tcp_sendmsg()的实现（一）](https://www.cnblogs.com/aiwz/p/6333235.html)
+* [ARP协议与邻居子系统剖析](https://cloud.tencent.com/developer/article/1792299)

@@ -17,11 +17,9 @@ Centos 等 Linux 平台常用命令，记录起来，方便使用。
 
 <div align=center><img src="/images/2021-06-26-06-17-04.png" data-action="zoom"/></div>
 
-> 图片来源于网络。
-
 <div align=center><img src="/images/2021-06-26-06-17-30.jpeg" data-action="zoom"/></div>
 
-> 图片来源于网络。
+> 图片来源于 [Linux Performance](https://www.brendangregg.com/linuxperf.html)。
 
 ## 1. 系统
 
@@ -51,15 +49,7 @@ cat /proc/cpuinfo | grep "processor" | wc -l
 
 ---
 
-### 1.4. 查看系统内存情况
-
-```shell
-free -m
-```
-
----
-
-### 1.5. 查看系统信息
+### 1.4. 查看系统信息
 
 ```shell
 uname -a
@@ -69,7 +59,7 @@ cat /etc/redhat-release
 
 ---
 
-### 1.6. 软链接
+### 1.5. 软链接
 
 ```shell
 ln -s source dest
@@ -77,27 +67,7 @@ ln -s source dest
 
 ---
 
-### 1.7. 防火墙
-
-```shell
-service iptables start
-service iptables stop
-```
-
----
-
-### 1.8. 开放端口
-
-```shell
-# centos
-vi /etc/sysconfig/iptables
--A INPUT -m state --state NEW -m tcp -p tcp --dport 19007 -j ACCEPT
-systemctl restart iptables.service
-```
-
----
-
-### 1.9. 压缩解压
+### 1.6. 压缩解压
 
 ```shell
 zip -r mydata.zip mydata
@@ -108,7 +78,7 @@ tar zxf mydata.tar.gz
 
 ---
 
-### 1.10. 更新文件配置
+### 1.7. 更新文件配置
 
 ```shell
 source /etc/profile
@@ -116,7 +86,7 @@ source /etc/profile
 
 ---
 
-### 1.11. 机器是多少位
+### 1.8. 机器是多少位
 
 ```shell
 file /sbin/init 或者 file /bin/ls
@@ -124,7 +94,7 @@ file /sbin/init 或者 file /bin/ls
 
 ---
 
-### 1.12. 环境变量
+### 1.9. 环境变量
 
 ```shell
 env
@@ -132,7 +102,7 @@ env
 
 ---
 
-### 1.13. 用户切换
+### 1.10. 用户切换
 
 ```shell
 su root
@@ -141,7 +111,7 @@ exit
 
 ---
 
-### 1.14. 日期
+### 1.11. 日期
 
 ```shell
 date -d @1361542596 +"%Y-%m-%d %H:%M:%S"
@@ -149,7 +119,7 @@ date -d @1361542596 +"%Y-%m-%d %H:%M:%S"
 
 ---
 
-### 1.15. 同步时间
+### 1.12. 同步时间
 
 ```shell
 # 修改中国时间
@@ -163,7 +133,7 @@ ntpdate ntp.aliyun.com
 
 ---
 
-### 1.16. 进程绝对路径
+### 1.13. 进程绝对路径
 
 ```shell
 top -c
@@ -174,9 +144,49 @@ ps -ef
 
 ---
 
-## 2. 文本
+## 2. 内存
 
-### 2.1. awk
+### 2.1. 查看系统内存情况
+
+```shell
+free -m
+```
+
+---
+
+### 2.2. 查看进程内存映像
+
+```shell
+pmaps -p <pid>
+```
+
+---
+
+### 2.3. vmstat
+
+命令查看内存转换情况，跟踪转换的频率
+
+swap 原因：系统内存不足会产生 swap，磁盘的速度读写速度是比较慢的，这会影响性能。
+
+```shell
+free
+vmstat
+top
+```
+
+vmstat 1 每秒输出一次统计结果
+
+不是 swap 空间占用性能就会下降，要看 si so 频率。
+
+<div align=center><img src="/images/image-20191113090543751.png" data-action="zoom"/></div>
+
+> 参考 [《Linux vmstat命令详解》](https://www.cnblogs.com/ftl1012/p/vmstat.html)
+
+---
+
+## 3. 文本
+
+### 3.1. awk
 
 awk [操作] [文件名]
 
@@ -193,7 +203,7 @@ ps -ef | grep gdb | grep -v grep | awk '{print $3}' | xargs sudo kill -9
 
 ---
 
-### 2.2. sed
+### 3.2. sed
 
 字符串处理。
 
@@ -216,7 +226,7 @@ sed -i '' 's/\/usr\/local\/bin/\/usr\/bin/g' /etc/init.d/fdfs_storaged
 
 ---
 
-### 2.3. grep
+### 3.3. grep
 
 |   命令    | 描述                                             |
 | :-------: | ------------------------------------------------ |
@@ -255,9 +265,9 @@ grep -r "pic" --include "*.md" .
 
 ---
 
-## 3. 磁盘文件
+## 4. 磁盘文件
 
-### 3.1. ls
+### 4.1. ls
 
 | 选项  | 描述                                                             |
 | :---: | ---------------------------------------------------------------- |
@@ -279,7 +289,7 @@ ls -lR|grep "^-"|wc -l
 
 ---
 
-### 3.2. tree
+### 4.2. tree
 
 显示目录结构
 
@@ -289,7 +299,7 @@ tree /dir/ -L 1
 
 ---
 
-### 3.3. du
+### 4.3. du
 
 用于显示目录或文件的大小。
 
@@ -308,7 +318,7 @@ du | sort -n -k1
 
 ---
 
-### 3.4. df
+### 4.4. df
 
 用于显示目前在Linux系统上的文件系统的磁盘使用情况统计。
 
@@ -319,7 +329,7 @@ df -h
 
 ---
 
-### 3.5. tail
+### 4.5. tail
 
 ```shell
 tail -f file
@@ -328,7 +338,7 @@ tail -f file | grep '123'
 
 ---
 
-### 3.6. find
+### 4.6. find
 
 ```shell
 man find
@@ -376,9 +386,9 @@ find . -name '*.so' -type f -exec cp -f {} ../../bin/modules \;
 
 ---
 
-## 4. 权限
+## 5. 权限
 
-### 4.1. 执行权限
+### 5.1. 执行权限
 
 ```shell
 chmod +x _file
@@ -387,9 +397,9 @@ chown -Rf imdev:imdev _folder
 
 ---
 
-## 5. 进程线程
+## 6. 进程线程
 
-### 5.1. 查找进程
+### 6.1. 查找进程
 
 ```shell
 ps aux | grep _proxy_srv
@@ -397,7 +407,7 @@ ps aux | grep _proxy_srv
 
 ---
 
-### 5.2. 进程启动绝对路径
+### 6.2. 进程启动绝对路径
 
 ```shell
 ps -ef | grep xxx
@@ -406,7 +416,7 @@ ll /proc/pid ｜ grep exe
 
 ---
 
-### 5.3. 查进程名称对应的 pid
+### 6.3. 查进程名称对应的 pid
 
 ```shell
 ps -ef | grep process_name | grep -v "grep" | awk '{print $2}' 
@@ -415,7 +425,7 @@ pidof redis-server
 
 ---
 
-### 5.4. 进程启动时间
+### 6.4. 进程启动时间
 
 ```shell
 ps -p PID -o lstart
@@ -424,7 +434,7 @@ ps -ef | grep redis | awk '{print $2}' | xargs ps -o pid,tty,user,comm,lstart,et
 
 ---
 
-### 5.5. 查看线程
+### 6.5. 查看线程
 
 ```shell
 top -H -p pid
@@ -434,9 +444,29 @@ pstree -p 1234 | wc -l
 
 ---
 
-## 6. 网络
+## 7. 网络
 
-### 6.1. scp
+### 7.1. 防火墙
+
+```shell
+service iptables start
+service iptables stop
+```
+
+---
+
+### 7.2. 开放端口
+
+```shell
+# centos
+vi /etc/sysconfig/iptables
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 19007 -j ACCEPT
+systemctl restart iptables.service
+```
+
+---
+
+### 7.3. scp
 
 1. scp -P端口号 本地文件路径 username@服务器ip:目的路径
 2. 从服务器下载文件到本地，scp -P端口号 username@ip:路径 本地路径
@@ -449,7 +479,7 @@ scp /Users/wenfh2020/src/other/c_test/normal/proc/main.cpp root@120.25.44.163:/h
 
 ---
 
-### 6.2. rsync
+### 7.4. rsync
 
 ```shell
 #!/bin/sh
@@ -476,7 +506,7 @@ rsync -avz --exclude="*.o" \
 
 ---
 
-### 6.3. nslookup
+### 7.5. nslookup
 
 查域名对应的 ip
 
@@ -493,7 +523,7 @@ Address: 120.25.83.163
 
 ---
 
-### 6.4. ssh
+### 7.6. ssh
 
 ```shell
 ssh -p22 root@120.25.44.163
@@ -501,7 +531,7 @@ ssh -p22 root@120.25.44.163
 
 ---
 
-### 6.5. tcpdump
+### 7.7. tcpdump
 
 Linux tcpdump [命令](https://www.runoob.com/linux/linux-comm-tcpdump.html)用于倾倒网络传输数据
 
@@ -531,7 +561,7 @@ tcpdump -i eth0 host api.fyber.com and port 80 -w 123.cap
 
 ---
 
-### 6.6. wget
+### 7.8. wget
 
 ```shell
 wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.rpm
@@ -539,7 +569,7 @@ wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.r
 
 ---
 
-### 6.7. netstat
+### 7.9. netstat
 
 netstat 命令用于显示网络状态
 
@@ -562,13 +592,13 @@ netstat -nat|grep -i "80"|wc -l
 
 ---
 
-### 6.8. ss
+### 7.10. ss
 
 参考：[Linux网络状态工具ss命令使用详解](http://www.ttlsa.com/linux-command/ss-replace-netstat/)
 
 ---
 
-### 6.9. lsof
+### 7.11. lsof
 
 * 查询端口对应的信息
 
@@ -584,7 +614,7 @@ lsof -p <pid>
 
 ---
 
-### 6.10. nc
+### 7.12. nc
 
 ```shell
 # 启动监听 8333 端口的服务。
@@ -595,9 +625,9 @@ nc -nvv 127.0.0.1 8333
 
 ---
 
-## 7. 其它
+## 8. 其它
 
-### 7.1. 有空格的路径 grep 操作
+### 8.1. 有空格的路径 grep 操作
 
 ```shell
 infos=`grep -r $src_pic_path --include '*.md' . | tr " " "\?"`
@@ -605,7 +635,7 @@ infos=`grep -r $src_pic_path --include '*.md' . | tr " " "\?"`
 
 ---
 
-### 7.2. 有空格路径进行 sed 操作
+### 8.2. 有空格路径进行 sed 操作
 
 ```shell
 sed -i '' "s:$src_pic_path:\.\/pic:g" $file
@@ -613,7 +643,7 @@ sed -i '' "s:$src_pic_path:\.\/pic:g" $file
 
 ---
 
-### 7.3. printf
+### 8.3. printf
 
 ```shell
 printf '%d\n' 0xA
@@ -625,7 +655,7 @@ printf "%-10s %-11s" "end:" $end_time
 
 ---
 
-### 7.4. xargs
+### 8.4. xargs
 
 是给命令传递参数的一个过滤器。
 
@@ -637,7 +667,7 @@ find / -name *.jpg -type f -print | xargs tar -cvzf images.tar.gz
 
 ---
 
-### 7.5. mysql 常用命令
+### 8.5. mysql 常用命令
 
 不同平台下，启动 mysql 服务。
 
@@ -651,9 +681,9 @@ systemctl start mysqld
 
 ---
 
-## 8. 工具
+## 9. 工具
 
-### 8.1. top
+### 9.1. top
 
 ```shell
 #显示完整命令
@@ -670,31 +700,31 @@ shit + p
 
 ---
 
-### 8.2. htop
+### 9.2. htop
 
 <div align=center><img src="/images/image-20191112180503405.png" data-action="zoom"/></div>
 
 ---
 
-### 8.3. iftop
+### 9.3. iftop
 
 <div align=center><img src="/images/image-20191112175351966.png" data-action="zoom"/></div>
 
 ---
 
-### 8.4. nload
+### 9.4. nload
 
 <div align=center><img src="/images/image-20191112180429804.png" data-action="zoom"/></div>
 
 ---
 
-### 8.5. nethogs
+### 9.5. nethogs
 
 <div align=center><img src="/images/image-20191112175719733.png" data-action="zoom"/></div>
 
 ---
 
-### 8.6. iotop
+### 9.6. iotop
 
 ```shell
 [root:...rver/src/test/test_pressure]# iotop -botq |grep kim-
@@ -711,29 +741,7 @@ shit + p
 
 ---
 
-### 8.7. vmstat
-
-命令查看内存转换情况，跟踪转换的频率
-
-swap 原因：系统内存不足会产生 swap，磁盘的速度读写速度是比较慢的，这会影响性能。
-
-```shell
-free
-vmstat
-top
-```
-
-vmstat 1 每秒输出一次统计结果
-
-不是 swap 空间占用性能就会下降，要看 si so 频率。
-
-<div align=center><img src="/images/image-20191113090543751.png" data-action="zoom"/></div>
-
-> 参考 [《Linux vmstat命令详解》](https://www.cnblogs.com/ftl1012/p/vmstat.html)
-
----
-
-### 8.8. strace
+### 9.7. strace
 
 > macos: dtruss
 
@@ -756,6 +764,6 @@ strace -s 512 -o /tmp/sentinel.log ./redis-sentinel sentinel.conf
 
 ---
 
-## 9. 参考
+## 10. 参考
 
 * [Linux 命令大全](https://www.runoob.com/linux/linux-command-manual.html)

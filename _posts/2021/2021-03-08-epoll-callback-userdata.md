@@ -181,14 +181,13 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
                    void *priv, int depth, bool ep_locked)
 {
     ...
+    /* 就绪列表（ep->rdllist）数据分片到 txlist 进行发送处理。 */
     write_lock_irq(&ep->lock);
     list_splice_init(&ep->rdllist, &txlist);
     WRITE_ONCE(ep->ovflist, NULL);
     write_unlock_irq(&ep->lock);
 
-    /*
-     * Now call the callback function.
-     */
+    /* ep_send_events_proc */
     res = (*sproc)(ep, &txlist, priv);
     ...
 }
@@ -288,7 +287,7 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
 libev epoll_event.data 传的是 fd 和索引的（uint64_t）组合，这样添加一个索引对数据进行保护，感觉更安全一些。
 
 ```c
-/* ev_poll.c */
+/* ev_epoll.c */
 static void
 epoll_modify (EV_P_ int fd, int oev, int nev) {
   struct epoll_event ev;
@@ -296,12 +295,19 @@ epoll_modify (EV_P_ int fd, int oev, int nev) {
   /* store the generation counter in the upper 32 bits, the fd in the lower 32 bits */
   ev.data.u64 = (uint64_t)(uint32_t)fd
               | ((uint64_t)(uint32_t)++anfds[fd].egen << 32);
+  ev.events   = (nev & EV_READ  ? EPOLLIN  : 0)
+              | (nev & EV_WRITE ? EPOLLOUT : 0);
+
+  if (ecb_expect_true (!epoll_ctl (backend_fd, oev && oldmask != nev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, fd, &ev)))
+    return;
   ...
 }
 
 static void
 epoll_poll (EV_P_ ev_tstamp timeout) {
-  ...
+    ...
+    eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, EV_TS_TO_MSEC (timeout));
+    ...
     for (i = 0; i < eventcnt; ++i) {
         struct epoll_event *ev = epoll_events + i;
 

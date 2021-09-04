@@ -24,7 +24,7 @@ layout: default
         <article itemscope itemtype="http://schema.org/BlogPosting">
             {{content}}
         </article>
-        <hr />
+        <!-- <hr />
         <div>
             <ul class="post-copyright">
                 <li class="post-copyright-author">
@@ -39,7 +39,7 @@ layout: default
                     <strong>版权声明： </strong>本文可以自由拷贝，转载，请注明出处，谢谢！如果觉得文章不错，也可以赏个 ☕️。
                 </li>
             </ul>
-        </div>
+        </div> -->
         <!-- <div class="post-widgets">
             <div id="needsharebutton-postbottom">
                 <span class="btn">
@@ -49,8 +49,8 @@ layout: default
             </div>
         </div> -->
         <hr />
+
         <div class="reward-container">
-            <!-- <div> 好好学习，天天向上 🌞 </div> -->
             <button
                 onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
                 ☕️
@@ -92,7 +92,7 @@ layout: default
 
         <!-- <h2 id="comments">Comments</h2>
         {% include comments.html %} -->
-        <div id="gitalk-container"></div>
+        <!-- <div id="gitalk-container"></div> -->
     </div>
     <button class="anchor"><i class="fa fa-anchor"></i></button>
     <div class="right">
@@ -220,8 +220,8 @@ layout: default
     }
 </style> -->
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
-<script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+<script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script> -->
 
 <!-- 
 <script>
@@ -242,7 +242,7 @@ layout: default
     });
 </script> -->
 
-<script type="text/javascript">
+<!-- <script type="text/javascript">
     var title = location.pathname.substr(0, 50);//截取路径的前50个字符作为标识符
     var gitalk = new Gitalk({
 
@@ -256,7 +256,7 @@ layout: default
         language: 'zh-CN',
     });
     gitalk.render('gitalk-container');
-</script>
+</script> -->
 
 <script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 
