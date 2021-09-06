@@ -104,7 +104,7 @@
         ul {
             >h2 {
                 margin-left: -40px;
-                color: #6a6b6b;
+                color: #000;
             }
             li {
                 line-height: 1.8;
@@ -114,8 +114,8 @@
                     width: 135px;
                 }
                 .title {
-                    font-weight: bold;
-                    color: #223253;
+                    // font-weight: bold;
+                    color: #536ea8;
                     transition: 0.3s ease;
                     &:hover {
                         color: #4d6dad;
@@ -127,12 +127,12 @@
                 .categories {
                     padding: 0 15px;
                     i {
-                        color: #9e9d9d;
+                        color: #cac8c8;
                     }
                     a {
                         padding: 0 5px;
-                        background-color: #9e9d9d;
-                        color: #fff;
+                        background-color: rgb(240, 234, 234);
+                        color: #536ea8;
                         font-size: 90%;
                         transition: 0.3s ease;
                         &:hover {
