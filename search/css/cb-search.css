@@ -7,6 +7,10 @@
                 margin: 0 15%;
             }
 
+            .dropdown-menu li a:hover {
+                background-color: #06fa12;
+            }
+
 			.cb-search-tool ul{
                  width: 70% ;
                  white-space:nowrap;
