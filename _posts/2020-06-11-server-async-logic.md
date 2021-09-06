@@ -17,7 +17,7 @@ author: wenfh2020
 
 ## 1. 逻辑
 
-* 高性能异步非阻塞服务，底层一般用多路复用 I/O 模型对事件进行管理，Linux 平台用 epoll。
+* 高性能异步非阻塞服务，底层一般用多路复用 I/O 模型对事件进行管理，例如 Linux 平台的 epoll。
 * epoll 支持异步事件逻辑。epoll_wait 会将就绪事件从内核中取出进行处理。
 * 服务处理事件，每个 fd 对应一个事件处理器 callback 处理取出的 events。
 * callback 逻辑被分散为逻辑步骤 `step`，这些步骤一般是异步串行处理，时序跟同步差不多，只是异步逻辑可能需要回调多次才能处理完一个完整的逻辑。
@@ -124,6 +124,7 @@ Cmd::STATUS CmdTestRedis::execute_steps(int err, void* data) {
             if (status == Cmd::STATUS::ERROR) {
                 return response_http(ERR_FAILED, "redis failed!");
             }
+            set_next_step();
             return status;
         }
         case E_STEP_REDIS_SET_CALLBACK: {

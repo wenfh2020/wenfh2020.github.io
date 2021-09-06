@@ -16,7 +16,8 @@
                 </li>
 
                 {% for my_page in site.pages %}
-                {% if my_page.type == 'page' and my_page.url != '/tag/' and  my_page.url != '/about/' and  my_page.url != '/collection/' %}
+                {% if my_page.type == 'page' and my_page.url != '/tag/' and my_page.url != '/about/' and my_page.url !=
+                '/collection/' %}
                 <li>
                     {% if my_page.url == page.url %}
                     <a class="active" href="{{ my_page.url | prepend: site.baseurl }}">
@@ -28,6 +29,11 @@
                 </li>
                 {% endif %}
                 {% endfor %}
+                <li>
+                    <a id="cb-search-btn">
+                        <i class=" fa fa-tags"></i> 搜索
+                    </a>
+                </li>
             </ul>
         </nav>
     </div>
