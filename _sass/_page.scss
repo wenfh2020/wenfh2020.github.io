@@ -92,9 +92,11 @@
         float: left;
         padding: 20px 30px;
         line-height: 1.5;
-        font-size: 13.5px;
+        font-size: 14px;
         background-color: #ffffff;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.4),0 0 30px rgba(10,10,0,0.1) inset;
+        background-clip: border-box;
+        border: 1px solid rgba(0,0,0,.125);
+        // box-shadow: 0 1px 2px rgba(0,0,0,0.4),0 0 30px rgba(10,10,0,0.1) inset;
         >h1 {
             margin-bottom: -10px;
         }
@@ -111,7 +113,7 @@
                 color: #888888;
                 time {
                     display: inline-block;
-                    width: 105px;
+                    width: 111px;
                 }
                 .title {
                     // font-weight: bold;
@@ -131,7 +133,7 @@
                     }
                     a {
                         padding: 0 5px;
-                        background-color: #f1eeee;
+                        background-color: #f7f3f3;
                         color: #536ea8;
                         font-size: 90%;
                         transition: 0.3s ease;
@@ -218,18 +220,15 @@
         }
     }
 }
-@media screen and (max-width:1200px) and (min-width: 1100px) {
-    .page {
-        width: 90%;
-    }
-}
-@media screen and (max-width: 1200px) {
+
+@media screen and (max-width: 750px) {
     .page {
         width: 93%;
         .left {
             width: 100%;
             float: left;
             padding: 10px 14px;
+            line-height: 1.5;
             font-size: 14px;
             >h1 {
                 font-size: 25px;

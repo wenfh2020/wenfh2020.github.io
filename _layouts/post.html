@@ -92,7 +92,7 @@ layout: default
 
         <!-- <h2 id="comments">Comments</h2>
         {% include comments.html %} -->
-        <!-- <div id="gitalk-container"></div> -->
+        <div id="gitalk-container"></div>
     </div>
     <button class="anchor"><i class="fa fa-anchor"></i></button>
     <div class="right">
@@ -220,11 +220,11 @@ layout: default
     }
 </style> -->
 
-<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
-<script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script> -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+<script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
 
-<!-- 
-<script>
+
+<!-- <script>
     NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
         NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
             var gitalk = new Gitalk({
@@ -242,13 +242,12 @@ layout: default
     });
 </script> -->
 
-<!-- <script type="text/javascript">
+<script type="text/javascript">
     var title = location.pathname.substr(0, 50);//截取路径的前50个字符作为标识符
     var gitalk = new Gitalk({
-
         // gitalk的主要参数
-        clientID: 'cbffd8a945287feb204b',
-        clientSecret: '29c4c663a2bf092979d3ba1002acbe4e5fd95990',
+        clientID: "{{ site.gitalk_clientid }}",
+        clientSecret: "{{ site.gitalk_secret }}",
         repo: 'wenfh2020.github.io',
         owner: 'wenfh2020',
         admin: ['wenfh2020'],
@@ -256,7 +255,7 @@ layout: default
         language: 'zh-CN',
     });
     gitalk.render('gitalk-container');
-</script> -->
+</script>
 
 <script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 
