@@ -28,8 +28,9 @@ html {
     height: 100%;
 }
 body {
-    font-family: 'Helvetica Neue',Helvetica,Arial,'Microsoft YaHei',sans-serif;
-    color: #343741;
+    font-family: 'trebuchet ms', verdana, helvetica, arial, sans-serif;
+    font-size: 13.5px;
+    color: #212529;
     background-image: url(https://gw.alicdn.com/tfs/TB1xzbUumBYBeNjy0FeXXbnmFXa-125-121.png);
     position: relative;
     min-height: 100%;
@@ -50,19 +51,19 @@ hr {
 
 ///////////
 h1 {
-    font-size: 23.5px;
+    font-size: 21.5px;
 }
 h2 {
-    font-size: 22.5px;
+    font-size: 20.5px;
     border-bottom: 1px solid #eee;
     margin: 50px 0 25px;
 }
 h3 {
-    font-size: 21px;
+    font-size: 19px;
     margin: 50px 0 20px;
 }
 h4 {
-    font-size: 19px;
+    font-size: 18px;
     margin: 30px 0 10px;
 }
 h5 {
@@ -74,14 +75,16 @@ h6 {
     margin: 10px 0 5px;
 }
 blockquote {
-    color: #444;
     border-left: 5px solid #D6DBDF;
     padding-left: 15px;
     background: rgba(112,138,153,.1);
-    padding: 10px 20px;
-    margin: 0 0 20px;
+    padding: 3px 20px;
+    margin: 0 0 5px;
     p:last-of-type{
         margin: 0;
+    }
+    p {
+        color: #666;
     }
 }
 table {
@@ -93,7 +96,7 @@ table {
     // table-layout:fixed;
     // width: 100%;
     border: 0;
-    margin: 8px 0;
+    // margin: 8px 0;
     border-collapse: collapse;
     thead {
         border-bottom: 1px solid #777;
@@ -121,6 +124,8 @@ table {
     }
 }
 p {
+    font-weight: 400;
+    color: #212529;
     margin: 0 0 7px;
 }
 img {

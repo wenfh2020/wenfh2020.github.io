@@ -32,7 +32,7 @@
                 color: #000;
             }
             li {
-                color: #343741;
+                color: #212529;
                 margin: 0;
             }
         }
@@ -62,21 +62,24 @@
 @media screen and (max-width: 770px) {
     .page[post] {
         .left {
-            font-size: 15px;
+            font-size: 13.5px;
+            h1 {
+                font-size: 21.5px;
+            }
             h2 {
-                font-size: 24px;
+                font-size: 18.5px;
             }
             h3 {
-                font-size: 20px;
+                font-size: 19px;
             }
             h4 {
                 font-size: 18px;
             }
             h5 {
-                font-size: 16px;
+                font-size: 17px;
             }
             h6 {
-                font-size: 15px;
+                font-size: 16px;
             }
         }
     }
