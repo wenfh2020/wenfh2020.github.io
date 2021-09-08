@@ -159,16 +159,16 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
 
 部分命令会修改或删除过期时间。
 
-| 命令      | 描述                                    |
-| :-------- | :-------------------------------------- |
-| del       | 删除指定 key 。                         |
-| unlink    | 逻辑删除指定 key，数据在线程异步删除。  |
-| set       | 设置一个键的值，ex 选项可以设置过期时间 |
-| persist   | 移除 key 的过期时间                     |
-| rename    | 重命名 key，会删除原来 key 的过期时间。 |
-| flushdb   | 清空当前数据库。                        |
+|   命令    | 描述                                    |
+| :-------: | :-------------------------------------- |
+|    del    | 删除指定 key 。                         |
+|  unlink   | 逻辑删除指定 key，数据在线程异步删除。  |
+|    set    | 设置一个键的值，ex 选项可以设置过期时间 |
+|  persist  | 移除 key 的过期时间                     |
+|  rename   | 重命名 key，会删除原来 key 的过期时间。 |
+|  flushdb  | 清空当前数据库。                        |
 | flushall  | 清空所有数据。                          |
-| expire    | 设置 key 的过期时间秒数。               |
+|  expire   | 设置 key 的过期时间秒数。               |
 | expireat  | 设置一个 UNIX 时间戳的过期时间。        |
 | pexpireat | 设置key到期 UNIX 时间戳，以毫秒为单位。 |
 

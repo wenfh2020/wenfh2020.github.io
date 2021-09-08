@@ -24,11 +24,13 @@ author: wenfh2020
 
 核心逻辑在 `epoll_wait` 的内核实现 `ep_send_events_proc` 函数里，关键在 <font color=red> 就绪列表 </font>。
 
+`epoll_wait` 的相关工作流程：
+
 * 监控的 fd 产生用户关注的事件，内核将 fd (epi)节点信息添加进就绪列表。
 * 内核发现就绪列表有数据，唤醒进程工作。
 * 内核将 fd 信息从就绪列表中删除。
 * fd 对应就绪事件信息从内核空间拷贝到用户空间。
-* 拷贝完成后，检查事件模式是 LT 还是 ET，如果不是 ET，重新将 fd 信息添加回就绪列表，下次重新触发。
+* 事件数据拷贝完成后，检查事件模式是 LT 还是 ET，如果不是 ET，重新将 fd 信息添加回就绪列表，下次重新触发。
 
 ---
 
@@ -56,10 +58,10 @@ static int do_epoll_wait(int epfd, struct epoll_event __user *events,
     ...
 }
 
-/* 检查就绪队列，如果就绪队列有就绪事件，就将事件信息从内核空间发送到用户空间。 */
+/* 检查就绪列表，如果就绪列表有就绪事件，就将事件信息从内核空间发送到用户空间。 */
 static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events, int maxevents, long timeout) {
     ...
-    /* 检查就绪队列，如果有就绪事件就进入发送环节。 */
+    /* 检查就绪列表，如果有就绪事件就进入发送环节。 */
     ...
 send_events:
     /* 有就绪事件就发送到用户空间，否则继续获取数据直到超时。 */
@@ -86,7 +88,7 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
                        struct list_head *, void *),
                   void *priv, int depth, bool ep_locked) {
     ...
-    /* 将就绪队列分片链接到 txlist 链表中。 */
+    /* 将就绪列表分片链接到 txlist 链表中。 */
     list_splice_init(&ep->rdllist, &txlist);
     /* 执行 ep_send_events_proc */
     res = (*sproc)(ep, &txlist, priv);
@@ -95,12 +97,12 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
 
 static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head, void *priv) {
     ...
-    // 遍历处理 txlist（原 ep->rdllist 数据）就绪队列结点，获取事件拷贝到用户空间。
+    // 遍历处理 txlist（原 ep->rdllist 数据）就绪列表结点，获取事件拷贝到用户空间。
     list_for_each_entry_safe (epi, tmp, head, rdllink) {
         if (esed->res >= esed->maxevents)
             break;
         ...
-        /* 先从就绪队列中删除 epi，如果是 LT 模式，就绪事件还没处理完，再把它添加回去。 */
+        /* 先从就绪列表中删除 epi，如果是 LT 模式，就绪事件还没处理完，再把它添加回去。 */
         list_del_init(&epi->rdllink);
 
         /* 获取 epi 对应 fd 的就绪事件。 */
@@ -154,21 +156,38 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 我们仔细看 `ep_scan_ready_list` 源码，当 `ep->rdllist` 不为空时，会唤醒进程。
 
-当多个进程共享同一个 "epoll fd" 时，多个进程同时在等待资源，当某个事件触发时，会唤醒某个进程处理事件；
+当多个进程共享同一个 "epoll fd" 时，多个进程同时在等待资源，当某个事件触发时，会唤醒进程处理事件；
 
-如果是 lt 模式，fd 事件节点仍然会存在就绪队列中，不管事件是否处理完成，那么唤醒进程 A 处理事件时，如果 B 进程也在等待资源，那么同样的事件有可能将 B 进程也唤醒。
+如果是 lt 模式，epoll 在下一个 `epoll_wait` 执行前，fd 事件节点仍然会存在就绪列表中，不管事件是否处理完成，那么唤醒进程 A 处理事件时，如果 B 进程也在等待资源，那么同样的事件有可能将 B 进程也唤醒处理，
 
-> 多进程共享 epoll fd 框架
+<center>
+    <img style="border-radius: 0.3125em;
+    box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);"
+    src="/images/2021-07-06-10-23-40.png" data-action="zoom">
+    <br>
+    <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+    display: inline-block;
+    color: #999;
+    padding: 2px;">多进程共享 epoll fd 框架</div>
+</center>
 
-<div align=center><img src="/images/2021-07-06-10-23-40.png" data-action="zoom"/></div>
+举个🌰：
+
+epoll lt 模式的多进程共享 epoll fd 的服务程序，如果只有一个客户端连接到服务，当进程 A 已经被唤醒，将要 accept 某个 socket（注意，这时候逻辑还在内核里，epoll_wait 还没返回到用户空间执行用户空间的逻辑，而 lt 模式的就绪列表上的数据还没有被删除），内核如果再唤醒进程 B，显然只有一个进程能成功 accept 到资源，而另外一个将会失败。
+
+这不是用户愿意看到的。所以为了避免发生类似问题，et 模式就有存在的必要，因为 et 模式，事件只处理一次，就会从就绪列表删除。所以同样的 fd 事件，不会唤醒多个进程同时处理。避免了类似的“惊群”问题。
+
+这样，我们就理解 nginx 为什么会使用 et 模式。
 
 ```c
+/* epoll_wait 执行逻辑。 */
 static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events,
             int maxevents, long timeout) {
     ...
     /* epoll_wait 处理就绪事件前，先添加等待唤醒事件。 */
     if (!waiter) {
         waiter = true;
+        /* current 是当前进程。 */
         init_waitqueue_entry(&wait, current);
 
         spin_lock_irq(&ep->wq.lock);
@@ -176,7 +195,7 @@ static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events,
         spin_unlock_irq(&ep->wq.lock);
     }
     ...
-    /* 就绪队列有事件，处理就绪事件逻辑。 */
+    /* 就绪列表有事件，处理就绪事件逻辑。 */
     if (!res && eavail &&
         !(res = ep_send_events(ep, events, maxevents)) && !timed_out)
         goto fetch_events;
@@ -207,15 +226,15 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
                        struct list_head *, void *),
                   void *priv, int depth, bool ep_locked) {
     ...
-    /* 将就绪队列分片链接到 txlist 链表中。 */
+    /* 将就绪列表分片链接到 txlist 链表中。 */
     list_splice_init(&ep->rdllist, &txlist);
-    /* 执行 ep_send_events_proc，唤醒进程 A 处理事件。 */
+    /* 执行 ep_send_events_proc，唤醒进程 A。 */
     res = (*sproc)(ep, &txlist, priv);
     ...
-    /* 唤醒进程 B 进程处理事件。 */
     if (!list_empty(&ep->rdllist)) {
-        /* 如果还有等待资源的进程，唤醒。 */
         if (waitqueue_active(&ep->wq))
+            /* A 进程已被唤醒，但是就绪列表（ep->rdllist）还有数据，
+            * 进程 B，也在等待队列中，那么唤醒进程 B。 */
             wake_up_locked(&ep->wq);
         ...
     }
@@ -223,19 +242,13 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
 }
 ```
 
-在服务程序中，当进程 A 已经被唤醒 accept 到某个 socket 了，内核如果再唤醒进程 B，显然 B 之前因为没有 accept 到对应的 socket，那处理就会出现问题。
-
-这显然不是用户愿意看到的。所以为了避免发生类似问题，et 模式就有存在的必要，因为 et 模式，只通知用户一次后，就会将事件节点从就绪队列删除。所以同样的 fd 事件，不会唤醒多个进程同时处理。避免了类似的“惊群”问题（注意，这不是惊群，只是像）。
-
-这样，我们就理解 nginx 为什么会使用 et 模式。
-
 ---
 
 ## 4. 小结
 
-写些小心得吧，使用 epoll 十几年，一直困扰着 LT 与 ET 模式的区别，直到这两年，深入内核源码，才开始慢慢理解它的实现原理，其实真的不是很复杂，可见阅读内核源码的重要性！
+写些小心得吧，使用 epoll 已经很长一段时间了，一直困扰着 LT 与 ET 模式的区别，直到这两年，深入阅读内核源码，才慢慢地理解它的工作原理，其实逻辑不是想象的那么复杂，可见阅读内核源码的重要性！
 
-这几个月，花了不少力气，将 [内核的调试环境](https://www.bilibili.com/video/bv1yo4y1k7QJ) 搭建起来，一边看内核源码，一边调试验证源码逻辑——感觉忽然开窍了，这就是当你每次处于一个瓶颈，久久不能突破，忽然柳暗花明！
+这几个月，花了不少力气，将 [内核的调试环境](https://www.bilibili.com/video/bv1yo4y1k7QJ) 搭建起来，一边看内核源码，一边调试验证源码逻辑——感觉忽然开窍了~
 
 ---
 

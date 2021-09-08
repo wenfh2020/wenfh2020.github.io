@@ -6,7 +6,7 @@ tags: split brain redis sentinel
 author: wenfh2020
 ---
 
-哨兵模式的 redis 集群，假如原来只有一个主服务，经过故障转移后，产生多个主服务，这样脑裂现象出现了。
+哨兵模式的 redis 集群，假如原来只有一个主服务，经过故障转移后，产生多个主服务，这样脑裂现象出现了。通过合理部署配置 sentinel/master，可以降低脑裂问题出现的概率。
 
 
 
@@ -31,7 +31,7 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 1. 在 redis 集群中，当 sentinel 检测到 master 出现故障，那么 sentinel 需要对集群进行故障转移。
 2. 当一个 sentinel 发现 master 下线，它会将下线的 master 确认为**主观下线**。
 3. 当“法定个数”（quorum）sentinel 已经发现该 master 节点下线，那么 sentinel 会将其确认为**客观下线**。
-4. 多个 sentinel 根据一定的逻辑，选举出一个 sentinel 作为代表，由它去进行故障转移，将原来连接已客观下线 master 最优的一个 slave 提升为新 master 角色。旧  master 如果重新激活，它将被降级为 slave。
+4. 多个 sentinel 根据一定的逻辑，选举出一个 sentinel 作为 leader，由它去进行故障转移，将原来连接已客观下线 master 最优的一个 slave 提升为新 master 角色。旧  master 如果重新激活，它将被降级为 slave。
 
 > 详细请参考：《[[redis 源码走读] sentinel 哨兵 - 故障转移](https://wenfh2020.com/2020/09/27/redis-sentinel-failover/)》
 
@@ -41,8 +41,8 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 
 我们看看下面的部署：两个机器，分别部署了 redis 的三个角色。
 
-* 如果我们将集群部署在两个机器上（redis 集群部署情况如下图）。
-* sentinel 配置 `quorum = 1`，也就是一个 sentinel 发现故障，也可以选举自己为代表，进行故障转移。
+* 如果将集群部署在两个机器上（如下图）。
+* sentinel 配置 `quorum = 1`，也就是一个 sentinel 发现故障，也可以选举自己为 leader，进行故障转移。
 
 | 节点  | 描述                         |
 | :---: | :--------------------------- |
@@ -58,7 +58,7 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 +----+         +----+
 ```
 
-* 因为某种原因，两个机器断开链接，S2 将同机器的 R1 提升角色为 master，这样集群里，出现了两个 master 服务同时工作 —— 脑裂出现了。不同的 client 链接到不同的 redis 进行读写，那么在两台机器上的 redis 数据，就出现了不一致的现象了。
+* 因为某种原因，两个机器断开链接，S2 将同机器的 R1 提升角色为 master，这样集群里，出现了两个 master 同时工作 —— <font color=red>脑裂出现了</font>。不同的 client 链接到不同的 redis 进行读写，那么两台机器就出现了 redis 数据不一致的现象。
 
 ```shell
 +----+           +------+
@@ -71,7 +71,11 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 
 ## 2. 解决方案
 
-### 2.1. sentienl 部署
+通过合理部署配置 sentinel/master，降低脑裂出现概率。
+
+### 2.1. sentienl 配置
+
+合理部署 sentinel 的节点个数，以及配置 sentinel 选举的法定人数。
 
 1. sentinel 节点个数最好 >= 3。
 2. sentinel 节点个数最好是基数。
@@ -86,18 +90,20 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 
 * quorum
 
-\<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过一定`法定人数`选举某人为代表，那么他就成为 sentinel 的代表，代表负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 (n/2 + 1) 比较合理。
+    \<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过`法定人数`的 sentinel 选举某个 sentinel 为 leader，那么他就成为 leader， leader 负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 (n/2 + 1) 比较合理。
 
-> 如果 sentinel 个数总数为 3，那么最好 quorum == 2，这样最接近真实：少数服从多数，不会出现两个票数一样的代表同时被选上，进行故障转移。
->
->```shell
-># sentinel.conf
->sentinel monitor mymaster >127.0.0.1 6379 2
->```
+    > 如果 sentinel 个数总数为 3，那么最好 quorum == 2，这样最接近真实：少数服从多数，不会出现两个票数一样的 leader同时被选上，进行故障转移。
+    >
+    >```shell
+    ># sentinel.conf
+    >sentinel monitor mymaster >127.0.0.1 6379 2
+    >```
 
 ---
 
-### 2.2. redis 配置
+### 2.2. master 配置
+
+如果 master 因为某些原因与一定数量的副本失去联系了，通过修改 master 配置项，可以禁止 client 向故障的 master 写数据。
 
 #### 2.2.1. 问题
 
@@ -117,7 +123,7 @@ sentinel 作为高可用集群管理者，它的功能主要是：检查故障�
 Configuration: quorum = 2
 ```
 
-假如 M1 机器与其它机器断开链接了，S2 和 S3 两个 sentinel 能相互链接，sentinel 能正常进行故障转移，sentinel 将 R2 提升为新的 master 角色 [M2]。但是客户端 C1 仍然能读写 M1，这样仍然会出现问题，所以我们不得不对 M1 进行限制。
+假如 M1 机器与其它机器断开链接了，S2 和 S3 两个 sentinel 能相互链接，sentinel 能正常进行故障转移，sentinel leader 将 R2 提升为新的 master 角色 [M2]。但是客户端 C1 仍然能读写 M1，这样仍然会出现问题，所以我们不得不对 M1 进行限制。
 
 ```shell
          +----+
@@ -137,7 +143,7 @@ Configuration: quorum = 2
 
 #### 2.2.2. 解决方案
 
-限制 M1 比较简单的方案，修改 redis 配置 [redis.conf](https://github.com/antirez/redis/blob/unstable/redis.conf)，检查 master 节点与其它副本的联系。当 master 与其它副本在一定时间内失去联系，那么禁止 master 进行写数据。
+限制 M1 比较简单的方案，通过修改 redis 配置 [redis.conf](https://github.com/antirez/redis/blob/unstable/redis.conf)，检查 master 节点与其它副本的联系。当 master 发现它的副本下线或者通信超时的总数量小于阈值时，那么禁止 master 进行写数据。
 
 > 但是这个方案也不是完美的，`min-slaves-to-write` 依赖于副本的链接个数，如果 slave 个数设置不合理，那么集群很难故障转移成功。
 
@@ -170,7 +176,7 @@ Configuration: quorum = 2
 ```
 
 ```shell
-# master 至少有 x 个副本连接。
+# master 须要有至少 x 个副本连接。
 min-slaves-to-write x
 # 数据复制和同步的延迟不能超过 x 秒。
 min-slaves-max-lag x
