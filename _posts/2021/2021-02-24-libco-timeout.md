@@ -6,7 +6,7 @@ tags: libco workflow
 author: wenfh2020
 ---
 
-在 Linux 系统，libco 调用 epoll_wait 有点用力过猛，虽然 libco 针对大并发，但是小问题的处理，略显粗糙。
+在 Linux 系统，libco 调用 epoll_wait 有点用力过猛，虽然 libco 针对高并发，但是小问题的处理，略显粗糙。
 
 
 

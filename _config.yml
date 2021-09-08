@@ -13,6 +13,9 @@ url: "https://wenfh2020.com/" # the base hostname & protocol for your site
 post_site: 'https://wenfh2020.com' # 链接域名。
 
 permalink: /:year/:month/:day/:title/
+gitalk_clientid: 3d1547be2ae6256e29b8
+gitalk_secret: ec54bf4a795e0d03dd0b32a50271fedf1388dcb8
+
 
 # other links
 twitter_username: 
@@ -74,4 +77,4 @@ excerpt_separator: "\n\n\n\n"
 
 gems:
   - jekyll-paginate
-paginate: 6
+paginate: 15

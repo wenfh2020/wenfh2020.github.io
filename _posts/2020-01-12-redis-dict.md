@@ -109,6 +109,7 @@ dictEntry *dictFind(dict *d, const void *key) {
 > 调试方法，可以参考视频：
 >
 > * bilibili: [Debug Redis in VsCode with Gdb](https://www.bilibili.com/video/av83070640)
+>
 > * youtube: [Debug Redis in VsCode with Gdb](https://youtu.be/QltK3vV5Slw)
 
 ```shell

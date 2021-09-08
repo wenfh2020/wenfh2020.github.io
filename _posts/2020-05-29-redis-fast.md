@@ -6,7 +6,7 @@ tags: redis fast
 author: wenfh2020
 ---
 
-redis 为啥那么快？redis 单进程轻松并发 10w+ ([《hiredis + libev 异步测试》](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本章从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
+redis 为啥那么快？redis 单进程轻松并发 10w+ ([《hiredis + libev 异步测试》](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本文将从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
 
 
 
@@ -18,8 +18,6 @@ redis 为啥那么快？redis 单进程轻松并发 10w+ ([《hiredis + libev �
 ## 1. 单进程
 
 redis 核心逻辑在单进程主线程里实现。
-
----
 
 ### 1.1. 单线程
 
@@ -41,7 +39,9 @@ redis 核心逻辑在单进程主线程里实现。
 
 * pipeline。
   
-  > 支持客户端一次发送多个命令。减少了客户端和服务端通信的 RTT (Round-Trip Time) 往返时间；一次发送和接收多个数据，减少了 read()/write() 内核函数的调用，降低系统性能损耗。
+  > 支持客户端一次发送多个命令。
+  > 减少了客户端和服务端通信的往返时间（RTT --> Round-Trip Time）；
+  > 也减少了读写数据的系统调用次数，降低系统性能损耗。
   >
   > 详细请参考官方文档：《[Using pipelining to speedup Redis queries](https://redis.io/topics/pipelining)》
 
@@ -63,38 +63,36 @@ redis 有部分场景需要子进程和子线程辅助。
 
 ## 2. 多进程
 
-redis 主服务是单进程的。单进程不能充分利用系统 cpu 核心，可以通过多开实例提高系统的并发能力。
+redis 主服务是单进程的。单进程不能充分利用系统 cpu 核心，可以通过多进程方式提高系统的并发能力。
+
+* 子进程。
+  
+  > redis 有持久化功能：aof 和 rdb 方式。持久化需要将内存数据写入磁盘，写磁盘是缓慢的 I/O，为了避免影响主进程性能，有些需要对整个内存数据集落地的操作，会通过 fork 子进程进行工作。例如 aof 的 rewrite 操作，rdb 持久化。
+
+* 多实例（master/replication）。
+  
+  > 主从复制数据，使得服务有多个数据副本，实现读写分离。
 
 ---
 
-### 2.1. 子进程
+## 3. 高可用集群
 
-redis 有持久化功能：aof 和 rdb 方式。持久化需要将内存数据写入磁盘，写磁盘是缓慢的 I/O，为了避免影响主进程性能，有些需要对整个内存数据集落地的操作，会通过 fork 子进程进行。例如 aof 的 rewrite 操作，rdb 持久化。
+对于一些超高并发服务场景，单个 master 往往无法满足需求，那么可以对数据进行分片，从逻辑上创建多个 master 协调工作，这样 redis 集群应运而生，以下是一些比较常用的集群管理方案：
 
----
+* sentinel 哨兵模式。
 
-### 2.2. 多实例
+  > redis 内部功能，类似于中心服务，管理 redis 节点群；它只负责 redis 节点的监控管理，没有数据分片功能；数据分片逻辑需要用户自己实现。
 
-* 主从副本（replication）。
+* redis cluster。
 
-  > 主从复制数据，使得服务数据有多个数据副本，可以进行读写分离。
+  > redis 内部功能，cluster 无中心架构，通过 Gossip 协议多个节点相互关联建立成一个整体，支持节点监控和数据分片。
 
-* 高可用。
+* proxy。
 
-  > 1. sentinel 哨兵模式。
-  > 2. redis cluster 自带集群模式。
-  > 3. 第三方代理模式（例如 codis）。
-
-* proxy
-
-  > redis 可以开多个实例，提高系统并发能力，这些实例通过第三方代理（例如 [codis](https://github.com/CodisLabs/codis)）进行扩容缩容，对数据进行分片管理。
-
-* redis cluster
-
-  > redis 自带集群 cluster 无中心架构，通过 Gossip 协议将多个实例数据分片建立成一个整体。
+  > 第三方代理（例如 [codis](https://github.com/CodisLabs/codis)），支持 redis 节点监控，数据分片，节点扩容缩容，可视化页面管理等功能。
 
 ---
 
-## 3. 总结
+## 4. 总结
 
-从以上几个视角分析了 redis 快的主要原因。天下大事，必作于细，redis 的快，还建立在很多细节的优化上，有兴趣可以通过阅读它的源码去详细了解。
+从以上几个视角分析了 redis 快的主要原因。天下大事，必作于细，redis 的快，还建立在很多细节的优化上，如要详细理解，须要通过[阅读源码](https://wenfh2020.com/category/#redis)。

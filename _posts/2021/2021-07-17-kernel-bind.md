@@ -69,7 +69,9 @@ int __inet_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len,
 * 地址端口可以重复绑定吗?
 
   > 答：可以，了解一下这两个设置项：SO_REUSEADDR / SO_REUSEPORT。
+  >
   > 1. SO_REUSEADDR 是为了解决 TCP_TIME_WAIT 问题。
+  >
   > 2. SO_REUSEPORT 是为了解决惊群问题，允许多个进程共同使用相同的地址端口。
 
 ---
@@ -437,7 +439,9 @@ EXPORT_SYMBOL_GPL(inet_csk_get_port);
 
 > 图片来源：[soreuseport: TCP/IPv4 implementation](https://github.com/torvalds/linux/commit/da5e36308d9f7151845018369148201a5d28b46d?branch=da5e36308d9f7151845018369148201a5d28b46d&diff=split#)
 
+>
 > 1. SO_REUSEADDR 是为了解决前一个 socket 处于 TCP_TIME_WAIT 没完全退出的问题。
+>
 > 2. SO_REUSEPORT 是为了解决惊群问题的，允许多个进程共同使用同一个IP地址/端口。
 
 ```c

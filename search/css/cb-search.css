@@ -42,6 +42,9 @@
                 width: 96%;
                 margin: 0 2%;
             }
+            .dropdown-menu li a:hover {
+                background-color: #06fa12;
+            }
 			.cb-search-tool ul{
 				width: 96% ;
 				white-space:nowrap; 
