@@ -10,7 +10,7 @@ author: wenfh2020
 
 保存字符串，数值两种类型（ It stores both strings and integer values），列表内部实现主要是对一块连续内存进行管理，列表支持列表头尾的插入或弹出结点操作。因为写操作涉及到内存重新分配，所以复杂度需要根据当前使用内存的使用情况而定，一般情况下，不建议存储大量数据。
 
-`sorted set` 根据数据长度，就分别用 `ziplist` 和 `skiplist` 两种数据结构进行保存。
+`sorted set` 根据数据长度，就分别用 ziplist 和 `skiplist` 两种数据结构进行保存。
 
 > The ziplist is a specially encoded dually linked list that is designed to be very memory efficient. It stores both strings and integer values, where integers are encoded as actual integers instead of a series of characters. It allows push and pop operations on either side of the list in O(1) time. However, because every operation requires a reallocation of the memory used by the ziplist, the actual complexity is related to the amount of memory used by the ziplist.
 
@@ -64,17 +64,17 @@ author: wenfh2020
 
 ### 2.2. entry
 
-结点结构：`<prevlen> <encoding> <entry-data>`，但有时候数值很小，用 `<encoding>` 也能保存数据，不需要 `<entry-data>`， 即 `<prevlen> <encoding>`。
+结点结构：`<prevlen> <encoding> <entry-data>`，但有时候数值很小，用 \<encoding\> 也能保存数据，不需要 \<entry-data\>， 即 \<prevlen\>  \<encoding\>。
 
 ---
-压缩链表的结点有点特别，这里的链表不是传统的链表，传统的链表每个结点都有 prev 或者 next 的指针，连接起来。压缩链表结点通过 prevlen 在内存上进行定位前一个结点，因为 [`<encoding>`](#encoding) 存储了当前结点数据类型和数据长度，从而可以向后定位下一个结点。
+压缩链表的结点有点特别，这里的链表不是传统的链表，传统的链表每个结点都有 prev 或者 next 的指针，连接起来。压缩链表结点通过 prevlen 在内存上进行定位前一个结点，因为 [\<encoding\>](#encoding) 存储了当前结点数据类型和数据长度，从而可以向后定位下一个结点。
 
 ### 2.3. prevlen
 
-| 条件        | 长度   | 格式                                                                    |
-| ----------- | ------ | ----------------------------------------------------------------------- |
-| < 254 字节  | 1 字节 | `<prevlen from 0 to 253> <encoding> <entry-dagta>`                      |
-| >= 254 字节 | 5 字节 | `0xFE <4 bytes unsigned little endian prevlen> <encoding> <entry-data>` |
+|    条件     |  长度  | 格式                                                                        |
+| :---------: | :----: | --------------------------------------------------------------------------- |
+| < 254 字节  | 1 字节 | \<prevlen from 0 to 253\> \<encoding\> \<entry-dagta\>                      |
+| >= 254 字节 | 5 字节 | 0xFE \<4 bytes unsigned little endian prevlen\> \<encoding\> \<entry-data\> |
 
 前一个结点长度，存储在本结点首部，有两种存储长度，1 字节或者 5 字节空间进行存储，具体产看前面的具体描述。
 
@@ -121,11 +121,11 @@ prevlensize: 保存 prevlen 占用了多少内存（1/5）
 
 #### 2.4.1. 字符串
 
-如果当结点内容是字符串，那么 `<encoding>` 前两个 bit 主要用来存储编码类型，剩下的保存当前字符串的字符串长度。从 `<encoding>` 可以获得 3 个信息：
+如果当结点内容是字符串，那么 \<encoding\> 前两个 bit 主要用来存储编码类型，剩下的保存当前字符串的字符串长度。从 \<encoding\> 可以获得 3 个信息：
 
 1. 编码类型。
 2. 结点数据内容长度。
-3. 整个 `<encoding>` 长度。
+3. 整个 \<encoding\> 长度。
 
 | 标识                                                 | encoding 长度 | 字符串长度             | 描述                                                                   | 注意                      |
 | :--------------------------------------------------- | :------------ | ---------------------- | :--------------------------------------------------------------------- | :------------------------ |
@@ -146,21 +146,21 @@ prevlensize: 保存 prevlen 占用了多少内存（1/5）
 
 #### 2.4.2. 数值
 
-当结点内容是数值，`<encoding>` 前两个 bit 设置成 `1`，接下来两个 bit 用来保存数值类型。从 `<encoding>` 可以获得 3 个信息：
+当结点内容是数值，\<encoding\> 前两个 bit 设置成 `1`，接下来两个 bit 用来保存数值类型。从 \<encoding\> 可以获得 3 个信息：
 
 1. 编码类型。
 2. 数值类型。
 3. 数值。
 
-| 首字节标识   | encoding 长度 | 数值长度 | 描述                                                                                                                             |
-| :----------- | :------------ | :------- | :------------------------------------------------------------------------------------------------------------------------------- |
-| \|11000000\| | 3 bytes       | 2 bytes  | int16_t                                                                                                                          |
-| \|11010000\| | 5 bytes       | 4 bytes  | int32_t                                                                                                                          |
-| \|11100000\| | 9 bytes       | 8 bytes  | int64_t                                                                                                                          |
-| \|11110000\| | 4 bytes       | 3 bytes  | Integer encoded as 24 bit signed (3 bytes).                                                                                      |
-| \|11111110\| | 2 bytes       | 1 byte   | Integer encoded as 8 bit signed (1 byte).                                                                                        |
-| \|1111xxxx\| | 1 byte        | 4 bits   | 4 bit integer, 可以存储 0 - 12， 因为 0000，1110，1111 不能使用，只能存储 1 - 13，所以保存进来的数字进行 + 1 操作，解析后需要 -1 |
-| \|11111111\| | 1 byte        | 0 bit    | 列表结束符                                                                                                                       |
+|  首字节标识  | encoding 长度 | 数值长度 | 描述                                                                                                                             |
+| :----------: | :-----------: | :------- | :------------------------------------------------------------------------------------------------------------------------------- |
+| \|11000000\| |    3 bytes    | 2 bytes  | int16_t                                                                                                                          |
+| \|11010000\| |    5 bytes    | 4 bytes  | int32_t                                                                                                                          |
+| \|11100000\| |    9 bytes    | 8 bytes  | int64_t                                                                                                                          |
+| \|11110000\| |    4 bytes    | 3 bytes  | Integer encoded as 24 bit signed (3 bytes).                                                                                      |
+| \|11111110\| |    2 bytes    | 1 byte   | Integer encoded as 8 bit signed (1 byte).                                                                                        |
+| \|1111xxxx\| |    1 byte     | 4 bits   | 4 bit integer, 可以存储 0 - 12， 因为 0000，1110，1111 不能使用，只能存储 1 - 13，所以保存进来的数字进行 + 1 操作，解析后需要 -1 |
+| \|11111111\| |    1 byte     | 0 bit    | 列表结束符                                                                                                                       |
 
 
 #### 2.4.3. 编解码实现
@@ -410,7 +410,7 @@ int main() {
 
 ## 4. 接口
 
-可以通过 `sorted set` （t_zset.c）源码理解 `ziplist` 的使用。
+可以通过 `sorted set` （t_zset.c）源码理解 ziplist 的使用。
 
 ### 4.1. 插入结点
 
@@ -529,10 +529,10 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
 ## 5. 问题
 
 * 分配内存
-  `ziplist` 插入删除数据需要重新分配内存。
+  ziplist 插入删除数据需要重新分配内存。
 
 * 耦合问题
-  `ziplist` 为了在连续内存上进行数据管理，对数据进行压缩，节省内存开销，也减少内存碎片。但是 prevlen 作为数据结点对组成部分，跟其它结点严重耦合，只要在链表中间插入或者删除结点，有可能需要遍历更新插入或删除位置后续的所有结点 `<prevlen>`。
+  ziplist 为了在连续内存上进行数据管理，对数据进行压缩，节省内存开销，也减少内存碎片。但是 prevlen 作为数据结点对组成部分，跟其它结点严重耦合，只要在链表中间插入或者删除结点，有可能需要遍历更新插入或删除位置后续的所有结点 `<prevlen>`。
 
 * 效率问题
   列表重点是压缩，是一个列表，插入删除数据，效率不高，需要重新分配内存。因为是列表，查找结点复杂度 O(n)。在 `sorted set` 的实现中，对 `skiplist` 的使用是有限制的。
@@ -579,7 +579,7 @@ int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
 ```
 
 * 复杂度
-指针的偏移考验的是技术功底。`ziplist` 实现算是比较复杂了（对我而言）。如果用传统的双向链表实现要简单不少的，压缩目的还是能达到的，结点间的耦合比较小。
+指针的偏移考验的是技术功底。ziplist 实现算是比较复杂了（对我而言）。如果用传统的双向链表实现要简单不少的，压缩目的还是能达到的，结点间的耦合比较小。
 
 ---
 

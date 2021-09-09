@@ -6,7 +6,7 @@ tags: strcpy strncpy snprintf
 author: wenfh2020
 ---
 
-测试一下看看，Linux 环境下，这三个函数（`strcpy`, `strncpy`, `snprintf`）哪个比较安全。
+测试一下看看，Linux 环境下，这三个函数（strcpy, strncpy, snprintf）哪个比较安全。
 
 
 
@@ -19,9 +19,9 @@ author: wenfh2020
 
 数据拷贝，当目标内存很小，源数据很大时，从测试结果看：
 
-* `snprintf` 结果正常，达到预期。
-* `strcpy` 拷贝的数据打印出来有点问题，不知道是否正常。
-* `strncpy` 崩溃了。
+* snprintf 结果正常，达到预期。
+* strcpy 拷贝的数据打印出来有点问题，不知道是否正常。
+* strncpy 崩溃了。
 
 ```c
 // test.c
@@ -122,9 +122,9 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args) {
 
 从测试结果看：
 
-* `snprintf` 比较安全。
-* `strcpy` 不安全。
-* `strncpy` 当目标内存很小时，拷贝完成后不会在末位填充 '\0' ，拷贝操作后，目标字符串在使用中可能会有问题。
+* snprintf 比较安全。
+* strcpy 不安全。
+* strncpy 当目标内存很小时，拷贝完成后不会在末位填充 '\0' ，拷贝操作后，目标字符串在使用中可能会有问题。
 
 ---
 

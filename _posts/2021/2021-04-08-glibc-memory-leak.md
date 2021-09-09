@@ -10,7 +10,7 @@ author: wenfh2020
 
 通过调试（[Centos 调试 glibc 视频](https://www.bilibili.com/video/BV1864y1i7PQ/)）和查阅 [glibc 源码](https://ftp.gnu.org/pub/gnu/glibc/)，好不容易才搞明白它 "泄漏" 的原因。
 
-问题在于：ptmalloc2 内存池的 fast bins 快速缓存和 `top chunk` 内存返还系统的特点导致。
+问题在于：`ptmalloc2` 内存池的 `fast bins` 快速缓存和 `top chunk` 内存返还系统的特点导致。
 
 
 
@@ -241,17 +241,17 @@ in use bytes     =          0
 
 ## 3. glibc 问题分析
 
-`ptmalloc2` 是目前 Linux 用户空间默认的内存分配器，源码集成在 glibc 里。
+ptmalloc2 是目前 Linux 用户空间默认的内存分配器，源码集成在 glibc 里。
 
-`ptmalloc2` 支持多线程，它为多个线程提供了多个 `arena` 分区（malloc_state）管理内存：主分区和非主分区（main_arena/non_main_arena）。因为本文 demo 是单线程，所以我们这里只讨论 `main_arena` 场景，详细请参考文档：[glibc内存管理ptmalloc源代码分析.pdf](https://paper.seebug.org/papers/Archive/refs/heap/glibc%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86ptmalloc%E6%BA%90%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90.pdf)。
+ptmalloc2 支持多线程，它为多个线程提供了多个 `arena` 分区（malloc_state）管理内存：主分区和非主分区（main_arena/non_main_arena）。因为本文 demo 是单线程，所以我们这里只讨论 `main_arena` 场景，详细请参考文档：[glibc内存管理ptmalloc源代码分析.pdf](https://paper.seebug.org/papers/Archive/refs/heap/glibc%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86ptmalloc%E6%BA%90%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90.pdf)。
 
-至于 free 掉的内存 glibc 为啥没有返还给系统，通过走读和调试它的源码后，发现 `malloc_state.top` 这个 `top chunk` 对问题解决起着关键作用。
+至于 free 掉的内存 glibc 为啥没有返还给系统，通过走读和调试它的源码后，发现 `malloc_state.top` 这个 top chunk 对问题解决起着关键作用。
 
 ---
 
 ### 3.1. 系统内存分配流程
 
-* `ptmalloc2` 主要通过 `sbrk` 和 `mmap` 这两个函数，向内核申请内存空间。因为上述例子是单线程的，而且申请的内存小于 128k，所以用户空间向内核申请内存通过 `sbrk` 而不是 `mmap`。
+* ptmalloc2 主要通过 `sbrk` 和 `mmap` 这两个函数，向内核申请内存空间。因为上述例子是单线程的，而且申请的内存小于 128k，所以用户空间向内核申请内存通过 `sbrk` 而不是 `mmap`。
 
 <div align=center><img src="/images/2021-04-14-17-13-58.png" data-action="zoom"/></div>
 
@@ -263,7 +263,7 @@ in use bytes     =          0
 
 #### 3.2.1. malloc_chunk
 
-`ptmalloc2` 每次会根据需要向内核申请一大块内存空间，并根据需要将其划分为大小不等的内存块，内存块以 `chunk` 形式进行管理。
+ptmalloc2 每次会根据需要向内核申请一大块内存空间，并根据需要将其划分为大小不等的内存块，内存块以 `chunk` 形式进行管理。
 
 ```c
 /*
@@ -309,9 +309,9 @@ malloc 给用户返回内存是 `mem` 的地址，事实上，它前面有两个
 
 可以理解为线程的内存池分区（`arena`），那些 free 接口释放的内存，会根据一定的策略缓存起来，或者返还系统。
 
-因为 `ptmalloc2` 本来就是一个内存池，为了提高内存分配效率，它需要通过一些策略，将部分内存缓存起来，避免用户态和内核态频繁进行交互。缓存起来的内存块，通过 fastbinsY 和 bins 这些数组维护起来，数组保存的是空闲内存块链表。
+因为 ptmalloc2 本来就是一个内存池，为了提高内存分配效率，它需要通过一些策略，将部分内存缓存起来，避免用户态和内核态频繁进行交互。缓存起来的内存块，通过 fastbinsY 和 bins 这些数组维护起来，数组保存的是空闲内存块链表。
 
-`top` 这个内存块指向 `top chunk`，它对于理解 glibc 从系统申请内存，返还内存给系统有着关键作用。
+`top` 这个内存块指向 top chunk，它对于理解 glibc 从系统申请内存，返还内存给系统有着关键作用。
 
 ```c
 typedef struct malloc_chunk* mchunkptr;
@@ -340,9 +340,9 @@ struct malloc_state {
 
 ### 3.3. sbrk 系统分配回收内存
 
-测试 demo 分配小内存，当 glibc 内存池缓存不足时，glibc 会通过 sbrk 向系统申请内存给 `malloc_state.top`，也就是 `top chunk`，从它那里划分一块出来返回给用户进程。
+测试 demo 分配小内存，当 glibc 内存池缓存不足时，glibc 会通过 sbrk 向系统申请内存给 `malloc_state.top`，也就是 top chunk，从它那里划分一块出来返回给用户进程。
 
-当 `top chunk` 内存达到一个回收阈值时，它才会通过 sbrk 返还内存给系统。所以说理解 `malloc_state.top` 是解决问题的关键。
+当 top chunk 内存达到一个回收阈值时，它才会通过 sbrk 返还内存给系统。所以说理解 `malloc_state.top` 是解决问题的关键。
 
 <div align=center><img src="/images/2021-04-27-09-13-26.png" data-action="zoom"/></div>
 
@@ -350,7 +350,7 @@ struct malloc_state {
 
 #### 3.3.1. 内存块长期不被回收
 
-很多时候，通过 free 释放掉的内存块，它不是紧贴 `top chunk` 那一块内存，它被释放后并没有合并到 `top chunk`，所以 `top chunk` 的大小没有改变，没有达到返还系统的阈值，所以空闲内存不会被返还系统，<font color=red> 如上图，如果程序刚好有一个像 n2 那样的小内存块长时间不释放，那就杯具了</font>。例如：
+很多时候，通过 free 释放掉的内存块，它不是紧贴 top chunk 那一块内存，它被释放后并没有合并到 top chunk，所以 top chunk 的大小没有改变，没有达到返还系统的阈值，所以空闲内存不会被返还系统，<font color=red> 如上图，如果程序刚好有一个像 n2 那样的小内存块长时间不释放，那就杯具了</font>。例如：
 
 ```c
 void print_mem_info(const char* s) {
@@ -400,25 +400,25 @@ in use bytes     =         32 # ptmalloc2 已经分配出去给用户使用的�
 
 #### 3.3.2. fast bins 缓存
 
-有时候即便回收的内存紧贴 `top chunk`，但是被释放的内存太小了，以至于内存池为了保证小内存的分配效率，而将其缓存起来放进 `fast bins`，而没有被 `top chunk` 合并。
+有时候即便回收的内存紧贴 top chunk，但是被释放的内存太小了，以至于内存池为了保证小内存的分配效率，而将其缓存起来放进 fast bins，而没有被 top chunk 合并。
   
-例如上图图 2，就是测试 demo 图 1 的内存布局。堆内存是从低位向高位分配，但是如果 n2 内存没有被 free 掉，或者 n2 被 free 掉后，内存池为了效率，将其缓存起来了，并没有合并到 `top chunk`，那么即便 n2 之前的堆内存全部 free 掉了，内存池也不会将内存归还系统的。
+例如上图图 2，就是测试 demo 图 1 的内存布局。堆内存是从低位向高位分配，但是如果 n2 内存没有被 free 掉，或者 n2 被 free 掉后，内存池为了效率，将其缓存起来了，并没有合并到 top chunk，那么即便 n2 之前的堆内存全部 free 掉了，内存池也不会将内存归还系统的。
 
-所以对于 `fast bins` 这些缓存起来的小空闲内存块，需要在某一时刻对这些小空闲内存块进行处理。
+所以对于 fast bins 这些缓存起来的小空闲内存块，需要在某一时刻对这些小空闲内存块进行处理。
 
-正常情况下，当内存池管理的内存块不足以满足分配时，而且 `top chunk` 也不够空间分配了，内存池会尝试处理 `fast bins` 里的这些小内存块，看看能否合并出足够的大空间满足分配需求。但是如果内存池里的空间一直能满足外部的分配，那么这个处理就永远不会触发。
+正常情况下，当内存池管理的内存块不足以满足分配时，而且 top chunk 也不够空间分配了，内存池会尝试处理 fast bins 里的这些小内存块，看看能否合并出足够的大空间满足分配需求。但是如果内存池里的空间一直能满足外部的分配，那么这个处理就永远不会触发。
 
-`ptmalloc2` 可能早已预见了这样的场景，所以提供了 `malloc_trim` 这样的接口。能主动将 `n2` 这样的已经释放的小内存块，从 `fast bins` 缓存里取出来进行合并整理。这样，零散的内存碎片很可能会因为这些小内存碎片，合并成大块的连续内存，`top chunk` 很大概率会跟那些空闲的内存碎片连接成为一个连续的大块内存，达到回收的标准。
-
----
-
-通过上述分析，我们可以知道，为啥 glibc 会出现"内存泄漏"了。那为啥 stl + glibc 搭配出现`内存泄漏`的概率那么高呢？stl 内部不少类都有动态内存管理，就像图 2 的 `n2` 这个小内存块，如果缓存起来，一直不释放，那么其它内存块即使释放，`ptmalloc2` 也很大几率不会将内存返还系统。
-
-其实这不只是 stl 的问题，即便不用 stl，用户实现复杂的业务逻辑，也很可能会因为一个小内存块不释放，导致 `ptmalloc2` 不能将空闲内存返还系统。
+ptmalloc2 可能早已预见了这样的场景，所以提供了 `malloc_trim` 这样的接口。能主动将 `n2` 这样的已经释放的小内存块，从 fast bins 缓存里取出来进行合并整理。这样，零散的内存碎片很可能会因为这些小内存碎片，合并成大块的连续内存，top chunk 很大概率会跟那些空闲的内存碎片连接成为一个连续的大块内存，达到回收的标准。
 
 ---
 
-这里测试 demo，std::list 节点也会向 glibc 申请很多小内存，std::list::clear 执行后，std::list 全部节点被 free 掉了，因为 std::list 每个节点才占 32 个字节 chunk（64 位系统），它们被 `fast bins` 缓存起来了，并没有触发 `top chunk` 的内存合并。所以 `top chunk` 的大小一直没有超过返还系统的阈值，所以 `ptmalloc2` 的缓存一直没有归还系统。
+通过上述分析，我们可以知道，为啥 glibc 会出现"内存泄漏"了。那为啥 stl + glibc 搭配出现内存泄漏的概率那么高呢？stl 内部不少类都有动态内存管理，就像图 2 的 `n2` 这个小内存块，如果缓存起来，一直不释放，那么其它内存块即使释放，ptmalloc2 也很大几率不会将内存返还系统。
+
+其实这不只是 stl 的问题，即便不用 stl，用户实现复杂的业务逻辑，也很可能会因为一个小内存块不释放，导致 ptmalloc2 不能将空闲内存返还系统。
+
+---
+
+这里测试 demo，std::list 节点也会向 glibc 申请很多小内存，std::list::clear 执行后，std::list 全部节点被 free 掉了，因为 std::list 每个节点才占 32 个字节 chunk（64 位系统），它们被 fast bins 缓存起来了，并没有触发 top chunk 的内存合并。所以 top chunk 的大小一直没有超过返还系统的阈值，所以 ptmalloc2 的缓存一直没有归还系统。
 
 ---
 
@@ -434,7 +434,7 @@ in use bytes     =         32 # ptmalloc2 已经分配出去给用户使用的�
 
 ### 3.5. 源码分析
 
-* 分配内存。如果内存池没有足够内存，malloc 通过 sbrk 向系统申请一块虚拟内存给 `top chunk`，然后再从这块内存上分配合适的内存出去。
+* 分配内存。如果内存池没有足够内存，malloc 通过 sbrk 向系统申请一块虚拟内存给 top chunk，然后再从这块内存上分配合适的内存出去。
 
 ```c
 static void* _int_malloc(mstate av, size_t bytes) {
@@ -581,7 +581,7 @@ static int systrim(size_t pad, mstate av) {
 }
 ```
 
-* 回收空闲内存。整理合并 `fast bins` 缓存的小内存块；或者回收达到一定数值的空闲内存块，通过 `__madvise` 告诉系统这些内存虽然不能从虚拟内存清除，但是可以先将其从物理内存清除，减少物理内存的使用，当虚拟内存使用到时，再通过缺页中断方式重新加载。
+* 回收空闲内存。整理合并 fast bins 缓存的小内存块；或者回收达到一定数值的空闲内存块，通过 `__madvise` 告诉系统这些内存虽然不能从虚拟内存清除，但是可以先将其从物理内存清除，减少物理内存的使用，当虚拟内存使用到时，再通过缺页中断方式重新加载。
 
 ```c
 /*
@@ -669,7 +669,7 @@ static void malloc_consolidate(mstate av) {
 
 * 避免内存泄漏。malloc/new 出来的内存，一定要 free/delete 掉。
 * 避免分阶段分配内存，后面分配的内存，长期驻留在程序不释放。
-* 可以考虑定时执行 malloc_trim(0) 强制回收整理 `fast bins` 小空闲内存块，释放物理内存。
+* 可以考虑定时执行 malloc_trim(0) 强制回收整理 fast bins 小空闲内存块，释放物理内存。
 * 考虑使用 jemalloc 和 tcmalloc 替换 ptmalloc。
 
 ---

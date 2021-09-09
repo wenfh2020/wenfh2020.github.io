@@ -153,10 +153,10 @@ redis 服务通过事件驱动监控 fd 读写事件。redis 在 Linux 系统事
 
 ### 3.2. epoll 使用逻辑
 
-socket 设置非阻塞后，write / read，有可能不是一次性将数据读写完成再返回（参考 2.2 章节）。redis 采用 `epoll` 默认模式是 `LT`，当数据没处理完，内核重复通知事件给服务处理。
+socket 设置非阻塞后，write / read，有可能不是一次性将数据读写完成再返回（参考 2.2 章节）。redis 采用 epoll 默认模式是 `LT`，当数据没处理完，内核重复通知事件给服务处理。
 
-* read 数据，只要没有读取完成 fd 对应的所有接收数据，内核会不停通知 `EPOLLIN` 读事件。即 `epoll_wait` 不停取出读事件要求读数据，直到 read 所有接收到的数据，才会停止 `EPOLLIN` 读事件通知。
-* write 数据，服务一次发送不完，那么需要服务主动调用 `epoll_ctl` 监控写事件，下次 `epoll_wait` 会通知 `EPOLLOUT` 事件，服务继续处理写事件，直到将数据发送完毕为止。数据发送完毕后，再通过 `epoll_ctl` 取消监控 `EPOLLOUT` 写事件。（参考 `sendReplyToClient`源码实现逻辑）
+* read 数据，只要没有读取完成 fd 对应的所有接收数据，内核会不停通知 `EPOLLIN` 读事件。即 `epoll_wait` 不停取出读事件要求读数据，直到 read 所有接收到的数据，才会停止 EPOLLIN 读事件通知。
+* write 数据，服务一次发送不完，那么需要服务主动调用 `epoll_ctl` 监控写事件，下次 epoll_wait 会通知 `EPOLLOUT` 事件，服务继续处理写事件，直到将数据发送完毕为止。数据发送完毕后，再通过 epoll_ctl 取消监控 EPOLLOUT 写事件。（参考 `sendReplyToClient`源码实现逻辑）
 
 <div align=center><img src="/images/2021-06-21-16-25-36.png" data-action="zoom"/></div>
 

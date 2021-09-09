@@ -49,7 +49,7 @@ static int CoRoutineFunc(stCoRoutine_t *co, void *) {
 
 为啥删除工作中的协程是不安全？
 
-因为协程在工作过程中可能触发 `poll` 功能。它主要处理了两种类型事件：socket 事件和定时器事件，这些事件都是异步回调的。当事件触发后，如果协程被释放了，那么保存的协程指针变成了<font color=red>野指针</font>!
+因为协程在工作过程中可能触发 `poll` 功能。它主要处理了两种类型事件：socket 事件和定时器事件，这些事件都是异步回调的。当事件触发后，如果协程被释放了，那么保存的协程指针变成了 `野指针`!
 
 ```c
 int co_poll_inner(stCoEpoll_t *ctx, struct pollfd fds[], nfds_t nfds, int timeout, poll_pfn_t pollfunc) {

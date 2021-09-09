@@ -106,7 +106,7 @@ flamegraph.pl perf.folded > perf.svg
 
 <div align=center><img src="/images/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
 
-上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 `vsnprintf`，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致高等级的日志虽然没有被记录，仍然执行了 `vsnprintf` 操作。后面将判断放在 `vsnprintf` 前，重复进行测试，占 1.54%。 性能提高 5 个百分点——good!
+上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 vsnprintf，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致高等级的日志虽然没有被记录，仍然执行了 vsnprintf 操作。后面将判断放在 vsnprintf 前，重复进行测试，占 1.54%。 性能提高 5 个百分点——good!
 
 ```c++
 bool Log::log_data(const char* file_name, int file_line, const char* func_name, int level, const char* fmt, ...) {

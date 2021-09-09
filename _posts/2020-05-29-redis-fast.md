@@ -6,7 +6,7 @@ tags: redis fast
 author: wenfh2020
 ---
 
-redis 为啥那么快？redis 单进程轻松并发 10w+ ([《hiredis + libev 异步测试》](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本文将从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例。
+redis 为啥那么快？redis 单进程轻松并发 10w+ ([《hiredis + libev 异步测试》](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/))。本文将从这几个角度进行分析：单进程，单线程，多线程，多进程，多实例，集群。
 
 
 

@@ -227,7 +227,7 @@ epoll_data 在用户层是一个 union 值，那么用户应该如何传参？�
 
 Linux 系统的 epoll_wait 回调数据，data 是一个 `stTimeoutItem_t` 指针。
 
-传指针缺点：如果程序在 epoll_wait 回调前，把指针释放了，那么 epoll_wait 回调后回传的指针就变成<font color=red> 野指针 </font>了。
+传指针缺点：如果程序在 epoll_wait 回调前，把指针释放了，那么 epoll_wait 回调后回传的指针就变成 `野指针`了。
 
 ```c
 /* co_coroutine.cpp */

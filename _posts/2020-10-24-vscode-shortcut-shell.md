@@ -6,9 +6,9 @@ tags: vscode shell shortcuts
 author: wenfh2020
 ---
 
-写代码习惯了一边写一边编译，以前用 `vistual studio` 系列，有编译、调试、运行快捷键；现在使用 `vscode` 却找不到这些快捷键，在很长一段时间里，在 `terminal` 窗口执行脚本编译，窗口来回切换，麻烦不说，思路也很容易被打断。
+写代码习惯了一边写一边编译，以前用 vistual studio 系列，有编译、调试、运行快捷键；现在使用 vscode 却找不到这些快捷键，在很长一段时间里，在 terminal 窗口执行脚本编译，窗口来回切换，麻烦不说，思路也很容易被打断。
 
-最近查了一下，需要自己设置 `vscode` 的一些配置，绑定快捷键。
+最近查了一下，需要自己设置 vscode 的一些配置，绑定快捷键。
 
 
 
@@ -22,7 +22,7 @@ author: wenfh2020
 
 快捷键和脚本绑定，主要编辑两个文件配置： `keybindings.json` + `tasks.json`。详细可以参考[官方文档](https://code.visualstudio.com/docs/editor/tasks#_binding-keyboard-shortcuts-to-tasks)。
 
-现在看看如何绑定快捷键 `ctrl+h` 和下面这个脚本命令。
+现在看看如何绑定快捷键 `ctrl + h` 和下面这个脚本命令。
 
 ```shell
 ~/src/other/kimserver/run.sh compile all
@@ -34,7 +34,7 @@ author: wenfh2020
 
 1. `F1` 快捷键查找：`short`。
 2. 选中 `Preferences: Open Keyboard Shortcuts (JSON)` 选项。
-3. 步骤 1 随即会打开快捷键 json 文件：`keybindings.json`。
+3. 步骤 1 随即会打开快捷键 json 文件：keybindings.json。
 4. 添加要绑定的快捷键信息。
 
 ![快捷键设置](/images/2020-10-24-17-25-43.png){:data-action="zoom"}
@@ -59,12 +59,12 @@ author: wenfh2020
 
 ## 3. 编辑编译任务
 
-修改 `tasks.json`，绑定执行命令。
+修改 tasks.json 文件，绑定执行命令。
 
 1. `F1` 快捷键查找：`tasks`。
 2. 选中 `Tasks: Open User Tasks` 选项。
 3. 根据自己脚本的需要选择对应的类型，笔者选择了 `Others`。
-4. 步骤 3 后就可以编辑 `tasks.json` 文件即可。
+4. 步骤 3 后就可以编辑 tasks.json 文件即可。
 
 ![编辑 tasks.json](/images/2020-10-24-17-55-14.png){:data-action="zoom"}
 
@@ -93,7 +93,7 @@ author: wenfh2020
 
 ## 4. 其它
 
-当运行快捷键后，vscode 底部的 terminal 窗口会弹出，可以修改 `keybindings.json` 绑定 `esc` 键，快捷隐藏。
+当运行快捷键后，vscode 底部的 terminal 窗口会弹出，可以修改 keybindings.json 绑定 `esc` 键，快捷隐藏。
 
 ``` json
 {

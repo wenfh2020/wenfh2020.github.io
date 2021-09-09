@@ -19,7 +19,7 @@ author: wenfh2020
 
 ## 1. epoll
 
-`epoll` 是一个 `Linux` 系统的一个事件驱动。简单点来说，是一个针对系统文件的事件管理器，可以高效管理大量网络链接下的数据并发。研发人员根据业务需要，通过事件管理器，监控对应文件描述符的读写事件。
+epoll 是一个 `Linux` 系统的一个事件驱动。简单点来说，是一个针对系统文件的事件管理器，可以高效管理大量网络链接下的数据并发。研发人员根据业务需要，通过事件管理器，监控对应文件描述符的读写事件。
 
 > 详细的解析可以参考 [百度百科](https://baike.baidu.com/item/epoll/10738144?fr=aladdin)
 
@@ -98,9 +98,9 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 * `epoll_create` 创建 epoll 事件驱动 (epoll_fd)。
 * `epoll_ctl` 监控 server_fd 的可读事件 `EPOLLIN`。
 * 服务进程通过 `epoll_wait` 获取内核就绪事件处理。
-* 如果就绪事件是新连接，`accept` 为客户端新连接分配新的文件描述符 client_fd，设置非阻塞，然后 `epoll_ctl` 监控 client_fd 的可读事件 `EPOLLIN`。
+* 如果就绪事件是新连接，`accept` 为客户端新连接分配新的文件描述符 client_fd，设置非阻塞，然后 epoll_ctl 监控 client_fd 的可读事件 EPOLLIN。
 * 如果就绪事件不是新连接，`read` 读取客户端发送数据进行逻辑处理。
-* 处理逻辑过程中需要 `write` 回复客户端，`write` 内容很大，超出了内核缓冲区，没能实时发送完成所有数据，需要下次继续发送；那么 `epoll_ctl` 监控 client_fd 的 `EPOLLOUT` 可写事件，下次触发事件进行发送。下次触发可写事件发送完毕后， `epoll_ctl` 删除 `EPOLLOUT` 事件。
+* 处理逻辑过程中需要 `write` 回复客户端，write 内容很大，超出了内核缓冲区，没能实时发送完成所有数据，需要下次继续发送；那么 epoll_ctl 监控 client_fd 的 `EPOLLOUT` 可写事件，下次触发事件进行发送。下次触发可写事件发送完毕后， epoll_ctl 删除 EPOLLOUT 事件。
 * 客户端关闭链接，服务端监控客户端 fd，如果 `read == 0`，`close` 关闭对应 fd 从而完成四次挥手。
 
 <div align=center><img src="/images/2021-06-21-16-25-36.png" data-action="zoom"/></div>

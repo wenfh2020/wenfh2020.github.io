@@ -24,7 +24,7 @@ author: wenfh2020
 
 核心逻辑在 `epoll_wait` 的内核实现 `ep_send_events_proc` 函数里，关键在 <font color=red> 就绪列表 </font>。
 
-`epoll_wait` 的相关工作流程：
+epoll_wait 的相关工作流程：
 
 * 监控的 fd 产生用户关注的事件，内核将 fd (epi)节点信息添加进就绪列表。
 * 内核发现就绪列表有数据，唤醒进程工作。
@@ -158,7 +158,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 当多个进程共享同一个 "epoll fd" 时，多个进程同时在等待资源，当某个事件触发时，会唤醒进程处理事件；
 
-如果是 lt 模式，epoll 在下一个 `epoll_wait` 执行前，fd 事件节点仍然会存在就绪列表中，不管事件是否处理完成，那么唤醒进程 A 处理事件时，如果 B 进程也在等待资源，那么同样的事件有可能将 B 进程也唤醒处理，
+如果是 lt 模式，epoll 在下一个 epoll_wait 执行前，fd 事件节点仍然会存在就绪列表中，不管事件是否处理完成，那么唤醒进程 A 处理事件时，如果 B 进程也在等待资源，那么同样的事件有可能将 B 进程也唤醒处理，
 
 <center>
     <img style="border-radius: 0.3125em;
