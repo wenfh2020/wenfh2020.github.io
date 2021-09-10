@@ -251,7 +251,7 @@ ptmalloc2 支持多线程，它为多个线程提供了多个 `arena` 分区（m
 
 ### 3.1. 系统内存分配流程
 
-* ptmalloc2 主要通过 `sbrk` 和 `mmap` 这两个函数，向内核申请内存空间。因为上述例子是单线程的，而且申请的内存小于 128k，所以用户空间向内核申请内存通过 `sbrk` 而不是 `mmap`。
+* ptmalloc2 主要通过 `sbrk` 和 `mmap` 这两个函数，向内核申请内存空间。因为上述例子是单线程的，而且申请的内存小于 128k，所以用户空间向内核申请内存通过 sbrk 而不是 mmap。
 
 <div align=center><img src="/images/2021-04-14-17-13-58.png" data-action="zoom"/></div>
 
@@ -330,19 +330,19 @@ struct malloc_state {
 };
 ```
 
-| 成员      | 描述                                                                                                                                                                                                                                                         |
-| :-------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|   成员    | 描述                                                                                                                                                                                                                                                         |
+| :-------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | fastbinsY | 拥有 10 (NFASTBINS) 个元素的数组，用于存放每个 fast chunk 链表头指针，所以 fast bins 最多包含 10 个 fast chunk 的单向链表。                                                                                                                                  |
-| top       | 是一个 chunk 指针，指向分配区的 top chunk。                                                                                                                                                                                                                  |
-| bins      | 用于存储 unstored bin，small bins 和 large bins 的 chunk 链表头，small bins 一共 62 个，large bins 一共 63 个，加起来一共 125 个 bin。而 NBINS 定义为 128，其实 bin[0] 和 bin[127] 都不存在，bin[1] 为 unsorted bin 的 chunk 链表头，所以实际只有 126 bins。 |
+|    top    | 是一个 chunk 指针，指向分配区的 top chunk。                                                                                                                                                                                                                  |
+|   bins    | 用于存储 unstored bin，small bins 和 large bins 的 chunk 链表头，small bins 一共 62 个，large bins 一共 63 个，加起来一共 125 个 bin。而 NBINS 定义为 128，其实 bin[0] 和 bin[127] 都不存在，bin[1] 为 unsorted bin 的 chunk 链表头，所以实际只有 126 bins。 |
 
 ---
 
 ### 3.3. sbrk 系统分配回收内存
 
-测试 demo 分配小内存，当 glibc 内存池缓存不足时，glibc 会通过 sbrk 向系统申请内存给 `malloc_state.top`，也就是 top chunk，从它那里划分一块出来返回给用户进程。
+测试 demo 分配小内存，当 glibc 内存池缓存不足时，glibc 会通过 sbrk 向系统申请内存给 malloc_state.top，也就是 top chunk，从它那里划分一块出来返回给用户进程。
 
-当 top chunk 内存达到一个回收阈值时，它才会通过 sbrk 返还内存给系统。所以说理解 `malloc_state.top` 是解决问题的关键。
+当 top chunk 内存达到一个回收阈值时，它才会通过 sbrk 返还内存给系统。所以说理解 malloc_state.top 是解决问题的关键。
 
 <div align=center><img src="/images/2021-04-27-09-13-26.png" data-action="zoom"/></div>
 
