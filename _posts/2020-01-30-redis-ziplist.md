@@ -528,58 +528,62 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
 
 ## 5. 问题
 
-* 分配内存
+* 分配内存。
+  
   ziplist 插入删除数据需要重新分配内存。
 
-* 耦合问题
+* 耦合问题。
+  
   ziplist 为了在连续内存上进行数据管理，对数据进行压缩，节省内存开销，也减少内存碎片。但是 prevlen 作为数据结点对组成部分，跟其它结点严重耦合，只要在链表中间插入或者删除结点，有可能需要遍历更新插入或删除位置后续的所有结点 `<prevlen>`。
 
-* 效率问题
+* 复杂度
+  
+  指针的偏移考验的是技术功底。ziplist 实现算是比较复杂了（对我而言）。如果用传统的双向链表实现要简单不少的，压缩目的还是能达到的，结点间的耦合比较小。
+
+* 效率问题。
+  
   列表重点是压缩，是一个列表，插入删除数据，效率不高，需要重新分配内存。因为是列表，查找结点复杂度 O(n)。在 `sorted set` 的实现中，对 `skiplist` 的使用是有限制的。
 
-redis.conf
+    *redis.conf*
 
-```shell
-zset-max-ziplist-entries 128
-zset-max-ziplist-value 64
-```
+    ```shell
+    zset-max-ziplist-entries 128
+    zset-max-ziplist-value 64
+    ```
 
-t_zset.c
+    *t_zset.c*
 
-```c
-void zaddGenericCommand(client *c, int flags) {
-    ...
-    zobj = lookupKeyWrite(c->db,key);
-    if (zobj == NULL) {
-        if (xx) goto reply_to_client; /* No key + XX option: nothing to do. */
-        if (server.zset_max_ziplist_entries == 0 ||
-            server.zset_max_ziplist_value < sdslen(c->argv[scoreidx+1]->ptr))
-        {
-            zobj = createZsetObject();
+    ```c
+    void zaddGenericCommand(client *c, int flags) {
+        ...
+        zobj = lookupKeyWrite(c->db,key);
+        if (zobj == NULL) {
+            if (xx) goto reply_to_client; /* No key + XX option: nothing to do. */
+            if (server.zset_max_ziplist_entries == 0 ||
+                server.zset_max_ziplist_value < sdslen(c->argv[scoreidx+1]->ptr))
+            {
+                zobj = createZsetObject();
+            } else {
+                zobj = createZsetZiplistObject();
+            }
+            dbAdd(c->db,key,zobj);
         } else {
-            zobj = createZsetZiplistObject();
-        }
-        dbAdd(c->db,key,zobj);
-    } else {
-        if (zobj->type != OBJ_ZSET) {
-            addReply(c,shared.wrongtypeerr);
-            goto cleanup;
+            if (zobj->type != OBJ_ZSET) {
+                addReply(c,shared.wrongtypeerr);
+                goto cleanup;
+            }
         }
     }
-}
 
-int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
-    ...
-    zobj->ptr = zzlInsert(zobj->ptr,ele,score);
-    if (zzlLength(zobj->ptr) > server.zset_max_ziplist_entries ||
-        sdslen(ele) > server.zset_max_ziplist_value)
-        zsetConvert(zobj,OBJ_ENCODING_SKIPLIST);
-    ...
-}
-```
-
-* 复杂度
-指针的偏移考验的是技术功底。ziplist 实现算是比较复杂了（对我而言）。如果用传统的双向链表实现要简单不少的，压缩目的还是能达到的，结点间的耦合比较小。
+    int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
+        ...
+        zobj->ptr = zzlInsert(zobj->ptr,ele,score);
+        if (zzlLength(zobj->ptr) > server.zset_max_ziplist_entries ||
+            sdslen(ele) > server.zset_max_ziplist_value)
+            zsetConvert(zobj,OBJ_ENCODING_SKIPLIST);
+        ...
+    }
+    ```
 
 ---
 
