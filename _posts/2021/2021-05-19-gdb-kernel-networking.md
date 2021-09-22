@@ -8,7 +8,7 @@ author: wenfh2020
 
 最近在看 Linux 内核的网络部分源码，在 MacOS 上搭建调试环境，通过 gdb 调试，熟悉内核网络接口的工作流程。
 
-> 调试环境搭建视频：[gdb 调试 Linux 内核网络源码](https://www.bilibili.com/video/bv1cq4y1E79C)。
+!> 调试环境搭建视频：[gdb 调试 Linux 内核网络源码](https://www.bilibili.com/video/bv1cq4y1E79C)。
 
 
 
@@ -133,7 +133,8 @@ gcc --version
 sudo apt install gcc-9 g++-9 -y
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 gcc --version
-wget https://mirror.bjtu.edu.cn/gnu/gdb/gdb-8.3.tar.xz
+#wget https://mirror.bjtu.edu.cn/gnu/gdb/gdb-8.3.tar.xz
+wget http://ftp.gnu.org/gnu/gdb/gdb-8.3.tar
 tar -xvf gdb-8.3.tar.xz
 cd gdb-8.3
 # 修改 gdb/remote.c 代码。
@@ -141,23 +142,24 @@ vim gdb/remote.c
 ```
 
 ```c
-    /* Further sanity checks, with knowledge of the architecture.  */
-    // if (buf_len > 2 * rsa->sizeof_g_packet)
-    //   error (_("Remote 'g' packet reply is too long (expected %ld bytes, got %d "
-    //      "bytes): %s"),
-    //    rsa->sizeof_g_packet, buf_len / 2,
-    //    rs->buf.data ());
-  if (buf_len > 2 * rsa->sizeof_g_packet) {
+/* Further sanity checks, with knowledge of the architecture.  */
+// if (buf_len > 2 * rsa->sizeof_g_packet)
+//   error (_("Remote 'g' packet reply is too long (expected %ld bytes, got %d "
+//      "bytes): %s"),
+//    rsa->sizeof_g_packet, buf_len / 2,
+//    rs->buf.data ());
+
+if (buf_len > 2 * rsa->sizeof_g_packet) {
     rsa->sizeof_g_packet = buf_len;
-    for (i = 0; i < gdbarch_num_regs (gdbarch); i++){
-            if (rsa->regs[i].pnum == -1)
-                continue;
-            if (rsa->regs[i].offset >= rsa->sizeof_g_packet)
-                rsa->regs[i].in_g_packet = 0;
-            else
-                rsa->regs[i].in_g_packet = 1;
-        }
+    for (i = 0; i < gdbarch_num_regs(gdbarch); i++) {
+        if (rsa->regs[i].pnum == -1)
+            continue;
+        if (rsa->regs[i].offset >= rsa->sizeof_g_packet)
+            rsa->regs[i].in_g_packet = 0;
+        else
+            rsa->regs[i].in_g_packet = 1;
     }
+}
 ```
 
 ```shell
@@ -199,6 +201,8 @@ gdb ./vmlinux
 # 下断点。
 b tcp_v4_connect
 b inet_csk_accept
+# gdb 远程连接调试程序。
+target remote : 123
 c
 ```
 

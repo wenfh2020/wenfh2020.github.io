@@ -37,7 +37,7 @@ inline util::Status JsonStringToMessage(StringPiece input, Message* message);
 syntax = "proto3";
 package kim;
 
-message addr_info{
+message addr_info {
     string bind = 1;      /* bind host for inner server. */
     uint32 port = 2;      /* port for inner server. */
     string gate_bind = 3; /* bind host for user client. */
@@ -54,7 +54,7 @@ message node_info {
 }
 ```
 
-* 执行脚本将 proto 文件生成 protobuf 代码。
+* 执行脚本将 proto 文件生成 C++ protobuf 代码。
 
 ```shell
 protoc -I. *.proto --cpp_out=. 

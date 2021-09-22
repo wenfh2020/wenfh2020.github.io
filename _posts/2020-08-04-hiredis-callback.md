@@ -267,8 +267,8 @@ static void __redisRunCallback(redisAsyncContext *ac, redisCallback *cb, redisRe
 
 单链接异步读写 redis，为何能并发 10w+，主要几个原因：
 
-1. 非阻塞网络通信。
-2. redis 高性能特性。
+1. redis 高性能特性。
+2. 非阻塞网络通信。
 3. 多路复用技术。
 
 ---

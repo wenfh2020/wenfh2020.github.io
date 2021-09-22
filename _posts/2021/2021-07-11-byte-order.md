@@ -27,15 +27,15 @@ author: wenfh2020
   1. **小端**：将低序字节存储在起始地址；
   2. **大端**：将高序字节存储在起始地址。
 
-<div align=center><img src="/images/2021-07-11-17-17-40.png" data-action="zoom"/></div>
-
   > 上述文字主要来源于：《UNIX 网络编程》- 3.4 字节排序函数。
+
+<div align=center><img src="/images/2021-07-11-17-17-40.png" data-action="zoom"/></div>
 
 * 网络字节序。
   
   网络字节顺序是TCP/IP中规定好的一种数据表示格式，它与具体的CPU类型、操作系统等无关，从而可以保证数据在不同主机之间传输时能够被正确解释。网络字节顺序采用大端（big-endian）排序方式。
   
-> 上述文字主要来源于：[网络字节序](https://baike.baidu.com/item/%E7%BD%91%E7%BB%9C%E5%AD%97%E8%8A%82%E5%BA%8F/12610557)。
+  > 上述文字主要来源于：[网络字节序](https://baike.baidu.com/item/%E7%BD%91%E7%BB%9C%E5%AD%97%E8%8A%82%E5%BA%8F/12610557)。
 
 ---
 
@@ -59,7 +59,7 @@ uint32_t ntohl(uint32_t net32bitvalue);
 
 * 转换流程。
   
-  举个🌰：client 与 server 通信，16 位整数字节序转换流程：htons --> 网络字节序（大端） --> ntohs。
+  举个 🌰：client 与 server 通信，16 位整数字节序转换流程：htons --> 网络字节序（大端） --> ntohs。
 
   其实这里面有两个环节：
 
@@ -131,12 +131,46 @@ __bswap_16 (unsigned short int __bsx) {
 
 ## 3. C 语言实现大小端判断
 
+* 判断大小端。
+
 ```c
 int little = 1;
 if (*(char*)(&little) == 0) {
     printf("big endian\n");
 } else {
     printf("little endian\n");
+}
+```
+
+* 转小端测试 [源码](https://github.com/wenfh2020/c_test/blob/master/network/endian.cpp)。
+
+```c
+#include <stdio.h>
+
+unsigned char is_little_endian() {
+    static int little = 1;
+    return (*(char*)(&little) == 1);
+}
+
+void swap(void* data, int n) {
+    if (is_little_endian()) return;
+
+    int i;
+    unsigned char *p, temp;
+
+    p = (unsigned char*)data;
+    for (i = 0; i < n / 2; i++) {
+        temp = p[i];
+        p[i] = p[n - 1 - i];
+        p[n - 1 - i] = temp;
+    }
+}
+
+int main(int argc, char** argv) {
+    int a = 0x12345678;
+    swap(&a, sizeof(a));
+    printf("a: %x\n", a);
+    return 0;
 }
 ```
 

@@ -87,7 +87,7 @@ dictEntry *dictFind(dict *d, const void *key) {
         idx = h & d->ht[table].sizemask;
         he = d->ht[table].table[idx];
         while(he) {
-            // 如果 key 已经存在则返回错误。
+            // 如果 key 已经存在则返回对应的数据结构。
             if (key==he->key || dictCompareKeys(d, key, he->key))
                 return he;
             he = he->next;
@@ -225,6 +225,8 @@ dictEntry *dictAddRaw(dict *d, void *key) {
 
 ### 4.4. 哈希索引
 
+检查哈希键是否已经被占用，被占用了就返回 -1，否则返回 key 对应的哈希索引。
+
 ```c
 /* Returns the index of a free slot that can be populated with
  * a hash entry for the given 'key'.
@@ -246,7 +248,7 @@ static int _dictKeyIndex(dict *d, const void *key) {
         /* Search if this slot does not already contain the given key */
         he = d->ht[table].table[idx];
         while(he) {
-            // 如果 key 已经存在则返回错误。
+            // 如果 key 已经存在则返回 -1。
             if (key==he->key || dictCompareKeys(d, key, he->key))
                 return -1;
             he = he->next;
@@ -265,7 +267,7 @@ static int _dictKeyIndex(dict *d, const void *key) {
 
 ### 5.1. 哈希表数据迁移
 
-避免数据量大，一次性迁移需要耗费大量资源。每次只迁移部分数据。
+避免数据量大，一次性迁移需要耗费大量资源，每次只迁移部分数据。
 
 ```c
 /* This function performs just a step of rehashing, and only if there are

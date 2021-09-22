@@ -6,7 +6,7 @@ tags: epoll
 author: wenfh2020
 ---
 
-epoll 多路复用驱动是异步事件处理，在用户层它提供了用户数据（`epoll_data`），方便事件触发后回调给用户处理。
+epoll 多路复用驱动是异步事件处理，在用户空间它提供了用户数据（`epoll_data`），方便事件触发后回调给用户处理。
 
 * glibc
 
@@ -129,7 +129,7 @@ static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
 
 ### 2.2. epoll_wait
 
-内核检测到 fd 有事件发生，唤醒进程，epoll_wait 将 fd 对应事件从内核拷贝（__put_user）到用户层。
+epoll_wait 是阻塞（超时）等待事件发生的接口，当内核检测到 fd 有事件发生，会唤醒进程，内核将 fd 对应事件从内核拷贝（__put_user）到用户空间处理。
 
 ```c
 /* eventpoll.c */
@@ -350,6 +350,7 @@ ngx_epoll_add_event(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags) {
     struct epoll_event ee;
     ...
     ee.events = events | (uint32_t)flags;
+    /* 增加 instance 值。 */
     ee.data.ptr = (void *) ((uintptr_t) c | ev->instance);
     ...
     if (epoll_ctl(ep, op, c->fd, &ee) == -1) {
@@ -393,8 +394,8 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
 
 ## 4. 小结
 
-* 做底层的事件驱动逻辑，需要缜密的思维，只要逻辑错误，无论传的是啥参数一样会出现错误。
 * 阅读经典的开源源码，可以深层次理解作者代码设计思路，通过对比，加深对代码的理解。
+* 做底层的事件驱动逻辑，需要缜密的思维，只要逻辑错误，无论传的是啥参数一样会出现错误。
 * 现实使用，我们可以参考开源的实现。
 
 ---
