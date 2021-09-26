@@ -75,7 +75,7 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 * 函数调用层次。
 
-<div align=center><img src="/images/2021-09-01-12-07-31.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-09-23-15-47-37.png" data-action="zoom"/></div>
 
 ---
 
@@ -1029,6 +1029,7 @@ static inline int neigh_hh_output(const struct hh_cache *hh, struct sk_buff *skb
 * [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
 * [[内核源码] 网络协议栈 - socket (tcp)](https://wenfh2020.com/2021/07/13/kernel-sys-socket/)
 * [Linux网络系统原理笔记](https://blog.csdn.net/qq_33588730/article/details/105177754)
+* [25 张图，一万字，拆解 Linux 网络包发送过程](https://blog.csdn.net/zhangyanfei01/article/details/116725966?spm=1001.2014.3001.5501)
 * [浅析TCP协议报文生成过程](https://blog.csdn.net/vipshop_fin_dev/article/details/103931691)
 * [TCP发送源码学习(1)--tcp_sendmsg](http://sunjiangang.blog.chinaunix.net/uid-9543173-id-3546189.html)
 * [Linux操作系统学习笔记（二十二）网络通信之发包](https://ty-chen.github.io/linux-kernel-tcp-send/)

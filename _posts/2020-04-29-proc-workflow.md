@@ -67,11 +67,15 @@ start1 (ARG_DUMMIES argc, argp)
 
 ![程序运行流程](/images/2020-04-29-11-39-52.png){:data-action="zoom"}
 
+<div align=center><img src="/images/2021-09-25-12-57-23.png" data-action="zoom"/></div>
+
+> 图片来源：《Linux Performance and Tuning Guidelines》
+
 ---
 
 ## 2. 进程虚拟内存
 
-进程一般不允许直接访问物理内存，系统通过虚拟内存方式管理进程内存。
+用户进程一般不允许直接访问物理内存，系统通过虚拟内存方式管理进程内存。
 
 ![进程地址空间](/images/2020-02-20-14-22-08.png){: data-action="zoom"}
 

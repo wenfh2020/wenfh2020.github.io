@@ -223,9 +223,9 @@ struct inet_hashinfo {
 
 * 逻辑。
 
-1. 一开始监听的 socket，根据端口值哈希，保存在 inet_hashinfo.istening_hash 哈希表里。后面因为引入 reuseport 功能，多个 socket 可以 bind/listen 相同的 ip/port，这样导致根据端口哈希值保存的数据，哈希链冲突严重，查询性能下降。
+1. 一开始监听的 socket，根据端口值哈希，保存在 inet_hashinfo.listening_hash 哈希表里。后面因为引入 reuseport 功能，多个 socket 可以 bind/listen 相同的 ip/port，这样导致根据端口哈希值保存的数据，哈希链冲突严重，查询性能下降。
 
-2. 后面引入了 (sock_reuseport) 数组，保存符合 reuseport 条件的 socket，当要从 reuseport 场景中，找出一个 socket，先根据端口哈希值，从 inet_hashinfo.istening_hash 中找出第一个符合条件的 socket，因为每个 socket.sock.sk_reuseport_cb 指针都指向了 (sock_reuseport) 数组，然后再从该数组中再哈希查找一个 socket，这样 reuseport 选项的每个 socket 查询的概率相对平衡。
+2. 后面引入了 (sock_reuseport) 数组，保存符合 reuseport 条件的 socket，当要从 reuseport 场景中，找出一个 socket，先根据端口哈希值，从 inet_hashinfo.listening_hash 中找出第一个符合条件的 socket，因为每个 socket.sock.sk_reuseport_cb 指针都指向了 (sock_reuseport) 数组，然后再从该数组中再哈希查找一个 socket，这样 reuseport 选项的每个 socket 查询的概率相对平衡。
 
 3. 但是上述操作还是无法解决相同端口 sk 过多会导致哈希链冲突的问题，所以后面又引入了 inet_hashinfo.lhash2 哈希表，哈希因子再也不只是端口值，而是 ip/port 两个数值（ipv4_portaddr_hash()），这样查找哈希链的冲突减少了。（参考下文：**查找 listen socket**）
 

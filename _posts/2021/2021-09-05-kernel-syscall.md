@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Linux 系统调用（x86_64）"
+title:  "[内核源码] Linux 系统调用（x86_64）"
 categories: kernel
 tags: linux kernel syscall
 author: wenfh2020
@@ -25,6 +25,8 @@ Linux 操作系统，为了避免用户程序非法操作设备资源，需要�
 Linux 应用程序要与内核通信，需要通过 `系统调用`。系统调用，相当于用户空间和内核空间之间添加了一个中间层。
 
 <div align=center><img src="/images/2021-09-22-13-43-07.png" data-action="zoom"/></div>
+
+> 图片来源：[Linux 系统调用](https://processon.com/view/61355ba063768906a220a785?fromnew=1)
 
 ---
 
@@ -552,32 +554,7 @@ struct pt_regs {
 
 ---
 
-### 3.3. 系统调用表
-
-系统调用表 `syscall_64.tbl`，建立了系统调用号与系统调用函数名的映射关系。脚本会根据这个表，自动生成相关的映射源码。
-
-```shell
-# arch/x86/entry/syscalls/syscall_64.tbl
-#
-# 64-bit system call numbers and entry vectors
-#
-# The format is:
-# <number> <abi> <name> <entry point>
-#
-# The __x64_sys_*() stubs are created on-the-fly for sys_*() system calls
-#
-# The abi is "common", "64" or "x32" for this file.
-#
-# 系统调用号  abi（应用程序二进制接口）类型       函数名           系统调用函数名
-     0               common                 read           __x64_sys_read
-     1               common                 write          __x64_sys_write
-     2               common                 open           __x64_sys_open
-...
-```
-
----
-
-### 3.4. do_syscall_64
+### 3.3. do_syscall_64
 
 do_syscall_64 主要功能：
 
@@ -617,6 +594,31 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs) {
     syscall_return_slowpath(regs);
 }
 #endif
+```
+
+---
+
+### 3.4. 系统调用表
+
+系统调用表 `syscall_64.tbl`，建立了系统调用号与系统调用函数名的映射关系。脚本会根据这个表，自动生成相关的映射源码。
+
+```shell
+# arch/x86/entry/syscalls/syscall_64.tbl
+#
+# 64-bit system call numbers and entry vectors
+#
+# The format is:
+# <number> <abi> <name> <entry point>
+#
+# The __x64_sys_*() stubs are created on-the-fly for sys_*() system calls
+#
+# The abi is "common", "64" or "x32" for this file.
+#
+# 系统调用号  abi（应用程序二进制接口）类型       函数名           系统调用函数名
+     0               common                 read           __x64_sys_read
+     1               common                 write          __x64_sys_write
+     2               common                 open           __x64_sys_open
+...
 ```
 
 ---
@@ -716,6 +718,13 @@ asmlinkage const sys_call_ptr_t sys_call_table[__NR_syscall_max+1] = {
 
 * 系统调用函数。现在虽然搞清楚了系统调用的关系，但是还没有发现 `__x64_sys_write` 这个函数是在哪里定义的。答案就在这个宏 `SYSCALL_DEFINE3`，将这个宏展开，回头再看上面 gdb 调试断点截断处的那些函数，整个思路就清晰了。
 
+```shell
+__do_sys_write() (/root/linux-5.0.1/fs/read_write.c:610)
+__se_sys_write() (/root/linux-5.0.1/fs/read_write.c:607)
+__x64_sys_write(const struct pt_regs * regs) (/root/linux-5.0.1/fs/read_write.c:607)
+...
+```
+
 ```c
 /* fs/read_write.c */
 SYSCALL_DEFINE3(write, unsigned int, fd, const char __user *, buf,
@@ -756,7 +765,7 @@ SYSCALL_DEFINE3(write, unsigned int, fd, const char __user *, buf,
 ## 4. 后记
 
 * 很多底层的源码，阅读起来比较费劲，用 gdb 调试，或者反汇编查看最底层的逻辑，也是一种很好掌握源码意图的方法。
-* 本人是汇编小白，能力有限，虽然翻阅了大量资料，难免有很多错漏，多多包涵~
+* 本人是汇编小白，能力有限，虽然翻阅了大量资料，难免有很多错漏，有待指正~
 
 ---
 
