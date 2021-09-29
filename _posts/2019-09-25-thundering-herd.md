@@ -31,7 +31,7 @@ author: wenfh2020
 
 ---
 
-## 1. accept 工作原理
+## 1. accept 惊群
 
 ### 1.1. 三次握手
 
@@ -348,7 +348,7 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 ---
 
-## 2. epoll 多路复用架构
+## 2. epoll 惊群
 
 经过对阻塞的 accept 服务模型进行分析，我们应该可以理解惊群的避免解决方法了，这个问题内核早已解决，不需要用户处理了。
 
@@ -390,7 +390,7 @@ redis 是数据服务，业务逻辑相对简单，单进程也能很好地完�
 
 如下图，master 主进程负责 listener 资源的 accept，当主进程获得资源，按照一定的策略，分派给相应的子进程。相当于 master 是管理者，子进程是一线员工。
 
-因为只有一个 master `单进程` 在等待 listener 的资源，所以也不存在多个进程争抢资源的 “惊群” 问题。
+虽然文件描述符透传这个是多进程模型，但因为只有一个 master 进程在等待 listener 的资源，所以也不存在多个进程争抢资源的 “惊群” 问题。
 
 > 参考：《[[kimserver] 父子进程传输文件描述符](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)》
 
@@ -402,7 +402,7 @@ redis 是数据服务，业务逻辑相对简单，单进程也能很好地完�
 
 #### 2.2.1. nginx
 
-redis 单进程处理网络虽然很快，但也限制了它对多核资源的使用。而 nginx 为了利用多核的资源，fork 了多个子进程，进行网络事件处理。
+nginx 是典型的多进程网络模型，为了利用多核的资源，主进程 fork 了多个子进程，处理网络事件。
 
 ---
 

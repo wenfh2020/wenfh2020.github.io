@@ -6,9 +6,9 @@ tags: redis sentinel vote
 author: wenfh2020
 ---
 
-在 sentinel 故障转移的流程上，当 sentinel 确认 master 客观下线（[《[redis 源码走读] sentinel 哨兵 - 主客观下线》](https://wenfh2020.com/2020/06/15/redis-sentinel-master-down/)）后，那么它要进入 `选举投票` 环节。
+在 sentinel 故障转移的流程上，当 sentinel 确认 master [客观下线](https://wenfh2020.com/2020/06/15/redis-sentinel-master-down/) 后，那么它要进入 `选举投票` 环节。
 
-多个 sentinel 有可能在同一个时间段内一起发现某个 master 客观下线，如果多个 sentinel 同时执行故障转移，有可能会乱套，也可能出现“脑裂”现象（[《[redis 源码走读] sentinel 哨兵 - 脑裂处理方案》](https://wenfh2020.com/2019/12/27/redis-split-brain/)），所以在一个集群里，多个 sentinel 需要通过投票选出一个代表，由代表去执行故障转移。
+多个 sentinel 有可能在同一个时间段内一起发现某个 master 客观下线，如果多个 sentinel 同时执行故障转移，有可能会乱套，也可能出现 [“脑裂”现象](https://wenfh2020.com/2019/12/27/redis-split-brain/)，所以在一个集群里，多个 sentinel 需要通过投票选出一个代表，由代表去执行故障转移。
 
 
 
@@ -161,7 +161,7 @@ void sentinelReceiveIsMasterDownReply(redisAsyncContext *c, void *reply, void *p
 
 ## 3. 投票
 
-* 投票方式
+### 3.1. 投票方式
 
 sentinel 的投票有两种方式：
 
@@ -199,7 +199,7 @@ char *sentinelVoteLeader(sentinelRedisInstance *master, uint64_t req_epoch, char
 }
 ```
 
-* 主动投票。
+### 3.2. 主动投票
 
 故障转移有很多环节，sentinel 要选举中赢得选举，成为 leader，才能完成故障转移所有环节。
 

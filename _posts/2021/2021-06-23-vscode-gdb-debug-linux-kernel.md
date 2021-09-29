@@ -6,8 +6,6 @@ tags: vscode gdb debug linux kernel
 author: wenfh2020
 ---
 
-配套视频：[vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)。
-
 前段时间才搭建起来 [gdb 调试 Linux 内核网络源码](https://wenfh2020.com/2021/05/19/gdb-kernel-networking/)（[视频](https://www.bilibili.com/video/bv1cq4y1E79C) ），但是 gdb 命令调试效率不高。磨刀不误砍柴工，所以折腾一下 **vscode**，使调试人性化一点。
 
 
@@ -20,15 +18,23 @@ author: wenfh2020
 
 ---
 
-## 1. 搭建调试环境
+## 1. 视频
+
+视频连接：[vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
+
+<iframe class="bilibili" src="//player.bilibili.com/player.html?aid=376254064&bvid=BV1yo4y1k7QJ&cid=360457201&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+
+---
+
+## 2. 搭建调试环境
 
 要搭建 vscode + gdb 调试 Linux 内核环境，首选要搭建：**[gdb 调试 Linux 内核源码](https://wenfh2020.com/2021/05/19/gdb-kernel-networking/)（[视频](https://www.bilibili.com/video/bv1cq4y1E79C)）**，然后再配置 vscode 进行测试调试。
 
 ---
 
-## 2. vscode 配置
+## 3. vscode 配置
 
-### 2.1. vscode 插件
+### 3.1. vscode 插件
 
 * ms-vscode.cpptools
 
@@ -44,7 +50,7 @@ author: wenfh2020
 
 ---
 
-### 2.2. 项目调试配置
+### 3.2. 项目调试配置
 
 <div align=center><img src="/images/2021-06-23-13-15-06.png" data-action="zoom"/></div>
 
@@ -74,9 +80,9 @@ author: wenfh2020
 
 ---
 
-## 3. 测试调试
+## 4. 测试调试
 
-### 3.1. 虚拟机操作
+### 4.1. 虚拟机操作
 
 ```shell
 # 虚拟机进入 linux 内核源码目录。
@@ -106,7 +112,7 @@ c
 
 ---
 
-### 3.2. 实体机操作
+### 4.2. 实体机操作
 
 1. vscode 连接远程虚拟机。
 2. vscode 打开虚拟机 Linux 内核源码。
@@ -117,7 +123,7 @@ c
 
 ---
 
-## 4. 小结
+## 5. 小结
 
 * 我认为在阅读 Linux 内核源码前，最好先把调试环境搭建起来，因为 Linux 内核源码庞大复杂，新手很难从复杂的源码调用关系中理清思路。
 * 老师传道受业，只会给你指出一条学习路线，还会提醒你路上可能遇到哪些大坑，但是路上还有无数小坑，你只有通过实践调试，才能找到答案。

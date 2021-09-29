@@ -61,11 +61,7 @@ libco 是轻量级的协程库，看完下面几个帖子，应该能大致搞�
 * 测试源码：[github](https://github.com/wenfh2020/test_libco.git)。
 * 测试视频：[gdb & libco & mysql](https://www.bilibili.com/video/bv1QV41187wz)
 
-<div align=center>
-<a href="https://www.bilibili.com/video/bv1QV41187wz">
-<img src="/images/2020-12-11-21-41-13.png" border="0" width="60%">
-</a>
-</div>
+<iframe class="bilibili" src="//player.bilibili.com/player.html?aid=415532577&bvid=BV1QV41187wz&cid=265333456&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 
 ---
 
@@ -215,7 +211,7 @@ total cnt: 1000000, total time: 125.832877, avg: 7947.048692
 
 * 压测源码（[github](https://github.com/wenfh2020/co_kimserver/blob/main/src/test/test_mysql_mgr/test_mysql_mgr.cpp)）。
 * [mysql 连接池](https://wenfh2020.com/2021/03/25/co-kimserver-mysql-pool/) 简单实现。
-* libco hook 技术虽然将 mysqlclient 阻塞接口设置为非阻塞，但是每个 mysqlclient 连接，必须一次只能处理一个命令，像同步那样！非阻塞只是方便协程切换到其它空闲协程继续工作，充分利用原来阻塞等待的时间。mysqlclient 链接是串行工作，一个连接，一次只能处理一个包，不可能被你设置为非阻塞后，一次往 mysql server 发 N 个包，这样肯定会出现不可预料的问题。
+* libco hook 技术虽然将 mysqlclient 阻塞接口设置为非阻塞，但是每个 mysqlclient 连接，必须一次只能处理一个命令，像同步那样！非阻塞只是方便协程切换到其它空闲协程继续工作，充分利用原来阻塞等待的时间。mysqlclient 链接是串行工作，一个连接，一次只能处理一个 sql 命令请求，不可能被你设置为非阻塞后，一次往 mysql server 发 N 个包，这样肯定会出现不可预料的问题。
 * libco 协程切换成本不高，主要是 mysqlclient 耗费性能，参考火焰图。
 * 压测频繁地申请内存空间也耗费了不少性能（参考火焰图的 __brk），尝试添加 jemalloc 优化，发现 jemalloc 与 libco 一起用在 Linux 竟然出现死锁！！！
 
@@ -232,6 +228,7 @@ total cnt: 1000000, total time: 125.832877, avg: 7947.048692
 * libco 是轻量级的，它主要应用于高并发的 **IO 密集型场景**，所以它绑定了多路复用事件驱动（epoll）。
 * 虽然测试效果不错，如果你考虑用 libco 去造一个 [mysql 连接池](https://wenfh2020.com/2021/03/25/co-kimserver-mysql-pool/)，还有不少工作要做。
 * libco 很不错，所以我选择 golang 🐶。
+* 然后欢迎大家查看我的 《[libco 文章系列](https://wenfh2020.com/category/#libco)》 啦啦啦 🌶。
 
 ---
 

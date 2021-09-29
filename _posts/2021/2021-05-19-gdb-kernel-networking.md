@@ -8,8 +8,6 @@ author: wenfh2020
 
 最近在看 Linux 内核的网络部分源码，在 MacOS 上搭建调试环境，通过 gdb 调试，熟悉内核网络接口的工作流程。
 
-> 调试环境搭建视频：[gdb 调试 Linux 内核网络源码](https://www.bilibili.com/video/bv1cq4y1E79C)。
-
 
 
 
@@ -30,7 +28,15 @@ author: wenfh2020
 
 ---
 
-## 2. 流程
+## 2. 视频
+
+视频连接：[gdb 调试 Linux 内核网络源码](https://www.bilibili.com/video/bv1cq4y1E79C)。
+
+<iframe class="bilibili" src="//player.bilibili.com/player.html?aid=545629533&bvid=BV1cq4y1E79C&cid=341392411&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+
+---
+
+## 3. 流程
 
 * 下载 ubuntu 14.04
 
@@ -216,7 +222,7 @@ vscode + gdb 调试 Linux 内核更好一点。详看：[vscode + gdb 远程调�
 
 ---
 
-## 3. 参考
+## 4. 参考
 
 * [构建调试Linux内核网络代码的环境MenuOS系统](https://www.cnblogs.com/AmosYang6814/p/12027988.html)
 * [初始化MenuOS的网络设置，跟踪分析TCP协议](https://www.lanqiao.cn/courses/1198/learning/?id=9010)

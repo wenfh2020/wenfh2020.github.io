@@ -56,6 +56,7 @@ man siege
 
 ```shell
 siege  -c 并发用户数 -r 循环次数 --header "http协议头设置" '请求链接'
+# siege -c 10 -r 1 'http://127.0.0.1:80/hello POST {"key": "value"}'
 ```
 
 ---
