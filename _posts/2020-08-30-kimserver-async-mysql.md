@@ -20,9 +20,7 @@ author: wenfh2020
 
 ## 1. 异步接口文档
 
-Mariadb 提供异步接口，官网文档 [《Non-blocking API Reference》](https://mariadb.com/kb/en/non-blocking-api-reference/)。
-
-> 链接可能需要翻墙。
+Mariadb 提供异步接口，官网文档：[《Non-blocking API Reference》](https://mariadb.com/kb/en/non-blocking-api-reference/)<font color=gray>（链接可能需要翻墙）</font>。
 
 ---
 
@@ -62,7 +60,9 @@ sudo make && make install
 ## 3. 性能
 
 测试数据： 100,000。
+
 测试场景：单线程。
+
 测试结果：看数据表吧，因为读写 sql 命令比较简单，测试结果只作参考吧。
 
 * Mac （8 核，16G 内存）
@@ -91,9 +91,11 @@ sudo make && make install
 
 ### 4.1. 原理
 
-虽然是异步非阻塞操作，mysql 不像 redis 那样支持批量处理命令（pipeline）。
+虽然是异步非阻塞操作，mysql 不像 redis（[pipeline](https://wenfh2020.com/2021/03/14/redis-pipeline/)) 那样支持批量命令处理。
 
-异步 client 发送命令，每个命令需要等待 mysql 返回结果后，才能再发送下一个，所以单链接的异步处理本质上也是串行的，与同步比较，并没有什么优势可言，但是异步处理，是非阻塞的，并且支持多个链接“并行”工作。
+异步 client 发送命令，每个命令需要等待 mysql 返回结果后，才能再发送下一个，所以单链接的异步处理本质上也是串行的，在 Linux 上，异步与同步比较，并没有什么优势可言。
+
+但是异步处理，是非阻塞的，单线程能支持多个链接“并行”工作，这样 `单线程的吞吐性能` 得到提升。
 
 测试项目的异步链接池基于 `libev` 对链接事件进行管理，我们来看看**读数据**的流程逻辑：
 
@@ -225,7 +227,7 @@ int main(int args, char** argv) {
 2. mysql 异步与同步 client，单连接性能差距不大，区别在于：异步是非阻塞的，同步是阻塞的。
 3. mariadb 异步 client 使用复杂度还是有点高，需要造轮子，这不是一件简单的事。
 4. 如果你正在使用鹅厂的轻量级协程库：[libco](https://github.com/Tencent/libco)，使用同步的 mysql client 能达到异步效果：[《libco 协程库学习，测试连接 mysql》](https://wenfh2020.com/2020/12/07/libco-learnning/)，但是当你实际使用，可能又会遇到新的坑，太难了...
-5. 我认为无论多牛的技术，首先需要使用简单才行，所以折腾过 C/C++，你才会发现为啥越来越多人拥抱 golang；它有强大的生态，一个 `go get` 就能轻松获得一个高质量的数据库连接池🙃，而且性能还不错。所以很多成熟的套件，压根不需要你重新去造轮子。
+5. 我认为无论多牛的技术，首先需要使用简单才行，所以折腾过 C/C++，你才会发现为啥越来越多人拥抱 golang；它有强大的生态，一个 `go get` 就能轻松获得一个高质量的数据库连接池🙃，而且性能还不错。
 
 ---
 

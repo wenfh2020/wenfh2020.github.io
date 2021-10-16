@@ -1,16 +1,25 @@
 ---
 layout: post
-title:  "剖析 TCP - SO_REUSEPORT 使用"
+title:  "探索惊群 ⑥ - nginx - reuseport"
 categories: kernel nginx
 tags: reuseport nginx
 author: wenfh2020
 ---
 
-在 TCP 应用中，SO_REUSEPORT 是 TCP 的一个选项设置，它能开启内核功能：网络连接分配 `内核负载均衡`。
+SO_REUSEPORT (reuseport) 是网络的一个选项设置，它能开启内核功能：网络链接分配 `内核负载均衡`。
 
-该功能允许多个进程/线程 bind/listen 相同的 IP/PORT，提升了新连接的分配性能。
+该功能允许多个进程/线程 bind/listen 相同的 IP/PORT，提升了新链接的分配性能。
 
-nginx 开启 `reuseport` 功能后，性能有立竿见影的提升，我们结合 nginx 分析一下 reuseport 功能。
+nginx 开启 reuseport 功能后，性能有立竿见影的提升，我们结合 tcp 协议分析 nginx 的 reuseport 功能。
+
+---
+
+reuseport 也是内核解决 `惊群问题` 的优秀方案。
+
+1. 每个进程可以 bind/listen 相同的 IP/PORT，相当于每个进程拥有独立的 listen socket 的完全队列，避免了共享 listen socket 的资源争抢。
+
+2. 内核通过哈希算法，将新链接相对均衡地分配到各个开启了 reuseport 属性的进程，所以资源的负载均衡得到解决。
+
 
 
 
@@ -28,7 +37,7 @@ nginx 开启 `reuseport` 功能后，性能有立竿见影的提升，我们结�
 
 从下面这段英文提取一些关键信息：
 
-SO_REUSEPORT 是网络的一个选项设置，它允许多个进程/线程 bind/listen 相同的 IP/PORT，在 TCP 的应用中，它是一个新连接分发的（内核）负载均衡功能，它提升了新连接的分配性能（针对 accept ）。
+SO_REUSEPORT 是网络的一个选项设置，它允许多个进程/线程 bind/listen 相同的 IP/PORT，在 TCP 的应用中，它是一个新链接分发的（内核）负载均衡功能，它提升了新链接的分配性能（针对 accept ）。
 
 ```shell
 Socket options
@@ -61,7 +70,7 @@ Socket options
                 the same socket.
 ```
 
-> 注释文字来源 (连接需要翻墙）：[socket(7) — Linux manual page](https://man7.org/linux/man-pages/man7/socket.7.html)
+> 注释文字来源 (链接需要翻墙）：[socket(7) — Linux manual page](https://man7.org/linux/man-pages/man7/socket.7.html)
 
 ---
 
@@ -110,9 +119,9 @@ reuseport 选项主要解决了两个问题：
 
 其实它还解决了一个很重要的问题：
 
-在 tcp 多线程场景中，（B 图）服务端如果所有新连接只保存在一个 listen socket 的 `全连接队列` 中，那么多个线程去这个队列里获取（accept）新的连接，势必会出现多个线程对一个公共资源的争抢，争抢过程中，大量资源的损耗。
+在 tcp 多线程场景中，（B 图）服务端如果所有新链接只保存在一个 listen socket 的 `全链接队列` 中，那么多个线程去这个队列里获取（accept）新的链接，势必会出现多个线程对一个公共资源的争抢，争抢过程中，大量资源的损耗。
 
-而（C 图）有多个 listener 共同 bind/listen 相同的 IP/PORT，也就是说每个进程/线程有一个独立的 listener，相当于每个进程/线程独享一个 listener 的全连接队列，不需要多个进程/线程竞争某个公共资源，能充分利用多核，减少竞争的资源消耗，效率自然提高了。
+而（C 图）有多个 listener 共同 bind/listen 相同的 IP/PORT，也就是说每个进程/线程有一个独立的 listener，相当于每个进程/线程独享一个 listener 的全链接队列，不需要多个进程/线程竞争某个公共资源，能充分利用多核，减少竞争的资源消耗，效率自然提高了。
 
 ---
 
@@ -130,7 +139,7 @@ setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (const void *)&reuse, sizeof(int));
 
 ## 2. 原理
 
-TCP 客户端连接服务端，第一次握手，服务端被动收到第一次握手 SYN 包，内核就通过哈希算法，将客户端的连接分派到内核半连接队列，三次握手成功后，再将这个连接从半连接队列移动到某个 listener 的全连接队列中，提供 accept 获取。
+TCP 客户端链接服务端，第一次握手，服务端被动收到第一次握手 SYN 包，内核就通过哈希算法，将客户端的链接分派到内核半链接队列，三次握手成功后，再将这个链接从半链接队列移动到某个 listener 的全链接队列中，提供 accept 获取。
 
 * 三次握手流程。
 

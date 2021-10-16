@@ -24,7 +24,7 @@ author: wenfh2020
 
 每个 sentinel 当确认 master 客观下线，它需要向其它 sentinel 拉票，让它们投票给自己。当然 sentinel 除了拉票，它自己也能主动投，投别人，或者投自己。
 
-多数服从少数，当集群里超过半数的 sentinel 选某个 sentinel 为代表，那么它就是 leader，这样选举结束。
+少数服从多数，当集群里超过半数的 sentinel 选某个 sentinel 为代表，那么它就是 leader，这样选举结束。
 
 ![选举投票](/images/2020-09-27-12-46-37.png){:data-action="zoom"}
 

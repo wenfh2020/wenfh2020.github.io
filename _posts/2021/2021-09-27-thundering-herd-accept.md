@@ -1,20 +1,19 @@
 ---
 layout: post
-title:  "惊群效应"
-categories: network
-tags: thundering herd
+title:  "探索惊群 ② - accept"
+categories: nginx kernel
+tags: linux nginx kernel thundering herd
 author: wenfh2020
 ---
 
-多个 进程/线程 等待资源，当资源到来时，多个 进程/线程 同时争抢，而只有少数 进程/线程 获得资源，这就是传说中的 `“惊群效应”`。
+早期的 accept 同步阻塞睡眠等待资源，当资源到来时，在多个进程或线程上睡眠的 accept 会同时被唤醒处理。后来 Linux 内核增加了 `WQ_FLAG_EXCLUSIVE` 排它唤醒属性，避免了惊群问题。
 
-那么怎样才能避免 “惊群效应” 呢？答案是当一个资源到来时，只分配给一个 进程/线程 处理，这样就避免出现资源争抢的现象。
+本文将深入 Linux 内核（5.0.1）源码，剖析在 TCP 多进程框架下，同步阻塞 accept 的惊群处理。
 
-> 这与抢红包的道理是一样的，当你往群组里发一个红包，大家拼命争抢，结果是有人欢喜有人忧。当你不再往群组里发包了，私下发包，这样就不存在争抢的问题了。
+既然是 TCP 协议的 accept，那不得不了解三次握手和进程睡眠唤醒的原理。
 
----
 
-本文将会简述 “惊群效应” 的影响、原理和解决方案。因为多进程和多线程模型在解析惊群问题，原理差不多，而且多进程模型有比较经典的案例，所以本文将会通过多进程模型剖析惊群问题。
+
 
 
 
@@ -23,54 +22,90 @@ author: wenfh2020
 
 ---
 
-* 剖析经典的多线程和多进程处理方案。
-* epoll 惊群。
-* 剖析 nginx 原来是怎么做的。
-* 剖析 nginx reuseport 是怎么处理的。
-* 惊群会产生什么问题。
+## 1. 工作逻辑
+
+正常的同步服务程序，会启动多个进程（worker #1 / worker #2）进行 accept 新的链接。
+
+如下图，多个子进程共同 accept 主进程的共享 socket 的链接资源，当资源到来时，只唤醒其中一个进程处理，这样就避免了惊群问题。
+
+<div align=center><img src="/images/2021-10-12-15-00-05.png" data-action="zoom"/></div>
+
+* 子进程阻塞睡眠等待，添加排它唤醒标识（WQ_FLAG_EXCLUSIVE）的等待事件到等待队列。
+
+```c
+/* kernel/sched/wait.c */
+void prepare_to_wait_exclusive(struct wait_queue_head *wq_head, struct wait_queue_entry *wq_entry, int state) {
+    unsigned long flags;
+
+    /* 添加排它唤醒标识 WQ_FLAG_EXCLUSIVE，也就是当资源到来时，内核只唤醒一个进程/线程。 */
+    wq_entry->flags |= WQ_FLAG_EXCLUSIVE;
+    spin_lock_irqsave(&wq_head->lock, flags);
+    if (list_empty(&wq_entry->entry))
+        __add_wait_queue_entry_tail(wq_head, wq_entry);
+    /* 设置进程的状态为 TASK_INTERRUPTIBLE，睡眠，但是可被中断唤醒。*/
+    set_current_state(state);
+    spin_unlock_irqrestore(&wq_head->lock, flags);
+}
+```
+
+* 资源到来时，内核唤醒等待队列里的一个子进程。
+
+```c
+static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
+            int nr_exclusive, int wake_flags, void *key,
+            wait_queue_entry_t *bookmark) {
+    wait_queue_entry_t *curr, *next;
+    int cnt = 0;
+    ...
+    /* 遍历唤醒等待队列。 */
+    list_for_each_entry_safe_from(curr, next, &wq_head->head, entry) {
+        unsigned flags = curr->flags;
+        int ret;
+        ...
+        /* 将睡眠的进程唤醒。*/
+        ret = curr->func(curr, mode, wake_flags, key);
+        if (ret < 0)
+            break;
+        /* 如果设置了 WQ_FLAG_EXCLUSIVE 标签的话，执行一次唤醒（nr_exclusive == 1），就退出循环。 */
+        if (ret && (flags & WQ_FLAG_EXCLUSIVE) && !--nr_exclusive)
+            break;
+        ...
+    }
+
+    return nr_exclusive;
+}
+```
 
 ---
 
-## 1. accept 惊群
+## 2. 三次握手
 
-### 1.1. 三次握手
-
-通过 TCP 服务端和客户端的链接流程，了解 accept 从 listener 的 `全连接队列` 获取新链接资源的工作原理。（参考下图TCP 三次握手流程。）
+通过 TCP 服务端和客户端的链接流程，了解 accept 从 listener 的 `全连接队列` 获取新链接资源的工作流程。（参考下图TCP 三次握手流程。）
 
 <div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 ---
 
-### 1.2. 工作逻辑
+## 3. accept 内核源码
 
-正常的同步服务程序，会启动多个进程/线程（worker #1 / worker #2）进行 accept 新的链接，然后多个 进程/线程（worker #3 / worker #4） 处理新链接的逻辑。
+进程 accept 阻塞等待资源场景下，内核调用 `inet_csk_wait_for_connect` 等待资源。
 
-<div align=center><img src="/images/2021-09-27-10-44-09.png" data-action="zoom"/></div>
-
-这样的架构有个问题：多个 进程/线程 同时等待资源，那么内核应该将新来的资源分配给谁呢？是分配给其中一个 进程/线程 呢？还是将这些等待 accept 的 进程/线程 全部唤醒处理呢？答案是只将一个资源分配给一个 进程/线程，接下来看看内核是如何处理的。
-
----
-
-### 1.3. accept 内核源码
-
-进程/线程 accept 阻塞等待资源场景下，内核调用 `inet_csk_wait_for_connect` 等待资源。
-
-通过源码了解它当资源到来时，怎么只唤醒一个进程处理的，关键在于 `WQ_FLAG_EXCLUSIVE` 排它性等待标识，当资源到来时，`__wake_up_common` 根据标识，只唤醒一个正在等待的 进程/线程。（参考 Linux 源码：5.0.1）
+通过源码了解它当资源到来时，怎么只唤醒一个进程处理的，关键在于 WQ_FLAG_EXCLUSIVE 排它性等待标识，当资源到来时，`__wake_up_common` 根据标识，只唤醒一个正在等待的进程。（参考 Linux 源码：5.0.1）
 
 > 参考：《[[内核源码] 网络协议栈 - accept (tcp)](https://wenfh2020.com/2021/07/28/kernel-accept/)》
 
 ---
 
-#### 1.3.1. 睡眠等待资源
+### 3.1. 睡眠等待资源
 
-进程/线程 添加等待排它性唤醒标识 WQ_FLAG_EXCLUSIVE，`prepare_to_wait_exclusive` 将 进程/线程 添加到等待队列，然后睡眠等待唤醒；
+进程添加等待排它性唤醒标识 WQ_FLAG_EXCLUSIVE，`prepare_to_wait_exclusive` 将进程添加到等待队列，然后睡眠等待唤醒；
 
 ```shell
 accept
 |-- inet_accept
     |-- inet_csk_accept
         |-- inet_csk_wait_for_connect # 如果当前没有资源，进程/线程 睡眠等待资源，被唤醒。
-            |-- prepare_to_wait_exclusive # 将当前 进程/线程 添加到等待队列。
+            |-- prepare_to_wait_exclusive # 将当前进程添加到等待队列。
                 |-- __add_wait_queue_entry_tail # 添加到等待队列。
 ```
 
@@ -170,7 +205,7 @@ void prepare_to_wait_exclusive(struct wait_queue_head *wq_head, struct wait_queu
 
 ---
 
-#### 1.3.2. 唤醒
+### 3.2. 唤醒
 
 资源到来，`__wake_up_common` 函数唤醒等待进程/线程。tcp 完全链接，是通过客户端与服务端进行 `三次握手` 完成的，所以当三次握手成功时，内核会将链接添加到 listener 的完全连接队列，看看最后一次握手，服务端唤醒 listener 的等待队列中的等待的 进程/线程。
 
@@ -323,7 +358,7 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 ---
 
-### 1.4. 测试
+## 4. 测试
 
 通过多进程架构进行测试，主进程 listen，fork 两个子进程分别进行 accept。验证了阻塞的 accept 不会产生惊群问题。
 
@@ -345,82 +380,3 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 # 新连接到来，只有一个进程（pid: 69313） accept 到资源。
 [s][69313][2021-09-27 19:09:02.266][server.c][run_server:76] accept new client, pid: 69313, fd: 5, ip: 127.0.0.1, port: 40504
 ```
-
----
-
-## 2. epoll 惊群
-
-经过对阻塞的 accept 服务模型进行分析，我们应该可以理解惊群的避免解决方法了，这个问题内核早已解决，不需要用户处理了。
-
-现在 Linux 高性能服务一般都使用一些异步的 IO 模型：`select/poll/epoll`，不再是通过 accept 阻塞去获取资源，例如 🌰：redis / nginx。
-
-> redis 为啥那么快，通过 epoll 事件驱动处理事件就是快的其中一个原因。
-
-如果我们使用 epoll 多路复用 IO 模型，那么它就会通过 `epoll_wait` 去超时阻塞等待资源，直到获取到就绪事件（暂不考虑超时，信号，异常等原因），才会唤醒进程处理事件。
-
-所以接下来，要分析 epoll 模型，它是否也会产生惊群问题。
-
----
-
-### 2.1. 单进程
-
-使用 epoll 非常高效，单进程/线程也能实现高性能服务。所以只要使用单进程去 `epoll_wait` 等待资源，就不会存在什么 “惊群” 问题。例如：redis。
-
----
-
-#### 2.1.1. redis
-
-Linux 系统，redis 默认使用 epoll 异步事件驱动，可以高效地处理网络事件。
-
-redis 的网络逻辑是在主进程（主线程）中实现的，一个进程（主线程）何来 “惊群”？！所以 redis 不存在 “惊群” 问题。
-
-> 参考：《[[redis 源码走读] 异步通信流程-单线程](http://wenfh2020.com/2020/04/30/redis-async-communication/)》
-
-<div align=center><img src="/images/2021-09-28-12-41-03.png" data-action="zoom"/></div>
-
----
-
-#### 2.1.2. 文件描述符透传
-
-redis 是数据服务，业务逻辑相对简单，单进程也能很好地完成任务，然而一般的高性能服务业务逻辑比较复杂，单进程显然无法很好地完成业务逻辑，需要利用多核资源，创建多个进程去处理业务逻辑。
-
-那么多进程怎么避免 “惊群” 呢？
-
-有一个比较典型的服务模型，就是一个进程去 accept listener 的资源，然后通过 socket pair 管道进行文件描述符传输给子进程。
-
-如下图，master 主进程负责 listener 资源的 accept，当主进程获得资源，按照一定的策略，分派给相应的子进程。相当于 master 是管理者，子进程是一线员工。
-
-虽然文件描述符透传这个是多进程模型，但因为只有一个 master 进程在等待 listener 的资源，所以也不存在多个进程争抢资源的 “惊群” 问题。
-
-> 参考：《[[kimserver] 父子进程传输文件描述符](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)》
-
-<div align=center><img src="/images/2021-09-28-14-10-47.png" data-action="zoom"/></div>
-
----
-
-### 2.2. 多进程
-
-#### 2.2.1. nginx
-
-nginx 是典型的多进程网络模型，为了利用多核的资源，主进程 fork 了多个子进程，处理网络事件。
-
----
-
-## 3. 结果
-
-线程或进程切换，内核需要保存上下文以及寄存器等资源，频繁切换会导致系统资源损耗。
-
----
-
-## 4. 测试
-
-[源码](https://github.com/wenfh2020/c_test/blob/master/network/thundering_herd/main.cpp) server 是 epoll 事件模型，client 用 telnet 即可。
-
----
-
-## 5. 参考
-
-* [一个epoll惊群导致的性能问题](https://www.ichenfu.com/2017/05/03/proxy-epoll-thundering-herd/)
-* [Linux惊群效应详解](https://blog.csdn.net/lyztyycode/article/details/78648798)
-* [Linux 最新SO_REUSEPORT特性](https://www.cnblogs.com/Anker/p/7076537.html)
-* [[kimserver] 父子进程传输文件描述符](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)

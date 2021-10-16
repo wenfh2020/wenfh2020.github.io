@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[redis 源码走读] 主从数据复制（下）"
+title:  "[redis 源码走读] 主从数据复制 ②"
 categories: redis
 tags: redis replication
 author: wenfh2020
@@ -8,9 +8,8 @@ author: wenfh2020
 
 redis 主从模式主要作用：读写分离，提高系统的负载能力；保证服务高可用。
 
-本章走读 redis 6.0 源码 [github](https://github.com/antirez/redis)，理解 redis 主从数据复制流程。
+承接 [上一章](https://wenfh2020.com/2020/05/17/redis-replication/)，本章继续走读 redis 6.0 源码 [github](https://github.com/antirez/redis)，理解 redis 主从数据复制流程。
 
-> 承接上一章 [[redis 源码走读] 主从数据复制（上）](https://wenfh2020.com/2020/05/17/redis-replication/)。
 
 
 

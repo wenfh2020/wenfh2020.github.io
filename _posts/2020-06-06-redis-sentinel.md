@@ -118,8 +118,8 @@ redis 集群三个角色 sentinel / master / slave 都可能出现故障，当 r
 ## 5. 参考
 
 * [Redis Sentinel Documentation](https://redis.io/topics/sentinel)
-* [[redis 源码走读] 主从数据复制（上）](https://wenfh2020.com/2020/05/17/redis-replication/)
-* [[redis 源码走读] 主从数据复制（下）](https://wenfh2020.com/2020/05/31/redis-replication-next/)
+* [[redis 源码走读] 主从数据复制 ①](https://wenfh2020.com/2020/05/17/redis-replication/)
+* [[redis 源码走读] 主从数据复制 ②](https://wenfh2020.com/2020/05/31/redis-replication-next/)
 * 《redis 实现与设计》
 * [分布式算法之选举算法Raft](https://blog.csdn.net/cainaioaaa/article/details/79881296)
 * [10分钟弄懂Raft算法](http://blog.itpub.net/31556438/viewspace-2637112/)

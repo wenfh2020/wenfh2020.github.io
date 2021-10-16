@@ -6,7 +6,11 @@ tags: hiredis redis callback
 author: wenfh2020
 ---
 
-hiredis 是 redis 的一个 c - client，异步通信非常高效。单链接异步压测，轻松并发 10w+，具体请参考《[hiredis + libev 异步测试](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/)》。本章主要剖析 hiredis 异步回调机制原理，围绕三个问题，展开描述。
+hiredis 是 redis 的一个 c - client，异步通信非常高效。
+
+单链接异步压测，轻松并发 10w+，具体请参考《[hiredis + libev 异步测试](https://wenfh2020.com/2018/06/17/redis-hiredis-libev/)》。
+
+本章主要剖析 hiredis 异步回调机制原理，围绕三个问题，展开描述。
 
 1. 异步回调原理。
 2. 异步回调如何保证 request/response 时序。
@@ -22,7 +26,7 @@ hiredis 是 redis 的一个 c - client，异步通信非常高效。单链接异
 
 ## 1. 异步回调原理
 
-先看看异步通信流程。
+先看看[异步通信流程](https://wenfh2020.com/2020/06/11/server-async-logic/)。
 
 ![高性能异步框架通信流程](/images/2020-06-11-21-28-24.png){:data-action="zoom"}
 
@@ -32,7 +36,7 @@ hiredis 是 redis 的一个 c - client，异步通信非常高效。单链接异
 
 ### 1.1. demo
 
-hiredis demo，除了提供访问 redis 的同步异步接口，还支持支持大部分主流事件库，它非常实用。
+hiredis demo，除了提供访问 redis 的同步异步接口，还支持大部分主流事件库，它非常实用。
 
 ```shell
 [wenfh2020: hiredis/examples]$ tree
@@ -56,21 +60,19 @@ hiredis demo，除了提供访问 redis 的同步异步接口，还支持支持�
 
 ### 1.2. 使用
 
-hiredis 回调接口使用简单，做得非常精简。例如结合 `libev` 实现异步回调 [demo](https://github.com/redis/hiredis/blob/master/examples/example-libev.c)，只要绑定三个接口即可。
+hiredis 回调接口使用简单，做得非常精简。例如结合 `libev` 实现异步回调 [demo](https://github.com/redis/hiredis/blob/master/examples/example-libev.c)，只要绑定三个回调接口即可。
 
 ```c++
+/* examples/example-libev.c */
+...
+void getCallback(redisAsyncContext *c, void *r, void *privdata) {...}
+void connectCallback(const redisAsyncContext *c, int status) {...}
+void disconnectCallback(const redisAsyncContext *c, int status) {...}
+
 int main (int argc, char **argv) {
-#ifndef _WIN32
-    signal(SIGPIPE, SIG_IGN);
-#endif
-
+    ...
     redisAsyncContext *c = redisAsyncConnect("127.0.0.1", 6379);
-    if (c->err) {
-        /* Let *c leak for now... */
-        printf("Error: %s\n", c->errstr);
-        return 1;
-    }
-
+    ...
     redisLibevAttach(EV_DEFAULT_ c);
     redisAsyncSetConnectCallback(c,connectCallback);
     redisAsyncSetDisconnectCallback(c,disconnectCallback);
@@ -87,13 +89,17 @@ int main (int argc, char **argv) {
 
 hiredis 异步通信上下文 `redisAsyncContext` 结构，三个回调接口分别是：
 
-1. 链接回调 `redisConnectCallback`。
-2. 断开链接回调 `redisDisconnectCallback`。
-3. 正常数据通信回调 `redisCallbackFn`。
+<style> table th:first-of-type { width: 125px; } </style>
+
+| 接口                    | 描述               |
+| :---------------------- | :----------------- |
+| redisConnectCallback    | 连接回调。         |
+| redisDisconnectCallback | 断开链接回调。     |
+| redisCallbackFn         | 正常数据通信回调。 |
 
 ```c
-// async.h
-/* Reply callback prototype and container */
+/* async.h
+ * Reply callback prototype and container */
 typedef void (redisCallbackFn)(struct redisAsyncContext*, void*, void*);
 typedef void (redisDisconnectCallback)(const struct redisAsyncContext*, int status);
 typedef void (redisConnectCallback)(const struct redisAsyncContext*, int status);
@@ -128,11 +134,14 @@ typedef struct redisAsyncContext {
 
 ---
 
-### 1.4. 回调流程
+### 1.4. 请求回调流程
 
-* 请求。每个命令请求回调接口被添加到回调列表 `redisCallbackList`。
+#### 1.4.1. 请求
+
+每个命令请求回调接口被添加到回调列表：`ac->replies`。
 
 ```c
+/* async.c */
 int redisAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *format, ...) {
     ...
     status = redisvAsyncCommand(ac, fn, privdata, format, ap);
@@ -187,9 +196,14 @@ static int __redisPushCallback(redisCallbackList *list, redisCallback *source) {
 }
 ```
 
-* 回复。读数据 -> 解包 -> 从回调链表中取头部节点进行回调逻辑处理。
+---
+
+#### 1.4.2. 回复
+
+读数据 -> 解包 -> 从回调链表中取头部节点进行回调逻辑处理。
 
 ```c
+/* async.c */
 void redisProcessCallbacks(redisAsyncContext *ac) {
     redisContext *c = &(ac->c);
     redisCallback cb = {NULL, NULL, 0, NULL};
@@ -250,10 +264,10 @@ static void __redisRunCallback(redisAsyncContext *ac, redisCallback *cb, redisRe
 
 上文已经将请求回调的基本流程描述清楚，请求回调结构是用链表顺序保存的，然而 redis 命令没有提供任何 privdata 参数。那么请求和回调是如何保证时序的？主要基于以下两个条件：
 
-1. tcp 链接。redis 采用 tcp 协议进行通信，tcp 通信具有时序性，链接的每个包是顺序发出去的，不存在乱序问题，所以这样可以保证顺序发送。
+1. tcp 链接。redis 采用 tcp 协议进行通信，tcp 通信具有时序性，链接的每个包是顺序发出去的，顺序被接收，不存在乱序问题。
 
-2. redis 单进程处理命令。因为 redis 是单进程主线程处理命令的，所以顺序发送的命令，将会被顺序处理，这样可以保证顺序回复。
-   > redis 6.0 增加的多线程功能，也是每个 client 的命令数据包被独立放在一个线程里面处理，所以命令也是顺序处理的。详细请参考《[[redis 源码走读] 多线程通信 I/O](https://wenfh2020.com/2020/04/13/redis-multithreading-mode/)》
+2. redis 单线程处理命令。redis 单线程处理接收的请求包，不存在多线程/多进程并发处理同一个 client 发送的网络数据，所以顺序发送的命令，将会被顺序接收处理，这样可以保证顺序回复。
+   > redis 6.0 增加的[多线程功能](https://wenfh2020.com/2020/04/13/redis-multithreading-mode/)，也是每个 client 的命令数据包被独立放在一个线程里处理，所以命令也是顺序处理的。
 
 结合上面两点，可以保证 hiredis 请求异步回调时序。
 
@@ -290,7 +304,8 @@ hiredis 接口抽象非常好，封装了第三方库访问接口。例如它结
 而 redis 的网络事件也是通过多路复用事件驱动处理，当 client 触发写事件，它向 redis 服务发送了一个命令集合，相当于 redis 的 [pipeline 管道技术](https://wenfh2020.com/2021/03/14/redis-pipeline/)，将多个命令打包发送。redis 接收处理完，将回复命令集合通过 epoll 触发写事件进行发送。相当于每次通信都能处理多个命令，减少了大量 RTT (Round-Trip Time) 往返时间。
 
 ```c
-// 向事件库注册 socket 对应的读写事件。
+/* adapters/libev.h
+ * 向事件库注册 socket 对应的读写事件。*/
 static int redisLibevAttach(EV_P_ redisAsyncContext *ac) {
     ...
     /* Initialize read/write events */

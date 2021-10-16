@@ -44,5 +44,5 @@ raft 一致性算法，它是分布式系统中一种高可用算法策略，只
 
 ### 2.2. 主从数据复制
   
-  1. [《[redis 源码走读] 主从数据复制（上）》](https://wenfh2020.com/2020/05/17/redis-replication/)
-  2. [《[redis 源码走读] 主从数据复制（下）》](https://wenfh2020.com/2020/05/31/redis-replication-next/)
+  1. [《[redis 源码走读] 主从数据复制 ①》](https://wenfh2020.com/2020/05/17/redis-replication/)
+  2. [《[redis 源码走读] 主从数据复制 ②》](https://wenfh2020.com/2020/05/31/redis-replication-next/)

@@ -1,12 +1,12 @@
 ---
 layout: post
-title:  "[redis 源码走读] aof 持久化 (下)"
+title:  "[redis 源码走读] aof 持久化 ②"
 categories: redis
 tags: redis aof persistence
 author: wenfh2020
 ---
 
-文章重点讲述 aof 持久化的应用场景。aof 持久化，拆分上下为两章，可以先读上一章： [[redis 源码走读] aof 持久化 (上)](https://wenfh2020.com/2020/03/29/redis-aof-prev/)。
+文章重点讲述 aof 持久化的应用场景。aof 持久化，拆分上下为两章，可以先读[上一章](https://wenfh2020.com/2020/03/29/redis-aof-prev/)。
 
 
 

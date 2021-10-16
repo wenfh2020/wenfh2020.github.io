@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[redis 源码走读] 主从数据复制（上）"
+title:  "[redis 源码走读] 主从数据复制 ①"
 categories: redis
 tags: redis replication
 author: wenfh2020
@@ -8,8 +8,7 @@ author: wenfh2020
 
 阅读源码前，先了解 redis 主从复制的基本知识。
 
-> 详细源码分析，请参考下一章：[[redis 源码走读] 主从数据复制（下）
-](https://wenfh2020.com/2020/05/31/redis-replication-next/)
+> 详细源码分析，请参考 [下一章](https://wenfh2020.com/2020/05/31/redis-replication-next/)
 
 
 

@@ -6,11 +6,11 @@ tags: redis hiredis pipeline
 author: wenfh2020
 ---
 
-redis pipeline 官方文档：[Using pipelining to speedup Redis queries](https://redis.io/topics/pipelining)。
+redis 是 c/s 模式 tcp 通信服务。它支持批量命令处理（发送/接收），这就是 pipeline 技术。
+
+> 详细请参考：[Using pipelining to speedup Redis queries](https://redis.io/topics/pipelining)
 
 ---
-
-redis 是 c/s 模式 tcp 通信服务。它支持客户端单命令发送给服务处理，也支持客户端将多个命令打包发送，后者就是 pipeline 技术。
 
 **pipeline 优点**：
 

@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[redis 源码走读] aof 持久化 (上)"
+title:  "[redis 源码走读] aof 持久化 ①"
 categories: redis
 tags: redis aof
 author: wenfh2020
