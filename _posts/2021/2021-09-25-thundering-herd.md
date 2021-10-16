@@ -55,8 +55,6 @@ author: wenfh2020
 
 ## 3. 解决方案
 
-### 3.1. 简述
-
 怎么解决呢？这需要围绕两个方面去展开。
 
 1. 避免共享资源争抢。
@@ -75,7 +73,3 @@ author: wenfh2020
 5. [探索惊群 ⑤ - nginx - NGX_EXCLUSIVE_EVENT](https://wenfh2020.com/2021/10/11/thundering-herd-nginx-epollexclusive/)
 6. [探索惊群 ⑥ - nginx - reuseport](https://wenfh2020.com/2021/10/12/thundering-herd-tcp-reuseport/)
 7. [探索惊群 ⑦ - 文件描述符透传](https://wenfh2020.com/2021/10/13/thundering-herd-transfer-socket/)
-
----
-
-### 3.2. 方案
