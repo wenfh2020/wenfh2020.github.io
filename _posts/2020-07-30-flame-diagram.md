@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "软件性能检测--火焰图🔥"
+title:  "软件性能检测--火焰图 🔥"
 categories: tool
 tags: flame diagram performance
 author: wenfh2020
@@ -20,14 +20,15 @@ author: wenfh2020
 
 基于 Linux 平台的 `perf` 采样脚本（[fg.sh](https://github.com/wenfh2020/shell/blob/master/fg.sh)），对指定进程进行采样，生成火焰图 `perf.svg`。
 
-> 🔥 生成火焰图视频教程 [《生成火焰图（Generate flame diagram）》](https://www.bilibili.com/video/BV1My4y1q7YK/)
-
 ---
 
 ### 1.1. 安装 perf 和 FlameGraph
 
 ```shell
+# centos
 yum install perf
+# ubuntu
+# apt-get install linux-tools-$(uname -r) linux-tools-generic -y
 cd /usr/local/src
 git clone https://github.com/brendangregg/FlameGraph.git
 ln -s /usr/local/src/FlameGraph/flamegraph.pl /usr/local/bin/flamegraph.pl
@@ -43,16 +44,17 @@ ln -s /usr/local/src/FlameGraph/stackcollapse-perf.pl /usr/local/bin/stackcollap
 ```shell
 #!/bin/sh
 
+work_path=$(dirname $0)
+cd $work_path
+
 if [ $# -lt 1 ]; then
-    echo 'input pid'
+    echo 'pls input pid!'
     exit 1
 fi
 
-rm -f perf.*
-perf record -F 99 -p $1 -g -- sleep 60
-perf script -i perf.data &> perf.unfold
-stackcollapse-perf.pl perf.unfold &> perf.folded
-flamegraph.pl perf.folded > perf.svg
+[ -f perf_with_stack.data ] && rm -f perf_with_stack.data
+perf record -g -o perf_with_stack.data -p $1 -- sleep 20
+perf script -i perf_with_stack.data | stackcollapse-perf.pl | flamegraph.pl > perf.svg
 ```
 
 * 命令。
@@ -60,6 +62,10 @@ flamegraph.pl perf.folded > perf.svg
 ```shell
 ./fg.sh <pid>
 ```
+
+* 视频。
+
+<iframe class="bilibili" src="//player.bilibili.com/player.html?aid=800382925&bvid=BV1My4y1q7YK&cid=262046727&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 
 ---
 
@@ -72,7 +78,7 @@ flamegraph.pl perf.folded > perf.svg
 
 通过图象，我们对自己写的代码工作效率一目了然，这样可以针对性优化源码性能。
 
-* siege 压测工具。
+* [siege](https://wenfh2020.com/2018/05/02/siege-pressure/) 压测工具。
 
 ```shell
 # siege 压力测试工具
@@ -94,7 +100,7 @@ flamegraph.pl perf.folded > perf.svg
 }
 ```
 
-* 火焰图🔥
+* 火焰图 🔥
 
 ![火焰图](/images/2020-07-30-19-33-44.png){:data-action="zoom"}
 
@@ -106,10 +112,12 @@ flamegraph.pl perf.folded > perf.svg
 
 <div align=center><img src="/images/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
 
-上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 vsnprintf，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致高等级的日志虽然没有被记录，仍然执行了 vsnprintf 操作。后面将判断放在 vsnprintf 前，重复进行测试，占 1.54%。 性能提高 5 个百分点——good!
+上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 vsnprintf，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致不需要存盘的日志数据，仍然执行了 vsnprintf 操作。后面将日志过滤判断放在 vsnprintf 前，重复进行测试，占 1.54%，性能比之前提高了 5 个百分点 —— good 😄!
 
 ```c++
+/* 优化后的的代码。 */
 bool Log::log_data(const char* file_name, int file_line, const char* func_name, int level, const char* fmt, ...) {
+    /* 根据日志等级，过滤不需要存盘的日志。 */
     if (level < LL_EMERG || level > LL_DEBUG || level > m_cur_level) {
         return false;
     }
@@ -126,7 +134,9 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
 
 ### 3.2. 问题二
 
-如果不是火焰图，你无法想象 `std::list::size()` 这个接口时间复杂度竟然是 O(N)。
+如果不是火焰图，你无法想象 `std::list::size()` 这个接口的时间复杂度竟然是 O(N) 😱。
+
+> 参考：《[[stl 源码分析] std::list::size 时间复杂度](https://wenfh2020.com/2021/04/09/stl-list-size/)》
 
 ![火焰图问题二](/images/2020-12-11-17-43-59.png){:data-action="zoom"}
 
@@ -135,3 +145,6 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
 ## 4. 参考
 
 * [Siege HTTP 压力测试](https://wenfh2020.com/2018/05/02/siege-pressure/)
+* [[stl 源码分析] std::list::size 时间复杂度](https://wenfh2020.com/2021/04/09/stl-list-size/)
+* [Off-CPU Analysis](https://www.brendangregg.com/offcpuanalysis.html)
+* [off-cpu-flame-graphs.pdf](http://agentzh.org/misc/slides/off-cpu-flame-graphs.pdf)

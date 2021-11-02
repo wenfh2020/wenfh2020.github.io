@@ -1,22 +1,22 @@
 ---
 layout: post
 title:  "探索惊群 ④ - nginx - accept_mutex"
-categories: nginx
+categories: nginx kernel
 tags: linux nginx thundering herd
 author: wenfh2020
 ---
 
-前面已经说过，解决惊群问题的关键在于，多个子进程获取共享资源，少抢或者不抢！另外还有一个资源分配不均的问题。看看 nignx 的 `accept_mutex` 特性是如何解决这两个问题的。
+前面已经说过，解决惊群问题的关键在于，多个子进程获取共享资源，不抢！另外还有一个资源分配不均的问题。看看 nignx 的 `accept_mutex` 特性是如何解决这两个问题的。
 
 ---
 
-由主进程创建的 listen socket，是被 fork 出来的子进程共享的，但是为了避免多个子进程同时争抢共享资源，nginx 采用一种策略：使得多个子进程，同一时段，只有一个子进程能获取资源。既然短时间内只有一个子进程可以获得资源，从这个角度来看，就不存在共享资源的争抢问题。
+由主进程创建的 listen socket，是被 fork 出来的子进程共享的，但是为了避免多个子进程同时争抢共享资源，nginx 采用一种策略：使得多个子进程，同一时段，只有一个子进程能获取资源，就不存在共享资源的争抢问题。
 
 但是这个策略是建立在多个子进程竞争锁的基础上的：
 
-成功获取锁的，能获取一定数量的资源，而其它没有成功获取锁的子进程，不能获取资源，只能等待成功获取锁的进程释放锁后，nginx 再重新进入锁竞争环节，使得其它子进程也能成功获取锁，然后获取资源。
+成功获取锁的，能获取一定数量的资源，而其它没有成功获取锁的子进程，不能获取资源，只能等待成功获取锁的进程释放锁后，nginx 多进程再重新进入锁竞争环节。
 
-在应用层上，还是会存在锁竞争问题，这样抢资源问题，变成了抢锁，所以只能说**少抢**了，不能说**不抢**。
+所以在应用层上，还是会存在一些锁竞争问题。
 
 
 
@@ -44,7 +44,64 @@ events {
 
 ### 2.1. 负载均衡
 
-通过 `ngx_accept_disabled` 负载均衡数值控制抢锁的时机。当空闲连接数越大，说明子进程越“闲”，那么它渴望得到资源处理的愿望越强烈。
+nginx 子进程通过抢共享锁 🔐 实现负载均衡，现在用下面的伪代码去理解它的实现原理。
+
+```c
+int main() {
+    efd = epoll_create();
+
+    while (1) {
+        if (is_busy) {
+            /* 忙 --> 不抢。*/
+            ...
+            /* 但是为了避免一直不抢，也要递减它的繁忙程度。*/
+            is_busy = reduce_busy();
+        } else {
+            /* 闲 --> 抢。*/
+            if (try_lock()) {
+                /* 抢锁成功，epoll 关注 listen_fd 的 POLLIN 事件。 */
+                if (!is_locked) {
+                    epoll_ctl(efd, EPOLL_CTL_ADD, listen_fd, ...);
+                    is_locked = true;
+                }
+            } else {
+                if (is_locked) {
+                    /* 抢锁失败，epoll 不再关注 listen_fd 事件。 */
+                    epoll_ctl(efd, EPOLL_CTL_DEL, listen_fd, ...);
+                    is_locked = false;
+                }
+            }
+        }
+
+        /* 超时等待链接资源到来。 */
+        n = epoll_wait(...)
+        if (n > 0) {
+            if (is_able_to_accept) {
+                /* 链接资源到来，取出链接。*/
+                client_fd = accept();
+                /* 每次取出链接后，重新检查繁忙程度。*/
+                is_busy = check_busy();
+            }
+        }
+
+        if (is_locked) {
+            unlock();
+        }
+    }
+    return 0;
+}
+```
+
+nginx 通过 `ngx_accept_disabled` 负载均衡数值控制抢锁的时机，该值一定程度上表示当前进程处理链接资源的繁忙程度，每次 accept 完链接资源后，都检查一下它。
+
+```c
+ngx_accept_disabled = ngx_cycle->connection_n / 8 - ngx_cycle->free_connection_n;
+```
+
+connection_n 最大连接数是固定的；free_connection_n 空闲连接数是变化的。
+
+* 当空闲连接数越小，说明进程越忙，不希望得到锁。（ngx_accept_disabled 越大）
+* 当空闲连接数越大，说明进程越闲，越希望得到锁。（ngx_accept_disabled 越小）
 
 ```c
 /* src/event/ngx_event.c */
@@ -65,7 +122,7 @@ void ngx_event_accept(ngx_event_t *ev) {
         s = accept(lc->fd, &sa.sockaddr, &socklen);
 #endif
         ...
-        /* 负载均衡数值，空闲连接越大，ngx_accept_disabled 就越小。 */
+        /* 每次 accept 链接资源后，都检查一下当前进程的繁忙程度 —— 负载均衡数值。*/
         ngx_accept_disabled = ngx_cycle->connection_n / 8
                               - ngx_cycle->free_connection_n;
 
@@ -78,8 +135,8 @@ void ngx_event_accept(ngx_event_t *ev) {
 void ngx_process_events_and_timers(ngx_cycle_t *cycle) {
     ...
     if (ngx_use_accept_mutex) {
-        /* 当 ngx_accept_disabled 越小，那么就越快执行抢锁的逻辑。 */
         if (ngx_accept_disabled > 0) {
+            /* ngx_accept_disabled > 0，说明进程忙，放弃抢锁。 */
             ngx_accept_disabled--;
         } else {
             /* 通过锁竞争，获得获取资源的权限。 */
@@ -243,6 +300,12 @@ static ngx_int_t ngx_disable_accept_events(ngx_cycle_t *cycle, ngx_uint_t all) {
 
 ## 3. 缺点
 
+1. nginx 是多进程框架，accept_mutex 解决惊群的策略，使得在同一个时间段，多个子进程始终只有一个子进程可以 accept 链接资源，这样，不能充分利用其它子进程进行并发处理，在密集的短链接场景中，链接的吞吐将会遇到瓶颈。
+2. 避免了内核抢锁问题，转换为应用层抢锁，虽然抢的频率降低，但是进程多了，抢锁效率依然是个问题。
+3. 通过 `ngx_accept_disabled` 去解决负载均衡问题，可能会导致某个子进程长时间占用锁，其它子进程得不到 accept 链接资源的机会。
+
+---
+
 通过 nginx 的更新日志，我们发现 2016 年这个 accept_mutex 功能被默认关闭。
 
 ```shell
@@ -251,14 +314,6 @@ Changes with nginx 1.11.3                                        26 Jul 2016
     *) Change: now the "accept_mutex" directive is turned off by default.
     ...
 ```
-
-1. nginx 是多进程框架，为了避免惊群 accept_mutex 解决策略，使得在同一个时间段，多个子进程始终只有一个子进程可以 accept 资源，这样，不能充分利用其它子进程。在密集的短链接场景中，链接的吞吐将会遇到瓶颈。
-2. 避免了内核抢锁问题，转换为应用层抢锁，虽然抢的频率降低，但是进程多了，抢锁效率依然是个问题。
-3. 通过 `ngx_accept_disabled` 去解决负载均衡问题，可能会导致某个子进程长时间占用锁，其它子进程得不到 accept 资源的机会。
-
----
-
-这个解决方案虽然有一些缺点，但我们不能忽视它出现的历史背景，十几年前，海量用户的高并发场景还不多见，经过十几年的发展，linux 内核也不断地改进完善，内核也增加了一些优秀的解决方案。
 
 ---
 

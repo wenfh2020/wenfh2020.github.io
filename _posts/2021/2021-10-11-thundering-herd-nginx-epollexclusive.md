@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "探索惊群 ⑤ - nginx - NGX_EXCLUSIVE_EVENT"
-categories: nginx
+categories: nginx kernel
 tags: linux nginx thundering herd
 author: wenfh2020
 ---
@@ -83,8 +83,6 @@ almostivan authored and torvalds committed on 21 Jan 2016
 epoll_ctl 关注添加 fd 的事件时，通过 add_wait_queue_exclusive 函数，将 `WQ_FLAG_EXCLUSIVE` 标识的等待事件添加到 fd 的等待唤醒队列中。
 
 当 fd 发生对应的事件时，wake_up_interruptible_all (<font color=gray>__wake_up_common</font>) 遍历 fd 的等待事件队列，但只唤醒一个带有 WQ_FLAG_EXCLUSIVE 标识的等待事件的进程。
-
-> 详细流程可以参考下图：EPOLLEXCLUSIVE 的工作流程。
 
 <center>
     <img style="border-radius: 0.3125em;
@@ -310,3 +308,9 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
     ...
 }
 ```
+
+---
+
+## 2. 参考
+
+* [EPOLLEXCLUSIVE](https://man7.org/linux/man-pages/man2/epoll_ctl.2.html)

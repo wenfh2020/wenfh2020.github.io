@@ -27,7 +27,7 @@ pre {
         font-size: 12px;   // 代码块字体大小
         color: #212529;
         border: none;
-        background-color: #ffffff;
+        background-color: #ffffdd;
         line-height: 1.3em;
         
         .lineno {
@@ -43,14 +43,14 @@ pre {
 .rouge-table {
     td {
         // padding: 2px 7px;
-        border:1px solid #ebe8e8;
+        border:1px solid #ffffdd;
     }
 }
 
 .highlight {
     border-radius: 3px;
 
-    background: #e5eaed;
+    background: #ffffdd;
     
     .hll { background-color: #ffffff; }
     .highlight{border:1px solid rgb(192, 187, 187);}

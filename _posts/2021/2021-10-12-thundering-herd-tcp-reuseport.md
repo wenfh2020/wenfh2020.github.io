@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "探索惊群 ⑥ - nginx - reuseport"
-categories: kernel nginx
+categories: nginx kernel
 tags: reuseport nginx
 author: wenfh2020
 ---
@@ -76,7 +76,7 @@ Socket options
 
 ### 1.2. why
 
-SO_REUSEPORT 功能解决了什么问题？我们先看看 2013 年提交的这个 Linux 内核功能 [补丁](https://github.com/torvalds/linux/commit/da5e36308d9f7151845018369148201a5d28b46d?branch=da5e36308d9f7151845018369148201a5d28b46d&diff=split) 的注释。
+SO_REUSEPORT 功能解决了什么问题？我们先看看 2013 年 3.9+ 版本内核提交的这个 Linux 内核功能 [补丁](https://github.com/torvalds/linux/commit/da5e36308d9f7151845018369148201a5d28b46d?branch=da5e36308d9f7151845018369148201a5d28b46d&diff=split) 的注释。
 
 ```shell
 soreuseport: TCP/IPv4 implementation

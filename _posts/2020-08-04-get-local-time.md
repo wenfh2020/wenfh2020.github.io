@@ -96,9 +96,12 @@ void format() {
     t = time(NULL);
     tm = localtime(&t);
     gettimeofday(&tv, NULL);
+
+    /* 时间精度：秒。 */
     off = strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", tm);
     std::cout << "[" << buf << "]" << std::endl;
 
+    /* 时间精度：毫秒。 */
     snprintf(buf + off, sizeof(buf) - off, ".%03d", (int)tv.tv_usec / 1000);
     std::cout << "[" << buf << "]" << std::endl;
 }
@@ -159,7 +162,7 @@ protected:
 
 ---
 
-有空的同学，可以阅读一下 `libev` 的源码，看看它是怎么获取当前时间的。
+有空的朋友，可以阅读一下 `libev` 的源码，看看它是怎么获取当前时间的。
 
 ```c
 ev_tstamp ev_now (struct ev_loop *loop) {

@@ -85,10 +85,10 @@ author: wenfh2020
 
 ## 6. 开源
 
-|  类型  |                                                项目                                                |
-| :----: | :------------------------------------------------------------------------------------------------: |
-| c/c++  | [libev](http://software.schmorp.de/pkg/libev.html) <br/> [redis](https://github.com/antirez/redis) |
-| golang | [codis](https://github.com/CodisLabs/codis) <br/> [kingshard](https://github.com/flike/kingshard)  |
+|  类型  |                                                                                项目                                                                                |
+| :----: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| c/c++  | [libev](http://software.schmorp.de/pkg/libev.html) <br/> [redis](https://github.com/antirez/redis)<br/> [linux](https://mirrors.edge.kernel.org/pub/linux/kernel/) |
+| golang |                                 [codis](https://github.com/CodisLabs/codis) <br/> [kingshard](https://github.com/flike/kingshard)                                  |
 
 ---
 
