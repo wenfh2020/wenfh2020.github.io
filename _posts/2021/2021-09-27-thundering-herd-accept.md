@@ -360,7 +360,7 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 ## 4. 测试
 
-通过多进程架构进行测试，主进程 listen，fork 两个子进程分别进行 accept。验证了阻塞的 accept 不会产生惊群问题。
+通过多进程架构进行测试（[测试源码](https://github.com/wenfh2020/kernel_test/tree/main/test_accept)），主进程 listen，fork 两个子进程分别进行 accept。验证了阻塞的 accept 不会产生惊群问题。
 
 > Linux 线程与进程工作原理几乎一样，大家可以测测多线程。
 

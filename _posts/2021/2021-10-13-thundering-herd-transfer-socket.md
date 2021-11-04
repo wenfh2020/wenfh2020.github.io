@@ -8,7 +8,7 @@ author: wenfh2020
 
 惊群的两大核心问题，多进程/多线程争抢公共资源，还有资源分配的负载均衡问题。换个角度思考问题：既然是多个争抢，那么只有一个进程/线程获取资源，这样就不存在资源争抢问题了。
 
-与 nginx 的 accept_mutex 解决方案不同的是，它的 listen socket 不共享，始终由一个进程独占工作。
+与 nginx 的 [accept_mutex](https://wenfh2020.com/2021/10/10/nginx-thundering-herd-accept-mutex/) 解决方案不同的是，它的 listen socket 不共享，始终由一个进程独占工作。
 
 有一种文件描述传递的多进程架构，就是这样做的。
 

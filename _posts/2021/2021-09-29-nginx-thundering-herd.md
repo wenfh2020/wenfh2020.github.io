@@ -23,7 +23,7 @@ author: wenfh2020
 
 由测试可见，有的进程被唤醒后获取资源失败——惊群现象发生了！
 
-> 先不配置 accept_mutex，reuseport 等特性，后面会详细剖析。
+> 先不配置 [accept_mutex](https://wenfh2020.com/2021/10/10/nginx-thundering-herd-accept-mutex/)，[reuseport](https://wenfh2020.com/2021/10/12/thundering-herd-tcp-reuseport/) 等特性。
 
 <div align=center><img src="/images/2021-10-06-23-02-19.png" data-action="zoom"/></div>
 
@@ -271,7 +271,7 @@ nobody    79982  79980  0 22:28 ?        00:00:00 nginx: worker process
 
 ### 2.5. 惊群影响
 
-惊群使得部分进程唤醒产生了无用功，我们对比一下惊群与非惊群两个场景的数据。
+惊群使得部分进程唤醒做了无用功，我们对比一下惊群与非惊群两个场景的数据。
 
 惊群的系统资源损耗总体上要比非惊群的高，参考两个场景的 vmstat 虚拟内存统计数据：in 中断数据和 cs 上下文切换数据。
 

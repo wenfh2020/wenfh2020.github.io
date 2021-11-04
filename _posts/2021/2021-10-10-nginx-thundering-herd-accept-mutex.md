@@ -6,7 +6,7 @@ tags: linux nginx thundering herd
 author: wenfh2020
 ---
 
-前面已经说过，解决惊群问题的关键在于，多个子进程获取共享资源，不抢！另外还有一个资源分配不均的问题。看看 nignx 的 `accept_mutex` 特性是如何解决这两个问题的。
+[前面](https://wenfh2020.com/2021/09/25/thundering-herd/)已经说过，解决惊群问题的关键在于，多个子进程获取共享资源，不抢！另外还有一个资源分配不均的问题。看看 nignx 的 `accept_mutex` 特性是如何解决这两个问题的。
 
 ---
 
@@ -51,13 +51,12 @@ int main() {
     efd = epoll_create();
 
     while (1) {
-        if (is_busy) {
-            /* 忙 --> 不抢。*/
+        if (is_disabled) {
             ...
-            /* 但是为了避免一直不抢，也要递减它的繁忙程度。*/
-            is_busy = reduce_busy();
+            /* 不抢，但是为了避免一直不抢，也要递减它的 disable 程度。*/
+            is_disabled = reduce_disabled();
         } else {
-            /* 闲 --> 抢。*/
+            /* 抢。*/
             if (try_lock()) {
                 /* 抢锁成功，epoll 关注 listen_fd 的 POLLIN 事件。 */
                 if (!is_locked) {
@@ -79,8 +78,8 @@ int main() {
             if (is_able_to_accept) {
                 /* 链接资源到来，取出链接。*/
                 client_fd = accept();
-                /* 每次取出链接后，重新检查繁忙程度。*/
-                is_busy = check_busy();
+                /* 每次取出链接后，重新检查 disabled 值。*/
+                is_disabled = check_disabled();
             }
         }
 
@@ -88,20 +87,18 @@ int main() {
             unlock();
         }
     }
+
     return 0;
 }
 ```
 
-nginx 通过 `ngx_accept_disabled` 负载均衡数值控制抢锁的时机，该值一定程度上表示当前进程处理链接资源的繁忙程度，每次 accept 完链接资源后，都检查一下它。
+nginx 通过 `ngx_accept_disabled` 负载均衡数值控制抢锁的时机，每次 accept 完链接资源后，都检查一下它。
 
 ```c
 ngx_accept_disabled = ngx_cycle->connection_n / 8 - ngx_cycle->free_connection_n;
 ```
 
-connection_n 最大连接数是固定的；free_connection_n 空闲连接数是变化的。
-
-* 当空闲连接数越小，说明进程越忙，不希望得到锁。（ngx_accept_disabled 越大）
-* 当空闲连接数越大，说明进程越闲，越希望得到锁。（ngx_accept_disabled 越小）
+connection_n 最大连接数是固定的；free_connection_n 空闲连接数是变化的。只有在 ngx_accept_disabled > 0 的情况下，进程才不愿意抢锁，换句话说，就是已使用链接大于总链接的 7/8 了，`空闲链接快用完了，原来拥有锁的进程才不会频繁去抢锁`。
 
 ```c
 /* src/event/ngx_event.c */
@@ -122,7 +119,7 @@ void ngx_event_accept(ngx_event_t *ev) {
         s = accept(lc->fd, &sa.sockaddr, &socklen);
 #endif
         ...
-        /* 每次 accept 链接资源后，都检查一下当前进程的繁忙程度 —— 负载均衡数值。*/
+        /* 每次 accept 链接资源后，都检查一下负载均衡数值。*/
         ngx_accept_disabled = ngx_cycle->connection_n / 8
                               - ngx_cycle->free_connection_n;
 
@@ -136,7 +133,7 @@ void ngx_process_events_and_timers(ngx_cycle_t *cycle) {
     ...
     if (ngx_use_accept_mutex) {
         if (ngx_accept_disabled > 0) {
-            /* ngx_accept_disabled > 0，说明进程忙，放弃抢锁。 */
+            /* ngx_accept_disabled > 0，说明很少空闲链接了，放弃抢锁。 */
             ngx_accept_disabled--;
         } else {
             /* 通过锁竞争，获得获取资源的权限。 */
@@ -154,13 +151,17 @@ void ngx_process_events_and_timers(ngx_cycle_t *cycle) {
 
 ### 2.2. 避免争抢
 
+#### 2.2.1. 概述
+
 核心逻辑在这个函数 `ngx_trylock_accept_mutex`，获得锁的子进程，可以将共享的 listen socket 通过 epoll_ctl 添加到事件驱动进行监控，当有资源到来时，子进程通过 epoll_wait 获得通知处理。而没有获得锁的子进程的 epoll 没有关注 listen socket 的事件，所以它们的 epoll_wait 是不会通知 listen socket 的事件。
 
 <div align=center><img src="/images/2021-10-11-12-57-59.png" data-action="zoom"/></div>
 
 ---
 
-* 调试。通过调试查看函数调用的堆栈工作流程。
+#### 2.2.2. 源码分析
+
+通过调试查看函数调用的堆栈工作流程。
 
 ```shell
 # 子进程获取锁添加然后 listen socket 逻辑。
@@ -177,7 +178,22 @@ ngx_trylock_accept_mutex (cycle=0x72a6a0) at src/event/ngx_event_accept.c:323
 
 > 参考：[gdb 调试 nginx（附视频）](https://wenfh2020.com/2021/06/25/gdb-nginx/)
 
-* 源码分析。
+可以通过下面源码分析查看抢锁的流程。
+
+```shell
+ngx_worker_process_cycle
+|-- ngx_process_events_and_timers
+    |-- ngx_trylock_accept_mutex
+     if |-- ngx_shmtx_trylock
+        |-- ngx_enable_accept_events
+            |-- ngx_add_event
+                |-- epoll_ctl(efd, EPOLL_CTL_ADD, listen_fd, ...);
+   else |-- ngx_disable_accept_events
+            |-- ngx_del_event
+                |-- epoll_ctl(efd, EPOLL_CTL_DEL, listen_fd, ...);
+    |-- ngx_process_events
+    |-- ngx_shmtx_unlock
+```
 
 ```c
 /* src/event/ngx_event.c */
@@ -216,6 +232,11 @@ void ngx_process_events_and_timers(ngx_cycle_t *cycle) {
     ...
     /* 处理事件。 */
     (void) ngx_process_events(cycle, timer, flags);
+    ...
+    if (ngx_accept_mutex_held) {
+        /* 释放锁。 */
+        ngx_shmtx_unlock(&ngx_accept_mutex);
+    }
     ...
 }
 
@@ -298,11 +319,22 @@ static ngx_int_t ngx_disable_accept_events(ngx_cycle_t *cycle, ngx_uint_t all) {
 
 ---
 
+#### 2.2.3. 抢锁成功率
+
+很多时候，原来抢到锁的进程，很大概率会重新抢到锁，原因在于`抢锁的时机`。
+
+1. 原来抢到锁的进程，在抢到锁后会先处理完事件（`ngx_process_events`）后才会释放锁，在这个过程中，其它进程一直抢不到：因为它们都是盲目地抢，不知道锁什么时候释放，而抢到锁的进程它释放锁后，自己马上抢回，相对于其它进程盲目地抢，它的成功率更高。
+2. 原来抢到锁的进程，什么时候才会不抢呢，就是要满足这个条件：ngx_accept_disabled > 0。因为 ngx_accept_disabled = ngx_cycle->connection_n / 8 - ngx_cycle->free_connection_n，一般情况下，当已使用链接超过了 7/8 了，也就是说空闲链接快用完了，才不愿意抢锁了。如果配置的链接总数很大，那么空闲链接没那么快用完，那么原进程就一直抢，因为它一释放锁就马上去抢，它抢到锁的成功率更高！
+
+所以基于上面两个条件，可能会导致经常只有一个进程在工作，它很忙，其它进程比较闲。
+
+---
+
 ## 3. 缺点
 
 1. nginx 是多进程框架，accept_mutex 解决惊群的策略，使得在同一个时间段，多个子进程始终只有一个子进程可以 accept 链接资源，这样，不能充分利用其它子进程进行并发处理，在密集的短链接场景中，链接的吞吐将会遇到瓶颈。
 2. 避免了内核抢锁问题，转换为应用层抢锁，虽然抢的频率降低，但是进程多了，抢锁效率依然是个问题。
-3. 通过 `ngx_accept_disabled` 去解决负载均衡问题，可能会导致某个子进程长时间占用锁，其它子进程得不到 accept 链接资源的机会。
+3. 通过 `ngx_accept_disabled` 去解决负载均衡问题，因为上述抢锁时机问题，可能会导致某个子进程长时间占用锁，其它子进程得不到 accept 链接资源的机会。
 
 ---
 

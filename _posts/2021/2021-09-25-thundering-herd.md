@@ -69,6 +69,11 @@ author: wenfh2020
 
 我们换个角度去思考，如果红包私发，而不是扔进群组里，那别人还废什么劲去抢？！这个思路就是解决惊群问题的关键：`不抢`！—— 同一时段，只有一个进程有权限获取共享资源。
 
+1. [探索惊群 ④ - nginx - accept_mutex](https://wenfh2020.com/2021/10/10/nginx-thundering-herd-accept-mutex/)
+2. [探索惊群 ⑤ - nginx - NGX_EXCLUSIVE_EVENT](https://wenfh2020.com/2021/10/11/thundering-herd-nginx-epollexclusive/)
+3. [探索惊群 ⑥ - nginx - reuseport](https://wenfh2020.com/2021/10/12/thundering-herd-tcp-reuseport/)
+4. [探索惊群 ⑦ - 文件描述符透传](https://wenfh2020.com/2021/10/13/thundering-herd-transfer-socket/)
+
 ---
 
 ## 4. 参考
