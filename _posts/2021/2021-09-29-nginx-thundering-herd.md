@@ -21,17 +21,23 @@ author: wenfh2020
 
 在不配置 nginx 处理惊群特性的情况下，通过 `strace` 命令观察 nginx 的系统调用日志。
 
-由测试可见，有的进程被唤醒后获取资源失败——惊群现象发生了！
+在 ubuntu 14.04 系统，由简单的 telnet 测试可见：有的进程被唤醒后获取资源失败——惊群现象发生了！
 
 > 先不配置 [accept_mutex](https://wenfh2020.com/2021/10/10/nginx-thundering-herd-accept-mutex/)，[reuseport](https://wenfh2020.com/2021/10/12/thundering-herd-tcp-reuseport/) 等特性。
 
-<div align=center><img src="/images/2021-10-06-23-02-19.png" data-action="zoom"/></div>
+* telnet 测试命令。
+
+```shell
+telnet 127.0.0.1 80
+```
 
 * nginx 工作流程。
 
 ```shell
+# strace -f -s 512 -o /tmp/nginx.log /usr/local/nginx/sbin/nginx
 # 1. pid   2. syscall
 
+...
 # 主进程。
 # 79979 进程启动加载 nginx。nginx 主进程 socket -> bind -> listen。
 79979 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 6
@@ -43,7 +49,7 @@ author: wenfh2020
 79980 clone(child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f9e6f67fa10) = 79981
 79980 clone( <unfinished ...>
 79980 <... clone resumed> child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f9e6f67fa10) = 79982
-
+...
 # 子进程 79981
 79980 clone(child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f9e6f67fa10) = 79981
 79981 epoll_create(512 <unfinished ...>
@@ -60,7 +66,7 @@ author: wenfh2020
 79981 epoll_wait(8, {{EPOLLIN|EPOLLRDHUP, {u32=1868849616, u64=140318450409936}}}, 512, 60000) = 1
 79981 recvfrom(10, "", 1024, 0, NULL, NULL) = 0
 79981 close(10)                         = 0
-
+...
 # 子进程 79982
 79980 <... clone resumed> child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f9e6f67fa10) = 79982
 79982 epoll_create(512 <unfinished ...>
@@ -73,7 +79,10 @@ author: wenfh2020
 79982 accept4(6,  <unfinished ...>
 79982 <... accept4 resumed> 0x7ffe70c17e40, [112], SOCK_NONBLOCK) = -1 EAGAIN (Resource temporarily unavailable)
 79982 epoll_wait(10,  <unfinished ...>
+...
 ```
+
+<div align=center><img src="/images/2021-11-05-10-49-41.png" data-action="zoom"/></div>
 
 * 惊群现象。
 
@@ -86,29 +95,29 @@ author: wenfh2020
 
 ---
 
-## 2. 测试
+## 2. 压测
 
-### 2.1. 测试环境
+httpclient <--> nginx <--> httpserver
 
-| cpu 核心 | 内存  |     系统      | nginx 版本 | nginx 子进程个数 |
-| :------: | :---: | :-----------: | :--------: | :--------------: |
-|    4     |  4g   | ubuntu(14.04) |   1.20.1   |        2         |
-
----
-
-### 2.2. 测试流程
-
-简单的 http 客户端和服务端，通过 nginx 做反向代理，测试 nginx 的惊群问题。
+nginx 作为代理，httpclient 模拟多个短链接发包，测试 nginx 的惊群问题。
 
 <div align=center><img src="/images/2021-11-02-10-54-10.png" data-action="zoom"/></div>
 
 ---
 
-### 2.3. 测试源码
+### 2.1. 测试环境
 
-golang 实现的简单的测试 demo，源码详见：[github](https://github.com/wenfh2020/go-test/tree/master/test/http)。
+| cpu 核心 | 内存  |     系统      | nginx 版本 | nginx 子进程个数 | 测试并发数 |
+| :------: | :---: | :-----------: | :--------: | :--------------: | :--------: |
+|    4     |  4g   | ubuntu(14.04) |   1.20.1   |        2         |   10000    |
 
-* 测试服务 httpserver，简单的接收数据和回复数据。
+---
+
+### 2.2. 测试源码
+
+用 golang 实现的简单的测试 demo，源码详见：[github](https://github.com/wenfh2020/go-test/tree/master/test/http)。
+
+* 测试服务：httpserver，简单的接收数据和回复数据。
 
 ```go
 package main
@@ -129,7 +138,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-* 测试客户端，通过 golang 多协程，模拟多个客户端进行简单的数据发送和接收。
+* 测试客户端：httpclient，通过 golang 多协程，模拟多个客户端进行简单的数据发送和接收。
 
 ```go
 package main
@@ -187,7 +196,7 @@ func main() {
 }
 ```
 
-* 运行测试客户端 httpclient。
+* 运行测试客户端 httpclient，并发 1w 个短链接。
 
 ```shell
 ./httpclient --cnt 10000
@@ -196,7 +205,7 @@ cnt: 10000, failed: 0, spend: 8.080221123
 
 ---
 
-### 2.4. nginx
+### 2.3. nginx
 
 * nginx 转发配置。
 
@@ -233,7 +242,7 @@ nobody    79982  79980  0 22:28 ?        00:00:00 nginx: worker process
 
 * nginx 测试结果。
   
-  从 strace 统计的系统调用数据可见：79982 子进程的 accept4 系统调用有 195 个错误，因为进程被唤醒后，异步调用 accept4 去获取资源，它获取资源失败，返回 `EAGAIN` 错误，也就是说进程被唤醒后做了无用功。
+  从 strace 统计的系统调用数据可见：79982 子进程的 accept4 系统调用有 195 个错误，因为进程被唤醒后，异步调用 accept4 去获取资源，有时它获取资源失败了，返回 `EAGAIN` 错误，也就是说进程被唤醒后做了无用功。
 
   > 因为 strace 监控进程，还要写日志，处理速度应该会比正常的慢，所以测试客户端并发 1w 个，但是监控的进程只调用了 accept4 处理了 1356 个，失败了 195 个。
   >
@@ -269,7 +278,7 @@ nobody    79982  79980  0 22:28 ?        00:00:00 nginx: worker process
 
 ---
 
-### 2.5. 惊群影响
+### 2.4. 惊群影响
 
 惊群使得部分进程唤醒做了无用功，我们对比一下惊群与非惊群两个场景的数据。
 
@@ -279,7 +288,7 @@ nobody    79982  79980  0 22:28 ?        00:00:00 nginx: worker process
 
 > 这里压测比较简单，只查看了部分数据，也不太严谨，至于系统负载和CPU使用率，有兴趣的朋友可以在实际应用场景中再观察对比。
 
-* 压测脚本。简单调用了上面的 httpclient 进行测试。
+* 压测脚本。用 shell 脚本简单调用了上面的 httpclient 测试客户端进行测试。
 
 ```shell
 #!/bin/bash
@@ -296,7 +305,7 @@ for x in ${array[*]}; do
 done
 ```
 
-* 惊群数据。
+* nginx 惊群数据，主要看 in 中断次数，cs 上下文切换次数。
 
 ```shell
 # vmstat 1
@@ -312,7 +321,7 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
  5  0 4191228 440380  78144 489844   0    0     0     0 5031 9240  5 54 41  0  0
 ```
 
-* 开启 reuseport 避免惊群的特性，数据。
+* 开启 reuseport 避免惊群的特性，nginx 数据。
 
 ```shell
 procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
@@ -327,11 +336,11 @@ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
 2  0 4191228 443580  78320 498324   0    0     0     0 4718 7729  8 50 42  0  0
 ```
 
-* 对比两个场景的中断数据。(th_in：惊群中断数据，re_in：非惊群数据。)
+* 对比两个场景的中断数据。(th_in：惊群，re_in：非惊群。)
 
 <div align=center><img src="/images/2021-11-02-16-51-23.png" data-action="zoom"/></div>
 
-* 对比两个场景的上下文切换数据。(th_cs：惊群中断数据，re_cs：非惊群数据。)
+* 对比两个场景的上下文切换数据。(th_cs：惊群，re_cs：非惊群。)
 
 <div align=center><img src="/images/2021-11-02-16-52-41.png" data-action="zoom"/></div>
 
@@ -373,7 +382,7 @@ static void ep_ptable_queue_proc(struct file *file, wait_queue_head_t *whead, po
         if (epi->event.events & EPOLLEXCLUSIVE)
             add_wait_queue_exclusive(whead, &pwq->wait);
         else
-            /* 因为 nginx 默认情况下是没有开启 EPOLLEXCLUSIVE 特性的，
+            /* 因为 nginx 默认情况下在 Linux 4.5 版本以下内核是没有开启 EPOLLEXCLUSIVE 特性的，
              * 所以调用的是没有设置排它性属性的函数 add_wait_queue。  */
             add_wait_queue(whead, &pwq->wait);
         ...
@@ -503,7 +512,7 @@ void sock_init_data(struct socket *sock, struct sock *sk) {
     ...
 }
 
-/* 三次握手，服务端第二次握手。 */
+/* 三次握手，服务端第三次握手。 */
 int tcp_v4_rcv(struct sk_buff *skb) {
 process:
     ...
@@ -811,6 +820,7 @@ static __poll_t ep_item_poll(const struct epitem *epi, poll_table *pt, int depth
 /* include/linux/poll.h */
 static inline __poll_t vfs_poll(struct file *file, struct poll_table_struct *pt) {
     ...
+    /* sock_poll */
     return file->f_op->poll(file, pt);
 }
 
@@ -818,6 +828,7 @@ static inline __poll_t vfs_poll(struct file *file, struct poll_table_struct *pt)
 static __poll_t sock_poll(struct file *file, poll_table *wait) {
     struct socket *sock = file->private_data;
     ...
+    /* tcp_poll */
     return sock->ops->poll(file, sock, wait) | flag;
 }
 
@@ -837,19 +848,20 @@ __poll_t tcp_poll(struct file *file, struct socket *sock, poll_table *wait) {
     ...
 }
 
+/* include/net/sock.h */
+static inline void sock_poll_wait(struct file *filp, struct socket *sock, poll_table *p) {
+    if (!poll_does_not_wait(p)) {
+        /* 当前进程添加等待事件到 socket. */
+        poll_wait(filp, &sock->wq->wait, p);
+        ...
+    }
+}
+
 /* include/net/inet_connection_sock.h */
 static inline __poll_t inet_csk_listen_poll(const struct sock *sk) {
     /* 根据 listen socket 的完全队列是否为空返回对应的事件。 */
     return !reqsk_queue_empty(&inet_csk(sk)->icsk_accept_queue) ?
             (EPOLLIN | EPOLLRDNORM) : 0;
-}
-
-/* include/net/sock.h */
-static inline void sock_poll_wait(struct file *filp, struct socket *sock, poll_table *p) {
-    if (!poll_does_not_wait(p)) {
-        poll_wait(filp, &sock->wq->wait, p);
-        ...
-    }
 }
 
 /* include/linux/poll.h */
@@ -872,7 +884,7 @@ static void ep_ptable_queue_proc(struct file *file, wait_queue_head_t *whead, po
         if (epi->event.events & EPOLLEXCLUSIVE)
             add_wait_queue_exclusive(whead, &pwq->wait);
         else
-            /* 因为 nginx 默认情况下是没有开启 EPOLLEXCLUSIVE 特性的，
+            /* 因为 nginx 默认情况下在 Linux 4.5 版本以下内核是没有开启 EPOLLEXCLUSIVE 特性的，
              * 所以调用的是没有设置排它性属性的函数 add_wait_queue。  */
             add_wait_queue(whead, &pwq->wait);
         ...
@@ -963,7 +975,14 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 ---
 
-## 6. 参考
+## 6. 小结
+
+1. 惊群本质是进程睡眠和唤醒问题，重点理解 tcp 结合 epoll 睡眠和唤醒的时机以及工作流程。
+2. 避免惊群，内核源码需要重点理解 `WQ_FLAG_EXCLUSIVE` 标识的作用。
+
+---
+
+## 7. 参考
 
 * [Nginx的accept_mutex配置](https://blog.csdn.net/adams_wu/article/details/51669203)
 * [Nginx 是如何解决 epoll 惊群的](https://ld246.com/article/1588731832846)

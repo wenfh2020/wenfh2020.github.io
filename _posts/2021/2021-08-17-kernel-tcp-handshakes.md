@@ -254,7 +254,7 @@ void tcp_finish_connect(struct sock *sk, struct sk_buff *skb) {
 
 ---
 
-<font color=red>【注意】</font>旧版的 Linux 内核，在第二次握手时，TCP 状态已经是 TCP_SYN_RECV，但是新版已经修改逻辑，第二次握手 TCP 状态是 TCP_NEW_SYN_RECV，第三次握手后，TCP 状态才是 TCP_SYN_RECV。
+`【注意】` 旧版的 Linux 内核，在第二次握手时，TCP 状态已经是 TCP_SYN_RECV，但是新版已经修改逻辑，第二次握手 TCP 状态是 TCP_NEW_SYN_RECV，第三次握手后，TCP 状态才是 TCP_SYN_RECV。
 
 > 详细参考 2015 年 Linux 4.1 的补丁：[inet: add TCP_NEW_SYN_RECV state](https://github.com/torvalds/linux/commit/10feb428a5045d5eb18a5d755fbb8f0cc9645626)
 
