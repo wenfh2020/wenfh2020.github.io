@@ -59,6 +59,8 @@ strcpy: hello world
 
 ## 2. 看源码，探究原因
 
+可以查看 linux 内核源码或者 glibc 封装的代码。
+
 * strcpy
   
   从源码看，字符串拷贝是寻找 '\0' 结束符，从上面的测试场景看，这个函数是不安全的。
@@ -99,17 +101,29 @@ char *strncpy(char *dest, const char *src, size_t count) {
   代码有点长，没仔细看完，从测试场景上看，是正常的。。。（不严谨啊。^_^!）
 
 ```c
-// https://github.com/torvalds/linux/blob/master/lib/vsprintf.c
-int snprintf(char *buf, size_t size, const char *fmt, ...) {
-    va_list args;
-    int i;
+/* glibc 2.17 - snprintf.c */
+#include <stdarg.h>
+#include <stdio.h>
+#include <libioP.h>
+#define __vsnprintf(s, l, f, a) _IO_vsnprintf (s, l, f, a)
 
-    va_start(args, fmt);
-    i = vsnprintf(buf, size, fmt, args);
-    va_end(args);
+/* Write formatted output into S, according to the format
+   string FORMAT, writing no more than MAXLEN characters.  */
+/* VARARGS3 */
+int
+__snprintf (char *s, size_t maxlen, const char *format, ...)
+{
+  va_list arg;
+  int done;
 
-    return i;
+  va_start (arg, format);
+  done = __vsnprintf (s, maxlen, format, arg);
+  va_end (arg);
+
+  return done;
 }
+ldbl_weak_alias (__snprintf, snprintf)
+
 
 int vsnprintf(char *buf, size_t size, const char *fmt, va_list args) {
     ...
