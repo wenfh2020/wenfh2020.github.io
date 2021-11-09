@@ -1,8 +1,8 @@
 ---
 layout: post
 title:  "探索惊群 ② - accept"
-categories: nginx kernel
-tags: linux nginx kernel thundering herd
+categories: kernel
+tags: linux kernel thundering herd
 author: wenfh2020
 ---
 

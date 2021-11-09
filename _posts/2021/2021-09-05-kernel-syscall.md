@@ -24,7 +24,7 @@ Linux 操作系统，为了避免用户程序非法操作设备资源，需要�
 
 Linux 应用程序要与内核通信，需要通过 `系统调用`。系统调用，相当于用户空间和内核空间之间添加了一个中间层。
 
-<div align=center><img src="/images/2021-09-22-13-43-07.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-11-09-11-31-35.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux 系统调用](https://processon.com/view/61355ba063768906a220a785?fromnew=1)
 

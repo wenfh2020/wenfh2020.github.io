@@ -16,7 +16,7 @@ nginx 开启 reuseport 功能后，性能有立竿见影的提升，我们结合
 
 reuseport 也是内核解决 `惊群问题` 的优秀方案。
 
-1. 每个进程可以 bind/listen 相同的 IP/PORT，相当于每个进程拥有独立的 listen socket 的完全队列，避免了共享 listen socket 的资源争抢。
+1. 每个进程可以 bind/listen 相同的 IP/PORT，相当于每个进程拥有独立的 listen socket 的完全队列，避免了共享 listen socket 的资源争抢，提升了并发的吞吐。
 
 2. 内核通过哈希算法，将新链接相对均衡地分配到各个开启了 reuseport 属性的进程，所以资源的负载均衡得到解决。
 

@@ -452,7 +452,7 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 通过下图，了解一下服务端 tcp 的第三次握手和 epoll 内核的等待唤醒工作流程。
 
-<div align=center><img src="/images/2021-10-13-23-39-31.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-11-09-11-25-11.png" data-action="zoom"/></div>
 
 1. 进程通过 epoll_create 创建 eventpoll 对象。
 2. 进程通过 epoll_ctl 添加关注 listen socket 的 EPOLLIN 可读事件。
