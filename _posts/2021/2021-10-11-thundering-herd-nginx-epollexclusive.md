@@ -527,3 +527,4 @@ while (1) {
 ## 5. 参考
 
 * [EPOLLEXCLUSIVE](https://man7.org/linux/man-pages/man2/epoll_ctl.2.html)
+* [test_epoll_thundering_herd](https://github.com/wenfh2020/kernel_test/tree/main/test_epoll_thundering_herd)

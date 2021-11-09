@@ -19,6 +19,8 @@ shell 常用语法，整理方便查阅。
 
 ### 1.1. for
 
+* 遍历目录。
+
 ```shell
 for p in $paths;
 do
@@ -45,6 +47,14 @@ for dir in $subdirs; do
 done
 ```
 
+* 循环。
+
+```shell
+for ((i = 1; i <= $test_cnt; i++)); do
+    ...
+done
+```
+
 ---
 
 ### 1.2. if
@@ -65,10 +75,10 @@ fi
 ### 1.3. 数组
 
 ```shell
-array=(1, 2, 4, 8, 16, 32,64)
+array=(1000 3000 5000 8000 10000 15000 20000 25000)
 
 for x in ${array[*]}; do
-    # do something.
+    ...
 done
 ```
 

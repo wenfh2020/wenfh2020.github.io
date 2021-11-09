@@ -991,3 +991,4 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 * [牛逼的Linux性能剖析—perf](https://juejin.cn/post/6844903793348313102)
 * [NGINX Reverse Proxy](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/)
 * [nginx实现请求转发](https://blog.csdn.net/tobacco5648/article/details/51099426)
+* [test_epoll_thundering_herd](https://github.com/wenfh2020/kernel_test/tree/main/test_epoll_thundering_herd)

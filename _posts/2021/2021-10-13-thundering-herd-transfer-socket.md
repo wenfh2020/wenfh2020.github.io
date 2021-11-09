@@ -6,11 +6,7 @@ tags: linux thundering herd transfer socket
 author: wenfh2020
 ---
 
-惊群的两大核心问题，多进程/多线程争抢公共资源，还有资源分配的负载均衡问题。换个角度思考问题：既然是多个争抢，那么只有一个进程/线程获取资源，这样就不存在资源争抢问题了。
-
-与 nginx 的 [accept_mutex](https://wenfh2020.com/2021/10/10/nginx-thundering-herd-accept-mutex/) 解决方案不同的是，它的 listen socket 不共享，始终由一个进程独占工作。
-
-有一种文件描述传递的多进程架构，就是这样做的。
+与 nginx 的 [accept_mutex](https://wenfh2020.com/2021/10/10/nginx-thundering-herd-accept-mutex/) 解决方案不同的是，文件描述符透传，它始终由一个进程独占 listen socket，由它去获取资源，然后分派给其它的子进程。
 
 
 
@@ -22,9 +18,9 @@ author: wenfh2020
 
 ## 1. 原理
 
-比较典型的多进程架构(master/children)的服务模型，就是一个进程去 accept listener 的完全队列资源，然后通过 socket pair 管道进行文件描述符传输给它的子进程。相当于客户端链接间接分派到子进程上去工作了。
+比较典型的多进程架构（master/children）的服务模型，就是一个进程去 accept listener 的完全队列资源，然后通过 socket pair 管道进行文件描述符传输给它的子进程。相当于客户端间接链接到子进程上去工作了。
 
-如下图，master 主进程负责 listener 资源的 accept，当主进程获得资源，按照一定的策略（负载均衡），分派给相应的子进程。
+如下图，master 主进程负责 listener 资源的 accept，当主进程获得资源，按照一定的策略（取模/一致性哈希/...）负载均衡，分派给相应的子进程。
 
 <div align=center><img src="/images/2021-09-28-14-10-47.png" data-action="zoom"/></div>
 

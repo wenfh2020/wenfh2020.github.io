@@ -243,8 +243,6 @@ static struct sock *inet_lhash2_lookup(struct net *net,
 
 ## 3. nginx
 
-nginx 是多进程架构模型，在内核还没有添加 reuseport 功能前，nginx 为了解决单个 listener 暴露出来的问题，花了不少心思。
-
 2013 年 Linux 内核添加了 reuseport 功能后，nginx 在 2015 年，1.9.1 版本也增加对应功能的支持，nginx 开启 reuseport 功能后，性能是原来的 2-3 倍，效果可谓立竿见影！
 
 > 详细请参考 nginx 官方文档：[Socket Sharding in NGINX Release 1.9.1](https://www.nginx.com/blog/socket-sharding-nginx-release-1-9-1/)
