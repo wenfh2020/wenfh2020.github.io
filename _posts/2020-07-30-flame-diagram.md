@@ -20,6 +20,10 @@ author: wenfh2020
 
 基于 Linux 平台的 `perf` 采样脚本（[fg.sh](https://github.com/wenfh2020/shell/blob/master/fg.sh)），对指定进程进行采样，生成火焰图 `perf.svg`。
 
+<div align=center><img src="/images/2021-11-10-12-21-06.png" data-action="zoom"/></div>
+
+> 图片来源：[Linux Performance](https://www.brendangregg.com/linuxperf.html)。
+
 ---
 
 ### 1.1. 安装 perf 和 FlameGraph
@@ -38,6 +42,10 @@ ln -s /usr/local/src/FlameGraph/stackcollapse-perf.pl /usr/local/bin/stackcollap
 ---
 
 ### 1.2. 脚本
+
+通过脚本可以抓取到对应的进程/线程的数据，并将数据转换为火焰图。
+
+> `【注意】` 脚本不能监控正在睡眠不工作的进程/线程，否则抓取数据失败。
 
 * [fg.sh](https://github.com/wenfh2020/shell/blob/master/fg.sh) 。
 
@@ -63,7 +71,7 @@ perf script -i perf_with_stack.data | stackcollapse-perf.pl | flamegraph.pl > pe
 ./fg.sh <pid>
 ```
 
-* 视频。
+* [操作视频](https://www.bilibili.com/video/BV1My4y1q7YK/)。
 
 <iframe class="bilibili" src="//player.bilibili.com/player.html?aid=800382925&bvid=BV1My4y1q7YK&cid=262046727&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 

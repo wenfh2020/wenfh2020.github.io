@@ -19,7 +19,7 @@ Centos 等 Linux 平台常用命令，记录起来，方便使用。
 
 <div align=center><img src="/images/2021-06-26-06-17-30.jpeg" data-action="zoom"/></div>
 
-> 图片来源于 [Linux Performance](https://www.brendangregg.com/linuxperf.html)。
+> 图片来源：[Linux Performance](https://www.brendangregg.com/linuxperf.html)。
 
 ## 1. 系统
 
@@ -41,10 +41,14 @@ passwd root
 
 ---
 
-### 1.3. 查看 CPU
+### 1.3. 查看 CPU 信息
 
 ```shell
+# cpu 个数。
 cat /proc/cpuinfo | grep "processor" | wc -l
+
+# cpu 信息。
+lscpu
 ```
 
 ---
