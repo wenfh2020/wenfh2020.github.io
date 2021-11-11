@@ -26,7 +26,7 @@ author: wenfh2020
 
 ---
 
-### 1.1. 安装 perf 和 FlameGraph
+## 2. 安装 perf 和 FlameGraph
 
 ```shell
 # centos
@@ -41,7 +41,7 @@ ln -s /usr/local/src/FlameGraph/stackcollapse-perf.pl /usr/local/bin/stackcollap
 
 ---
 
-### 1.2. 脚本
+## 3. 脚本
 
 通过脚本可以抓取到对应的进程/线程的数据，并将数据转换为火焰图。
 
@@ -77,7 +77,7 @@ perf script -i perf_with_stack.data | stackcollapse-perf.pl | flamegraph.pl > pe
 
 ---
 
-## 2. 火焰图
+## 4. 火焰图
 
 通过上面脚本，对指定进程（`pid`）进行数据采集，即可生成下面的二维火焰图：
 
@@ -114,9 +114,9 @@ perf script -i perf_with_stack.data | stackcollapse-perf.pl | flamegraph.pl > pe
 
 ---
 
-## 3. 定位问题
+## 5. 定位问题
 
-### 3.1. 问题一
+### 5.1. 问题一
 
 <div align=center><img src="/images/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
 
@@ -140,7 +140,7 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
 
 ---
 
-### 3.2. 问题二
+### 5.2. 问题二
 
 如果不是火焰图，你无法想象 `std::list::size()` 这个接口的时间复杂度竟然是 O(N) 😱。
 
@@ -150,7 +150,7 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
 
 ---
 
-## 4. 参考
+## 6. 参考
 
 * [Siege HTTP 压力测试](https://wenfh2020.com/2018/05/02/siege-pressure/)
 * [[stl 源码分析] std::list::size 时间复杂度](https://wenfh2020.com/2021/04/09/stl-list-size/)
