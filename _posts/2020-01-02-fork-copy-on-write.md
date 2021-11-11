@@ -37,7 +37,7 @@ macos
 
 [源码](https://github.com/wenfh2020/c_test/blob/master/normal/proc.cpp)
 
-```c++
+```cpp
 alloc_data g_data;
 
 int main() {

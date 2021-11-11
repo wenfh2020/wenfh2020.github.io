@@ -25,7 +25,7 @@ quires the lock on mutex.
 
 ## 2. 使用
 
-```c++
+```cpp
 bool Bio::bio_init() {
     ...
     /* 创建线程。 */

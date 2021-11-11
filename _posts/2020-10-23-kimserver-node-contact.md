@@ -61,7 +61,7 @@ kimserver 作为异步服务，核心功能是把异步的逻辑封装在 `Cmd` 
 
 节点间相互连接的接口调用，主要参考 `network.cpp/auto_send` 函数的实现。
 
-```c++
+```cpp
 /* network.cpp */
 bool Network::auto_send(const std::string& host, int port, int worker_index,
                         const MsgHead& head, const MsgBody& body) {
@@ -127,7 +127,7 @@ bool Network::auto_send(const std::string& host, int port, int worker_index,
 
 节点相互连接协议通信实现，详细信息，参考源码实现。
 
-```c++
+```cpp
 /* auto_send(...)
  * A1 contact with B1. (auto_send func)
  *

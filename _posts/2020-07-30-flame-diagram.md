@@ -122,7 +122,7 @@ perf script -i perf_with_stack.data | stackcollapse-perf.pl | flamegraph.pl > pe
 
 上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 vsnprintf，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致不需要存盘的日志数据，仍然执行了 vsnprintf 操作。后面将日志过滤判断放在 vsnprintf 前，重复进行测试，占 1.54%，性能比之前提高了 5 个百分点 —— good 😄!
 
-```c++
+```cpp
 /* 优化后的的代码。 */
 bool Log::log_data(const char* file_name, int file_line, const char* func_name, int level, const char* fmt, ...) {
     /* 根据日志等级，过滤不需要存盘的日志。 */

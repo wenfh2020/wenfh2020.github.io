@@ -60,7 +60,7 @@ redis 连接池通过 (node) 节点管理链接的 ip 和 port 信息。下面 j
 
 链接池主要两个接口，初始化 redis 的链接信息 (ip/port)，以及发送命令接口。
 
-```c++
+```cpp
 class RedisMgr {
     ...
     /*
@@ -86,7 +86,7 @@ class RedisMgr {
 
 详细源码在 ([github](https://github.com/wenfh2020/kimserver/blob/master/src/test/test_redis/test_redis.cpp))。
 
-```c++
+```cpp
 /* redis 异步连接池对象指针。 */
 kim::RedisMgr* g_mgr = nullptr;
 

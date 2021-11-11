@@ -19,7 +19,7 @@ author: wenfh2020
 
 进度逻辑里，`pTask` 指针对象原来是 `CUploadTask` 类型的，被强制转换成 `CDownloadTask`，程序正常运行，没有抛异常。
 
-```c++
+```cpp
 // 下载任务
 class CDownloadTask : public CTask {
 public:
@@ -65,7 +65,7 @@ bool CTaskMgr::UpdateTaskProgress(int iTaskID,
 
 用安全的强制转换 `dynamic_cast`，它会在运行期对可疑的转型操作进行安全检查，类型不匹配会返回 NULL。
 
-```c++
+```cpp
 CDownloadTask* pDLoadTask = dynamic_cast<CDownloadTask*>(pTask);
 ```
 

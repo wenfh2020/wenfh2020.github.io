@@ -71,7 +71,7 @@ make
 
 * c++ 源码文件(\*.h/\*.cpp)。
 
-```c++
+```cpp
 // tb_file.h
 class tb_file {
 public:

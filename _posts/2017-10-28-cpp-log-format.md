@@ -43,7 +43,7 @@ LOG_ERR("check file failed, task id = %d, error = %d", iTaskID, iErrCode);
 
 * 宏
 
-```c++
+```cpp
 #define LOG_TRACE(x, ...)     LogTrace(__FILE__, __LINE__, x, ##__VA_ARGS__);
 #define LOG_DEBUG(x, ...)     LogDebug(__FILE__, __LINE__, x, ##__VA_ARGS__);
 #define LOG_INFO(x, ...)      LogInfo(__FILE__, __LINE__, x, ##__VA_ARGS__);
@@ -53,7 +53,7 @@ LOG_ERR("check file failed, task id = %d, error = %d", iTaskID, iErrCode);
 
 * 函数
 
-```c++
+```cpp
 void LogData(LPCTSTR pFile, int iLine, int iType, LPCTSTR lpInfo);
 void LogTrace(LPCTSTR pFile, int iLine, LPCTSTR lpszFormat, ...);
 void LogDebug(LPCTSTR pFile, int iLine, LPCTSTR lpszFormat, ...);
@@ -68,7 +68,7 @@ void LogError(LPCTSTR pFile, int iLine, LPCTSTR lpszFormat, ...);
 
 * log4cplus
 
-```c++
+```cpp
 #define LOG4_FATAL(args...) LOG4CPLUS_FATAL_FMT(GetLogger(), ##args)
 #define LOG4_ERROR(args...) LOG4CPLUS_ERROR_FMT(GetLogger(), ##args)
 #define LOG4_WARN(args...)  LOG4CPLUS_WARN_FMT(GetLogger(), ##args)
@@ -79,7 +79,7 @@ void LogError(LPCTSTR pFile, int iLine, LPCTSTR lpszFormat, ...);
 
 * 自定义（[github 源码](https://github.com/wenfh2020/kimserver/blob/master/src/core/server.h)）
 
-```c++
+```cpp
 #define LOG_FORMAT(level, args...)                                           \
     if (m_logger != nullptr) {                                               \
         m_logger->log_data(__FILE__, __LINE__, __FUNCTION__, level, ##args); \
@@ -97,7 +97,7 @@ void LogError(LPCTSTR pFile, int iLine, LPCTSTR lpszFormat, ...);
 
 * 源码实现（[github 源码](https://github.com/wenfh2020/kimserver/blob/master/src/core/util/log.h)）
 
-```c++
+```cpp
 class Log {
    public:
     enum {

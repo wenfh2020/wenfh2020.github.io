@@ -67,7 +67,7 @@ libco 是轻量级的协程库，看完下面几个帖子，应该能大致搞�
 
 ### 4.1. 测试源码
 
-```c++
+```cpp
 /* 数据库信息。 */
 typedef struct db_s {
     std::string host;

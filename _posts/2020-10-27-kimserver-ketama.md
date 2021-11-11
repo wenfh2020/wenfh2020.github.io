@@ -96,7 +96,7 @@ typedef struct node_s {
 
 * 一致性哈希节点管理。
 
-```c++
+```cpp
 class Nodes {
   private:
     /* 真实节点信息。
@@ -119,7 +119,7 @@ class Nodes {
 
 #### 3.2.1. 添加节点
 
-```c++
+```cpp
 bool Nodes::add_node(const std::string& node_type, const std::string& ip, int port, int worker) {
     LOG_INFO("add node, node type: %s, ip: %s, port: %d, worker: %d",
              node_type.c_str(), ip.c_str(), port, worker);
@@ -170,7 +170,7 @@ bool Nodes::add_node(const std::string& node_type, const std::string& ip, int po
 
 #### 3.2.2. 删除节点
 
-```c++
+```cpp
 bool Nodes::del_node(const std::string& node_id) {
     LOG_INFO("delete node: %s", node_id.c_str());
     auto it = m_nodes.find(node_id);
@@ -202,7 +202,7 @@ bool Nodes::del_node(const std::string& node_id) {
 
 获取节点接口性能测试，100w 个调用耗时 0.642390 s，效率还过得去吧。
 
-```c++
+```cpp
 node_t* Nodes::get_node_in_hash(const std::string& node_type, const std::string& obj) {
     auto it = m_vnodes.find(node_type);
     if (it == m_vnodes.end()) {
@@ -274,7 +274,7 @@ std::vector<uint32_t> Nodes::gen_vnodes(const std::string& node_id) {
 
 提供三种类型的哈希算法，默认是 `fnv1a_64`，根据业务场景，选择对应冲突率比较小的。
 
-```c++
+```cpp
 uint32_t Nodes::hash(const std::string& obj) {
     if (m_ha == HASH_ALGORITHM::FNV1_64) {
         return hash_fnv1_64(obj.c_str(), obj.size());

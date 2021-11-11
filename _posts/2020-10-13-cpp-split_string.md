@@ -17,7 +17,7 @@ author: wenfh2020
 
 ## 1. 源码
 
-```c++
+```cpp
 /* script: g++ -std='c++11' test_split_strings.cpp -o split && ./split */
 void split(const std::string& s, std::vector<std::string>& vec, const std::string& sep = " ", bool trim_blank = true) {
     std::size_t pre = 0, cur = 0;

@@ -35,7 +35,9 @@ const char* get_data();
 ```
 
 ---
+
 ### 1.2. inline
+
 inline 是 C++ 关键字，在函数声明或定义中。在函数返回类型前加上关键字 inline，即可把函数指定为内联函数，这样可以解决一些频繁调用的函数，大量消耗栈空间。
 > 可以对比宏函数
 
@@ -47,16 +49,22 @@ inline 是 C++ 关键字，在函数声明或定义中。在函数返回类型�
    2）如果函数体内出现循环，那么执行函数体内代码的时间要比函数调用的开销大。（递归）
 
 ---
+
 ### 1.3. C++ 三大特性
+
 封装，继承，多态
 
 ---
+
 #### 1.3.1. 封装
+
 将处理的数据抽象成类，操作执行抽象成方法。例如 file.
 
 ---
+
 #### 1.3.2. 继承
-```c++
+
+```cpp
 #include <iostream>
 #include <string>
 
@@ -90,9 +98,11 @@ int main() {
     return 0;
 }
 ```
-这里考察的是析构函数，多态功能。在析构函数中调用虚函数
 
-结果
+这里考察的是析构函数，多态功能。在析构函数中调用虚函数。
+
+结果：
+
 ```shell
 base construct
 child construct
@@ -104,8 +114,10 @@ base destruct
 ```
 
 ---
+
 #### 1.3.3. 多态
-```c++
+
+```cpp
 #include <iostream>
 #include <string>
 
@@ -140,7 +152,9 @@ int main() {
     return 0;
 }
 ```
+
 结果
+
 ```shell
 base construct
 child construct
@@ -150,9 +164,10 @@ base destruct
 ```
 
 ---
-- delete 强制转换指针对象和不强制转换效果不一样。
 
-```c++
+* delete 强制转换指针对象和不强制转换效果不一样。
+
+```cpp
 int main() {
     Base* b = new Child2;
     b->func2();
@@ -160,6 +175,7 @@ int main() {
     return 0;
 }
 ```
+
 ```shell
 base construct
 child construct
@@ -171,6 +187,7 @@ base destruct
 ```
 
 ---
+
 - 虚析构函数，会调用父类的析构函数，避免内存泄漏
 
 ```c
@@ -208,7 +225,9 @@ int main() {
     return 0;
 }
 ```
-结果
+
+结果：
+
 ```shell
 base construct
 child construct
@@ -243,17 +262,23 @@ int main() {
     return 0;
 }
 ```
+
 结果：
+
 ```shell
 class size: 8
 ptr size:8, ptr len: 10
 array size: 11, array len: 10
 ```
+
 > class 有虚函数，所以有虚函数指针，普通函数内存被分配到代码区，static 函数被分配到全局数据区，所以 sizeof 大小只有 virtual 的虚函数指针，64位机器，指针长度 8 个字节。数组除了字符串，还有结束符‘\0’
 
 ---
+
 ## 2. 其它
+
 ### 2.1. malloc 和 new 区别
+
 1. 属性：new/delete是C++关键字，需要编译器支持。malloc/free是库函数，需要头文件支持。
 2. 参数：使用new操作符申请内存分配时无须指定内存块的大小，编译器会根据类型信息自行计算。而malloc则需要显式地指出所需内存的尺寸。
 3. 返回类型：new操作符内存分配成功时，返回的是对象类型的指针，类型严格与对象匹配，无须进行类型转换，故new是符合类型安全性的操作符。而malloc内存分配成功则是返回 void*，需要通过强制类型转换将void* 指针转换成我们需要的类型。
@@ -263,9 +288,12 @@ array size: 11, array len: 10
 7. 内存区域：new操作符从**自由存储区（free store）上为对象动态分配内存空间**，而malloc函数从堆上动态分配内存。自由存储区是C++基于new操作符的一个抽象概念，凡是通过new操作符进行内存申请，该内存即为自由存储区。而堆是操作系统中的术语，是操作系统所维护的一块特殊内存，用于程序的内存动态分配，C语言使用malloc从堆上分配内存，使用free释放已分配的对应内存。自由存储区不等于堆，如上所述，布局new就可以不位于堆中。
 
 ---
+
 ### 2.2. 空类
+
 空类大小为 1
-```c++
+
+```cpp
 #include <iostream>
 
 class C {};
@@ -275,10 +303,13 @@ int main() {
     return 0;
 }
 ```
+
 结果：
+
 ```shell
 class size: 1
 ```
+
 这就是实例化的原因（空类同样可以被实例化），每个实例在内存中都有一个独一无二的地址，为了达到这个目的，编译器往往会给一个空类隐含的加一个字节，这样空类在实例化后在内存得到了独一无二的地址，所以空类所占的内存大小是1个字节。
 
 ---
@@ -286,4 +317,3 @@ class size: 1
 ## 3. 参考
 
 * [c++ 官网](http://www.cplusplus.com/reference/)
-

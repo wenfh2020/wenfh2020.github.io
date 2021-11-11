@@ -154,7 +154,7 @@ zookeeper 源码目录下有一个 [zookeeper-client-c](https://github.com/apach
 
 * 异步服务接口逻辑。
 
-```c++
+```cpp
 class ZkClient : public Bio {
    public:
     ZkClient(Log* logger);
@@ -224,7 +224,7 @@ class ZkClient : public Bio {
 
 * 后台线程（Bio）处理同步逻辑。Bio 这个类参考了 redis 的 [bio](https://github.com/antirez/redis/blob/unstable/src/bio.c) 线程实现。
 
-```c++
+```cpp
 /* 添加任务接口。 */
 bool Bio::add_cmd_task(const std::string& path, zk_task_t::CMD cmd, const std::string& value) {
     zk_task_t* task = new zk_task_t{path, value, cmd, time_now()};

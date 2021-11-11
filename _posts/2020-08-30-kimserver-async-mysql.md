@@ -130,7 +130,7 @@ sudo make && make install
 
 > 详细连接池源码可以查看 [github](https://github.com/wenfh2020/kimserver/tree/master/src/core/db)
 
-```c++
+```cpp
 /* 回调接口定义. */
 typedef void(MysqlExecCallbackFn)(const MysqlAsyncConn*, sql_task_t* task);
 typedef void(MysqlQueryCallbackFn)(const MysqlAsyncConn*, sql_task_t* task, MysqlResult* res);
@@ -188,7 +188,7 @@ void MysqlAsyncConn::wait_for_mysql(struct ev_loop* loop, ev_io* w, int event) {
 
 * 详细测试源码可以查看 [github](https://github.com/wenfh2020/kimserver/tree/master/src/test/test_mysql/test_async)
 
-```c++
+```cpp
 static void mysql_exec_callback(const kim::MysqlAsyncConn* c, kim::sql_task_t* task) {...}
 static void mysql_query_callback(const kim::MysqlAsyncConn* c, kim::sql_task_t* task, kim::MysqlResult* res) {...}
 

@@ -84,7 +84,7 @@ static void redisAeReadEvent(aeEventLoop *el, int fd, void *privdata, int mask) 
 
 [github 测试源码](https://github.com/wenfh2020/kimserver/blob/master/src/modules/module_test/cmd_test_redis.h)
 
-```c++
+```cpp
 namespace kim {
 
 enum E_STEP {

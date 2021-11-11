@@ -31,7 +31,7 @@ libco 有三大模块：协程管理模块，hook 模块，多路复用事件驱
 
 我们通过 lldb 调试 `mysql_real_connect` 工作流程，查看 libco 三大模块是如何结合起来的。（[github 测试源码](https://github.com/wenfh2020/test_libco.git)）
 
-```c++
+```cpp
 void* co_handler_mysql_query(void* arg) {
     co_enable_hook_sys();
     ...

@@ -34,7 +34,7 @@ pCallStack[0] 是主协程，`env->pCallStack[env->iCallStackSize - 1]` 是当�
   
 一般情况下数组大小为 2，子协程在主协程里创建。除非在子协程里嵌套创建唤醒新的协程，这个协程数组大小才会一直被累加 `env->iCallStackSize++`，直到嵌套深度达到 `128` 才会出现堆栈溢出，这种应用场景嵌应该不常见。
 
-```c++
+```cpp
 struct stCoRoutineEnv_t {
     stCoRoutine_t *pCallStack[128]; /* 协程数组。 */
     int iCallStackSize;             /* 协程数组元素个数。 */
@@ -60,7 +60,7 @@ void co_resume(stCoRoutine_t *co) {
 
 ### 1.3. 挂起协程 co_yield
 
-```c++
+```cpp
 void co_yield_env(stCoRoutineEnv_t *env) {
     stCoRoutine_t *last = env->pCallStack[env->iCallStackSize - 2];
     stCoRoutine_t *curr = env->pCallStack[env->iCallStackSize - 1];

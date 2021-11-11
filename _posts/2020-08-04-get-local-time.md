@@ -81,7 +81,7 @@ double time_now() {
 
 [年]-[月]-[日] [时]-[分]-[秒].[毫秒]
 
-```c++
+```cpp
 #include <sys/time.h>
 #include <unistd.h>
 #include <iostream>
@@ -139,7 +139,7 @@ int main() {
 * 放在时钟里定时设置。
 * 根据使用频率设置。
 
-```c++
+```cpp
 class Network {
     ...
 protected:

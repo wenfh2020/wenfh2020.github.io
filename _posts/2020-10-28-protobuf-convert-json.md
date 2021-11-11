@@ -19,7 +19,7 @@ protobuf 3.0 版本支持 protobuf 与 json 数据相互转换。
 
 protobuf 与 json 数据转换接口在 `google/protobuf/util/json_util.h` 文件里。
 
-```c++
+```cpp
 /* protobuf 转 json。 */
 inline util::Status MessageToJsonString(const Message& message, std::string* output);
 

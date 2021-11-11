@@ -65,7 +65,7 @@ ngx_int_t ngx_write_channel(ngx_socket_t s, ngx_channel_t *ch, size_t size, ngx_
 
 文件描述符传输逻辑，详细源码实现可以参考 [kimserver](https://github.com/wenfh2020/kimserver)。
 
-```c++
+```cpp
 /* 传输数据结构。 */
 typedef struct channel_s {
     int fd;

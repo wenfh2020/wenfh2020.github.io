@@ -81,7 +81,7 @@ g++ -g -std='c++11' -DTHREADED zk_cpp_test.cpp zk_cpp.cpp -lzookeeper_mt -o test
 
 即便是同步使用方式，也有部分异步回调的接口。因为监控的节点变化和节点数据变化不是实时发生的。
 
-```c++
+```cpp
 /* 监控节点数据变化。 */
 void data_change_event(const std::string& path, const std::string& new_value) {...}
 /* 监控父节点的子节点变化（添加/删除）。 */
@@ -125,6 +125,8 @@ int main() {
 ## 3. zookeeper-client-c 源码分析
 
 ![client 工作流程](/images/2020-10-18-21-59-50.png){:data-action="zoom"}
+
+---
 
 ### 3.1. 创建子线程
 

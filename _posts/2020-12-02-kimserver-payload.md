@@ -171,7 +171,7 @@ get /kimserver/payload/gate/kim-gate-gate0000000078
 
 详细源码实现，请参考 `core/network.cpp` （[github](https://github.com/wenfh2020/kimserver/blob/master/src/core/network.cpp)）
 
-```c++
+```cpp
 /* 时钟定时执行（默认每秒一次）。 */
 void Network::on_repeat_timer(void* privdata) {
     if (is_manager()) {

@@ -62,7 +62,7 @@ hiredis demo，除了提供访问 redis 的同步异步接口，还支持大部�
 
 hiredis 回调接口使用简单，做得非常精简。例如结合 `libev` 实现异步回调 [demo](https://github.com/redis/hiredis/blob/master/examples/example-libev.c)，只要绑定三个回调接口即可。
 
-```c++
+```cpp
 /* examples/example-libev.c */
 ...
 void getCallback(redisAsyncContext *c, void *r, void *privdata) {...}
