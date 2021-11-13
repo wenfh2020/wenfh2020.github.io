@@ -35,7 +35,7 @@ perf 采集的数据，可以通过插件生成二维火焰图：
 * Y 轴是函数块叠加而成，有点像程序调试堆栈；
 * X 轴代表程序函数，在单位时间内被采样的密集度。函数块越长，说明采样越多，工作频率越高，耗性能越多。
 
-通过图象，我们对自己写的代码工作效率一目了然，这样可以针对性优化源码性能
+通过图象，我们对自己写的代码工作效率一目了然，这样可以针对性优化源码性能。
 
 ![火焰图](/images/2020-07-30-19-33-44.png){:data-action="zoom"}
 
@@ -66,7 +66,7 @@ ln -s /usr/local/src/FlameGraph/stackcollapse-perf.pl /usr/local/bin/stackcollap
 
 通过脚本可以抓取到对应的进程/线程的数据，并将数据转换为火焰图。
 
-> `【注意】` 脚本不能监控正在睡眠不工作的进程/线程，否则抓取数据失败。
+> `【注意】` 脚本不能监控正在睡眠一直不工作的进程/线程，否则抓取数据失败。
 
 * [fg.sh](https://github.com/wenfh2020/shell/blob/master/fg.sh) 。
 
@@ -136,7 +136,7 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
 
 ## 4. off-cpu 火焰图
 
-有时候进程/线程因为某些阻塞操作很慢，仍然可以像 on-cpu 那样将采集的慢操作数据可视化为火焰图。详细原理请参考：[Off-CPU Analysis](https://www.brendangregg.com/offcpuanalysis.html)
+有时候进程/线程因为某些阻塞操作很慢，我们仍然可以像 on-cpu 那样将采集的慢操作数据可视化为火焰图。详细原理请参考：[Off-CPU Analysis](https://www.brendangregg.com/offcpuanalysis.html)。
 
 * 慢操作。
 
