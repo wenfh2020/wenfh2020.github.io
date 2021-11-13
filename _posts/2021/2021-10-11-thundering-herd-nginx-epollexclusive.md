@@ -491,15 +491,13 @@ out_unlock:
 
 ### 3.2. 问题原因
 
-<div align=center><img src="/images/2021-11-04-11-33-40.png" data-action="zoom"/></div>
-
 上面测试发现 EPOLLEXCLUSIVE 仍然有 accept 错误。
 
-这里要注意，多个进程虽然有各自的 epoll，但是它们 epoll_ctl 关注的 listen socket 是共享的，因为它在 nginx 主进程中创建，而子进程是从主进程中 fork 出来的，所以 listen socket 是父子进程共享的。
+这里忽略了一个重要的知识点，虽然每个子进程的 epoll 实例都是独立的，但是 epoll_ctl 关注的 listen socket 默认采用了 `LT 模式`，而 LT 模式下，epoll 的就绪队列上的节点不会在当前的 epoll_wait 中删除，而是在下一次的 epoll_wait 中重新检查事件是否处理完毕，再决定是否删除。
 
-这里就有问题了，因为资源共享，当第一个睡眠的进程被唤醒去获取资源，可能 listen socket 上的完全队列（accept queue）数据还没来得及处理，这时候新的连接数据又来了，内核又重新遍历进程等待事件（wait queue），发现第一个进程已经在运行了，那么它会唤醒第二个睡眠等待的进程处理。
+同一个进程在两次的 epoll_wait 之间的时间段内，共享的 listen socket 就可能接入很多新链接，导致前面唤醒的进程，accept 完一个链接资源后，执行第二次 epoll_wait 后，再去检查 epoll 就绪队列上的 listen socket 的就绪节点，发现 listen socket 上的完全队列还有数据，就绪节点仍然有效，所以 epoll_wait 返回有效数据给 accept 获取。但是这个资源可能由其它新的唤醒进程去处理的，被旧的进程处理掉了，所以新的进程被唤醒后，执行 accept，发现已经没有资源了。
 
-紧接着第一个已唤醒的进程开始工作了，它把 listen socket 上的完全队列数据全部 accept 完了，然后当第二个唤醒的进程再去 accept 数据，发现完全队列上已经没有数据了，所以 accept 返回错误，这时候第二个被唤醒的进程做了无用功。
+> 详情参考：[[内核源码] epoll lt / et 模式区别](https://wenfh2020.com/2020/06/11/epoll-lt-et/)
 
 ```c
 while (1) {
