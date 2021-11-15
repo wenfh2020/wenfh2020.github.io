@@ -215,7 +215,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 不要小看这个处理时序，在高并发系统里，海量事件，每个后来者都希望自己的事件快点被处理，而 et 模式可以一定程度上提高新事件被处理的速度。
 
-同时如果我们仔细观察服务程序的 listen 接口，它有一个 backlog 参数，代表 listen socket 就绪链接的已完成队列的长度，这说明队列是有限制的，当它满了就会返回错误给客户端，所以完全队列的数据当然越快得到处理越好。
+同时如果我们仔细观察服务程序的 [listen 接口](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)，它有一个 backlog 参数，代表 listen socket 就绪链接的已完成队列的长度，这说明队列是有限制的，当它满了就会返回错误给客户端，所以完全队列的数据当然越快得到处理越好。
 
 所以我们可以观察一下 nginx 的 epoll_ctl 系统调用，除了 listen socket 的操作是 lt 模式，其它的 socket 处理几乎所有都是 et 模式。
 

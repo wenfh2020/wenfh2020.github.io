@@ -218,11 +218,15 @@ c
 
 ---
 
-vscode + gdb 调试 Linux 内核更好一点。详看：[vscode + gdb 远程调试 linux 内核源码（附视频）](https://wenfh2020.com/2021/06/23/vscode-gdb-debug-linux-kernel/)
+## 4. vscode + gdb
+  
+vscode + gdb 调试 Linux 内核更人性化一点。详看：[vscode + gdb 远程调试 linux 内核源码（附视频）](https://wenfh2020.com/2021/06/23/vscode-gdb-debug-linux-kernel/)
+
+<iframe class="bilibili" src="//player.bilibili.com/player.html?aid=376254064&bvid=BV1yo4y1k7QJ&cid=360457201&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 
 ---
 
-## 4. 参考
+## 5. 参考
 
 * [构建调试Linux内核网络代码的环境MenuOS系统](https://www.cnblogs.com/AmosYang6814/p/12027988.html)
 * [初始化MenuOS的网络设置，跟踪分析TCP协议](https://www.lanqiao.cn/courses/1198/learning/?id=9010)
