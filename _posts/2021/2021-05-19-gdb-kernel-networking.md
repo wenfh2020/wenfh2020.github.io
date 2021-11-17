@@ -8,7 +8,7 @@ author: wenfh2020
 
 最近在看 Linux 内核的网络部分源码，在 MacOS 上搭建调试环境，通过 gdb 调试，熟悉内核网络接口的工作流程。
 
-
+> 在 windows 搭建环境应该也可以，调试环境是跑在虚拟机里的。
 
 
 
@@ -220,7 +220,9 @@ c
 
 ## 4. vscode + gdb
   
-vscode + gdb 调试 Linux 内核更人性化一点。详看：[vscode + gdb 远程调试 linux 内核源码（附视频）](https://wenfh2020.com/2021/06/23/vscode-gdb-debug-linux-kernel/)
+vscode + gdb 调试 Linux 内核更人性化一点。
+
+详看：[vscode + gdb 远程调试 linux 内核源码（附视频）](https://wenfh2020.com/2021/06/23/vscode-gdb-debug-linux-kernel/)
 
 <iframe class="bilibili" src="//player.bilibili.com/player.html?aid=376254064&bvid=BV1yo4y1k7QJ&cid=360457201&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 

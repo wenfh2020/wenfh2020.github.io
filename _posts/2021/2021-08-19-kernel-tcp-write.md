@@ -42,7 +42,7 @@ dev_queue_xmit(struct sk_buff * skb) (/root/linux-5.0.1/net/core/dev.c:3897)
 # 网络介质层（数据发往设备）。
 neigh_hh_output() (/root/linux-5.0.1/include/net/neighbour.h:498)
 neigh_output() (/root/linux-5.0.1/include/net/neighbour.h:506)
-# 邻居子系统。
+# 邻居子系统（链路层）。
 ip_finish_output2(struct net * net, struct sock * sk, struct sk_buff * skb) (/root/linux-5.0.1/net/ipv4/ip_output.c:229)
 NF_HOOK_COND() (/root/linux-5.0.1/include/linux/netfilter.h:278)
 ip_output(struct net * net, struct sock * sk, struct sk_buff * skb) (/root/linux-5.0.1/net/ipv4/ip_output.c:405)
@@ -58,17 +58,18 @@ tcp_sendmsg(struct sock * sk, struct msghdr * msg, size_t size) (/root/linux-5.0
 sock_sendmsg_nosec() (/root/linux-5.0.1/net/socket.c:622)
 sock_sendmsg(struct socket * sock, struct msghdr * msg) (/root/linux-5.0.1/net/socket.c:632)
 sock_write_iter(struct kiocb * iocb, struct iov_iter * from) (/root/linux-5.0.1/net/socket.c:901)
-# socket 层（应用层）。
+# socket -> sock。
 call_write_iter() (/root/linux-5.0.1/include/linux/fs.h:1863)
 new_sync_write() (/root/linux-5.0.1/fs/read_write.c:474)
 __vfs_write(struct file * file, const char * p, size_t count, loff_t * pos) (/root/linux-5.0.1/fs/read_write.c:487)
 vfs_write(struct file * file, const char * buf, size_t count, loff_t * pos) (/root/linux-5.0.1/fs/read_write.c:549)
-# vfs 虚拟文件系统管理层（应用层）。
+# 虚拟文件系统管理。
 ksys_write(unsigned int fd, const char * buf, size_t count) (/root/linux-5.0.1/fs/read_write.c:598)
 do_syscall_64(unsigned long nr, struct pt_regs * regs) (/root/linux-5.0.1/arch/x86/entry/common.c:290)
 entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
-# 系统调用层（应用层）。
+# 系统调用。
 ...
+# 应用层。
 ```
 
 > 参考：[vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
@@ -89,7 +90,7 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 ## 2. 数据发送层次
 
-### 2.1. VFS 层
+### 2.1. VFS
 
 * 文件与 socket。socket 是 Linux 一种 **特殊文件**，socket 在创建时（`sock_alloc_file`）会关联对应的文件处理，所以我们在 TCP 通信过程中，发送数据，用户层调用 `write` 接口，在内核里实际是调用了 `sock_write_iter` 接口。
 
@@ -210,7 +211,7 @@ int sock_sendmsg(struct socket *sock, struct msghdr *msg) {
 
 ---
 
-### 2.2. socket 层
+### 2.2. socket
 
 fd --> file --> socket --> sock --> tcp
 
@@ -315,7 +316,7 @@ struct sock *sk_alloc(struct net *net, int family, gfp_t priority,
 
 ---
 
-### 2.3. TCP 层
+### 2.3. TCP 传输层
 
 #### 2.3.1. sk_buff
 
@@ -714,7 +715,7 @@ static int __tcp_transmit_skb(struct sock *sk, struct sk_buff *skb,
 
 ---
 
-### 2.4. IP 层
+### 2.4. IP 网络层
 
 * IPv4 IP 头部。
 

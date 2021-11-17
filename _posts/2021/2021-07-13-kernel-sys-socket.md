@@ -431,7 +431,7 @@ void __fd_install(struct files_struct *files, unsigned int fd,
 
 ### 4.2. 网络部分
 
-协议：socket 层 --> 传输层 --> 网络层。
+协议：socket --> 传输层 --> 网络层。
 
 * net_proto_family：网域（PF_INET/AF_INET）数据结构。
 
