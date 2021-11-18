@@ -6,7 +6,10 @@ tags: redis sentinel contact
 author: wenfh2020
 ---
 
-承接上一章 《[[redis 源码走读] sentinel 哨兵 - 原理](https://wenfh2020.com/2020/06/06/redis-sentinel/)》，本章通过 `strace` 命令从底层抓取 sentinel 工作日志，熟悉节点通信流程，阅读相关源码。
+上一章讲述了哨兵的[工作原理](https://wenfh2020.com/2020/06/06/redis-sentinel/)。
+
+本章通过 `strace` 命令抓取 sentinel 的系统调用日志，熟悉节点通信流程，阅读相关源码。
+
 
 
 
@@ -45,6 +48,8 @@ struct redisCommand sentinelcmds[] = {
 ---
 
 ### 1.2. 节点关系
+
+<style> table th:first-of-type { width: 150px; } </style>
 
 | node       | port  |
 | :--------- | :---- |

@@ -1021,7 +1021,16 @@ static inline int neigh_hh_output(const struct hh_cache *hh, struct sk_buff *skb
 
 ---
 
-## 3. 参考
+## 3. 总结流程
+
+1. 应用程序通过系统调用 write 接口发送网络包，socket 层把数据拷贝到 socket 的发送缓冲区中；
+2. TCP/IP 协议栈层层包装处理发送缓冲区数据。
+3. 协议栈处理完成后产生软中断通知驱动程序，因为这时发送队列中有新的网络帧需要发送。
+4. 网卡驱动程序从发包队列中读出网络帧，并通过物理网卡把它发送出去。
+
+---
+
+## 4. 参考
 
 * 《图解 TCP_IP》
 * 《网络是怎样连接的》
@@ -1039,3 +1048,4 @@ static inline int neigh_hh_output(const struct hh_cache *hh, struct sk_buff *skb
 * [Linux Kernel TCP/IP Stack\|Linux网络硬核系列](https://mp.weixin.qq.com/s/63HBz8DGPjLeNd43kaOunw)
 * [TCP的发送系列 — tcp_sendmsg()的实现（一）](https://www.cnblogs.com/aiwz/p/6333235.html)
 * [ARP协议与邻居子系统剖析](https://cloud.tencent.com/developer/article/1792299)
+* [Linux基础之网络包收发流程](https://blog.csdn.net/yangguosb/article/details/103562983)
