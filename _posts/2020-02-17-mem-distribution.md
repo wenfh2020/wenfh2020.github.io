@@ -27,6 +27,8 @@ author: wenfh2020
 
 程序源码通过编译，产生可执行的 elf 文件。源码对应的变量，有的在执行前已经在虚拟内存中分配好内存空间，有的需要在程序运行起来才会分配。
 
+<style> table th:first-of-type { width: 100px; } </style>
+
 * 数据分区
 
   | 区域        | 描述       | 变量类型               |
@@ -191,12 +193,10 @@ ELF 可重定位目标文件的格式头：
 ## 5. objdump 工具
 
 * 通过 objdump 工具查询程序部分变量在 elf 文件中分配在虚拟内存哪个区。
-  
-```shell
-# objdump -j .rodata -S address
-```
 
 ```shell
+# objdump -j .rodata -S address
+
 address:     file format elf64-x86-64
 
 
@@ -225,9 +225,6 @@ Disassembly of section .rodata:
 
 ```shell
 # objdump -x address | grep '\.bss'
-```
-
-```shell
 0000000000606140 l     d .bss   0000000000000000              .bss
 0000000000606140 l     O .bss   0000000000000001              completed.6354
 00000000006061b0 l     O .bss   0000000000000001              _ZStL8__ioinit

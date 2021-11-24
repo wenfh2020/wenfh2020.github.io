@@ -69,7 +69,7 @@ author: wenfh2020
 
 ---
 
-### 2.1.1. reuseport
+### 2.1. reuseport
 
 内核解决惊群问题，目前 nginx 最好的惊群解决方案，基于 linux 内核 `so_reuseport` 端口重用网络特性。
 
@@ -80,7 +80,7 @@ author: wenfh2020
 
 ---
 
-### 2.1.2. NGX_EXCLUSIVE_EVENT
+### 2.2. NGX_EXCLUSIVE_EVENT
 
 内核解决惊群问题，基于 linux 4.5+ 内核增加的 epoll 属性 EPOLLEXCLUSIVE 独占资源属性。
 
@@ -95,7 +95,7 @@ author: wenfh2020
 
 ---
 
-### 2.1.3. accept_mutex
+### 2.3. accept_mutex
 
 应用层解决惊群问题，多个子进程通过应用层抢锁，成功者可以独占 listen socket 获取资源的权利。
 

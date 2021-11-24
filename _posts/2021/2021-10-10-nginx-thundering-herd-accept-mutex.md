@@ -6,10 +6,6 @@ tags: linux nginx thundering herd
 author: wenfh2020
 ---
 
-[前面](https://wenfh2020.com/2021/09/25/thundering-herd/)已经说过，解决惊群问题的关键在于，多个子进程获取共享资源，不抢！另外还有一个资源分配不均的问题。看看 nignx 的 `accept_mutex` 特性是如何解决这两个问题的。
-
----
-
 由主进程创建的 listen socket，是被 fork 出来的子进程共享的，但是为了避免多个子进程同时争抢共享资源，nginx 采用一种策略：使得多个子进程，同一时段，只有一个子进程能获取资源，就不存在共享资源的争抢问题。
 
 但是这个策略是建立在多个子进程竞争锁的基础上的：
@@ -326,11 +322,7 @@ static ngx_int_t ngx_disable_accept_events(ngx_cycle_t *cycle, ngx_uint_t all) {
 1. 原来抢到锁的进程，在抢到锁后会先处理完事件（`ngx_process_events`），然后才会释放锁，在这个过程中，其它进程一直抢不到：因为它们都是盲目地抢，不知道锁什么时候释放，而抢到锁的进程它释放锁后，自己马上抢回，相对于其它进程盲目地抢，它的成功率更高。😎
 2. 原来抢到锁的进程，什么时候才会不抢呢，就是要满足这个条件：ngx_accept_disabled > 0。因为 ngx_accept_disabled = ngx_cycle->connection_n / 8 - ngx_cycle->free_connection_n，一般情况下，当已使用链接超过了 7/8 了，也就是说**空闲链接快用完了**，才不愿意抢锁了。如果配置的链接总数很大，那么预分配的空闲链接没那么快用完，那么原进程就一直抢，因为它一释放锁就马上去抢，它抢到锁的成功率自然高！😂
 
-所以基于上面两个条件，可能会导致：有些进程很忙，有些进程比较闲，但始终只有一个进程在工作。
-
-> 注意：下图的 CPU 使用率刷新是有延迟的，所以正在 "S" 睡眠的的进程可能前面使用 CPU 占比很大。
-
-<div align=center><img src="/images/2021-11-05-17-27-31.png" data-action="zoom"/></div>
+所以基于上面两个条件，可能会导致：有些进程很忙，有些进程比较闲。
 
 ---
 

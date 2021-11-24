@@ -10,19 +10,6 @@ redis 是 c/s 模式 tcp 通信服务。它支持批量命令处理（发送/接
 
 > 详细请参考：[Using pipelining to speedup Redis queries](https://redis.io/topics/pipelining)
 
----
-
-**pipeline 优点**：
-
-1. 避免频繁发包/接包，避免时间（RTT (Round Trip Time））都浪费在通信路上。
-2. 避免性能损耗，发包/接包，write() / read() 调用内核接口非常耗资源，所以每次将多个命令打包发送，每次接收多个回复包（回复集合）将减少资源损耗。——避免大巴车每次只载几个人...
-
----
-
-**pipeline 缺点**：
-
-redis 集群，数据根据各种形式分片到不同实例，所以客户端如果将各个节点的数据读写命令，打包发往一个 redis 节点，往往无法达到预期，所以在使用前要做好方案调研，避免掉坑里。
-
 
 
 
@@ -31,7 +18,22 @@ redis 集群，数据根据各种形式分片到不同实例，所以客户端�
 
 ---
 
-## 1. 使用
+## 1. 优缺点
+
+### 1.1. 优点
+
+1. 避免频繁发包/接包，避免时间（RTT (Round Trip Time））都浪费在通信路上。
+2. 避免性能损耗，发包/接包，write() / read() 调用内核接口非常耗资源，所以每次将多个命令打包发送，每次接收多个回复包（回复集合）将减少资源损耗。——避免大巴车每次只载几个人...
+
+---
+
+### 1.2. 缺点
+
+redis 集群，数据根据各种形式分片到不同实例，所以客户端如果将各个节点的数据读写命令，打包发往一个 redis 节点，往往无法达到预期，所以在使用前要做好方案调研，避免掉坑里。
+
+---
+
+## 2. 使用
 
 我们参考 hiredis 测试源码：[test.c](https://github.com/redis/hiredis/blob/master/test.c)。
 
@@ -68,11 +70,11 @@ hi_free(replies);
 
 ---
 
-## 2. 性能
+## 3. 性能
 
 用 hiredis 压测 100w 条命令，测试源码 [github](https://github.com/wenfh2020/c_test/blob/master/redis/test_pipeline.cpp)。
 
-### 2.1. 耗时
+### 3.1. 耗时
 
 单命令耗费时间是 pipeline 的 10 倍。
 
@@ -95,7 +97,7 @@ pipeline test, cmd cnt: 1000000, spend time: 2240152 us.
 
 ---
 
-### 2.2. 性能
+### 3.2. 性能
 
 redis-server 火焰图：上图是单命令，下图是 pipeline。对比之下，单命令要耗费更多内核读写资源。
 
@@ -103,13 +105,15 @@ redis-server 火焰图：上图是单命令，下图是 pipeline。对比之下�
 
 <div align=center><img src="/images/2021-03-15-14-52-33.png" data-action="zoom"/></div>
 
+> 火焰图参考：[如何生成火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
+
 ---
 
-## 3. hiredis 客户端源码剖析
+## 4. hiredis 客户端源码剖析
 
 详细请参考：[hiredis github 源码](https://github.com/redis/hiredis/blob/master/hiredis.c)。
 
-### 3.1. 单命令接口
+### 4.1. 单命令接口
 
 redisCommand，发送完命令，马上阻塞等待 redis-server 回包。
 
@@ -131,7 +135,7 @@ void *redisvCommand(redisContext *c, const char *format, va_list ap) {
 
 ---
 
-### 3.2. pipeline 多命令
+### 4.2. pipeline 多命令
 
 * 命令追加到发送缓冲区。
 
