@@ -21,19 +21,11 @@ author: wenfh2020
 
 ---
 
-## 1. 设计意图
+## 1. 原理
 
-通过两个模式的对比，个人猜测 lt / et 模式的设计意图：事件处理的紧急程度。
+### 1.1. 逻辑
 
-举个 🌰：你有急事打电话找人，如果对方一直不接，那你只有一直打，直到他接电话为止，这就是 lt 模式；如果不急，电话打过去对方不接，那就等有空再打，这就是 et 模式。
-
----
-
-## 2. 原理
-
-### 2.1. 逻辑
-
-核心逻辑在 `epoll_wait` 的内核实现 `ep_send_events_proc` 函数里，关键在 `就绪队列`。
+lt/et 模式区别的核心逻辑在 `epoll_wait` 的内核实现 `ep_send_events_proc` 函数里，划重点：`就绪队列`。
 
 epoll_wait 的相关工作流程：
 
@@ -45,7 +37,7 @@ epoll_wait 的相关工作流程：
 
 ---
 
-### 2.2. 源码实现流程
+### 1.2. 源码实现流程
 
 ```shell
 #------------------- *用户空间* ---------------------------
@@ -159,9 +151,9 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 ---
 
-## 3. 区别
+## 2. 区别
 
-### 3.1. 通知
+### 2.1. 通知
 
 通过阅读 `ep_send_events_proc` 源码，最大区别就是，事件通知。
 
@@ -199,7 +191,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
   
 ---
 
-### 3.2. 快速处理
+### 2.2. 快速处理
 
 为什么说 et 模式会使得新的就绪事件能快速被处理呢？可以看下图 epoll_wait 的工作时序，假如 epoll_wait 每次最大从内核取一个事件。
 
@@ -221,13 +213,13 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 ---
 
-### 3.3. 类似惊群问题
+### 2.3. 类似惊群问题
 
 我们仔细看 `ep_scan_ready_list` 源码，当 `ep->rdllist` 不为空时，会唤醒进程。
 
-当多个进程共享同一个 "epoll fd" 时，多个进程同时在等待资源，当某个事件触发时，等待资源的进程会被唤醒；
+当多个进程共享同一个 "epoll fd" 时，多个进程同时在等待资源，也就是多个进程通过 epoll_wait 将自己当前进程的等待事件挂在内核 epoll 实例 eventpoll.wq 等待队列上，换句话说，eventpoll.wq 等待队列上挂着多个多个进程的等待事件，当某个事件触发时，等待队列上的进程会被唤醒。
 
-如果是 lt 模式，epoll 在下一个 epoll_wait 执行前，fd 事件节点仍然会存在就绪队列中，不管事件是否处理完成，那么唤醒进程 A 处理事件时，如果 B 进程也在等待资源，那么同样的事件有可能将 B 进程也唤醒处理。
+如果是 lt 模式，epoll 在下一个 epoll_wait 执行前，fd 事件节点仍然会存在就绪队列中，不管事件是否处理完成，那么唤醒进程 A 处理事件时，如果 B 进程也在等待资源，那么同样的事件有可能将 B 进程也唤醒处理，然后 B 又是同样的逻辑唤醒 C —— 连环唤醒问题，这种情况可能是用户不愿意看到的。
 
 <center>
     <img style="border-radius: 0.3125em;
@@ -239,14 +231,6 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
     color: #999;
     padding: 2px;">多进程共享 epoll fd 框架</div>
 </center>
-
-举个 🌰：
-
-epoll lt 模式的多进程共享 epoll fd 的服务程序，如果只有一个客户端连接到服务，当进程 A 已经被唤醒，将要 accept 某个 socket（注意，这时候逻辑还在内核里，epoll_wait 还没返回到用户空间执行用户空间的逻辑，而 lt 模式的就绪队列上的数据还没有被删除），内核如果再唤醒进程 B，显然只有一个进程能成功 accept 到资源，而另外一个将会失败。
-
-这不是用户愿意看到的。所以为了避免发生类似问题，et 模式就有存在的必要，因为 et 模式，事件只处理一次，就会从就绪队列删除。所以同样的 fd 事件，不会唤醒多个进程同时处理。避免了类似的“惊群”问题。
-
-这样，我们就理解 nginx 为什么会使用 et 模式了。
 
 ```c
 /* epoll_wait 执行逻辑。 */
@@ -263,6 +247,25 @@ static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events,
         __add_wait_queue_exclusive(&ep->wq, &wait);
         spin_unlock_irq(&ep->wq.lock);
     }
+    ...
+    /* 如果就绪队列没有就绪事件了，那么进程进入睡眠状态，等待唤醒。 */
+    for (;;) {
+        /* 进程设置为可中断睡眠状态。 */
+        set_current_state(TASK_INTERRUPTIBLE);
+        ...
+        eavail = ep_events_available(ep);
+        if (eavail)
+            break;
+        ...
+        /* 没有就绪事件了，超时阻塞睡眠，等待唤醒。 */
+        if (!schedule_hrtimeout_range(to, slack, HRTIMER_MODE_ABS)) {
+            timed_out = 1;
+            break;
+        }
+    }
+
+    /* 进程设置为唤醒状态。 */
+    __set_current_state(TASK_RUNNING);
     ...
     /* 就绪队列有事件，处理就绪事件逻辑。 */
     if (!res && eavail &&
@@ -313,7 +316,7 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
 
 ---
 
-## 4. 小结
+## 3. 小结
 
 1. epoll 的 lt / et 模式实现逻辑在内核的 epoll_wait 里。
 2. epoll_wait 的关键数据结构是事件就绪队列。
@@ -321,7 +324,7 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
 
 ---
 
-## 5. 后记
+## 4. 后记
 
 使用 epoll 已经很长时间了，一直困扰着 lt / et 模式的区别，直到深入阅读内核源码后，才慢慢地理解它的工作原理，其实逻辑不是想象的那么复杂，可见阅读内核源码的重要性！
 
@@ -329,7 +332,7 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
 
 ---
 
-## 6. 参考
+## 5. 参考
 
 * [[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)
 * [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)

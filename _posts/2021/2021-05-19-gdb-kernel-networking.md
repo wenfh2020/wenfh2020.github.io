@@ -21,7 +21,7 @@ author: wenfh2020
 ## 1. 目标
 
 * 目标：gdb 调试 Linux 内核网络部分源码。
-* 环境：macos + vmware + ubuntu + qemu + gdb + linux kernel。
+* 环境：macos + [vmware](https://wenfh2020.com/2021/02/23/macos-virtual-machine/) + ubuntu + qemu + gdb + linux kernel。
 * 参考：[构建调试Linux内核网络代码的环境MenuOS系统](https://www.cnblogs.com/AmosYang6814/p/12027988.html)。
 
 <div align=center><img src="/images/2021-05-19-16-08-52.png" data-action="zoom"/></div>

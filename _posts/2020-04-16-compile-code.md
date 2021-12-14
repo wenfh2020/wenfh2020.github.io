@@ -33,7 +33,7 @@ author: wenfh2020
 
 ## 2. gcc
 
-GCC（GNU Compiler Collection，GNU编译器套件）是由GNU开发的编程语言译器。GNU编译器套件包括C、C++、 Objective-C、 Fortran、Java、Ada和Go语言前端，也包括了这些语言的库（如libstdc++，libgcj等）。
+GCC（GNU Compiler Collection，GNU编译器套件）是由GNU开发的编程语言译器。GNU编译器套件包括C、C++、 Objective-C、Fortran、Java 和 Go 语言等，也包括了这些语言的库（如libstdc++，libgcj等）。
 
 <style> table th:first-of-type { width: 70px; } </style>
 

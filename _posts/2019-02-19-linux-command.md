@@ -450,7 +450,35 @@ pstree -p 1234 | wc -l
 
 ## 7. 网络
 
-### 7.1. 防火墙
+### 7.1. 网卡
+
+```shell
+# 展示所有网卡。
+ifconfig -a
+
+# 启用 eth0 网卡
+ifconfig eth0 up
+
+# 关闭 eth0 网卡
+ifconfig eth0 down
+```
+
+---
+
+### 7.2. 修改 DNS
+
+```shell
+# 这个方法是临时的，重启失效。
+vi /etc/resolv.conf
+
+# 填充内容。
+nameserver 8.8.8.8
+nameserver 4.4.4.4
+```
+
+---
+
+### 7.3. 防火墙
 
 ```shell
 service iptables start
@@ -459,7 +487,7 @@ service iptables stop
 
 ---
 
-### 7.2. 开放端口
+### 7.4. 开放端口
 
 ```shell
 # centos
@@ -470,7 +498,7 @@ systemctl restart iptables.service
 
 ---
 
-### 7.3. scp
+### 7.5. scp
 
 1. scp -P端口号 本地文件路径 username@服务器ip:目的路径
 2. 从服务器下载文件到本地，scp -P端口号 username@ip:路径 本地路径
@@ -483,7 +511,7 @@ scp /Users/wenfh2020/src/other/c_test/normal/proc/main.cpp root@120.25.44.163:/h
 
 ---
 
-### 7.4. rsync
+### 7.6. rsync
 
 ```shell
 #!/bin/sh
@@ -510,7 +538,7 @@ rsync -avz --exclude="*.o" \
 
 ---
 
-### 7.5. nslookup
+### 7.7. nslookup
 
 查域名对应的 ip
 
@@ -527,7 +555,7 @@ Address: 120.25.83.163
 
 ---
 
-### 7.6. ssh
+### 7.8. ssh
 
 ```shell
 ssh -p22 root@120.25.44.163
@@ -535,7 +563,7 @@ ssh -p22 root@120.25.44.163
 
 ---
 
-### 7.7. tcpdump
+### 7.9. tcpdump
 
 Linux tcpdump [命令](https://www.runoob.com/linux/linux-comm-tcpdump.html)用于倾倒网络传输数据
 
@@ -565,7 +593,7 @@ tcpdump -i eth0 host api.fyber.com and port 80 -w 123.cap
 
 ---
 
-### 7.8. wget
+### 7.10. wget
 
 ```shell
 wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.rpm
@@ -573,7 +601,7 @@ wget http://debuginfo.centos.org/6/x86_64/glibc-debuginfo-2.12-1.80.el6.x86_64.r
 
 ---
 
-### 7.9. netstat
+### 7.11. netstat
 
 netstat 命令用于显示网络状态
 
@@ -596,13 +624,13 @@ netstat -nat|grep -i "80"|wc -l
 
 ---
 
-### 7.10. ss
+### 7.12. ss
 
 参考：[Linux网络状态工具ss命令使用详解](http://www.ttlsa.com/linux-command/ss-replace-netstat/)
 
 ---
 
-### 7.11. lsof
+### 7.13. lsof
 
 * 查询端口对应的信息
 
@@ -618,7 +646,7 @@ lsof -p <pid>
 
 ---
 
-### 7.12. nc
+### 7.14. nc
 
 ```shell
 # 启动监听 8333 端口的服务。
