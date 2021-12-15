@@ -39,9 +39,15 @@ macos + vmware + ubuntu  + gdb + qemu + linux kernel。
 
 ---
 
-## 2. 流程
+## 2. 视频
 
-### 2.1. 下载 ubuntu
+<iframe class="bilibili" src="//player.bilibili.com/player.html?aid=592292865&bvid=BV1Sq4y1q7Gv&cid=461543929&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+
+---
+
+## 3. 流程
+
+### 3.1. 下载 ubuntu
 
 ```shell
 # 镜像下载链接。
@@ -50,7 +56,7 @@ http://mirrors.aliyun.com/ubuntu-releases/14.04/ubuntu-14.04.6-desktop-amd64.iso
 
 ---
 
-### 2.2. vmware 安装 ubuntu
+### 3.2. vmware 安装 ubuntu
 
 1. 虚拟系统磁盘空间，尽量给大一些，例如 100 G。
 2. 通过 root 权限安装 linux 内核。
@@ -83,7 +89,7 @@ source ~/.bashrc
 
 ---
 
-### 2.3. 下载编译 linux 内核
+### 3.3. 下载编译 linux 内核
 
 ```shell
 # 下载内核源码。
@@ -133,7 +139,7 @@ make -j4
 
 ---
 
-### 2.4. 源码安装 gdb
+### 3.4. 源码安装 gdb
 
 源码安装高版本的 gdb 8.3。
 
@@ -197,7 +203,7 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 100
 
 ---
 
-### 2.5. gdb 调试内核
+### 3.5. gdb 调试内核
 
 通过 gdb 远程调试内核。
 
@@ -244,9 +250,9 @@ bt
 
 ---
 
-### 2.6. vscode 配置
+### 3.6. vscode 配置
 
-#### 2.6.1. vscode 插件
+#### 3.6.1. vscode 插件
 
 * remote-ssh
 
@@ -262,7 +268,7 @@ bt
 
 ---
 
-#### 2.6.2. 项目调试配置
+#### 3.6.2. 项目调试配置
 
 <div align=center><img src="/images/2021-06-23-13-15-06.png" data-action="zoom"/></div>
 
@@ -292,7 +298,7 @@ bt
 
 ---
 
-### 2.7. 搭建网桥
+### 3.7. 搭建网桥
 
 * 安装相关更新组件。
 
@@ -364,13 +370,13 @@ telnet 192.168.10.221 5001
 
 ---
 
-## 3. 注意
+## 4. 注意
 
 * 跑通了流程，记得保存镜像，避免以后以后修改了配置跑不起来。
 
 ---
 
-## 4. 更好方案
+## 5. 更好方案
 
 前段时间有一位热心网友在我的博客上留言，给出了一个更好的解决方案：描述了使用 docker 搭建调试环境。
 
@@ -378,7 +384,7 @@ telnet 192.168.10.221 5001
 
 ---
 
-## 5. 参考
+## 6. 参考
 
 * [qemu虚拟机与外部网络的通信](https://blog.csdn.net/zhaihaifei/article/details/58624063)
 * [从源码编译linux-4.9内核并运行一个最小的busybox文件系统（最新整理版）](https://www.bilibili.com/read/cv11271232?spm_id_from=333.999.0.0)
