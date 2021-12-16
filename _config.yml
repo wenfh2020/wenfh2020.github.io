@@ -39,8 +39,8 @@ disqus_shortname: wenfh2020
 # 百度统计 id，将统计代码替换为自己的百度统计id，即
 # hm.src = "//hm.baidu.com/hm.js?xxxxxxxxxxxx";
 # xxxxx字符串
-baidu_tongji_id: 5d608593ca67a9d09bbceb948ce262cx
-google_analytics_id: UA-158372315-x # google 分析追踪id
+baidu_tongji_id: 5d608593ca67a9d09bbceb948ce262c9
+google_analytics_id: UA-158372315-1 # google 分析追踪id
 
 # Build settings
 highlighter: rouge
@@ -48,7 +48,7 @@ markdown: kramdown
 kramdown:
   math_engine: mathjax
   auto_ids:       true
-  toc_levels:     1..3
+  toc_levels:     1..4
   input: GFM
   syntax_highlighter: rouge
   syntax_highlighter_opts:
