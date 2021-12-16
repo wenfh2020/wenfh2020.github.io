@@ -2,7 +2,7 @@
 layout: post
 title:  "tcp + epoll 内核睡眠唤醒工作流程"
 categories: kernel
-tags: tcp epoll
+tags: tcp epoll kernel
 author: wenfh2020
 ---
 
