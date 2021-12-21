@@ -35,6 +35,10 @@ epoll_wait 的相关工作流程：
 * 然后将 fd 对应就绪事件信息从内核空间拷贝到用户空间。
 * 事件数据拷贝完成后，内核检查事件模式是 lt 还是 et，如果不是 et，重新将 fd 信息添加回就绪队列，下次重新触发 epoll_wait。
 
+<div align=center><img src="/images/2021-11-09-11-25-11.png" data-action="zoom"/></div>
+
+> 图片来源：[tcp + epoll 内核睡眠唤醒工作流程](https://wenfh2020.com/2021/12/16/tcp-epoll-wakeup/)
+
 ---
 
 ### 1.2. 源码实现流程
@@ -221,6 +225,12 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 
 如果是 lt 模式，epoll 在下一个 epoll_wait 执行前，fd 事件节点仍然会存在就绪队列中，不管事件是否处理完成，那么唤醒进程 A 处理事件时，如果 B 进程也在等待资源，那么同样的事件有可能将 B 进程也唤醒处理，然后 B 又是同样的逻辑唤醒 C —— 连环唤醒问题，这种情况可能是用户不愿意看到的。
 
+* 惊群现象。
+
+<div align=center><img src="/images/2021-11-05-10-49-41.png" data-action="zoom"/></div>
+
+* lt 模式连环唤醒。
+
 <center>
     <img style="border-radius: 0.3125em;
     box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);"
@@ -328,11 +338,11 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
 
 使用 epoll 已经很长时间了，一直困扰着 lt / et 模式的区别，直到深入阅读内核源码后，才慢慢地理解它的工作原理，其实逻辑不是想象的那么复杂，可见阅读内核源码的重要性！
 
-最近花了不少力气，将内核的 [调试环境](https://www.bilibili.com/video/bv1yo4y1k7QJ) 搭建起来了，边看内核源码，边调试验证逻辑，一个字：爽啊 😁！
+最近花了不少力气，将内核的 [调试环境](https://wenfh2020.com/2021/12/03/ubuntu-qemu-linux/) 搭建起来了，边看内核源码，边调试验证逻辑，一个字：爽啊 😁！
 
 ---
 
 ## 5. 参考
 
 * [[epoll 源码走读] epoll 实现原理](https://wenfh2020.com/2020/04/23/epoll-code/)
-* [vscode + gdb 远程调试 linux (EPOLL) 内核源码](https://www.bilibili.com/video/bv1yo4y1k7QJ)
+* [搭建 Linux 内核网络调试环境（vscode + gdb + qemu）](https://wenfh2020.com/2021/12/03/ubuntu-qemu-linux/)
