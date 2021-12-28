@@ -8,9 +8,9 @@ author: wenfh2020
 
 做服务端多年，但是学习 linux 内核才一年多，深入研究源码后，解决了我之前的很多疑惑。
 
-前段时间在回答知乎问题时，顺便做了个小结，现在把自己的回答整理了一下搬到这里。
+前段时间在回答[知乎问题](https://www.zhihu.com/question/439569498/answer/2242340127)时，顺便做了个小结，现在把自己的回答整理了一下搬到这里。
 
-**流程**：先熟练使用应用层接口 -> 看书看博客搞懂内核对应知识点的工作原理 -> 搭建内核调试环境 -> 画图将知识点串联起来。
+**学习流程**：熟练使用应用层接口 -> 理解工作原理 -> 搭建内核调试环境 -> 画图串联知识点 -> 解决问题。
 
 
 
@@ -49,12 +49,24 @@ Linux 源码大部分都是 c 语言写的，函数指针满天飞，很多时�
 
 ## 4. 画图
 
-最后不要怕麻烦，画 uml 图，将源码的运行流程时序画出来，将知识点串联起来，这样思路就清晰多了。
+不要怕麻烦，画 uml 图，将源码的运行流程时序画出来，将知识点串联起来，这样思路就清晰多了。
 
 <div align=center><img src="/images/2021-11-09-11-25-11.png" data-action="zoom"/></div>
 
 > 图片来源：[tcp + epoll 内核睡眠唤醒工作流程](https://wenfh2020.com/2021/12/16/tcp-epoll-wakeup/)
 
+---
+
 <div align=center><img src="/images/2021-07-27-21-18-33.png" data-action="zoom"/></div>
 
 > 图片来源：[linux 内核 listen (tcp/IPv4) 结构关系](https://processon.com/view/60fa6dfe7d9c083494e37a9a)
+
+---
+
+## 5. 解决问题
+
+学习目的是为了解决问题，遇到问题复盘源码细节，加深理解。
+
+例如：[epoll 的 lt / et 模式区别](https://wenfh2020.com/2020/06/11/epoll-lt-et/)，深入阅读内核源码后，发现区别的关键就是 epoll 的 `事件就绪队列`。
+
+<div align=center><img src="/images/2021-11-09-17-02-00.png" data-action="zoom"/></div>
