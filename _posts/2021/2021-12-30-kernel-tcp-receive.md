@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[内核源码] Linux 网络数据接收读取流程（TCP）- NAPI"
+title:  "[内核源码] Linux 网络数据接收流程（TCP）- NAPI"
 categories: kernel
 tags: linux kernel tcp receive
 author: wenfh2020
@@ -8,7 +8,7 @@ author: wenfh2020
 
 走读 Linux（5.0.1）源码，理解 TCP 网络数据接收和读取工作流程（NAPI）。
 
-要搞清楚数据的接收和读取流程，需要梳理这几个角色之间的关系：网卡（e1000），主存，CPU，网卡驱动，内核，应用程序。
+要搞清楚数据的接收和读取流程，需要梳理这几个角色之间的关系：网卡（本文：e1000），主存，CPU，网卡驱动，内核，应用程序。
 
 
 
@@ -26,7 +26,7 @@ author: wenfh2020
 2. 网卡通过 DMA 方式将接收到的数据写入主存。
 3. 网卡通过硬中断通知 CPU 处理主存上的数据。
 4. 网卡驱动（NIC driver）启用软中断，消费主存上的数据。
-5. 内核（TCP/IP）协议层层处理数据，将数据缓存到对应的 socket 上。
+5. 内核（TCP/IP）网络层层处理数据，将数据缓存到对应的 socket 上。
 6. 应用程序读取对应 socket 上已接收的数据。
 
 <div align=center><img src="/images/2021-11-19-17-49-58.png" data-action="zoom"/></div>
@@ -49,12 +49,13 @@ author: wenfh2020
 10. 内核软中断线程消费网卡 DMA 方式写入主存的数据。
 11. 内核软中断遍历 softnet_data.poll_list，调用对应的 napi_struct.poll -> e1000_clean 读取网卡 DMA 方式写入主存的数据。
 12. e1000_clean 遍历 ring buffer 通过 dma_sync_single_for_cpu 接口读取 DMA 方式写入主存的数据，并将数据拷贝到 e1000_copybreak 创建的 skb 包。
-13. 网卡驱动读取到 skb 包后，将该包传到协议层处理（e1000_receive_skb），处理过的 skb 包将会追加到 socket.sock.sk_receive_queue 队列，等待应用处理。接下来如果 read / epoll_wait 阻塞等待读取数据，那么唤醒进程/线程。
-14. 网卡驱动读取了网卡写入的数据后，需要清理已读的（ring buffer）数据，而且要通知网卡已读（ring buffer）数据的位置，将位置信息写入网卡 RDT 寄存器，方便网卡继续工作（writel(i, hw->hw_addr + rx_ring->rdt)）。
-15. 网卡驱动重新设置允许网卡触发硬中断，重新触发步骤 3，接收数据。
-16. 用户程序（或被唤醒）调用 read 接口读取 socket.sock.sk_receive_queue 上的数据并拷贝到用户空间。
+13. 网卡驱动读取到 skb 包后，需要将该包传到网络层处理。在这过程中，需要通过 GRO (Generic receive offload) 接口：napi_gro_receive 进行处理，将小包合并成大包，然后通过 __netif_receive_skb 将 skb 包交给网络层处理，最后将 skb 包追加到 socket.sock.sk_receive_queue 队列，等待应用处理；如果 read / epoll_wait 阻塞等待读取数据，那么唤醒进程/线程。
+14. skb 包需要传到网络层，如果内核开启了 RPS (Receive Package Steering) 功能，为了利用多核资源，（enqueue_to_backlog）需要将数据包负载均衡到各个 CPU，那么这个 skb 包将会通过哈希算法，挂在某个 cpu 的接收队列上（softnet_data.input_pkt_queue），然后等待软中断调用 softnet_data 的 napi 接口 process_backlog（softnet_data.backlog.poll）将接收队列上的数据包通过 __netif_receive_skb 交给网络层处理。
+15. 网卡驱动读取了网卡写入的数据，并将数据包交给协议栈处理后，需要通知网卡已读（ring buffer）数据的位置，将位置信息写入网卡 RDT 寄存器（writel(i, hw->hw_addr + rx_ring->rdt)），方便网卡继续往 ring buffer 填充数据。
+16. 网卡驱动重新设置允许网卡触发硬中断（e1000_irq_enable），重新执行步骤 3。
+17. 用户程序（或被唤醒）调用 read 接口读取 socket.sock.sk_receive_queue 上的数据并拷贝到用户空间。
 
-<div align=center><img src="/images/2021-12-28-12-21-49.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-12-30-12-33-29.png" data-action="zoom"/></div>
 
 ---
 
@@ -64,7 +65,7 @@ author: wenfh2020
 
 * 源码结构关系。
 
-<div align=center><img src="/images/2021-12-26-22-09-16.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-12-30-16-22-32.png" data-action="zoom"/></div>
 
 * 要点关系。
 
@@ -74,7 +75,7 @@ author: wenfh2020
 
 ### 3.1. 网卡驱动
 
-网卡是硬件，内核通过网卡驱动控制网卡。
+网卡是硬件，内核通过网卡驱动与网卡交互。
 
 网卡 e1000 的 intel 驱动（e1000_driver）在 linux 目录：drivers/net/ethernet/intel/e1000
 
@@ -86,9 +87,9 @@ author: wenfh2020
 
 ### 3.2. NAPI
 
-NAPI ([New API](https://en.wikipedia.org/wiki/New_API)) 中断缓解技术，它是 Linux 上采用的一种提高网络处理效率的技术。一般情况下，网卡接收到数据，通过硬中断通知 CPU 进行处理，但是当网卡有大量数据进来时，频繁的中断使得网卡和CPU处理效率低下，所以系统采用了中断+轮询技术，提升数据接收效率（详细流程请参考上面的总流程图）。
+NAPI ([New API](https://en.wikipedia.org/wiki/New_API)) 中断缓解技术，它是 Linux 上采用的一种提高网络处理效率的技术。一般情况下，网卡接收到数据，通过硬中断通知 CPU 进行处理，但是当网卡有大量数据涌入时，频繁中断使得网卡和 CPU 工作效率低下，所以系统采用了硬中断 + 软中断轮询（poll）技术，提升数据接收处理效率（详细流程请参考上面的总流程）。
 
-> 举个🌰：餐厅人少时，客户点菜，服务员可以一对一提供服务，客户点一个菜，服务员记录一下；但是人多了，服务员就忙不过来了，服务员每张桌子给一张菜单，客户慢慢看，选好菜了，就通知服务员处理，这样效率就高很多了。
+> 举个 🌰：餐厅人少时，客户点菜，服务员可以一对一提供服务，客户点一个菜，服务员记录一下；但是人多了，服务员就忙不过来了，这时服务员可以为每张桌子提供一张菜单，客户慢慢看，选好菜了，就通知服务员处理，这样效率就高很多了。
 
 ---
 
@@ -97,7 +98,7 @@ NAPI ([New API](https://en.wikipedia.org/wiki/New_API)) 中断缓解技术，它
 中断分上下半部。
 
 1. 上半部硬中断主要保存数据，网卡通过硬中断通知 CPU 有数据到来。
-2. 下半部 CPU 通过软中断处理接收的数据。
+2. 下半部内核通过软中断处理接收的数据。
 
 * 注册中断。
 
@@ -115,9 +116,9 @@ ksys_ioctl
     |-- __dev_open
         |-- e1000_configure
             |-- e1000_configure_rx
-                |-- adapter->clean_rx = e1000_clean_rx_irq; # 软中断处理接收数据包。
+                |-- adapter->clean_rx = e1000_clean_rx_irq; # 软中断处理接收数据包接口。
         |-- e1000_request_irq
-            |-- request_irq(adapter->pdev->irq, e1000_intr, ...); # 注册 NIC 硬中断 e1000_intr。
+            |-- request_irq(adapter->pdev->irq, e1000_intr, ...); # 注册网卡硬中断 e1000_intr。
 ```
 
 * 硬中断处理。
@@ -125,10 +126,10 @@ ksys_ioctl
 ```shell
 do_IRQ
 |-- e1000_intr
-    |-- ew32(IMC, ~0); # 禁止 NIC 硬中断。
+    |-- ew32(IMC, ~0); # 禁止网卡硬中断。
     |-- __napi_schedule
-        |-- list_add_tail(&napi->poll_list, &sd->poll_list); # 将 napi poll 挂在 softnet_data 上。
-        |-- __raise_softirq_irqoff(NET_RX_SOFTIRQ); # 开启软中断。
+        |-- list_add_tail(&napi->poll_list, &sd->poll_list); # 将网卡的 napi 挂在 softnet_data 上。
+        |-- __raise_softirq_irqoff(NET_RX_SOFTIRQ); # 开启软中断处理接收数据。
 ```
 
 * 软中断。
@@ -142,10 +143,17 @@ __do_softirq
             |-- e1000_clean_rx_irq
                 |-- e1000_receive_skb
                     |-- napi_gro_receive
-                        |-- napi_skb_finish
+                        |-- __netif_receive_skb
                             |-- ip_rcv
                                 |-- tcp_v4_rcv
-            |-- e1000_irq_enable # 开启 NIC 硬中断。
+                                    |-- ...
+##########################################
+     if |-- process_backlog # 开启了 RPS。
+            |-- ...
+                |-- __netif_receive_skb
+                    |-- ...
+##########################################        
+            |-- e1000_irq_enable # 重新开启硬中断。
 ```
 
 ---
@@ -156,13 +164,13 @@ DMA（Direct Memory Access）可以使得外部设备可以不用 CPU 干预，�
 
 #### 3.4.1. 网卡与驱动交互
 
-1. 系统通过 ring buffer 环形缓冲区管理内存描述符，通过一致性 DMA 映射（`dma_alloc_coherent`）描述符数组，方便 CPU 和网卡同步访问。
-2. 环形缓冲区内存描述符指向的内存通过 DMA 流式映射（`dma_map_single`），提供网卡写入。
+1. 系统通过 ring buffer 环形缓冲区管理内存描述符，通过一致性 DMA 映射（`dma_alloc_coherent`）描述符（e1000_rx_desc）数组，方便 CPU 和网卡同步访问。
+2. 环形缓冲区内存描述符指向的内存块（e1000_rx_buffer）通过 DMA 流式映射（`dma_map_single`），提供网卡写入。
 3. 网卡接收到数据，写入网卡缓存。
-4. 当网卡开始收到一个完整的数据包后，通过硬中断通知 CPU。
-5. CPU 接收到硬中断，禁止网卡再触发硬中断，然后唤醒 CPU 软中断。
+4. 当网卡开始收到数据包后，通过 DMA 方式将数据拷贝到主存，并通过硬中断通知 CPU。
+5. CPU 接收到硬中断，禁止网卡再触发硬中断（虽然硬中断被禁止了，但是网卡可以继续接收数据，并将数据拷贝到主存），然后唤醒 CPU 软中断（NET_RX_SOFTIRQ -> net_rx_action）。
 6. 软中断从主存中读取处理网卡 DMA 方式写入的数据（skb），并将数据交给网络层处理。
-7. 在有限的时间内一定数量的主存上的数据处理完后，系统将空闲的（ring buffer）内存描述符提供给网卡，方便网卡下次写入。
+7. 在有限的时间内一定数量的主存上的数据被处理完后，系统将空闲的（ring buffer）内存描述符提供给网卡，方便网卡下次写入。
 8. 重新开启网卡硬中断，走上述步骤 3。
 
 ---
@@ -173,15 +181,19 @@ DMA（Direct Memory Access）可以使得外部设备可以不用 CPU 干预，�
 
 系统分配内存缓冲区，映射为 DMA 内存，提供网卡直接访问。
 
-下面描述了 NIC <--> DMA <--> RAM 三者之间的关系。
+下图（图片来源：[stack overflow](https://stackoverflow.com/questions/47450231/what-is-the-relationship-of-dma-ring-buffer-and-tx-rx-ring-for-a-network-card?answertab=votes#tab-top)）简述了 NIC <--> DMA <--> RAM 三者关系。
 
 <div align=center><img src="/images/2021-12-25-06-12-34.png" data-action="zoom"/></div>
-
-> 图片来源：[stack overflow](https://stackoverflow.com/questions/47450231/what-is-the-relationship-of-dma-ring-buffer-and-tx-rx-ring-for-a-network-card?answertab=votes#tab-top)
 
 * ring buffer 数据结构。
 
 ```c
+#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
+typedef u64 dma_addr_t;
+#else
+typedef u32 dma_addr_t;
+#endif
+
 /* drivers/net/ethernet/intel/e1000/e1000.h */
 /* board specific private data structure */
 struct e1000_adapter {
@@ -197,12 +209,6 @@ struct e1000_adapter {
     ...
 };
 
-#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-typedef u64 dma_addr_t;
-#else
-typedef u32 dma_addr_t;
-#endif
-
 struct e1000_rx_ring {
     /* pointer to the descriptor ring memory */
     void *desc; /* 内存描述符（e1000_rx_desc）数组。 */
@@ -213,7 +219,7 @@ struct e1000_rx_ring {
     /* number of descriptors in the ring */
     unsigned int count; /* e1000_rx_desc 描述符个数。 */
     /* next descriptor to associate a buffer with */
-    unsigned int next_to_use; /* 刷新最新空闲内存位置，写入网卡寄存器通知网卡（网卡接着上次最后的写入位置，可以一直写到 next_to_use 这个位置）。*/
+    unsigned int next_to_use; /* 刷新最新空闲内存位置，写入网卡寄存器通知网卡（next_to_use - 1）。*/
     /* next descriptor to check for DD status bit */
     unsigned int next_to_clean; /* Descriptor Done 标记下次要从该位置取出数据。*/
     /* array of buffer information structs */
@@ -227,7 +233,7 @@ struct e1000_rx_ring {
     u16 rdt;
 };
 
-/* 描述符指向的内存块（skb）。 */
+/* 描述符指向的内存块。*/
 struct e1000_rx_buffer {
     union {
         struct page *page; /* jumbo: alloc_page */
@@ -280,13 +286,13 @@ __do_softirq
   
   e1000_rx_ring.desc 指针指向了一个 e1000_rx_desc 数组，网卡和网卡驱动都通过这个数组进行读写数据。这个数组被称为 `环形缓冲区`：通过数组下标遍历数组，下标指向数组末位后，重新指向数组第一个位置，看起来像个环形结构，——理解它需要些抽象思维；因为网卡和网卡驱动都操作它，所以每个对象都维护了自己的一套 `head` 和 `tail` 进行标识。
 
-1. 初始状态，下标都指向数组一个元素 偏移原理。e1000_rx_ring.desc[0]。
-2. 网卡接收到数据通过 DMA 方式拷贝到主存（e1000_rx_ring.desc[i] -> e1000_rx_buffer），如下图，NIC.RDH 顺时针偏移，NIC.RDT 到 NIC.RDH 的 e1000_rx_desc (->e1000_rx_buffer) 都填充了接收数据。
-3. 网卡驱动顺时针遍历 ring buffer，根据 e1000_rx_ring.desc[i].status 状态，读取 e1000_rx_ring.desc[i] 指向的 e1000_rx_buffer 数据块，因为读取数据有时间限制和读取数据权值限制，网卡驱动不一定能完全读取完成网卡写入主存的数据，所以最后读取的数据位置要标识起来，通过 e1000_rx_ring.next_to_clean 记录下一次要读取的数据位置。
-4. 既然网卡驱动已经读取了数据，那么已读取的数据已经没用了，可以清理掉，提供给网卡继续写，顺时针清理，把清理到的位置记录起来 e1000_rx_ring.next_to_use，下次继续清理。
-5. 但是这时候网卡还不知道驱动消费了哪些数据，那么驱动清理掉数据后，将已清理最后的位置（e1000_rx_ring.next_to_use - 1）通过写入网卡寄存器 RDT，告诉网卡，下次可以写入数据，从 NIC.RDH 到 NIC.RDT。
+1. 初始状态，下标都指向数组一个元素 e1000_rx_ring.desc[0]。
+2. 网卡接收到数据通过 DMA 方式拷贝到主存（e1000_rx_ring.desc[i] -> e1000_rx_buffer），如下图，NIC.RDH 顺时针偏移，NIC.RDT 到 NIC.RDH 的 e1000_rx_desc[i]->e1000_rx_buffer 内存块都填充了接收数据。
+3. 网卡驱动顺时针遍历 ring buffer，根据网卡更新的 e1000_rx_ring.desc[i].status 状态，读取 e1000_rx_ring.desc[i] 指向的 e1000_rx_buffer 数据块，因为读取数据有时间限制（jiffies）和数据量限制（budget），网卡驱动不一定能一次性读取完成网卡写入主存的数据，所以最后读取的数据位置要进行记录，通过 e1000_rx_ring.next_to_clean 记录下一次要读取数据的位置。
+4. 既然网卡驱动已经读取了数据，那么已读取的数据已经没用了，可以（清理）重新提供给网卡继续写入，那么需要把下次要清理的位置记录起来：e1000_rx_ring.next_to_use。
+5. 但是这时候网卡还不知道驱动消费数据到哪个位置，那么驱动清理掉数据后，将已清理最后的位置（e1000_rx_ring.next_to_use - 1）写入网卡寄存器 RDT，告诉网卡，下次可以（顺时针）写入数据，从 NIC.RDH 到 NIC.RDT。
 
-<div align=center><img src="/images/2021-12-28-17-46-31.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-12-28-20-50-58.png" data-action="zoom"/></div>
 
 ---
 
@@ -319,3 +325,5 @@ __do_softirq
 * [网络收包流程-报文从网卡驱动到网络层（或者网桥)的流程（非NAPI、NAPI）(一)](https://blog.csdn.net/hzj_001/article/details/100085112)
 * [深入理解Linux网络技术内幕 第10章 帧的接收](https://blog.csdn.net/weixin_44793395/article/details/106593127)
 * [数据包如何从物理网卡到达云主机的应用程序？](https://vcpu.me/packet_from_nic_to_user_process/)
+* [怎么打开网卡rss_Linux性能优化之RSS/RPS/RFS/XPS](https://blog.csdn.net/weixin_32836671/article/details/112780609?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-4.no_search_link&spm=1001.2101.3001.4242.3&utm_relevant_index=7)
+* [玩转KVM: 了解网卡软中断RPS](https://blog.csdn.net/RJ0024/article/details/86594687)
