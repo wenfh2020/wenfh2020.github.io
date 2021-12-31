@@ -198,9 +198,9 @@ EXPORT_SYMBOL(tcp_poll);
 
 ## 5. 源码工作流程
 
-![epoll 源码工作流程](/images/2020-05-16-21-14-46.png){:data-action="zoom"}
+<div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
-> 设计图来源：《[epoll 源码工作流程](https://www.processon.com/view/5eb95ba50791290fe0581bb9)》
+> 图片来源：[tcp + epoll 内核睡眠唤醒工作流程](https://wenfh2020.com/2021/12/16/tcp-epoll-wakeup/)
 
 ---
 
