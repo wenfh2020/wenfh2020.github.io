@@ -17,7 +17,7 @@ author: wenfh2020
 
 ## 1. 流程
 
-<div align=center><img src="/images/2021-11-09-11-25-11.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
 1. 进程通过 epoll_create 创建 eventpoll 对象。
 2. 进程通过 epoll_ctl 添加关注 listen socket 的 EPOLLIN 可读事件。

@@ -51,7 +51,7 @@ Linux 源码大部分都是 c 语言写的，函数指针满天飞，很多时�
 
 不要怕麻烦，画 uml 图，将源码的运行流程时序画出来，将知识点串联起来，这样思路就清晰多了。
 
-<div align=center><img src="/images/2021-11-09-11-25-11.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
 > 图片来源：[tcp + epoll 内核睡眠唤醒工作流程](https://wenfh2020.com/2021/12/16/tcp-epoll-wakeup/)
 
@@ -69,4 +69,4 @@ Linux 源码大部分都是 c 语言写的，函数指针满天飞，很多时�
 
 例如：[epoll 的 lt / et 模式区别](https://wenfh2020.com/2020/06/11/epoll-lt-et/)，深入阅读内核源码后，发现区别的关键就是 epoll 的 `事件就绪队列`。
 
-<div align=center><img src="/images/2021-11-09-17-02-00.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-12-30-21-41-55.png" data-action="zoom"/></div>
