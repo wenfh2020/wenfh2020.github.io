@@ -26,7 +26,7 @@ author: wenfh2020
 2. 网卡通过 DMA 方式将接收到的数据写入主存。
 3. 网卡通过硬中断通知 CPU 处理主存上的数据。
 4. 网卡驱动（NIC driver）启用软中断，消费主存上的数据。
-5. 内核（TCP/IP）网络层层处理数据，将数据缓存到对应的 socket 上。
+5. 内核（TCP/IP）协议层处理数据，将数据缓存到对应的 socket 上。
 6. 应用程序读取对应 socket 上已接收的数据。
 
 <div align=center><img src="/images/2021-11-19-17-49-58.png" data-action="zoom"/></div>
@@ -49,7 +49,7 @@ author: wenfh2020
 10. 内核软中断线程消费网卡 DMA 方式写入主存的数据。
 11. 内核软中断遍历 softnet_data.poll_list，调用对应的 napi_struct.poll -> e1000_clean 读取网卡 DMA 方式写入主存的数据。
 12. e1000_clean 遍历 ring buffer 通过 dma_sync_single_for_cpu 接口读取 DMA 方式写入主存的数据，并将数据拷贝到 e1000_copybreak 创建的 skb 包。
-13. 网卡驱动读取到 skb 包后，需要将该包传到网络层处理。在这过程中，需要通过 GRO (Generic receive offload) 接口：napi_gro_receive 进行处理，将小包合并成大包，然后通过 __netif_receive_skb 将 skb 包交给网络层处理，最后将 skb 包追加到 socket.sock.sk_receive_queue 队列，等待应用处理；如果 read / epoll_wait 阻塞等待读取数据，那么唤醒进程/线程。
+13. 网卡驱动读取到 skb 包后，需要将该包传到网络层处理。在这过程中，需要通过 GRO (Generic receive offload) 接口：napi_gro_receive 进行处理，将小包合并成大包，然后通过 __netif_receive_skb 将 skb 包交给 TCP/IP 协议逐层处理，最后将 skb 包追加到 socket.sock.sk_receive_queue 队列，等待应用处理；如果 read / epoll_wait 阻塞等待读取数据，那么唤醒进程/线程。
 14. skb 包需要传到网络层，如果内核开启了 RPS (Receive Package Steering) 功能，为了利用多核资源，（enqueue_to_backlog）需要将数据包负载均衡到各个 CPU，那么这个 skb 包将会通过哈希算法，挂在某个 cpu 的接收队列上（softnet_data.input_pkt_queue），然后等待软中断调用 softnet_data 的 napi 接口 process_backlog（softnet_data.backlog.poll）将接收队列上的数据包通过 __netif_receive_skb 交给网络层处理。
 15. 网卡驱动读取了网卡写入的数据，并将数据包交给协议栈处理后，需要通知网卡已读（ring buffer）数据的位置，将位置信息写入网卡 RDT 寄存器（writel(i, hw->hw_addr + rx_ring->rdt)），方便网卡继续往 ring buffer 填充数据。
 16. 网卡驱动重新设置允许网卡触发硬中断（e1000_irq_enable），重新执行步骤 3。
@@ -65,7 +65,7 @@ author: wenfh2020
 
 * 源码结构关系。
 
-<div align=center><img src="/images/2021-12-30-16-22-32.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021-12-31-14-57-25.png" data-action="zoom"/></div>
 
 * 要点关系。
 
@@ -169,7 +169,7 @@ DMA（Direct Memory Access）可以使得外部设备可以不用 CPU 干预，�
 3. 网卡接收到数据，写入网卡缓存。
 4. 当网卡开始收到数据包后，通过 DMA 方式将数据拷贝到主存，并通过硬中断通知 CPU。
 5. CPU 接收到硬中断，禁止网卡再触发硬中断（虽然硬中断被禁止了，但是网卡可以继续接收数据，并将数据拷贝到主存），然后唤醒 CPU 软中断（NET_RX_SOFTIRQ -> net_rx_action）。
-6. 软中断从主存中读取处理网卡 DMA 方式写入的数据（skb），并将数据交给网络层处理。
+6. 软中断从主存中读取处理网卡 DMA 方式写入的数据（skb），并将数据交给 TCP/IP 协议逐层处理。
 7. 在有限的时间内一定数量的主存上的数据被处理完后，系统将空闲的（ring buffer）内存描述符提供给网卡，方便网卡下次写入。
 8. 重新开启网卡硬中断，走上述步骤 3。
 
