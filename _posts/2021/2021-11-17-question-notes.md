@@ -60,13 +60,13 @@ markdown 通过简单的语法写出精简条理的文档，vscode 功能强大�
 
 ### 2.3. processon
 
-[processon](https://processon.com/u/56e76de5e4b05387d036f99e/profile) 思维导图将复杂的业务要点分类。
+* [processon](https://processon.com/u/56e76de5e4b05387d036f99e/profile) 思维导图将复杂的业务要点分类。
 
 <div align=center><img src="/images/2021-12-31-10-18-34.png" data-action="zoom"/></div>
 
 ---
 
-逻辑时序图，将复杂的源码工作流程落地。
+* 逻辑时序图，将复杂的源码工作流程落地。
 
 <div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
@@ -76,6 +76,6 @@ markdown 通过简单的语法写出精简条理的文档，vscode 功能强大�
 
 ### 2.4. 博客 wiki
 
-可以自己搭建博客，博客页面排版更人性化，可以同步 markdown 文件内容，博客可以部署在本地或局域网浏览，也可以部署到公网。
+可以自己[搭建博客](https://wenfh2020.com/2020/02/17/make-blog/)，博客页面排版更人性化，可以同步 markdown 文件内容，博客可以部署在本地或局域网浏览，也可以部署到公网。
 
 <div align=center><img src="/images/2021-12-31-10-20-53.png" data-action="zoom"/></div>

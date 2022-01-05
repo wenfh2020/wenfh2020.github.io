@@ -24,14 +24,17 @@ author: wenfh2020
 
 ## 1. 原理
 
-原理：协程上下文切换 + epoll 事件管理。
+**原理**：协程上下文切换 + epoll 事件管理。
 
-协程上下文：寄存器 + 内存信息 + 当前运行源码的下一条源码地址。
+**协程上下文**：寄存器 + 内存信息 + 当前运行源码的下一条源码地址。
 
-协程切换主要有两个操作: yield（切出），resume (唤醒切入)：
+---
 
-yield：保存当前（协程）程序 A 的上下文，加载其它（协程）程序的上下文。
-resume：保存当前（协程）程序 A 运行的上下文，加载指定要唤醒（协程）程序 B 的上下文（之前被 yield 出来时保存的）。
+协程切换主要有**两个操作**: yield（切出），resume (唤醒切入)：
+
+**yield**：保存当前（协程）程序 A 的上下文，加载其它（协程）程序的上下文。
+
+**resume**：保存当前（协程）程序 A 运行的上下文，加载指定要唤醒（协程）程序 B 的上下文（之前被 yield 出来时保存的）。
 
 ---
 
@@ -53,6 +56,6 @@ resume：保存当前（协程）程序 A 运行的上下文，加载指定要�
 
 ## 4. 参考
 
-1. [[libco] libco 工作流程](https://wenfh2020.com/2020/12/28/libco-workflow/)
-2. [[libco] 协程调度](https://wenfh2020.com/2020/12/27/libco-dispatch/)
-3. [[libco] 协程切换理解思路](https://wenfh2020.com/2020/12/17/libco-switch/)
+* [[libco] libco 工作流程](https://wenfh2020.com/2020/12/28/libco-workflow/)
+* [[libco] 协程调度](https://wenfh2020.com/2020/12/27/libco-dispatch/)
+* [[libco] 协程切换理解思路](https://wenfh2020.com/2020/12/17/libco-switch/)

@@ -30,7 +30,7 @@ redis 在 Linux 上有三种内存池选择：
 
 ---
 
-轻量级的也可以参考 nginx 的内存池：ngx_pool_t，但是它的内存回收管理比较弱。
+轻量级的也可以参考 nginx 的内存池：[ngx_pool_t](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.h)，但是它的内存回收管理比较弱。
 
 ![nginx 内存池](/images/2020-04-25-17-15-19.png){: data-action="zoom"}
 
