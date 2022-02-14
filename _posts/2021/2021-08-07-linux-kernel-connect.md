@@ -41,7 +41,6 @@ int connect(int sockfd, const struct sockaddr *servaddr, socklen_t addrlen);
 
 > 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 
-
 ---
 
 ## 3. 内核

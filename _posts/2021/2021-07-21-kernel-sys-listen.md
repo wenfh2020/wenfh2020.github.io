@@ -476,11 +476,9 @@ select_by_hash:
 
 tcp 通信，客户端通过三次握手与服务端建立连接。
 
-第一次握手时，服务端先创建一个轻量版本的 request_sock，第三次握手时，才会创建 sock，这样可以减少资源的消耗。
+第一次握手时，服务端先创建一个轻量版本的 request_sock，第三次握手时，才会创建 sock，这样可以减少资源的消耗。（Linux 5.0.1）其实没有 `半连接队列`，半链接的 request_sock 指针保存于 inet_hashinfo.ehash 哈希表里，而半连接的统计数据 qlen，保存于 listen sock 的 inet_connection_sock.icsk_accept_queue 里。
 
-没有半连接队列，但是 request_sock 指针会保存于 inet_hashinfo.ehash 哈希表里，半连接的统计数据 qlen，保存于 listen sock 的 inet_connection_sock.icsk_accept_queue 里。
-
-三次握手后，request_sock 指针会保存于 inet_connection_sock.icsk_accept_queue 全连接队列，等待 accept。
+三次握手后，request_sock 指针会保存于全连接队列：inet_connection_sock.icsk_accept_queue.rskq_accept_head，等待 accept。
 
 <div align=center><img src="/images/2021-07-28-10-01-09.png" data-action="zoom"/></div>
 
@@ -557,9 +555,8 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
      * limitations, they conserve resources and peer is
      * evidently real one.
      */
-    if ((net->ipv4.sysctl_tcp_syncookies == 2 ||
-        /* 检查半连接是否已满。 */
-        inet_csk_reqsk_queue_is_full(sk)) && !isn) {
+    if ((net->ipv4.sysctl_tcp_syncookies == 2 || inet_csk_reqsk_queue_is_full(sk)) 
+       && !isn) {
         want_cookie = tcp_syn_flood_action(sk, skb, rsk_ops->slab_name);
         if (!want_cookie)
             goto drop;
@@ -841,6 +838,17 @@ static inline bool reqsk_queue_empty(const struct request_sock_queue *queue) {
 
 ---
 
+### 4.4. 小结
+
+半连接队列和全连接队列长度的设置，tcp
+
+1. 如果全连接队列满了，需要直接丢弃。
+2. 如果半连接队列满了，如果没开 syncookies，丢弃。
+3. 半链接队列满了 && 全链接队列没满 && sysctl_tcp_syncookies > 0，不丢。
+4. sysctl_tcp_syncookies == 2 && 全连接队列没满，不丢弃。
+
+---
+
 ## 5. backlog 限制设置
 
 关于全连接和半连接的限制设置，可以参考：[TCP 半连接队列和全连接队列满了会发生什么？又该如何应对？](https://www.cnblogs.com/xiaolincoding/p/12995358.html)，这个帖子说得比较详细和通俗易懂。
@@ -951,7 +959,7 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
             /* 半连接长度如果超过 syn back 长度的 3/4  */
             (net->ipv4.sysctl_max_syn_backlog - inet_csk_reqsk_queue_len(sk) <
              (net->ipv4.sysctl_max_syn_backlog >> 2)) &&
-             /* 新旧连接是否有冲突。 */
+             /* tcp_peer_is_proven - PAWS 检查机制。 */
             !tcp_peer_is_proven(req, dst)) {
             /* Without syncookies last quarter of
              * backlog is filled with destinations,
@@ -960,7 +968,6 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
              * to destinations, already remembered
              * to the moment of synflood.
              */
-            /* 可能受到 syn 洪水攻击，将 syn 包丢弃。 */
             pr_drop_req(req, ntohs(tcp_hdr(skb)->source),
                     rsk_ops->family);
             goto drop_and_release;
@@ -971,6 +978,23 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
     ...
 }
 ```
+
+---
+
+### 5.3. 小结
+
+tcp 主要通过全连接和半连接来存储 tcp 的链接过程对象，队列是有限的资源，当队列已满应该如何处理呢？
+
+1. 全链接满了会丢弃 client 发的 syn 包吗？
+2. 全链接满了会丢弃 client 发的 ack 包吗？
+3. rst 是在第几次握手发的。
+
+* 全连接队列已满。
+  
+  1. 增大 listen 接口传入的参数 backlog，例如原来是 512 的，现在传 1024。
+  2. listen 的 backlog 参数受到内核配置 somaxconn 的影响：maxbacklog = min(backlog, somaxconn)，所以在改大 backlong 的入参时，也要考虑是否要修改内核的配置：net.core.somaxconn。
+
+* 半连接队列已满。
 
 ---
 
@@ -985,3 +1009,138 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
 * [TCP三次握手超时处理](https://blog.csdn.net/sinat_20184565/article/details/87865201)
 * [connect及bind、listen、accept背后的三次握手](https://www.cnblogs.com/yxzh-ustc/p/12101658.html)
 * [tcp/ip协议第5讲：tcp的半连接队列和全连接队列](https://www.bilibili.com/video/BV1AK4y177WA)
+
+---
+
+## 7. 问题
+
+---
+
+```c
+/* 如果 young <= 0 说明半链接队列已经空了，或者有需要重传的第三次握 ack 手包。 */
+static inline void reqsk_queue_removed(struct request_sock_queue *queue,
+                       const struct request_sock *req)
+{
+    /* 如果已经重传过了，就不需要再减了。 */
+    if (req->num_timeout == 0)
+        atomic_dec(&queue->young);
+    atomic_dec(&queue->qlen);
+}
+
+static void reqsk_timer_handler(struct timer=_list *t)
+{
+    ...
+    req->rsk_ops->syn_ack_timeout(req);
+    if (!expire && (!resend || !inet_rtx_syn_ack(sk_listener, req) ||
+            inet_rsk(req)->acked)) {
+        ...
+        /* 如果需要重传，那么先减 young，但是只减一次。 */
+        if (req->num_timeout++ == 0)
+            atomic_dec(&queue->young);
+    }
+    ...
+}
+
+static inline void reqsk_queue_added(struct request_sock_queue *queue)
+{
+    atomic_inc(&queue->young);
+    atomic_inc(&queue->qlen);
+}
+```
+
+---
+
+## 8. 连接满了
+
+第一次握手，syn 包。
+
+sk_max_ack_backlog 判断队列是否已满，全连接队列是否已满，半连接队列是否已满。
+
+tcp_max_syn_backlog？没打开 syncookies && 全连接队列没满 && 半连接队列没满。
+
+```c
+/* include/net/inet_connection_sock.h 
+ * 判断半连接队列是否已满。*/
+static inline int inet_csk_reqsk_queue_is_full(const struct sock *sk) {
+    return inet_csk_reqsk_queue_len(sk) >= sk->sk_max_ack_backlog;
+}
+```
+
+young 有啥用呢？
+syncookies 就是为了避免第一次握手 syn 包洪水攻击。
+
+1. 如果全连接队列满了，需要直接丢弃。
+2. 如果半连接队列满了，如果没开 syncookies，丢弃。
+3. 半链接队列满了 && 全链接队列没满 && sysctl_tcp_syncookies > 0，不丢弃。
+4. sysctl_tcp_syncookies == 2 && 全连接队列没满，不丢弃。
+
+```c
+int tcp_conn_request(struct request_sock_ops *rsk_ops,
+             const struct tcp_request_sock_ops *af_ops,
+             struct sock *sk, struct sk_buff *skb)
+{
+    struct tcp_fastopen_cookie foc = { .len = -1 };
+    __u32 isn = TCP_SKB_CB(skb)->tcp_tw_isn;
+    struct tcp_options_received tmp_opt;
+    struct tcp_sock *tp = tcp_sk(sk);
+    struct net *net = sock_net(sk);
+    struct sock *fastopen_sk = NULL;
+    struct request_sock *req;
+    bool want_cookie = false;
+    struct dst_entry *dst;
+    struct flowi fl;
+
+    /* TW buckets are converted to open requests without
+     * limitations, they conserve resources and peer is
+     * evidently real one.
+     */
+    if ((net->ipv4.sysctl_tcp_syncookies == 2 ||
+         inet_csk_reqsk_queue_is_full(sk)) && !isn) {
+        want_cookie = tcp_syn_flood_action(sk, skb, rsk_ops->slab_name);
+        if (!want_cookie)
+            goto drop;
+    }
+
+    if (sk_acceptq_is_full(sk)) {
+        NET_INC_STATS(sock_net(sk), LINUX_MIB_LISTENOVERFLOWS);
+        goto drop;
+    }
+    ...
+    if (!want_cookie && !isn) {
+        /* Kill the following clause, if you dislike this way. */
+        if (!net->ipv4.sysctl_tcp_syncookies &&
+            (net->ipv4.sysctl_max_syn_backlog - inet_csk_reqsk_queue_len(sk) <
+             (net->ipv4.sysctl_max_syn_backlog >> 2)) &&
+            !tcp_peer_is_proven(req, dst)) {
+            /* Without syncookies last quarter of
+             * backlog is filled with destinations,
+             * proven to be alive.
+             * It means that we continue to communicate
+             * to destinations, already remembered
+             * to the moment of synflood.
+             */
+            pr_drop_req(req, ntohs(tcp_hdr(skb)->source),
+                    rsk_ops->family);
+            goto drop_and_release;
+        }
+
+        isn = af_ops->init_seq(skb);
+    }
+}
+
+static bool tcp_syn_flood_action(const struct sock *sk,
+                 const struct sk_buff *skb,
+                 const char *proto)
+{
+    ...
+#ifdef CONFIG_SYN_COOKIES
+    if (net->ipv4.sysctl_tcp_syncookies) {
+        msg = "Sending cookies";
+        want_cookie = true;
+        __NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPREQQFULLDOCOOKIES);
+    }
+#endif
+    ...
+    return want_cookie;
+}
+```
