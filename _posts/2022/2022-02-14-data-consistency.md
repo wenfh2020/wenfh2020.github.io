@@ -66,7 +66,7 @@ func(key, obj) {
 
 * 先改数据库再改缓存。
 
-<div align=center><img src="/images/2022-02-14-12-37-47.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022-02-14-17-44-28.png" data-action="zoom"/></div>
 
 ---
 
