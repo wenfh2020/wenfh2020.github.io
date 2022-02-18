@@ -39,7 +39,7 @@ const char* get_data();
 ### 1.2. inline
 
 inline 是 C++ 关键字，在函数声明或定义中。在函数返回类型前加上关键字 inline，即可把函数指定为内联函数，这样可以解决一些频繁调用的函数，大量消耗栈空间。
-> 可以对比宏函数
+> 可以对比 [宏函数](https://wenfh2020.com/2020/02/15/c-asm/)
 
 1. 优点：
    作为函数定义的关键字，说明该函数是内联函数。内联函数会将代码块嵌入到每个调用该函数的地方，内联函数减少了函数的调用，使代码执行的效率提高。
@@ -262,7 +262,44 @@ class size: 1
 
 ---
 
-## 3. 参考
+## 3. 字符串处理
+
+### 3.1. 分离字符串
+
+```cpp
+/* g++ -std=c++11 test.cpp -o test && ./test */
+#include <iostream>
+#include <string>
+#include <vector>
+
+bool get_words(const std::string& s, const std::string& split, std::vector<std::string>& words) {
+    std::size_t pre = 0, cur = 0;
+    while ((pre = s.find_first_not_of(split, cur)) != std::string::npos) {
+        cur = s.find(split, pre);
+        if (cur != std::string::npos) {
+            words.push_back(s.substr(pre, cur - pre));
+        } else {
+            words.push_back(s.substr(pre, s.length() - pre));
+        }
+    }
+    return words.size() != 0;
+}
+
+int main() {
+    char s[] = "1 2 3 4 5 6 ";
+    std::vector<std::string> words;
+    if (get_words(s, " ", words)) {
+        for (auto v : words) {
+            std::cout << v << std::endl;
+        }
+    }
+    return 0;
+}
+```
+
+---
+
+## 4. 参考
 
 * [c++ 官网](http://www.cplusplus.com/reference/)
 * [C++ 多态的实现原理分析](https://blog.csdn.net/afei__/article/details/82142775)
