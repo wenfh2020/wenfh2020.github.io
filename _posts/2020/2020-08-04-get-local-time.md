@@ -120,9 +120,35 @@ int main() {
 
 ---
 
-## 4. 性能
+## 4. c++11 时间接口
 
-### 4.1. 问题
+c++11 提供了[时间获取接口](http://www.cplusplus.com/reference/chrono/)。
+
+```cpp
+#include <chrono>
+#include <iostream>
+
+int main() {
+    auto t1 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 10000000; i++) {
+        std::chrono::high_resolution_clock::now();
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto spend_s = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+    auto spend_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+    std::cout << "spend: " << spend_s.count() << " s"
+              << std::endl
+              << "spend: " << spend_ms.count() << " ms"
+              << std::endl;
+    return 0;
+}
+```
+
+---
+
+## 5. 性能
+
+### 5.1. 问题
 
 高并发系统里，从火焰图里看到：平平无奇的 `mstime()` 接口，却是资源吃货！
 
@@ -132,7 +158,7 @@ int main() {
 
 ---
 
-### 4.2. 优化
+### 5.2. 优化
 
 一般业务，对时间精度要求不高。可以按照两个方面优化：
 

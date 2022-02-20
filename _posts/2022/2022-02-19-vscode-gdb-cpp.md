@@ -76,6 +76,7 @@ root@ubuntu:~/src/test# uname -r
                 "-O0",
                 "${file}",
                 "-std=c++11",
+                "-D_GLIBCXX_DEBUG",
                 "-o",
                 "${fileBasenameNoExtension}"
             ]

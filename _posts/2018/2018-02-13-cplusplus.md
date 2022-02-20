@@ -133,9 +133,9 @@ A::~A()
 
 ### 1.4. 字符串类
 
-通过字符串操作的封装，熟悉 C++ 的基本语法和特性。
+#### 1.4.1. demo1
 
-* demo。
+* demo1
 
 ```cpp
 #include <iostream>
@@ -167,7 +167,6 @@ class Test {
     }
 
     const char* data() { return m_data; }
-
     bool set_data(const char* p) {
         return copy_data(p) == NULL;
     }
@@ -220,6 +219,29 @@ int main() {
 456
 456
 456
+```
+
+---
+
+#### 1.4.2. demo2
+
+```cpp
+struct A {
+    std::string s;
+    A(std::string str) : s(std::move(str))  { std::cout << " constructed\n"; }
+    A(const A& o) : s(o.s) { std::cout << " copy constructed\n"; }
+    A(A&& o) : s(std::move(o.s)) { std::cout << " move constructed\n"; }
+    A& operator=(const A& other) {
+        s = other.s;
+        std::cout << " copy assigned\n";
+        return *this;
+    }
+    A& operator=(A&& other) {
+        s = std::move(other.s);
+        std::cout << " move assigned\n";
+        return *this;
+    }
+};
 ```
 
 ---
