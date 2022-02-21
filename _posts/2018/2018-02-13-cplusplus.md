@@ -246,9 +246,24 @@ struct A {
 
 ---
 
-## 2. 其它
+## 2. 常用函数
 
-### 2.1. malloc 和 new 区别
+```cpp
+/* 字符串转整型。 */
+std::stoi
+/* 字符串转长整型。 */
+std::stol
+/* 字符串转 64 位长整型。 */
+std::stoll
+/* 整型转字符串。 */
+std::to_string
+```
+
+---
+
+## 3. 其它
+
+### 3.1. malloc 和 new 区别
 
 1. 属性：new/delete 是 C++ 关键字，需要编译器支持。malloc/free 是库函数，需要头文件支持。
 2. 参数：使用 new 操作符申请内存分配时无须指定内存块的大小，编译器会根据类型信息自行计算。而 malloc 则需要显式地指出所需内存的尺寸。
@@ -259,7 +274,7 @@ struct A {
 
 ---
 
-### 2.2. 空类
+### 3.2. 空类
 
 空类大小为 1 个字节。
 
@@ -284,9 +299,9 @@ class size: 1
 
 ---
 
-## 3. 字符串处理
+## 4. 字符串处理
 
-### 3.1. 分离字符串
+### 4.1. 分离字符串
 
 ```cpp
 /* g++ -std=c++11 test.cpp -o test && ./test */
@@ -321,7 +336,7 @@ int main() {
 
 ---
 
-## 4. 参考
+## 5. 参考
 
 * [c++ 官网](http://www.cplusplus.com/reference/)
 * [C++ 多态的实现原理分析](https://blog.csdn.net/afei__/article/details/82142775)

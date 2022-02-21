@@ -124,10 +124,10 @@ target ... : prerequisites ...
 |   .PHONY   | ".PHONY" 用来显式地指明一个目标是“伪目标”，向 make 说明，不管是否有这个文件，这个目标就是“伪目标”。“伪目标”并不是一个文件，只是一个标签，由于“伪目标”不是文件，所以 make 无法生成它的依赖关系和决定它是否要执行。我们只有通过显式地指明这个“目标”才能让其生效。当然，“伪目标”的取名不能和文件名重名，不然其就失去了“伪目标”的意义了。<br/>.PHONY: clean <br/>clean: <br/>rm *.o temp                |
 | .SECONDARY | 阻止 make 自动删除中间目标。                                                                                                                                                                                                                                                                                                                                                                        |
 |     %      | 我们的“目标模式”或是“依赖模式”中都应该有“%”这个字符<br/>$(objects): %.o: %.c                                                                                                                                                                                                                                                                                                                        |
+|     $      | 可以定义变量<br/>TARGETS = main<br/>$(TARGETS)                                                                                                                                                                                                                                                                                                                                                      |
 |    \$<     | 依赖目标中的第一个目标名字。                                                                                                                                                                                                                                                                                                                                                                        |
 |    \$^     | 所有依赖目标集合，以空格分隔。                                                                                                                                                                                                                                                                                                                                                                      |
 |    \$@     | 表示目标集(也就是“foo.o bar.o”)<br/>$(CC) -c \$(CFLAGS) \$< -o \$@                                                                                                                                                                                                                                                                                                                                  |
-|     $      | 可以定义变量<br/>TARGETS = main<br/>$(TARGETS)                                                                                                                                                                                                                                                                                                                                                      |
 
 ### 3.3. Makefile 实例
 
@@ -141,7 +141,7 @@ ae.c         ae_epoll.c   anet.c       config.h     server.h
 
 * Makefile 文件内容。
 
-```shell
+```make
 CC = gcc
 CFLAGS = -g -O0
 
@@ -212,7 +212,7 @@ ae.o            ae_kqueue.o     config.h
 
 ### 4.2. Makefile 文件内容
 
-```shell
+```make
 LIBCO_DIR = libco
 TEST_DIR = $(shell pwd)
 
