@@ -6,7 +6,7 @@ tags: gdb vscode debug c++
 author: wenfh2020
 ---
 
-vscode + gdb 调试 ubuntu 上的 c/c++ stl 源码。
+vscode + gdb 简单调试 ubuntu 上的 c/c++ stl 源码。
 
 
 
@@ -16,20 +16,28 @@ vscode + gdb 调试 ubuntu 上的 c/c++ stl 源码。
 
 ---
 
-## 1. 配置
+## 1. 系统
 
-在 .vscode 目录上添加两个文件：launch.json，tasks.json。
-
-<div align=center><img src="/images/2022-02-19-22-37-06.png" data-action="zoom"/></div>
-
----
-
-* ubuntu 14.04 系统。
+ubuntu 14.04 系统。
 
 ```shell
 root@ubuntu:~/src/test# uname -r
 4.4.0-142-generic
+
+root@ubuntu:~/src/test# g++ --version
+g++ (Ubuntu 9.4.0-1ubuntu1~14.04) 9.4.0
+Copyright (C) 2019 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
+
+---
+
+## 2. 配置
+
+在 .vscode 目录上添加两个文件：launch.json，tasks.json。
+
+<div align=center><img src="/images/2022-02-19-22-37-06.png" data-action="zoom"/></div>
 
 * launch.json，选择对应的调试器和调试目录。
 
@@ -61,7 +69,7 @@ root@ubuntu:~/src/test# uname -r
 }
 ```
 
-* tasks.json，编译参数，下面是根据 c++11 设置的，可以根据自己的需要填充对应参数。
+* tasks.json，下面是根据 c++11 设置的编译参数，可以根据自己的需要填充对应参数。
 
 ```json
 {
@@ -87,7 +95,7 @@ root@ubuntu:~/src/test# uname -r
 
 ---
 
-## 2. 调试
+## 3. 调试
 
 编写对应的测试源码，下断点进行调试。
 
