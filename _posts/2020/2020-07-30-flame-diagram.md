@@ -169,7 +169,7 @@ perf script -i perf.data | stackcollapse-perf.pl | \
 * 脚本使用。
 
 ```shell
-./offcpu.sh -p <pid>
+./offcpu.sh <pid>
 ```
 
 * off-cpu 火焰图。展示了程序写日志到磁盘的阻塞操作的可视化记录。
