@@ -57,7 +57,11 @@ mysql> update mysql.user set authentication_string=password('root') where user='
 ### 1.2. mysqlclient
 
 ```shell
+# centos
 yum install mysql -y
+
+# ubuntu
+apt-get install mysql-client libmysqlclient-dev python3-dev
 ```
 
 ---
