@@ -192,12 +192,63 @@ class basic_string {
 
 ---
 
-## 3. 小结
+## 3. 其它
+
+同样的分析方法，可以分析一下，下面的 demo 的结果。
+
+```cpp
+/* g++ -g -O0 -std=c++11 test.cpp -o test -D_GLIBCXX_DEBUG && ./test */
+#include <iostream>
+#include <vector>
+
+struct A {
+    std::string s;
+    A(std::string str) : s(std::move(str)) { std::cout << "constructed\n"; }
+    A(const A& o) : s(o.s) { std::cout << "copy constructed\n"; }
+    A(A&& o) : s(std::move(o.s)) { std::cout << "move constructed\n"; }
+    ~A() { std::cout << "destructed\n"; }
+    A& operator=(const A& other) {
+        s = other.s;
+        std::cout << " copy assigned\n";
+        return *this;
+    }
+    A& operator=(A&& other) {
+        s = std::move(other.s);
+        std::cout << "move assigned\n";
+        return *this;
+    }
+};
+
+int main() {
+    std::vector<A> v;
+    for (int i = 0; i < 5; i++) {
+        std::cout << i << " ---" << std::endl;
+        // v.push_back(std::to_string(i));
+        v.emplace_back(std::to_string(i));
+    }
+
+    std::cout << "--- no move ---" << std::endl;
+    std::vector<A> vv = v;
+    std::cout << "v size: " << v.size() << std::endl;
+    std::cout << "vv size: " << vv.size() << std::endl;
+    std::cout << "--- no move ---" << std::endl;
+
+    std::cout << "--- move ---" << std::endl;
+    std::vector<A> vvv = std::move(vv);
+    std::cout << "v size: " << vv.size() << std::endl;
+    std::cout << "vv size: " << vv.size() << std::endl;
+    std::cout << "vvv size: " << vvv.size() << std::endl;
+    std::cout << "--- move ---" << std::endl;
+    return 0;
+}
+```
+
+## 4. 小结
 
 通过 stl 源码走读，可以看到移动语义，在 std::string 的复制构造和移动构造实现，对原对象数据进行深浅拷贝的处理逻辑，这样对程序性能影响就应该有比较直观的认知了。
 
 ---
 
-## 4. 参考
+## 5. 参考
 
 * [C++17剖析：string在Modern C++中的实现](https://www.cnblogs.com/bigben0123/p/14043586.html)
