@@ -1,14 +1,16 @@
 ---
 layout: post
-title:  "[stl 源码分析] 通过 std::string 分析 std::move 作用（C++11）"
+title:  "[stl 源码分析] 移动语义是如何影响程序性能的（C++11）"
 categories: c/c++
 tags: stl sort
 author: wenfh2020
 ---
 
-std::move 顾名思义：`移动`。
+移动语义，只是 C++11 提供的一种对象转移的方法，程序可以通过移动语义的实现去降低对象转移成本，提高程序性能。
 
-本章将通过走读 C++11 的 std::string 源码，分析移动语义的作用：避免数据拷贝，提高程序性能。
+本文将结合测试例子走读 std::string 和 std::vector 对应源码，看看程序是如何通过移动语义方法去避免数据拷贝，提高程序性能的。
+
+> 右值引用，移动语义，等详细知识可以参考：《Effective Modern C++》-- 第五章
 
 
 
@@ -17,136 +19,33 @@ std::move 顾名思义：`移动`。
 
 ---
 
-## 1. 概述
+## 1. std::move
 
-通过 gdb 调试方式走读 stl 源码。
-
-* g++ 版本。
-
-```shell
-# g++ --version                                                             
-g++ (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
-```
-
-* 测试源码。
+std::move 将对象类型被强制转换为右值引用。
 
 ```cpp
-/* g++ -g -O0 -W -std=c++11 test.cpp -o test -D_GLIBCXX_DEBUG && ./test */
-#include <iostream>
+/* bits/move.h */
 
-int main() {
-    std::string s("1234567890123456789");
-    std::string ss(s);
-    std::string sss(std::move(s));
-    return 0;
+template <typename _Tp>
+constexpr typename std::remove_reference<_Tp>::type&&
+move(_Tp&& __t) noexcept {
+    return static_cast<typename std::remove_reference<_Tp>::type&&>(__t);
 }
 ```
-
-* stl 源码。
-
-<div align=center><img src="/images/2022-04-08-18-52-02.png" data-action="zoom"/></div>
 
 ---
 
 ## 2. 源码分析
 
-### 2.1. 复制构造
+### 2.1. std::string
 
-复制构造，申请新的空间，深拷贝数据。
-
-* 测试源码。
-
-```cpp
-/* g++ -g -O0 -W -std=c++11 test_smptr.cpp -o test -D_GLIBCXX_DEBUG && ./test */
-#include <iostream>
-
-int main() {
-    std::string s("1234567890123456789");
-    std::string ss(s); /* 复制构造，深拷贝数据。*/
-    return 0;
-}
-```
-
-* stl 源码。
-
-```cpp
-/* bits/basic_string.h */
-template<typename _CharT, typename _Traits, typename _Alloc>
-class basic_string {
-    ...
-    basic_string(const basic_string& __str)
-      : _M_dataplus(_M_local_data(),
-            _Alloc_traits::_S_select_on_copy(__str._M_get_allocator())) {
-        /* 构造分配空间，深拷贝数据。*/
-        _M_construct(__str._M_data(), __str._M_data() + __str.length());
-    }
-
-    template<typename _InIterator>
-    void
-    _M_construct(_InIterator __beg, _InIterator __end) {
-      typedef typename std::__is_integer<_InIterator>::__type _Integral;
-      _M_construct_aux(__beg, __end, _Integral());
-    }
-
-    template<typename _InIterator>
-    void
-    _M_construct_aux(_InIterator __beg, _InIterator __end,
-             std::__false_type) {
-        typedef typename iterator_traits<_InIterator>::iterator_category _Tag;
-        _M_construct(__beg, __end, _Tag());
-    }
-}
-
-/* bits/basic_string.tcc */
-
-template<typename _CharT, typename _Traits, typename _Alloc>
-template<typename _InIterator>
-void
-basic_string<_CharT, _Traits, _Alloc>::
-_M_construct(_InIterator __beg, _InIterator __end, std::forward_iterator_tag) {
-    ...
-    size_type __dnew = static_cast<size_type>(std::distance(__beg, __end));
-
-    if (__dnew > size_type(_S_local_capacity)) {
-        /* 申请新的空间。*/
-        _M_data(_M_create(__dnew, size_type(0)));
-        _M_capacity(__dnew);
-    }
-
-    // Check for out_of_range and length_error exceptions.
-    __try {
-        /* 深拷贝数据。*/
-        this->_S_copy_chars(_M_data(), __beg, __end);
-    } __catch(...) {
-        _M_dispose();
-        __throw_exception_again;
-    }
-    _M_set_length(__dnew);
-}
-
-template<typename _CharT, typename _Traits, typename _Alloc>
-typename basic_string<_CharT, _Traits, _Alloc>::pointer
-basic_string<_CharT, _Traits, _Alloc>::
-_M_create(size_type& __capacity, size_type __old_capacity) {
-    ...
-    /* 计算动态空间。*/
-    if (__capacity > __old_capacity && __capacity < 2 * __old_capacity) {
-        __capacity = 2 * __old_capacity;
-        // Never allocate a string bigger than max_size.
-        if (__capacity > max_size())
-            __capacity = max_size();
-    }
-
-    /* 申请空间。*/
-    return _Alloc_traits::allocate(_M_get_allocator(), __capacity + 1);
-}
-```
+<div align=center><img src="/images/2022-04-09-12-58-38.png" data-action="zoom"/></div>
 
 ---
 
-### 2.2. 移动构造
+#### 2.1.1. 移动构造
 
-通过浅拷贝的方式，实现了原对象内存数据的转移，但是原对象数据被重置。
+浅拷贝，实现了原对象数据转移，但是原对象数据被重置。
 
 * 测试源码。
 
@@ -156,24 +55,25 @@ _M_create(size_type& __capacity, size_type __old_capacity) {
 
 int main() {
     std::string s("1234567890123456789");
-    std::string sss(std::move(s));
+    std::string ss(std::move(s)); /* 右值引用。*/
+    std::cout << s << " " << ss << std::endl;
     return 0;
 }
 ```
 
-* stl 源码，可见移动构造逻辑简单，当数据量比较大时，可以避免数据深拷贝。
+* stl 源码，移动构造逻辑简单，当数据量比较大时，可以避免数据深拷贝带来的开销。
 
 ```cpp
 /* bits/basic_string.h */
-template<typename _CharT, typename _Traits, typename _Alloc>
+template <typename _CharT, typename _Traits, typename _Alloc>
 class basic_string {
     ...
+    /* 移动构造函数。*/
     basic_string(basic_string&& __str) noexcept
         : _M_dataplus(_M_local_data(), std::move(__str._M_get_allocator())) {
         if (__str._M_is_local()) {
-            /* 参考：enum { _S_local_capacity = 15 / sizeof(_CharT) }; 
-               当原对象数据长度 <= 15，会跑到这里来。
-             */
+            /* 参考：enum { _S_local_capacity = 15 / sizeof(_CharT) };
+               当原对象数据长度 <= 15，会跑到这里来。*/
             traits_type::copy(_M_local_buf, __str._M_local_buf, _S_local_capacity + 1);
         } else {
             /* 字符串指针浅拷贝。*/
@@ -192,12 +92,183 @@ class basic_string {
 
 ---
 
-## 3. 其它
+#### 2.1.2. 复制构造
 
-同样的分析方法，可以分析一下，下面的 demo 的结果。
+复制构造，申请新的空间，深拷贝数据。
+
+* 测试源码。
+
+```cpp
+/* g++ -g -O0 -W -std=c++11 test.cpp -o test -D_GLIBCXX_DEBUG && ./test */
+#include <iostream>
+
+int main() {
+    std::string s("1234567890123456789");
+    std::string ss(s); /* 复制构造，深拷贝数据。*/
+    std::cout << s << " " << ss << std::endl;
+    return 0;
+}
+```
+
+* stl 源码。
+
+```cpp
+/* bits/basic_string.h */
+
+template <typename _CharT, typename _Traits, typename _Alloc>
+class basic_string {
+    ...
+    basic_string(const basic_string& __str)
+        : _M_dataplus(_M_local_data(),
+                      _Alloc_traits::_S_select_on_copy(__str._M_get_allocator())) {
+        /* 构造分配空间，深拷贝数据。*/
+        _M_construct(__str._M_data(), __str._M_data() + __str.length());
+    }
+
+    template <typename _InIterator>
+    void
+    _M_construct(_InIterator __beg, _InIterator __end) {
+        typedef typename std::__is_integer<_InIterator>::__type _Integral;
+        _M_construct_aux(__beg, __end, _Integral());
+    }
+
+    template <typename _InIterator>
+    void
+    _M_construct_aux(_InIterator __beg, _InIterator __end,
+                     std::__false_type) {
+        typedef typename iterator_traits<_InIterator>::iterator_category _Tag;
+        _M_construct(__beg, __end, _Tag());
+    }
+}
+
+/* bits/basic_string.tcc */
+
+template <typename _CharT, typename _Traits, typename _Alloc>
+template <typename _InIterator>
+void basic_string<_CharT, _Traits, _Alloc>::
+    _M_construct(_InIterator __beg, _InIterator __end, std::forward_iterator_tag) {
+    ...
+    size_type __dnew = static_cast<size_type>(std::distance(__beg, __end));
+
+    if (__dnew > size_type(_S_local_capacity)) {
+        /* 申请新的空间。*/
+        _M_data(_M_create(__dnew, size_type(0)));
+        _M_capacity(__dnew);
+    }
+
+    // Check for out_of_range and length_error exceptions.
+    __try {
+        /* 深拷贝数据。*/
+        this->_S_copy_chars(_M_data(), __beg, __end);
+    }
+    ...
+    _M_set_length(__dnew);
+}
+
+template <typename _CharT, typename _Traits, typename _Alloc>
+typename basic_string<_CharT, _Traits, _Alloc>::pointer
+basic_string<_CharT, _Traits, _Alloc>::
+    _M_create(size_type& __capacity, size_type __old_capacity) {
+        ...
+        /* 计算动态空间。*/
+        if (__capacity > __old_capacity && __capacity < 2 * __old_capacity) {
+        __capacity = 2 * __old_capacity;
+        // Never allocate a string bigger than max_size.
+        if (__capacity > max_size())
+            __capacity = max_size();
+    }
+
+    /* 申请空间。*/
+    return _Alloc_traits::allocate(_M_get_allocator(), __capacity + 1);
+}
+```
+
+---
+
+### 2.2. std::vector
+
+接下来分析一下，动态数组容器是如何通过移动方式减少拷贝的。
+
+* 测试源码。
 
 ```cpp
 /* g++ -g -O0 -std=c++11 test.cpp -o test -D_GLIBCXX_DEBUG && ./test */
+#include <iostream>
+#include <vector>
+
+int main() {
+    std::vector<std::string> v;
+    for (int i = 0; i < 5; i++) {
+        v.emplace_back(std::to_string(i));
+    }
+
+    std::cout << "--- no move ---" << std::endl;
+    std::vector<std::string> vv = v;
+    std::cout << "v   size: " << v.size() << std::endl;
+    std::cout << "vv  size: " << vv.size() << std::endl;
+    std::cout << "--- no move ---" << std::endl;
+
+    std::cout << "--- move ---" << std::endl;
+    std::vector<std::string> vvv = std::move(v); /* 右值引用。*/
+    std::cout << "v   size: " << v.size() << std::endl;
+    std::cout << "vv  size: " << vv.size() << std::endl;
+    std::cout << "vvv size: " << vvv.size() << std::endl;
+    std::cout << "--- move ---" << std::endl;
+    return 0;
+}
+```
+
+* stl 源码，通过 gdb 调试方式，看看关键部分代码的处理。
+
+<div align=center><img src="/images/2022-04-09-12-36-04.png" data-action="zoom"/></div>
+
+```cpp
+/* /usr/include/c++/9/debug/vector */
+template <typename _Tp, typename _Allocator = std::allocator<_Tp> >
+class vector
+    : public __gnu_debug::_Safe_container<
+          vector<_Tp, _Allocator>, _Allocator, __gnu_debug::_Safe_sequence>,
+      public _GLIBCXX_STD_C::vector<_Tp, _Allocator>,
+      public __gnu_debug::_Safe_vector<
+          vector<_Tp, _Allocator>, _GLIBCXX_STD_C::vector<_Tp, _Allocator> > {
+    ...
+#if __cplusplus >= 201103L
+    ...
+    vector(vector&&) noexcept = default;
+    ...
+#endif
+    ...
+}
+
+/* /usr/include/c++/9/bits/stl_vector.h */
+template <typename _Tp, typename _Alloc>
+struct _Vector_base {
+    ...
+#if __cplusplus >= 201103L
+    _Vector_base(_Vector_base&&) = default;
+#endif
+    ...
+    struct _Vector_impl_data {
+        pointer _M_start;          /* 目前使用空间头部位置。 */
+        pointer _M_finish;         /* 当前使用空间尾部位置。 */
+        pointer _M_end_of_storage; /* 目前可用空间尾部位置。 */
+
+#if __cplusplus >= 201103L
+        _Vector_impl_data(_Vector_impl_data&& __x) noexcept
+            /* 转移被转移对象的关键数据到当前对象。 */
+            : _M_start(__x._M_start), _M_finish(__x._M_finish), _M_end_of_storage(__x._M_end_of_storage) {
+            /* 被转移对象，关键成员数据被重置。 */
+            __x._M_start = __x._M_finish = __x._M_end_of_storage = pointer();
+        }
+#endif
+    };
+    ...
+}
+```
+
+* 其它。有兴趣的朋友可以观测一下下面自定义结构的程序运行结果。
+
+```cpp
 #include <iostream>
 #include <vector>
 
@@ -214,7 +285,7 @@ struct A {
     }
     A& operator=(A&& other) {
         s = std::move(other.s);
-        std::cout << "move assigned\n";
+        std::cout << " move assigned\n";
         return *this;
     }
 };
@@ -234,6 +305,7 @@ int main() {
     std::cout << "--- no move ---" << std::endl;
 
     std::cout << "--- move ---" << std::endl;
+    /* 右值引用。*/
     std::vector<A> vvv = std::move(vv);
     std::cout << "v size: " << vv.size() << std::endl;
     std::cout << "vv size: " << vv.size() << std::endl;
@@ -243,12 +315,17 @@ int main() {
 }
 ```
 
-## 4. 小结
+---
 
-通过 stl 源码走读，可以看到移动语义，在 std::string 的复制构造和移动构造实现，对原对象数据进行深浅拷贝的处理逻辑，这样对程序性能影响就应该有比较直观的认知了。
+## 3. 小结
+
+* 通过 调试 和 stl 源码走读，可以看到 std::string / std::vector 移动语义的实现，它们是如何影响程序性能的。
+* 自定义的类实体对象，轻易不要传到 stl 容器里，因为你不知道里面有啥拷贝操作，反之应该传递对象指针，这样内部拷贝的成本就会比较低。
 
 ---
 
-## 5. 参考
+## 4. 参考
 
+* 《Effective Modern C++》
+* [(ubuntu) vscode + gdb 调试 c++](https://wenfh2020.com/2022/02/19/vscode-gdb-cpp/)
 * [C++17剖析：string在Modern C++中的实现](https://www.cnblogs.com/bigben0123/p/14043586.html)
