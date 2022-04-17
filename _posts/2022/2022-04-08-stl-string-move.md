@@ -6,7 +6,7 @@ tags: stl sort
 author: wenfh2020
 ---
 
-移动语义，只是 C++11 提供的一种对象转移的方法，程序可以通过移动语义的实现去降低对象转移成本，提高程序性能。
+移动语义，只是 C++11 提供的一种对象转移方法，程序可以通过移动语义的实现去降低对象转移成本，提高程序性能。
 
 本文将结合测试例子走读 std::string 和 std::vector 对应源码，看看程序是如何通过移动语义方法去避免数据拷贝，提高程序性能的。
 
@@ -45,7 +45,7 @@ move(_Tp&& __t) noexcept {
 
 #### 2.1.1. 移动构造
 
-浅拷贝，实现了原对象数据转移，但是原对象数据被重置。
+浅拷贝，实现了原对象成员数据转移到目标对象，原对象成员数据被重置。
 
 * 测试源码。
 
@@ -61,7 +61,7 @@ int main() {
 }
 ```
 
-* stl 源码，移动构造逻辑简单，当数据量比较大时，可以避免数据深拷贝带来的开销。
+* stl 源码，移动构造逻辑简单，当数据量比较大时，可以避免深拷贝数据带来的开销。
 
 ```cpp
 /* bits/basic_string.h */
@@ -73,7 +73,7 @@ class basic_string {
         : _M_dataplus(_M_local_data(), std::move(__str._M_get_allocator())) {
         if (__str._M_is_local()) {
             /* 参考：enum { _S_local_capacity = 15 / sizeof(_CharT) };
-               当原对象数据长度 <= 15，会跑到这里来。*/
+               当原对象数据长度 <= 15，程序会跑到这里来。*/
             traits_type::copy(_M_local_buf, __str._M_local_buf, _S_local_capacity + 1);
         } else {
             /* 字符串指针浅拷贝。*/
@@ -255,7 +255,7 @@ struct _Vector_base {
 
 #if __cplusplus >= 201103L
         _Vector_impl_data(_Vector_impl_data&& __x) noexcept
-            /* 转移被转移对象的关键数据到当前对象。 */
+            /* 转移被转移对象的关键成员数据到当前对象。 */
             : _M_start(__x._M_start), _M_finish(__x._M_finish), _M_end_of_storage(__x._M_end_of_storage) {
             /* 被转移对象，关键成员数据被重置。 */
             __x._M_start = __x._M_finish = __x._M_end_of_storage = pointer();
