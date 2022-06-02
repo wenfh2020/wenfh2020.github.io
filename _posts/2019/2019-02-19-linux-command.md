@@ -241,6 +241,7 @@ sed -i '' 's/\/usr\/local\/bin/\/usr\/bin/g' /etc/init.d/fdfs_storaged
 |    -i     | 大小写匹配查找字符串。                           |
 |    -w     | 匹配整个单词，而不是字符串。                     |
 | --include | 搜索指定文件。                                   |
+| --exclude-dir| 排除指定文件夹。                                            |
 |    -A     | 列出搜索到的内容后面的几行内容。 grep xxxx -A 10 |
 
 找出文件（filename）中包含123或者包含abc的行
