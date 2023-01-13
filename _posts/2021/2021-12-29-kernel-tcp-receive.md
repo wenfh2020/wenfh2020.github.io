@@ -57,6 +57,8 @@ author: wenfh2020
 
 <div align=center><img src="/images/2021-12-30-12-33-29.png" data-action="zoom"/></div>
 
+> 图片来源：[linux 网络数据接收流程](https://www.processon.com/view/61ca8e530791290c9e1574b1)
+
 ---
 
 ## 3. 要点
@@ -296,7 +298,17 @@ __do_softirq
 
 ---
 
-## 4. 参考
+## 4. 调试
+
+要了解更多细节，可以搭建 Linux 的调试环境进行源码调试。
+
+详细请参考文章：[搭建 Linux 内核网络调试环境（vscode + gdb + qemu）](https://wenfh2020.com/2021/12/03/ubuntu-qemu-linux/)。
+
+<iframe class="bilibili" src="//player.bilibili.com/player.html?aid=592292865&bvid=BV1Sq4y1q7Gv&cid=461543929&page=1&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+
+---
+
+## 5. 参考
 
 * 《Linux 内核源码剖析 - TCP/IP 实现》
 * [What is the relationship of DMA ring buffer and TX/RX ring for a network card?](https://stackoverflow.com/questions/47450231/what-is-the-relationship-of-dma-ring-buffer-and-tx-rx-ring-for-a-network-card?answertab=votes#tab-top)
