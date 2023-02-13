@@ -19,6 +19,8 @@ author: wenfh2020
 
 <div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
+> 图片来源：[tcp + epoll 内核睡眠唤醒时序流程](https://www.processon.com/view/61669e405653bb1336db3c86)
+
 1. 进程通过 epoll_create 创建 eventpoll 对象。
 2. 进程通过 epoll_ctl 添加关注 listen socket 的 EPOLLIN 可读事件。
 3. 接步骤 2，epoll_ctl 还将 epoll 的 socket 唤醒等待事件（唤醒函数：ep_poll_callback）通过 add_wait_queue 函数添加到 socket.wq 等待队列。
