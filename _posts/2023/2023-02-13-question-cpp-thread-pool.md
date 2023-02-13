@@ -6,7 +6,7 @@ tags: working
 author: wenfh2020
 ---
 
-[**知乎问题**](https://www.zhihu.com/question/414313102/answer/2229115248)：
+[**知乎问题**](https://www.zhihu.com/question/397916107/answer/2848415125)：
 
 生产环境有什么推荐的线程池库吗？...
 
