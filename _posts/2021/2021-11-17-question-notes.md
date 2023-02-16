@@ -39,7 +39,7 @@ author: wenfh2020
 
 语雀，是蚂蚁集团旗下的在线文档编辑与协同工具，软件支持跨平台，文档编辑相对友好，是个不错的个人/团队的知识库平台。
 
-<div align=center><img src="/images/2023-02-16-12-37-07.png" data-action="zoom" width=40%/></div>
+<div align=center><img src="/images/2023-02-16-12-37-07.png" data-action="zoom" width="40%"/></div>
 
 ---
 
