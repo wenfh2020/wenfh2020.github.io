@@ -25,6 +25,7 @@ author: wenfh2020
 
 ## 1. 概述
 
+* 语雀
 * markdown + vscode
 * git + github (github 有公开或私人目录)
 * processon（也可以用 xmind）
@@ -34,7 +35,15 @@ author: wenfh2020
 
 ## 2. 方式
 
-### 2.1. markdown + vscode
+### 2.1. 语雀
+
+语雀，是蚂蚁集团旗下的在线文档编辑与协同工具，软件支持跨平台，文档编辑相对友好，是个不错的个人/团队的知识库平台。
+
+<div align=center><img src="/images/2023-02-16-12-37-07.png" width=40%/></div>
+
+---
+
+### 2.2. markdown + vscode
 
 markdown 通过简单的语法写出精简条理的文档，vscode 功能强大，有很多插件支持 markdown.
 
@@ -50,7 +59,7 @@ markdown 通过简单的语法写出精简条理的文档，vscode 功能强大�
 
 ---
 
-### 2.2. git + github
+### 2.3. git + github
 
 笔记文章通过 git 进行版本管理，git 数据上传 [github](https://github.com/wenfh2020/wenfh2020.github.io/tree/master/_posts) 进行可视化管理。（github + jekyll 还能搭建自己的博客。）
 
@@ -58,7 +67,7 @@ markdown 通过简单的语法写出精简条理的文档，vscode 功能强大�
 
 ---
 
-### 2.3. processon
+### 2.4. processon
 
 * [processon](https://processon.com/u/56e76de5e4b05387d036f99e/profile) 思维导图将复杂的业务要点分类。
 
@@ -74,7 +83,7 @@ markdown 通过简单的语法写出精简条理的文档，vscode 功能强大�
 
 ---
 
-### 2.4. 博客 wiki
+### 2.5. 博客 wiki
 
 可以自己[搭建博客](https://wenfh2020.com/2020/02/17/make-blog/)，博客页面排版更人性化，可以同步 markdown 文件内容，博客可以部署在本地或局域网浏览，也可以部署到公网。
 
