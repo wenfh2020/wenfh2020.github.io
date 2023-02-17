@@ -10,20 +10,21 @@ author: wenfh2020
 
 `探索惊群` 系列文章将深入 Linux (5.0.1) 内核，透过 `多进程模型` 去剖析惊群现象、惊群原理、惊群的解决方案。
 
-1. [探索惊群 ①](https://wenfh2020.com/2021/09/25/thundering-herd/)
+
+
+
+* content
+{:toc}
+
+---
+
+1. [探索惊群 ①（★）](https://wenfh2020.com/2021/09/25/thundering-herd/)
 2. [探索惊群 ② - accept](https://wenfh2020.com/2021/09/27/thundering-herd-accept/)
 3. [探索惊群 ③ - nginx 惊群现象](https://wenfh2020.com/2021/09/29/nginx-thundering-herd/)
 4. [探索惊群 ④ - nginx - accept_mutex](https://wenfh2020.com/2021/10/10/nginx-thundering-herd-accept-mutex/)
 5. [探索惊群 ⑤ - nginx - NGX_EXCLUSIVE_EVENT](https://wenfh2020.com/2021/10/11/thundering-herd-nginx-epollexclusive/)
 6. [探索惊群 ⑥ - nginx - reuseport](https://wenfh2020.com/2021/10/12/thundering-herd-tcp-reuseport/)
 7. [探索惊群 ⑦ - 文件描述符透传](https://wenfh2020.com/2021/10/13/thundering-herd-transfer-socket/)
-
-
-
-
-
-* content
-{:toc}
 
 ---
 
