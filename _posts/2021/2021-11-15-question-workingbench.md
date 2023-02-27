@@ -28,4 +28,4 @@ author: wenfh2020
 
 * 2023 春，家里。
 
-<div align=center><img src="/images/2023-02-27-12-30-36.png"/></div>
+<div align=center><img src="/images/2023-02-27-12-30-36.png" data-action="zoom"/></div>
