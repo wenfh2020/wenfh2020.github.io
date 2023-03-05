@@ -25,3 +25,7 @@ author: wenfh2020
 * 2021 岁末，家里。
 
 <div align=center><img src="/images/2021-12-31-10-10-45.png" data-action="zoom"/></div>
+
+* 2023 春，家里。
+
+<div align=center><img src="/images/2023-02-27-12-30-36.png" data-action="zoom"/></div>
