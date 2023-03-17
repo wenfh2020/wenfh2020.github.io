@@ -35,7 +35,9 @@ author: wenfh2020
 3. libco 号称支持千万级协程，如果每个协程都是独立栈，那得废多少内存？！
 
 ```c
-struct stCoRoutine_t *co_create_env(stCoRoutineEnv_t *env, const stCoRoutineAttr_t *attr, pfn_co_routine_t pfn, void *arg) {
+struct stCoRoutine_t* co_create_env(stCoRoutineEnv_t* env,
+                                    const stCoRoutineAttr_t* attr,
+                                    pfn_co_routine_t pfn, void* arg) {
     stCoRoutineAttr_t at;
     if (attr) {
         memcpy(&at, attr, sizeof(at));
@@ -67,9 +69,11 @@ struct stCoRoutine_t *co_create_env(stCoRoutineEnv_t *env, const stCoRoutineAttr
 * 共享栈，协程栈空间指向指定共享栈空间。
 
 ```c
-struct stCoRoutine_t *co_create_env(stCoRoutineEnv_t *env, const stCoRoutineAttr_t *attr, pfn_co_routine_t pfn, void *arg) {
+struct stCoRoutine_t* co_create_env(stCoRoutineEnv_t* env,
+                                    const stCoRoutineAttr_t* attr,
+                                    pfn_co_routine_t pfn, void* arg) {
     ...
-    stStackMem_t *stack_mem = NULL;
+    stStackMem_t* stack_mem = NULL;
     if (at.share_stack) {
         stack_mem = co_get_stackmem(at.share_stack);
         at.stack_size = at.share_stack->stack_size;
@@ -80,7 +84,7 @@ struct stCoRoutine_t *co_create_env(stCoRoutineEnv_t *env, const stCoRoutineAttr
     ...
 }
 
-static stStackMem_t *co_get_stackmem(stShareStack_t *share_stack) {
+static stStackMem_t* co_get_stackmem(stShareStack_t* share_stack) {
     if (!share_stack) {
         return NULL;
     }
@@ -104,22 +108,24 @@ void co_swap(stCoRoutine_t *curr, stCoRoutine_t *pending_co) {
 * 协程在切换过程中，内存拷贝。
 
 ```c
-void co_swap(stCoRoutine_t *curr, stCoRoutine_t *pending_co) {
-    stCoRoutineEnv_t *env = co_get_curr_thread_env();
+void co_swap(stCoRoutine_t* curr, stCoRoutine_t* pending_co) {
+    stCoRoutineEnv_t* env = co_get_curr_thread_env();
 
-    //get curr stack sp
+    // get curr stack sp
     char c;
-    /* 记录当前协程空间栈底位置，因为函数局部变量都是通过压栈进入内存的，地址从高到低） */
+    /* 记录当前协程空间栈底位置，
+     * 因为函数局部变量都是通过压栈进入内存的，地址从高到低）。*/
     curr->stack_sp = &c;
 
     if (!pending_co->cIsShareStack) {
         ...
     } else {
-        /* 因为 coctx_swap 上下代码已经不是同一个协程了，需要 env 保存信息，方便不同协程使用。 */
+        /* 因为 coctx_swap 上下代码已经不是同一个协程了，需要 env
+         * 保存信息，方便不同协程使用。 */
         env->pending_co = pending_co;
-        //get last occupy co on the same stack mem
-        stCoRoutine_t *occupy_co = pending_co->stack_mem->occupy_co;
-        //set pending co to occupy thest stack mem;
+        // get last occupy co on the same stack mem
+        stCoRoutine_t* occupy_co = pending_co->stack_mem->occupy_co;
+        // set pending co to occupy thest stack mem;
         pending_co->stack_mem->occupy_co = pending_co;
 
         env->occupy_co = occupy_co;
@@ -133,16 +139,19 @@ void co_swap(stCoRoutine_t *curr, stCoRoutine_t *pending_co) {
     /* 协程切换，切换上下文。 */
     coctx_swap(&(curr->ctx), &(pending_co->ctx));
 
-    //stack buffer may be overwrite, so get again;
-    stCoRoutineEnv_t *curr_env = co_get_curr_thread_env();
-    stCoRoutine_t *update_occupy_co = curr_env->occupy_co;
-    stCoRoutine_t *update_pending_co = curr_env->pending_co;
+    // stack buffer may be overwrite, so get again;
+    stCoRoutineEnv_t* curr_env = co_get_curr_thread_env();
+    stCoRoutine_t* update_occupy_co = curr_env->occupy_co;
+    stCoRoutine_t* update_pending_co = curr_env->pending_co;
 
     /* 不一定需要内存拷贝啊，新切换的协程，可能落在其它的共享栈上。*/
     if (update_pending_co && update_occupy_co != update_pending_co) {
-        /* 当前共享栈上，当前协程是新切换进来的，那么需要把它的前面保存的内存上下文，拷贝到共享栈上运行。 */
-        if (update_pending_co->save_buffer && update_pending_co->save_size > 0) {
-            memcpy(update_pending_co->stack_sp, update_pending_co->save_buffer, update_pending_co->save_size);
+        /* 当前共享栈上，当前协程是新切换进来的，
+         * 那么需要把它的前面保存的内存上下文，拷贝到共享栈上运行。*/
+        if (update_pending_co->save_buffer &&
+            update_pending_co->save_size > 0) {
+            memcpy(update_pending_co->stack_sp, update_pending_co->save_buffer,
+                   update_pending_co->save_size);
         }
     }
 }
