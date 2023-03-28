@@ -12,18 +12,16 @@ epoll 多路复用驱动是异步事件处理，在用户空间它提供了用�
 
 ```c
 /* sys/epoll.h */
-typedef union epoll_data
-{
-  void *ptr;
-  int fd;
-  uint32_t u32;
-  uint64_t u64;
+typedef union epoll_data {
+    void* ptr;
+    int fd;
+    uint32_t u32;
+    uint64_t u64;
 } epoll_data_t;
 
-struct epoll_event
-{
-  uint32_t events;    /* Epoll events */
-  epoll_data_t data;  /* User data variable */
+struct epoll_event {
+    uint32_t events;   /* Epoll events */
+    epoll_data_t data; /* User data variable */
 } __EPOLL_PACKED;
 ```
 
@@ -63,7 +61,6 @@ struct epoll_event {
   epoll_data_t data; /* User data variable */
 } __EPOLL_PACKED;
 
-
 /* 事件控制接口。 */
 int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
 
@@ -85,7 +82,8 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents. int timeout)
 
 ```c
 /* eventpoll.c */
-SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd, struct epoll_event __user *, event) {
+SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
+                struct epoll_event __user *, event) {
     struct epoll_event epds;
 
     if (ep_op_has_event(op) &&
@@ -95,25 +93,26 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd, struct epoll_event __use
     return do_epoll_ctl(epfd, op, fd, &epds, false);
 }
 
-int do_epoll_ctl(int epfd, int op, int fd, struct epoll_event *epds, bool nonblock) {
-    ...
+int do_epoll_ctl(int epfd, int op, int fd, struct epoll_event *epds,
+                 bool nonblock) {
+    ... 
     switch (op) {
-    case EPOLL_CTL_ADD:
-        if (!epi) {
-            epds->events |= EPOLLERR | EPOLLHUP;
-            error = ep_insert(ep, epds, tf.file, fd, full_check);
-        }
-        ...
+        case EPOLL_CTL_ADD:
+            if (!epi) {
+                epds->events |= EPOLLERR | EPOLLHUP;
+                error = ep_insert(ep, epds, tf.file, fd, full_check);
+            }
+            ...
     }
     ...
 }
 
 static int ep_insert(struct eventpoll *ep, const struct epoll_event *event,
-             struct file *tfile, int fd, int full_check) {
+                     struct file *tfile, int fd, int full_check) {
     ...
     struct epitem *epi;
     ...
-    if (!(epi = kmem_cache_alloc(epi_cache, GFP_KERNEL)))
+    if (!(epi = kmem_cache_alloc(epi_cache, GFP_KERNEL))) 
         return -ENOMEM;
     ...
     /* 监控的事件信息被添加到 epi 红黑树节点。 */
@@ -134,12 +133,12 @@ epoll_wait 是阻塞（超时）等待事件发生的接口，当内核检测到
 ```c
 /* eventpoll.c */
 SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events, int,
-        maxevents, int, timeout) {
+                maxevents, int, timeout) {
     return do_epoll_wait(epfd, events, maxevents, timeout);
 }
 
 static int do_epoll_wait(int epfd, struct epoll_event __user *events,
-             int maxevents, int timeout) {
+                         int maxevents, int timeout) {
     ...
     /* Time to fish for events ... */
     error = ep_poll(ep, events, maxevents, timeout);
@@ -147,22 +146,22 @@ static int do_epoll_wait(int epfd, struct epoll_event __user *events,
 }
 
 static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events,
-           int maxevents, long timeout) {
+                   int maxevents, long timeout) {
     ...
     /* 网络驱动检测到有事件发生，唤醒进程，通知用户。 */
     write_lock_irq(&ep->lock);
     eavail = ep_events_available(ep);
     write_unlock_irq(&ep->lock);
-    if (eavail)
+    if (eavail) 
         goto send_events;
-    ...
-send_events:
+    ... 
+send_events: 
     res = ep_send_events(ep, events, maxevents);
     ...
 }
 
 static int ep_send_events(struct eventpoll *ep,
-              struct epoll_event __user *events, int maxevents) {
+                          struct epoll_event __user *events, int maxevents) {
     struct ep_send_events_data esed;
 
     esed.maxevents = maxevents;
@@ -175,11 +174,10 @@ static int ep_send_events(struct eventpoll *ep,
 
 /* 遍历事件就绪列表。 */
 static __poll_t ep_scan_ready_list(struct eventpoll *ep,
-                   __poll_t (*sproc)(struct eventpoll *,
-                             struct list_head *,
-                             void *),
-                   void *priv, int depth, bool ep_locked)
-{
+                                   __poll_t (*sproc)(struct eventpoll *,
+                                                     struct list_head *,
+                                                     void *),
+                                   void *priv, int depth, bool ep_locked) {
     ...
     /* 就绪列表（ep->rdllist）数据分片到 txlist 进行发送处理。 */
     write_lock_irq(&ep->lock);
@@ -192,16 +190,15 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
     ...
 }
 
-static __poll_t ep_send_events_proc(
-    struct eventpoll *ep, struct list_head *head, void *priv) {
-
+static __poll_t ep_send_events_proc(struct eventpoll *ep,
+                                    struct list_head *head, void *priv) {
     struct ep_send_events_data *esed = priv;
-    ...
+    ... 
     struct epoll_event __user *uevent = esed->events;
     ...
     /* epi 是 fd 对应的红黑树节点，遍历就绪列表，拷贝事件。 */
-    list_for_each_entry_safe (epi, tmp, head, rdllink) {
-        ...
+    list_for_each_entry_safe(epi, tmp, head, rdllink) {
+        ... 
         revents = ep_item_poll(epi, &pt, 1);
         ...
         /* 数据从内核空间拷贝到用户空间。 */
@@ -288,39 +285,42 @@ libev epoll_event.data 传的是 fd 和索引的（uint64_t）组合，这样添
 
 ```c
 /* ev_epoll.c */
-static void
-epoll_modify (EV_P_ int fd, int oev, int nev) {
-  struct epoll_event ev;
-  ...
-  /* store the generation counter in the upper 32 bits, the fd in the lower 32 bits */
-  ev.data.u64 = (uint64_t)(uint32_t)fd
-              | ((uint64_t)(uint32_t)++anfds[fd].egen << 32);
-  ev.events   = (nev & EV_READ  ? EPOLLIN  : 0)
-              | (nev & EV_WRITE ? EPOLLOUT : 0);
+static void epoll_modify(EV_P_ int fd, int oev, int nev) {
+    struct epoll_event ev;
+    ...
+    /* store the generation counter in the upper 32 bits, the fd in the
+     * lower 32 bits */
+    ev.data.u64 =
+        (uint64_t)(uint32_t)fd | ((uint64_t)(uint32_t)++anfds[fd].egen << 32);
+    ev.events = (nev & EV_READ ? EPOLLIN : 0) | (nev & EV_WRITE ? EPOLLOUT : 0);
 
-  if (ecb_expect_true (!epoll_ctl (backend_fd, oev && oldmask != nev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, fd, &ev)))
-    return;
-  ...
+    if (ecb_expect_true(!epoll_ctl(
+            backend_fd, oev && oldmask != nev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD,
+            fd, &ev)))
+        return;
+    ...
 }
 
-static void
-epoll_poll (EV_P_ ev_tstamp timeout) {
+static void epoll_poll(EV_P_ ev_tstamp timeout) {
     ...
-    eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, EV_TS_TO_MSEC (timeout));
+    eventcnt = epoll_wait(backend_fd, epoll_events, epoll_eventmax,
+                          EV_TS_TO_MSEC(timeout));
     ...
     for (i = 0; i < eventcnt; ++i) {
         struct epoll_event *ev = epoll_events + i;
 
         int fd = (uint32_t)ev->data.u64; /* mask out the lower 32 bits */
-        int want = anfds [fd].events;
+        int want = anfds[fd].events;
         ...
         /*
-        * check for spurious notification.
-        * this only finds spurious notifications on egen updates
-        * other spurious notifications will be found by epoll_ctl, below
-        * we assume that fd is always in range, as we never shrink the anfds array
-        */
-        if (ecb_expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32))) {
+         * check for spurious notification.
+         * this only finds spurious notifications on egen updates
+         * other spurious notifications will be found by epoll_ctl, below
+         * we assume that fd is always in range, as we never shrink the
+         * anfds array
+         */
+        if (ecb_expect_false((uint32_t)anfds[fd].egen !=
+                             (uint32_t)(ev->data.u64 >> 32))) {
             /* recreate kernel state */
             postfork |= 2;
             continue;
@@ -340,18 +340,18 @@ nginx epoll_event.data 传的是指针，这样也会存在“野指针”的风
 struct ngx_event_s {
     ...
     /* used to detect the stale events in kqueue and epoll */
-    unsigned         instance:1;
+    unsigned instance : 1;
     ...
 };
 
-static ngx_int_t
-ngx_epoll_add_event(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags) {
+static ngx_int_t ngx_epoll_add_event(ngx_event_t *ev, ngx_int_t event,
+                                     ngx_uint_t flags) {
     ...
     struct epoll_event ee;
     ...
     ee.events = events | (uint32_t)flags;
     /* 增加 instance 值。 */
-    ee.data.ptr = (void *) ((uintptr_t) c | ev->instance);
+    ee.data.ptr = (void *)((uintptr_t)c | ev->instance);
     ...
     if (epoll_ctl(ep, op, c->fd, &ee) == -1) {
         ngx_log_error(NGX_LOG_ALERT, ev->log, ngx_errno,
@@ -361,16 +361,16 @@ ngx_epoll_add_event(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags) {
     ...
 }
 
-static ngx_int_t
-ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags) {
+static ngx_int_t ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
+                                          ngx_uint_t flags) {
     ...
-    events = epoll_wait(ep, event_list, (int) nevents, timer);
+    events = epoll_wait(ep, event_list, (int)nevents, timer);
     ...
     for (i = 0; i < events; i++) {
         c = event_list[i].data.ptr;
 
-        instance = (uintptr_t) c & 1;
-        c = (ngx_connection_t *) ((uintptr_t) c & (uintptr_t) ~1);
+        instance = (uintptr_t)c & 1;
+        c = (ngx_connection_t *)((uintptr_t)c & (uintptr_t)~1);
 
         rev = c->read;
 
