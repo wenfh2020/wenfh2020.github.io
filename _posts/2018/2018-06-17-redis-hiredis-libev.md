@@ -6,9 +6,15 @@ tags: redis hiredis libev
 author: wenfh2020
 ---
 
-用 `hiredis` 测试写命令 `set key value`，几个字节的 value，轻松 10 万+ 并发；1024 个字节的 value，10w 请求需要耗时 1.5 秒左右。所以 hiredis 的异步使用性能非常给力的，而且程序的性能损耗也不高。只是异步使用有点反人类，业务都要在 callback 里面处理，没有同步调用那么直观。libev 是一个不错的事件驱动库，在这里就不展开了。
+用 `hiredis` 测试写命令 `set key value`，几个字节的 value，轻松 10 万+ 并发；
 
-![本地性能](/images/2020-02-20-16-56-08.png){: data-action="zoom"}
+1024 个字节的 value，10w 请求需要耗时 1.5 秒左右。
+
+所以 hiredis 的异步使用性能非常给力的，而且程序的性能损耗也不高。
+
+只是异步使用有点反人类，业务都要在 callback 里面处理，没有同步调用那么直观。
+
+<div align=center><img src="/images/2020-02-20-16-56-08.png" data-action="zoom"/></div>
 
 
 
@@ -38,12 +44,14 @@ void RdsCbCmd(redisAsyncContext* pRdsContext, void* pReply, void* pData) {
         return;
     }
 
-    //printf("%d, redis reply info: type = %d, string = %s\n", ++g_iCmdCallback, pRdsReply->type, pRdsReply->str);
+    /* printf("%d, redis reply info: type = %d, string = %s\n",
+           ++g_iCmdCallback, pRdsReply->type, pRdsReply->str); */
 
     if (++g_iCmdCallback >= TEST_CMD_COUNT) {
         unsigned long long ullEndTime = GetMicrosecond();
         printf("test end time: %s, %llu, interval: %llu\n",
-               GetCurrentTime().c_str(), ullEndTime, ullEndTime - g_ullBeginTime);
+               GetCurrentTime().c_str(), ullEndTime,
+               ullEndTime - g_ullBeginTime);
         redisAsyncDisconnect((redisAsyncContext*)pRdsContext);
     }
 }
@@ -51,7 +59,8 @@ void RdsCbCmd(redisAsyncContext* pRdsContext, void* pReply, void* pData) {
 int main() {
     redisAsyncContext* pRdsContext = redisAsyncConnect(IP, PORT);
     if (pRdsContext->err != REDIS_OK) {
-        printf("async redis connect failed! err code = %d, err msg = %s\n", pRdsContext->err, pRdsContext->errstr);
+        printf("async redis connect failed! err code = %d, err msg = %s\n",
+               pRdsContext->err, pRdsContext->errstr);
         return 1;
     }
 
