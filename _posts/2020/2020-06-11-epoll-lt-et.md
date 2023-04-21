@@ -56,21 +56,22 @@ epoll_wait
 
 ```c
 /* fs/eventpoll.c */
-SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
-        int, maxevents, int, timeout) {
+SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events, int,
+                maxevents, int, timeout) {
     return do_epoll_wait(epfd, events, maxevents, timeout);
 }
 
 /* fs/eventpoll.c */
 static int do_epoll_wait(int epfd, struct epoll_event __user *events,
-             int maxevents, int timeout) {
+                         int maxevents, int timeout) {
     ...
     error = ep_poll(ep, events, maxevents, timeout);
     ...
 }
 
-/* 检查就绪队列，如果就绪队列有就绪事件，就将事件信息从内核空间发送到用户空间。 */
-static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events, int maxevents, long timeout) {
+/* 检查就绪队列，如果就绪队列有就绪事件，就将事件信息从内核空间发送到用户空间。*/
+static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events,
+                   int maxevents, long timeout) {
     ...
     /* 检查就绪队列，如果有就绪事件就进入发送环节。 */
     ...
@@ -83,7 +84,7 @@ send_events:
 }
 
 static int ep_send_events(struct eventpoll *ep,
-              struct epoll_event __user *events, int maxevents) {
+                          struct epoll_event __user *events, int maxevents) {
     struct ep_send_events_data esed;
 
     esed.maxevents = maxevents;
@@ -95,9 +96,10 @@ static int ep_send_events(struct eventpoll *ep,
 }
 
 static __poll_t ep_scan_ready_list(struct eventpoll *ep,
-                  __poll_t (*sproc)(struct eventpoll *,
-                       struct list_head *, void *),
-                  void *priv, int depth, bool ep_locked) {
+                                   __poll_t (*sproc)(struct eventpoll *,
+                                                     struct list_head *,
+                                                     void *),
+                                   void *priv, int depth, bool ep_locked) {
     ...
     /* 将就绪队列分片链接到 txlist 链表中。 */
     list_splice_init(&ep->rdllist, &txlist);
@@ -106,21 +108,24 @@ static __poll_t ep_scan_ready_list(struct eventpoll *ep,
     ...
 }
 
-static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head, void *priv) {
+static __poll_t ep_send_events_proc(struct eventpoll *ep,
+                                    struct list_head *head, void *priv) {
     ...
-    // 遍历处理 txlist（原 ep->rdllist 数据）就绪队列结点，获取事件拷贝到用户空间。
-    list_for_each_entry_safe (epi, tmp, head, rdllink) {
-        if (esed->res >= esed->maxevents)
-            break;
+    /* 遍历处理 txlist（原 ep->rdllist 数据）就绪队列结点，
+     * 获取事件拷贝到用户空间。 */
+    list_for_each_entry_safe(epi, tmp, head, rdllink) {
+        if (esed->res >= esed->maxevents) break;
         ...
-        /* 先从就绪队列中删除 epi，如果是 lt 模式，就绪事件还没处理完，再把它添加回去。 */
+        /* 先从就绪队列中删除 epi，如果是 lt
+         * 模式，就绪事件还没处理完，再把它添加回去。 */
         list_del_init(&epi->rdllink);
 
         /* 获取 epi 对应 fd 的就绪事件。 */
         revents = ep_item_poll(epi, &pt, 1);
-        if (!revents)
+        if (!revents) {
             /* 如果没有就绪事件就返回（这时候，epi 已经从就绪队列中删除了。） */
             continue;
+        }
 
         /* 内核空间通过 __put_user 向用户空间拷贝传递数据。 */
         if (__put_user(revents, &uevent->events) ||
@@ -128,8 +133,9 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
             /* 如果拷贝失败，将 epi 重新保存回就绪队列，以便下一次处理。 */
             list_add(&epi->rdllink, head);
             ep_pm_stay_awake(epi);
-            if (!esed->res)
+            if (!esed->res) {
                 esed->res = -EFAULT;
+            }
             return 0;
         }
 
@@ -137,7 +143,8 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
         esed->res++;
         uevent++;
         if (epi->event.events & EPOLLONESHOT)
-            /* #define EP_PRIVATE_BITS (EPOLLWAKEUP | EPOLLONESHOT | EPOLLET | EPOLLEXCLUSIVE) */
+            /* #define EP_PRIVATE_BITS (EPOLLWAKEUP | EPOLLONESHOT | EPOLLET |
+             * EPOLLEXCLUSIVE) */
             epi->event.events &= EP_PRIVATE_BITS;
         else if (!(epi->event.events & EPOLLET)) {
             /* lt 模式，重新将前面从就绪队列删除的 epi 添加回去。
@@ -164,13 +171,12 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
 当用户关注的 fd 事件发生时，et 模式，只通知用户一次，不管这个事件是否已经被用户处理完毕，直到该事件再次发生，或者用户通过 `epoll_ctl` 重新关注该 fd 对应的事件；而 lt 模式，会不停地通知用户，直到用户把事件处理完毕。
 
 ```c
-
-static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head, void *priv) {
+static __poll_t ep_send_events_proc(struct eventpoll *ep,
+                                    struct list_head *head, void *priv) {
     ...
-    // 遍历处理 txlist（原 ep->rdllist 数据）就绪队列结点，获取事件拷贝到用户空间。
-    list_for_each_entry_safe (epi, tmp, head, rdllink) {
-        if (esed->res >= esed->maxevents)
-            break;
+    /* 遍历处理 txlist（原 ep->rdllist 数据）就绪队列结点，获取事件拷贝到用户空间。 */
+    list_for_each_entry_safe(epi, tmp, head, rdllink) {
+        if (esed->res >= esed->maxevents) break;
         ...
         /* 先从就绪队列中删除 epi。*/
         list_del_init(&epi->rdllink);
@@ -178,9 +184,9 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
         /* 获取 epi 对应 fd 的就绪事件。 */
         revents = ep_item_poll(epi, &pt, 1);
         if (!revents)
-            /* 如果没有就绪事件，说明就绪事件已经处理完了，就返回。（这时候，epi 已经从就绪队列中删除了。） */
+            /* 如果没有就绪事件，说明就绪事件已经处理完了，就返回。（这时候，epi
+             * 已经从就绪队列中删除了。） */
             continue;
-
         ...
         else if (!(epi->event.events & EPOLLET)) {
             /* lt 模式，前面删除掉了的就绪事件节点，重新追加到就绪队列尾部。*/
