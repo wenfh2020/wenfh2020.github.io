@@ -18,9 +18,11 @@ author: wenfh2020
 
 ## 1. 概述
 
-libco 定时器核心数据结构：数组 + 双向链表（左图）。
+libco 定时器核心数据结构：数组 + 双向链表（下面左图）。
 
-数组以毫秒为单位，默认大小 60 * 1000，主要保存一分钟以内到期的事件数据。相同到期时间的事件，会保存在双向链表里，当时间到期时，到期事件链表会一起取出来。
+数组默认大小为：60 * 1000，以毫秒为单位，主要保存一分钟以内到期的事件数据。
+
+相同到期时间的事件，会保存在双向链表里，当时间到期时，到期事件链表会一起取出来。
 
 当然超过一分钟的到期事件也支持保存，通过取模路由，有可能与一分钟以内到期的数据耦合在一起，一起取出来后，再检查，没到期的重新写回去即可。
 
@@ -74,7 +76,8 @@ stCoEpoll_t *AllocEpoll() {
 stTimeout_t *AllocTimeout(int iSize) {
     stTimeout_t *lp = (stTimeout_t *)calloc(1, sizeof(stTimeout_t));
     lp->iItemSize = iSize;
-    lp->pItems = (stTimeoutItemLink_t *)calloc(1, sizeof(stTimeoutItemLink_t) * lp->iItemSize);
+    lp->pItems = (stTimeoutItemLink_t *)calloc(
+        1, sizeof(stTimeoutItemLink_t) * lp->iItemSize);
     lp->ullStart = GetTickMS();
     lp->llStartIdx = 0;
     return lp;
@@ -84,7 +87,8 @@ stTimeout_t *AllocTimeout(int iSize) {
 * 添加到期事件。
 
 ```c
-int AddTimeout(stTimeout_t *apTimeout, stTimeoutItem_t *apItem, unsigned long long allNow) {
+int AddTimeout(stTimeout_t *apTimeout, stTimeoutItem_t *apItem,
+               unsigned long long allNow) {
     ...
     unsigned long long diff = apItem->ullExpireTime - apTimeout->ullStart;
     if (diff >= (unsigned long long)apTimeout->iItemSize) {
@@ -96,7 +100,8 @@ int AddTimeout(stTimeout_t *apTimeout, stTimeoutItem_t *apItem, unsigned long lo
     }
 
     /* 通过取模，将定时器事件存储到数组对应的双向链表里。 */
-    AddTail(apTimeout->pItems + (apTimeout->llStartIdx + diff) % apTimeout->iItemSize, apItem);
+    AddTail(apTimeout->pItems + (apTimeout->llStartIdx + diff) % apTimeout->iItemSize,
+            apItem);
     return 0;
 }
 ```
@@ -105,7 +110,8 @@ int AddTimeout(stTimeout_t *apTimeout, stTimeoutItem_t *apItem, unsigned long lo
 
 ```c
 /* 获取到期事件。 */
-inline void TakeAllTimeout(stTimeout_t *apTimeout, unsigned long long allNow, stTimeoutItemLink_t *apResult) {
+inline void TakeAllTimeout(stTimeout_t *apTimeout, unsigned long long allNow,
+                           stTimeoutItemLink_t *apResult) {
     ...
     /* 处理当前时间与上一次处理时间间隔内到期的时间事件。 */
     int cnt = allNow - apTimeout->ullStart + 1;
