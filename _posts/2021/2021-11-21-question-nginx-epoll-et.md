@@ -26,11 +26,13 @@ Web服务器nginx使用ET模式的epoll。我想问，它相对LT模式epoll有�
 
 ```c
 /* Linux 5.0.1 - fs/eventpoll.c */
-static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head, void *priv) {
+static __poll_t ep_send_events_proc(struct eventpoll *ep,
+                                    struct list_head *head, void *priv) {
     ...
-    /* 遍历处理 txlist（原 ep->rdllist 数据）就绪队列结点，获取事件拷贝到用户空间。*/
-    list_for_each_entry_safe (epi, tmp, head, rdllink) {
-        if (esed->res >= esed->maxevents)
+    /* 遍历处理 txlist（原 ep->rdllist 数据）就绪队列结点，
+     * 获取事件拷贝到用户空间。*/
+    list_for_each_entry_safe(epi, tmp, head, rdllink) {
+        if (esed->res >= esed->maxevents) 
             break;
         ...
         /* 先从就绪队列（头部）删除 epi。*/
@@ -39,7 +41,8 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
         /* 获取 epi 对应 fd 的就绪事件。 */
         revents = ep_item_poll(epi, &pt, 1);
         if (!revents)
-            /* 如果没有就绪事件，说明就绪事件已经处理完了，就返回。（这时候，epi 已经从就绪队列中删除了。） */
+            /* 如果没有就绪事件，说明就绪事件已经处理完了，就返回。
+             * （这时候，epi 已经从就绪队列中删除了。） */
             continue;
         ...
         /* 主要看这一行哈~~~~ */
@@ -52,8 +55,6 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep, struct list_head *head
     ...
 }
 ```
-
-
 
 ---
 
