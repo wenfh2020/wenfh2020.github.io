@@ -256,7 +256,9 @@ struct _Vector_base {
 #if __cplusplus >= 201103L
         _Vector_impl_data(_Vector_impl_data&& __x) noexcept
             /* 转移被转移对象的关键成员数据到当前对象。 */
-            : _M_start(__x._M_start), _M_finish(__x._M_finish), _M_end_of_storage(__x._M_end_of_storage) {
+            : _M_start(__x._M_start),
+              _M_finish(__x._M_finish),
+              _M_end_of_storage(__x._M_end_of_storage) {
             /* 被转移对象，关键成员数据被重置。 */
             __x._M_start = __x._M_finish = __x._M_end_of_storage = pointer();
         }
