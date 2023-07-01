@@ -69,4 +69,4 @@ Linux 源码大部分都是 c 语言写的，函数指针满天飞，很多时�
 
 例如：[epoll 的 lt / et 模式区别](https://wenfh2020.com/2020/06/11/epoll-lt-et/)，深入阅读内核源码后，发现区别的关键就是 epoll 的 `事件就绪队列`。
 
-<div align=center><img src="/images/2021-12-30-21-41-55.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023-07-01-16-02-17.png" data-action="zoom"></div>

@@ -211,7 +211,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep,
 
 > 这个道理有点像排队打饭，一个队列上，有些同学要打包两份饭，如果每次只能打包一份，lt 模式就是，这些同学打包了一份之后，马上重新回去排队，再打一份。et 模式是，这些同学先打包一份，然后拿回去吃掉了，再回来排队，在高峰期显然整个排队的效率和结果不一样。
 
-<div align=center><img src="/images/2021-12-30-21-41-55.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023-07-01-16-02-17.png" data-action="zoom"></div>
 
 ---
 
