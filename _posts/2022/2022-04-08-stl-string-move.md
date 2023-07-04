@@ -21,6 +21,8 @@ author: wenfh2020
 
 这里借助 Chat GPT 的回答来借花献佛。
 
+### 1.1. 移动语义
+
 <div align=center><img src="/images/2023-07-04-22-05-02.png" data-action="zoom"></div>
 
 ---
@@ -33,9 +35,19 @@ C++ 移动语义是一种在 C++11 中引入的特性，它允许对象的资源
 
 ---
 
-## 2. std::move
+### 1.2. std::move
 
-std::move 将对象类型被强制转换为右值引用。
+<div align=center><img src="/images/2023-07-05-07-17-05.png" data-action="zoom"></div>
+
+---
+
+C++11 中的 std::move 是一个函数模板，用于将对象转换为右值引用。
+
+它的作用是告诉编译器，我们希望将对象的资源转移到另一个对象，而不是进行复制操作。std::move 实际上只是将对象的类型转换为右值引用类型，并不会真正移动对象的资源。
+
+移动操作的实际发生是由对象的移动构造函数或移动赋值运算符来完成的。使用 std::move 可以显式地指示编译器进行移动操作，从而提高代码的性能。
+
+---
 
 ```cpp
 /* bits/move.h */
@@ -49,15 +61,15 @@ move(_Tp&& __t) noexcept {
 
 ---
 
-## 3. 源码分析
+## 2. 源码分析
 
-### 3.1. std::string
+### 2.1. std::string
 
 <div align=center><img src="/images/2022-04-09-12-58-38.png" data-action="zoom"/></div>
 
 ---
 
-#### 3.1.1. 移动构造
+#### 2.1.1. 移动构造
 
 浅拷贝，实现了原对象成员数据转移到目标对象，原对象成员数据被重置。
 
@@ -106,7 +118,7 @@ class basic_string {
 
 ---
 
-#### 3.1.2. 复制构造
+#### 2.1.2. 复制构造
 
 复制构造，申请新的空间，深拷贝数据。
 
@@ -199,7 +211,7 @@ basic_string<_CharT, _Traits, _Alloc>::
 
 ---
 
-### 3.2. std::vector
+### 2.2. std::vector
 
 接下来分析一下，动态数组容器是如何通过移动方式减少拷贝的。
 
@@ -333,14 +345,14 @@ int main() {
 
 ---
 
-## 4. 小结
+## 3. 小结
 
 * 通过调试和走读 stl 源码，可以看到 std::string / std::vector 移动语义的实现，它们是如何影响程序性能的。
 * 自定义的类实体对象，轻易不要传到 stl 容器里，因为你不知道里面有啥拷贝操作，反之应该传递对象指针，这样内部拷贝的成本就会比较低。
 
 ---
 
-## 5. 参考
+## 4. 参考
 
 * 《Effective Modern C++》
 * [(ubuntu) vscode + gdb 调试 c++](https://wenfh2020.com/2022/02/19/vscode-gdb-cpp/)
