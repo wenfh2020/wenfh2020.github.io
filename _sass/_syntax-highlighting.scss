@@ -21,6 +21,11 @@ pre {
     // white-space: pre-wrap;      /* current browsers */
     white-space: none;     // 代码自动换行  /* current browsers */
     // text-overflow: ellipsis;
+    // font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    font-family: Menlo,Monaco,Consolas,'Andale Mono','lucida console','Courier New',monospace;
+    // &:hover {
+    //     overflow-x: auto;
+    // }
     > code {
         margin: 0;
         padding: 0;
@@ -33,12 +38,42 @@ pre {
         .lineno {
             color: #ece7e7;
         }
-
+        
         table {
-            width: auto;
-        }
+          width: auto;
+      }
     }
 }
+
+// 美化滚动条
+::-webkit-scrollbar {
+    width: 10px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    width: 6px;
+    background: rgba(#101F1C, 0.1);
+    -webkit-border-radius: 2em;
+    -moz-border-radius: 2em;
+    border-radius: 2em;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(144,147,153,.2);
+    background-clip: padding-box;
+    min-height: 28px;
+    -webkit-border-radius: 2em;
+    -moz-border-radius: 2em;
+    border-radius: 2em;
+    transition: background-color .3s;
+    cursor: pointer;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(144,147,153,.3);
+  }
+  
 
 .rouge-table {
     td {
@@ -54,16 +89,16 @@ pre {
     
     .hll { background-color: #ffffff; }
     .highlight{border:1px solid rgb(192, 187, 187);}
-    .c { color: #377d22 } /* Comment */
+    .c { color: #6A9955 } /* Comment */
     .err { color: #960050; background-color: #1e0010 } /* Error */
     .k { color: #09189c } /* Keyword */
     .l { color: #000 } /* Literal */
     .n { color: #000 } /* Name */
     .o { color: #837f81 } /* Operator */
     .p { color: #09189c } /* Punctuation */
-    .cm { color: #377d22 } /* Comment.Multiline */
+    .cm { color: #6A9955 } /* Comment.Multiline */
     .cp { color: #000 } /* Comment.Preproc */ //#define precompile
-    .c1 { color: #377d22 } /* Comment.Single */
+    .c1 { color: #6A9955 } /* Comment.Single */
     .cs { color: #000 } /* Comment.Special */
     .ge { font-style: italic } /* Generic.Emph */
     .gs { font-weight: bold } /* Generic.Strong */
@@ -94,7 +129,7 @@ pre {
     .w { color: #000 } /* Text.Whitespace */
     .mf { color: #000 } /* Literal.Number.Float */
     .mh { color: #000 } /* Literal.Number.Hex */
-    .mi { color: #000 } /* Literal.Number.Integer */
+    .mi { color: #0086B3 } /* Literal.Number.Integer */
     .mo { color: #000 } /* Literal.Number.Oct */
     .sb { color: #000 } /* Literal.String.Backtick */
     .sc { color: #c27c60 } /* Literal.String.Char */
