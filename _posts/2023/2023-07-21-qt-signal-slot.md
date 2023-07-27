@@ -295,7 +295,7 @@ void TestThread::sigThreadNotify(qint64 _t1, const QString & _t2)
 }
 ```
 
-* QT 内部开源源码，通过 signal_index 找到对应的链接；遍历链接表，触发信号对应的槽函数。
+* QT 内部开源源码，通过 signal_index 找到对应的链接表；遍历链接表，触发信号对应的槽函数。
 
 ```cpp
 // C:\Qt\Qt5.14.2\5.14.2\Src\qtbase\src\corelib\kernel\qobject.cpp
