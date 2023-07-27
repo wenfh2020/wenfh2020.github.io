@@ -202,7 +202,7 @@ QMetaObject::Connection QObjectPrivate::connectImpl(
 
 ## 4. 信号索引
 
-信号索引：signal_index，它一个数组下标，便于搜索对应的信号信息；它是信号槽中非常重要的一环。
+信号索引：signal_index，它是一个数组下标，便于搜索对应的信号信息；它是信号槽中非常重要的一环。
 
 > 这个值三言两语说不清楚，还是上图吧。
 
