@@ -2,7 +2,6 @@
 layout: post
 title:  "[知乎回答] C++ 有什么好用的线程池？"
 categories: 知乎 c/c++
-tags: working
 author: wenfh2020
 ---
 
