@@ -56,7 +56,7 @@ author: wenfh2020
 * worker 子进程：负责客户端详细连接逻辑。
 * module 动态库：业务源码实现。(参考：[co_kimserver/src/modules/](https://github.com/wenfh2020/co_kimserver/tree/main/src/modules))
 
-<div align=center><img src="/images/2021-03-25-16-54-06.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-03-25-16-54-06.png" data-action="zoom"/></div>
 
 ---
 
@@ -64,5 +64,5 @@ author: wenfh2020
 
 服务节点通过 `zookeeper` 发现其它节点。（下图是客户端与服务端多节点建立通信流程。）
 
-<div align=center><img src="/images/2021-03-25-16-54-26.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-03-25-16-54-26.png" data-action="zoom"/></div>
 

@@ -46,7 +46,7 @@ appendfilename "appendonly.aof"
 
 ### 2.1. aof 文件结构
 
-![aof 文件结构](/images/2020-03-28-15-38-27.png){: data-action="zoom"}
+![aof 文件结构](/images/2020/2020-03-28-15-38-27.png){: data-action="zoom"}
 
 **aof 文件可以由 redis 协议命令组成文本文件**。 第一次启动 redis，执行第一个写命令： `set key1111 1111`。我们观察一下 aof 文件：
 
@@ -117,7 +117,7 @@ sds catAppendOnlyGenericCommand(sds dst, int argc, robj **argv) {
 
 ### 2.2. aof 和 rdb 混合结构
 
-![rdb aof 混合结构](/images/2020-03-28-16-19-34.png){: data-action="zoom"}
+![rdb aof 混合结构](/images/2020/2020-03-28-16-19-34.png){: data-action="zoom"}
 
 **redis 支持 aof 和 rdb 持久化同时使用**，rdb 和 aof 存储格式同时存储在一个 aof 文件中。
 
@@ -226,7 +226,7 @@ appendfsync no
   
   > 上文引用自 《UNINX 环境高级编程》 4.24
 
-![数据持久化流程](/images/2020-03-29-19-12-04.png){: data-action="zoom"}
+![数据持久化流程](/images/2020/2020-03-29-19-12-04.png){: data-action="zoom"}
 
 * 文件数据刷新到磁盘流程。
 

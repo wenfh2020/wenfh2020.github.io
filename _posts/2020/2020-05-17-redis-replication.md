@@ -34,7 +34,7 @@ author: wenfh2020
 * A 图，数据复制实时性比较好，但是如果 slave 节点数量多了，master 复制数据量就会增大，特别是全量复制场景。
 * B 图，D，E sub-slave 节点数据复制实时性相对差一点，但是能解决多个从节点下，master 数据复制压力，能支撑系统更大的负载。
 
-![主从复制模式](/images/2020-05-31-12-04-10.png){:data-action="zoom"}
+![主从复制模式](/images/2020/2020-05-31-12-04-10.png){:data-action="zoom"}
 
 ---
 
@@ -164,7 +164,7 @@ Linux 平台可以通过 `strace` 抓包，观察主从数据复制工作流程�
 replicaof 127.0.0.1 16379
 ```
 
-![redis 全量复制流程](/images/2020-05-31-10-16-02.png){:data-action="zoom"}
+![redis 全量复制流程](/images/2020/2020-05-31-10-16-02.png){:data-action="zoom"}
 
 ---
 

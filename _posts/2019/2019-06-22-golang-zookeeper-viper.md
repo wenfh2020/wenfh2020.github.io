@@ -19,7 +19,7 @@ author: wenfh2020
 
 我们可以通过 zookeeper 管理配置文件内容。服务注册到 zookeeper，当配置文件变更，zookeeper 实时通知服务更新服务的配置文件内容。golang 语言环境下，viper 是一个不错的配置插件。下面是服务读取远程配置到本地的实现流程：
 
-![获取远程配置逻辑](/images/2020-09-08-22-49-33.png){:data-action="zoom"}
+![获取远程配置逻辑](/images/2020/2020-09-08-22-49-33.png){:data-action="zoom"}
 
 ---
 

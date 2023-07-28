@@ -27,7 +27,7 @@ author: wenfh2020
 
 ---
 
-![消息时序](/images/2020-02-25-08-14-15.png){: data-action="zoom"}
+![消息时序](/images/2020/2020-02-25-08-14-15.png){: data-action="zoom"}
 
 > 设计图来源：[《即时通讯（IM）- 千人群组消息管理》](https://www.processon.com/apps/5dbb0ac4e4b0ea86c41ca550)
 
@@ -106,7 +106,7 @@ msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
 
 * database 数据落地。
 
-![存储架构](/images/2020-02-25-08-16-18.png){: data-action="zoom"}
+![存储架构](/images/2020/2020-02-25-08-16-18.png){: data-action="zoom"}
 
 ---
 
@@ -114,13 +114,13 @@ msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
 
 ### 5.1. 写数据
 
-![写逻辑](/images/2020-02-25-08-16-44.png){: data-action="zoom"}
+![写逻辑](/images/2020/2020-02-25-08-16-44.png){: data-action="zoom"}
 
 ---
 
 ### 5.2. 读数据
 
-![读逻辑](/images/2020-02-25-08-17-14.png){: data-action="zoom"}
+![读逻辑](/images/2020/2020-02-25-08-17-14.png){: data-action="zoom"}
 
 ---
 

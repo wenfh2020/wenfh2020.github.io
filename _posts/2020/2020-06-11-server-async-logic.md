@@ -22,7 +22,7 @@ author: wenfh2020
 * 服务处理事件，每个 fd 对应一个事件处理器 callback 处理取出的 events。
 * callback 逻辑被分散为逻辑步骤 `step`，这些步骤一般是异步串行处理，时序跟同步差不多，只是异步逻辑可能需要回调多次才能处理完一个完整的逻辑。
 
-![高性能异步框架通信流程](/images/2020-06-11-21-28-24.png){:data-action="zoom"}
+![高性能异步框架通信流程](/images/2020/2020-06-11-21-28-24.png){:data-action="zoom"}
 
 > 设计图来源：《[异步服务框架通信流程](https://www.processon.com/view/5ee1d7de7d9c084420107b53)》
 

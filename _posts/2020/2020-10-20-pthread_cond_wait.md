@@ -77,7 +77,7 @@ void* Bio::bio_process_tasks(void* arg) {
 4. “回复”唤醒者。
 5. 重新上锁。
 
-![pthread_cond_wait 工作流程](/images/2020-10-20-17-33-25.png){:data-action="zoom"}
+![pthread_cond_wait 工作流程](/images/2020/2020-10-20-17-33-25.png){:data-action="zoom"}
 
 ---
 

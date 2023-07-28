@@ -64,7 +64,7 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
 
 ## 3. 应用场景
 
-![快照应用场景](/images/2020-03-19-13-08-31.png){: data-action="zoom"}
+![快照应用场景](/images/2020/2020-03-19-13-08-31.png){: data-action="zoom"}
 
 ### 3.1. 服务启动加载数据
 

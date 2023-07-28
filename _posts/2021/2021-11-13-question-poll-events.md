@@ -24,11 +24,11 @@ bing.com 搜索事件 POLLNVAL，关键字：POLLNVAL site:man7.org/linux/man-pa
 
 * 搜索方式，其它的事件信息也可以进行类似搜索。
 
-<div align=center><img src="/images/2021-12-31-08-18-29.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-31-08-18-29.png" data-action="zoom"/></div>
 
 * 事件文档。
 
-<div align=center><img src="/images/2021-12-31-08-18-50.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-31-08-18-50.png" data-action="zoom"/></div>
 
 ---
 

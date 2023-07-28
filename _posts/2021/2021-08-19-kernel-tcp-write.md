@@ -28,7 +28,7 @@ author: wenfh2020
 
 * OSI 模型 / TCP/IP 分层模型。详细分层原理请参考：[网络分层概述](https://segmentfault.com/a/1190000008741770#comment-area)。
 
-<div align=center><img src="/images/2021-06-11-13-36-24.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-11-13-36-24.png" data-action="zoom"/></div>
 
 > 图片来源：《图解 TCP_IP》
 
@@ -76,13 +76,13 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 * 函数调用层次。
 
-<div align=center><img src="/images/2021-09-23-15-47-37.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-09-23-15-47-37.png" data-action="zoom"/></div>
 
 ---
 
 * 通信分层数据包封装格式。
 
-<div align=center><img src="/images/2021-06-09-11-01-49.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-09-11-01-49.png" data-action="zoom"/></div>
 
 > 图片来源：《图解 TCP_IP》
 
@@ -96,7 +96,7 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 > 详细参考：[《[内核源码] 网络协议栈 - socket (tcp)》](https://wenfh2020.com/2021/07/13/kernel-sys-socket/) - 4.1 文件部分
 
-<div align=center><img src="/images/2021-07-20-07-51-52.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-20-07-51-52.png" data-action="zoom"/></div>
 
 > 图片来源：《Linux 内核源代码情景分析》- 第五章 - 文件系统
 
@@ -327,11 +327,11 @@ socket 数据缓存，sk_buff 用于保存接收或者发送的数据报文信�
 
 > 详细请参考：《Linux 内核源码剖析 - TCP/IP 实现》- 第三章 - 套接口缓存
 
-<div align=center><img src="/images/2021-08-28-11-06-40.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-28-11-06-40.png" data-action="zoom"/></div>
 
 > 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 3.2.3
 
-<div align=center><img src="/images/2021-08-28-11-08-14.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-28-11-08-14.png" data-action="zoom"/></div>
 
 > 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 3.2.3
 
@@ -340,7 +340,7 @@ tcp 的数据输出，数据首先是从应用层在流入内核，内核会将�
 * `sk_write_queue`：发送队列的双向链表头。
 * `sk_send_head`：指向发送队列中下一个要发送的数据包。
 
-<div align=center><img src="/images/2021-08-27-14-11-43.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-27-14-11-43.png" data-action="zoom"/></div>
 
 > 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 30.1
 
@@ -353,11 +353,11 @@ tcp 的数据输出，数据首先是从应用层在流入内核，内核会将�
 * MTU：Maximum Transmission Unit。
 * MSS：Max Segment Size。
 
-<div align=center><img src="/images/2021-06-09-06-44-13.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-09-06-44-13.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
-<div align=center><img src="/images/2021-06-09-06-44-35.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-09-06-44-35.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
@@ -375,7 +375,7 @@ tcp 的数据输出，数据首先是从应用层在流入内核，内核会将�
 >
 > 3. [TCP的发送系列 — tcp_sendmsg()的实现（二）](https://www.cnblogs.com/aiwz/p/6333233.html)
 
-<div align=center><img src="/images/2021-08-28-13-56-17.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-28-13-56-17.png" data-action="zoom"/></div>
 
 > 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 下册 - 30.3.3 传输接口层的实现。
 
@@ -589,17 +589,17 @@ struct tcphdr {
 };
 ```
 
-<div align=center><img src="/images/2021-06-11-16-02-53.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-11-16-02-53.png" data-action="zoom"/></div>
 
 > 图片来源：《图解 TCP_IP》 -- 6.7 TCP 首部格式
 
-<div align=center><img src="/images/2021-06-08-08-22-52.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-08-22-52.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
 * `tcp_transmit_skb` 填充 tcp 头部，将缓存数据进行发送。从上面发送逻辑，如果数据填充到缓冲区后，需要调用接口将数据发送出去，`tcp_push`，`tcp_push_one`，`__tcp_push_pending_frames` 这几个接口内部都要调用 `tcp_write_xmit`，`tcp_write_xmit` 需要将数据通过 `tcp_transmit_skb` 填充 TCP 头部，从传输层发送到 IP 层处理。
 
-<div align=center><img src="/images/2021-08-31-11-37-56.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-31-11-37-56.png" data-action="zoom"/></div>
 
 ```c
 static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
@@ -744,11 +744,11 @@ struct iphdr {
 };
 ```
 
-<div align=center><img src="/images/2021-06-11-13-43-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-11-13-43-59.png" data-action="zoom"/></div>
 
 >《图解 TCP_IP》 -- 4.7 IPv4 首部
 
-<div align=center><img src="/images/2021-06-08-08-40-07.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-08-40-07.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
@@ -893,7 +893,7 @@ IP 层调用 `ip_finish_output` 进入 MAC 层，对 skb 添加二层头（填�
 
 因为在以太网上传输 IP 数据报时，以太网设备并不能识别（IPv4） 32 位 IP 地址，而是以 48 位以太网地址传输以太网数据包的。以太网帧本体的前端是以太网的首部，它总共占 14 个字节。分别是 6 个字节的目标 MAC 地址，6 个字节的源 MAC 地址以及 2 个字节的上层协议类型。紧随帧头后面的是数据。一个数据帧所能容纳的最大数据范围是 46 ~ 1500 个字节。帧尾是一个叫做 FCS（Frame Check Sequence，帧检验序列）的 4 个字节。
 
-<div align=center><img src="/images/2021-09-01-11-40-03.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-09-01-11-40-03.png" data-action="zoom"/></div>
 
 > 内容和图片来源 《图解 TCP_IP》 - 3.3.3 以太网的历史。
 
@@ -1015,7 +1015,7 @@ static inline int neigh_hh_output(const struct hh_cache *hh, struct sk_buff *skb
 
 > 详细内容请参考：《Linux 内核源码剖析 - TCP/IP 实现》- 上册 - 第八章 - 接口层的输出。
 
-<div align=center><img src="/images/2021-09-01-11-13-13.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-09-01-11-13-13.png" data-action="zoom"/></div>
 
 > 图片来源：《Linux 内核源码剖析 - TCP/IP 实现》- 上册 - 第八章 - 接口层的输出。
 

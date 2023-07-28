@@ -24,7 +24,7 @@ QT 的信号与槽技术，是一种用于对象间通信的机制。它允许�
 * 信号与槽是一种 `观察者` 模式，QObject 为每个信号生成一个索引 `signal_index`，用于标识某个信号所在 `signalVector` 动态数组的位置，receiver 信息被保存于数组下标对应的列表中。
   > sender object -> signalVector[signal_index] -> connectionlist -> connection
 
-<div align=center><img src="/images/2023-07-25-11-13-45.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-07-25-11-13-45.png" data-action="zoom"></div>
 
 ---
 
@@ -34,7 +34,7 @@ QT 的信号与槽技术，是一种用于对象间通信的机制。它允许�
 
 > 详细源码请参考 [Github](https://github.com/wenfh2020/my_qt_test/tree/main/TestApp)。
 
-<div align=center><img src="/images/2023-07-27-13-43-53-03.gif" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-07-27-13-43-53-03.gif" data-action="zoom"></div>
 
 ```cpp
 // 线程测试用例
@@ -207,7 +207,7 @@ QMetaObject::Connection QObjectPrivate::connectImpl(
 
 > 这个值不是三言两语能说清楚的，还是上图吧。
 
-<div align=center><img src="/images/2023-07-27-14-12-16.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-07-27-14-12-16.png" data-action="zoom"></div>
 
 我们先来了解一下 MOC（Meta-Object Compiler）的工作：
 

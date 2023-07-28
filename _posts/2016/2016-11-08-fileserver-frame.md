@@ -34,9 +34,9 @@ author: wenfh2020
 
 ## 2. 架构
 
-![文件服务器架构](/images/2020-02-24-09-14-59.png){: data-action="zoom"}
+![文件服务器架构](/images/2020/2020-02-24-09-14-59.png){: data-action="zoom"}
 
-<!-- <div align=center><img src="/images/2020-02-24-09-14-59.png"/></div> -->
+<!-- <div align=center><img src="/images/2020/2020-02-24-09-14-59.png"/></div> -->
 
 | 对象        | 描述                                                 |
 | :---------- | :--------------------------------------------------- |
@@ -51,5 +51,5 @@ author: wenfh2020
 
 ## 3. 逻辑时序
 
-![逻辑时序](/images/2020-02-24-09-16-08.png){: data-action="zoom"}
-<!-- <div align=center><img src="/images/2020-02-24-09-16-08.png"/></div> -->
+![逻辑时序](/images/2020/2020-02-24-09-16-08.png){: data-action="zoom"}
+<!-- <div align=center><img src="/images/2020/2020-02-24-09-16-08.png"/></div> -->

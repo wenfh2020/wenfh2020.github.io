@@ -96,7 +96,7 @@ Changes with nginx 1.11.3                                        26 Jul 2016
 128808 epoll_ctl(12, EPOLL_CTL_ADD, 6, {EPOLLIN|EPOLLEXCLUSIVE, {u32=732094480, u64=140132630061072}}) = 0
 ```
 
-<div align=center><img src="/images/2021-11-04-11-07-09.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-04-11-07-09.png" data-action="zoom"/></div>
 
 ---
 
@@ -202,7 +202,7 @@ EPOLLEXCLUSIVE
 almostivan authored and torvalds committed on 21 Jan 2016 
 ```
 
-<div align=center><img src="/images/2021-11-04-11-33-40.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-04-11-33-40.png" data-action="zoom"/></div>
 
 ---
 
@@ -215,7 +215,7 @@ epoll_ctl 关注添加 fd 的事件时，通过 add_wait_queue_exclusive 函数�
 <center>
     <img style="border-radius: 0.3125em;
     box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);"
-    src="/images/2021-11-09-11-26-53.png" data-action="zoom">
+    src="/images/2021/2021-11-09-11-26-53.png" data-action="zoom">
     <br>
     <div style="color:orange; border-bottom: 1px solid #d9d9d9;
     display: inline-block;

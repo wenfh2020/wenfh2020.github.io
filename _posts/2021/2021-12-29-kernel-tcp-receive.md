@@ -29,7 +29,7 @@ author: wenfh2020
 5. 内核（TCP/IP）协议层处理数据，将数据缓存到对应的 socket 上。
 6. 应用程序读取对应 socket 上已接收的数据。
 
-<div align=center><img src="/images/2021-11-19-17-49-58.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-19-17-49-58.png" data-action="zoom"/></div>
 
 > 图片来源：《图解 TCP_IP》
 
@@ -55,7 +55,7 @@ author: wenfh2020
 16. 网卡驱动重新设置允许网卡触发硬中断（e1000_irq_enable），重新执行步骤 3。
 17. 用户程序（或被唤醒）调用 read 接口读取 socket.sock.sk_receive_queue 上的数据并拷贝到用户空间。
 
-<div align=center><img src="/images/2021-12-30-12-33-29.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-30-12-33-29.png" data-action="zoom"/></div>
 
 > 图片来源：[linux 网络数据接收流程](https://www.processon.com/view/61ca8e530791290c9e1574b1)
 
@@ -67,11 +67,11 @@ author: wenfh2020
 
 * 源码结构关系。
 
-<div align=center><img src="/images/2021-12-31-14-57-25.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-31-14-57-25.png" data-action="zoom"/></div>
 
 * 要点关系。
 
-<div align=center><img src="/images/2021-12-28-12-27-31.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-28-12-27-31.png" data-action="zoom"/></div>
 
 ---
 
@@ -185,7 +185,7 @@ DMA（Direct Memory Access）可以使得外部设备可以不用 CPU 干预，�
 
 下图（图片来源：[stack overflow](https://stackoverflow.com/questions/47450231/what-is-the-relationship-of-dma-ring-buffer-and-tx-rx-ring-for-a-network-card?answertab=votes#tab-top)）简述了 NIC <--> DMA <--> RAM 三者关系。
 
-<div align=center><img src="/images/2021-12-25-06-12-34.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-25-06-12-34.png" data-action="zoom"/></div>
 
 * ring buffer 数据结构。
 
@@ -294,7 +294,7 @@ __do_softirq
 4. 既然网卡驱动已经读取了数据，那么已读取的数据已经没用了，可以（清理）重新提供给网卡继续写入，那么需要把下次要清理的位置记录起来：e1000_rx_ring.next_to_use。
 5. 但是这时候网卡还不知道驱动消费数据到哪个位置，那么驱动清理掉数据后，将已清理最后的位置（e1000_rx_ring.next_to_use - 1）写入网卡寄存器 RDT，告诉网卡，下次可以（顺时针）写入数据，从 NIC.RDH 到 NIC.RDT。
 
-<div align=center><img src="/images/2021-12-28-20-50-58.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-28-20-50-58.png" data-action="zoom"/></div>
 
 ---
 

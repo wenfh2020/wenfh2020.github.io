@@ -31,7 +31,7 @@ author: wenfh2020
 
 如下图，master 主进程负责 listener 资源的 accept，当主进程获得资源，按照一定的策略（取模/一致性哈希/...）负载均衡，分派给相应的子进程。
 
-<div align=center><img src="/images/2021-11-11-09-31-35.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-11-09-31-35.png" data-action="zoom"/></div>
 
 > 参考：《[[kimserver] 父子进程传输文件描述符](https://wenfh2020.com/2020/10/23/kimserver-socket-transfer/)》
 

@@ -20,11 +20,11 @@ author: wenfh2020
 
 * 到 [docker 官网](https://hub.docker.com/) 下载 docker app 安装。
 
-<div align=center><img src="/images/2022-04-06-14-38-55.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-04-06-14-38-55.png" data-action="zoom"/></div>
 
 * docker app。
 
-<div align=center><img src="/images/2022-04-07-18-17-14.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-04-07-18-17-14.png" data-action="zoom"/></div>
 
 ---
 
@@ -69,7 +69,7 @@ docker network inspect <container_id>
 
 ## 3. 容器
 
-<div align=center><img src="/images/2022-04-07-18-13-03.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-04-07-18-13-03.png" data-action="zoom"/></div>
 
 ### 3.1. ubuntu
 

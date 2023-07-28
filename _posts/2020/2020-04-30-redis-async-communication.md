@@ -26,7 +26,7 @@ author: wenfh2020
 
 redis 客户端与服务端异步通信流程，整体逻辑有点复杂，先看看流程图，后面再抓抓重点。
 
-![异步服务工作流程](/images/2020-05-04-01-19-51.png){:data-action="zoom"}
+![异步服务工作流程](/images/2020/2020-05-04-01-19-51.png){:data-action="zoom"}
 
 > 流程图来源： 《[redis 异步网络通信流程 - 单线程](https://www.processon.com/view/5eab75227d9c0869dab46472)》
 
@@ -158,7 +158,7 @@ socket 设置非阻塞后，write / read，有可能不是一次性将数据读�
 * read 数据，只要没有读取完成 fd 对应的所有接收数据，内核会不停通知 `EPOLLIN` 读事件。即 `epoll_wait` 不停取出读事件要求读数据，直到 read 所有接收到的数据，才会停止 EPOLLIN 读事件通知。
 * write 数据，服务一次发送不完，那么需要服务主动调用 `epoll_ctl` 监控写事件，下次 epoll_wait 会通知 `EPOLLOUT` 事件，服务继续处理写事件，直到将数据发送完毕为止。数据发送完毕后，再通过 epoll_ctl 取消监控 EPOLLOUT 写事件。（参考 `sendReplyToClient`源码实现逻辑）
 
-<div align=center><img src="/images/2021-06-21-16-25-36.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-21-16-25-36.png" data-action="zoom"/></div>
 
 > 图片来源：《[epoll 多路复用 I/O工作流程](https://wenfh2020.com/2020/04/14/epoll-workflow/)》
 

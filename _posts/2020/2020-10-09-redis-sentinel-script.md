@@ -64,7 +64,7 @@ logfile "sentinel.log"
 
 ---
 
-![第三方通知流程](/images/2020-10-10-11-41-26.png){:data-action="zoom"}
+![第三方通知流程](/images/2020/2020-10-10-11-41-26.png){:data-action="zoom"}
 
 ## 2. 命令
 
@@ -188,7 +188,7 @@ echo $* >> /tmp/nofify.log
 
 * nofify.log 日志内容，sentinel 根据对应业务事件传递对应文本参数，我们可以处理感兴趣的参数，例如："+sdown"，“+switch-master” 等。现实中，每个 sentinel 都应该配置脚本，所以有些事件每个 sentinel 都会触发，有些事件只有 leader 角色才会触发，例如故障转移 “+switch-master” ，只有一个 sentinel 触发。
 
-![故障转移测试环节](/images/2020-09-30-16-47-51.png){:data-action="zoom"}
+![故障转移测试环节](/images/2020/2020-09-30-16-47-51.png){:data-action="zoom"}
 
 ```shell
 # /tmp/nofify.log

@@ -82,7 +82,7 @@ int __inet_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len,
 
 ### 3.1. socket 结构关系
 
-<div align=center><img src="/images/2021-07-19-23-54-25.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-19-23-54-25.png" data-action="zoom"/></div>
 
 ### 3.2. 哈希表
 
@@ -96,7 +96,7 @@ int __inet_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len,
 
   查询数据时，可能需要遍历两个链表，而且在同一个网域下，以端口作为哈希索引，导致不同的 IP 地址相同端口的数据也会在同一个 `inet_bind_bucket` 里。所以 `inet_bind_bucket` 要使用 `fastreuse` 和 `fastreuseport` 去优化，尽量避免链表遍历。
 
-<div align=center><img src="/images/2021-07-19-23-49-14.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-19-23-49-14.png" data-action="zoom"/></div>
 
 ```c
 /* net/ipv4/tcp_ipv4.c */
@@ -435,7 +435,7 @@ EXPORT_SYMBOL_GPL(inet_csk_get_port);
 
 先检查 SO_REUSEADDR 的使用场景，再检查 SO_REUSEPORT 的使用场景。
 
-<div align=center><img src="/images/2021-07-20-13-22-12.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-20-13-22-12.png" data-action="zoom"/></div>
 
 > 图片来源：[soreuseport: TCP/IPv4 implementation](https://github.com/torvalds/linux/commit/da5e36308d9f7151845018369148201a5d28b46d?branch=da5e36308d9f7151845018369148201a5d28b46d&diff=split#)
 

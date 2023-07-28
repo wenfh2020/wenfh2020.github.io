@@ -152,7 +152,7 @@ int main() {
 
 高并发系统里，从火焰图里看到：平平无奇的 `mstime()` 接口，却是资源吃货！
 
-<div align=center><img src="/images/2021-03-01-13-10-57.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-03-01-13-10-57.png" data-action="zoom"/></div>
 
 > 火焰图参考：[如何生成火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
 

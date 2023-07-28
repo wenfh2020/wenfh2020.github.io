@@ -219,7 +219,7 @@ struct inet_hashinfo {
 
 * 哈希表与 socket 的结构关系：
 
-<div align=center><img src="/images/2021-07-27-21-18-33.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-27-21-18-33.png" data-action="zoom"/></div>
 
 > 图片来源：[linux 内核 listen (tcp/IPv4) 结构关系](https://processon.com/view/60fa6dfe7d9c083494e37a9a)
 
@@ -480,7 +480,7 @@ tcp 通信，客户端通过三次握手与服务端建立连接。
 
 三次握手后，request_sock 指针会保存于全连接队列：inet_connection_sock.icsk_accept_queue.rskq_accept_head，等待 accept。
 
-<div align=center><img src="/images/2021-07-28-10-01-09.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-28-10-01-09.png" data-action="zoom"/></div>
 
 > 图片来源：[linux 内核 listen (tcp/IPv4) 结构关系](https://processon.com/view/60fa6dfe7d9c083494e37a9a)
 

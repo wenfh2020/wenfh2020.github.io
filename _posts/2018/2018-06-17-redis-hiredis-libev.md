@@ -14,7 +14,7 @@ author: wenfh2020
 
 只是异步使用有点反人类，业务都要在 callback 里面处理，没有同步调用那么直观。
 
-<div align=center><img src="/images/2020-02-20-16-56-08.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020/2020-02-20-16-56-08.png" data-action="zoom"/></div>
 
 
 

@@ -57,13 +57,13 @@ telnet 127.0.0.1 12456
 
 * 用神器 `wireshark` 打开 `*.cap` 文件。
 
-![wireshark](/images/2020-04-13-09-46-38.png){: data-action="zoom"}
+![wireshark](/images/2020/2020-04-13-09-46-38.png){: data-action="zoom"}
 
 * 流程
 
 从上面抓包数据看，我们可以描述一下 tcp 握手挥手工作流程。
 
-![握手挥手流程](/images/2021-06-08-17-01-28.png){: data-action="zoom"}
+![握手挥手流程](/images/2021/2021-06-08-17-01-28.png){: data-action="zoom"}
 
 * 三次握手，三次挥手。
   
@@ -88,7 +88,7 @@ telnet 127.0.0.1 12456
   
   > 图片来源：《TCP/IP 详解卷 1：协议》 -- 18.6 tcp 的状态变迁图
 
-![tcp 状态变迁](/images/2020-04-13-13-14-49.png){: data-action="zoom"}
+![tcp 状态变迁](/images/2020/2020-04-13-13-14-49.png){: data-action="zoom"}
 
 ```c
 // tcp_states.h

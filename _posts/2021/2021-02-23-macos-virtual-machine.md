@@ -49,7 +49,7 @@ CentOS Linux release 7.7.1908 (Core)
 Linux localhost.localdomain 3.10.0-1062.el7.x86_64 #1 SMP Wed Aug 7 18:08:02 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
 ```
 
-<div align=center><img src="/images/2021-02-23-16-52-56.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-02-23-16-52-56.png" data-action="zoom"/></div>
 
 ---
 
@@ -59,7 +59,7 @@ Linux localhost.localdomain 3.10.0-1062.el7.x86_64 #1 SMP Wed Aug 7 18:08:02 UTC
 
 * 虚拟机系统网络适配。
 
-<div align=center><img src="/images/2021-02-23-16-40-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-02-23-16-40-18.png" data-action="zoom"/></div>
 
 * 打开文件，根据实体机网络，修改虚拟机对应网络信息，设置固定网络 IP。
 
@@ -93,9 +93,9 @@ DNS1=114.114.114.114
 
 * 本实体机网络信息。
 
-<div align=center><img src="/images/2021-02-23-16-34-54.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-02-23-16-34-54.png" data-action="zoom"/></div>
 
-<div align=center><img src="/images/2021-02-23-16-33-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-02-23-16-33-59.png" data-action="zoom"/></div>
 
 * 重启网络。
 

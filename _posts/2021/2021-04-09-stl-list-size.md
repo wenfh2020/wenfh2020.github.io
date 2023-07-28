@@ -23,7 +23,7 @@ author: wenfh2020
 
 功能测试完成后，发现 cpu 一直很高，所以就上火焰图，看到 std::list::size 占满了负载。
 
-<div align=center><img src="/images/2021-04-09-09-13-49.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-09-09-13-49.png" data-action="zoom"/></div>
 
 > 火焰图参考：[如何生成火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
 

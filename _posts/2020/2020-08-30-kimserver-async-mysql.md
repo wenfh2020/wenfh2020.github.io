@@ -99,7 +99,7 @@ sudo make && make install
 
 测试项目的异步链接池基于 `libev` 对链接事件进行管理，我们来看看**读数据**的流程逻辑：
 
-![异步 client 读数据逻辑](/images/2020-08-30-15-11-33.png){:data-action="zoom"}
+![异步 client 读数据逻辑](/images/2020/2020-08-30-15-11-33.png){:data-action="zoom"}
 
 ---
 

@@ -35,7 +35,7 @@ epoll_wait 的相关工作流程：
 * 然后将 fd 对应就绪事件信息从内核空间拷贝到用户空间。
 * 事件数据拷贝完成后，内核检查事件模式是 lt 还是 et，如果不是 et，重新将 fd 信息添加回就绪队列，下次重新触发 epoll_wait。
 
-<div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
 > 图片来源：[tcp + epoll 内核睡眠唤醒工作流程](https://wenfh2020.com/2021/12/16/tcp-epoll-wakeup/)
 
@@ -211,7 +211,7 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep,
 
 > 这个道理有点像排队打饭，一个队列上，有些同学要打包两份饭，如果每次只能打包一份，lt 模式就是，这些同学打包了一份之后，马上重新回去排队，再打一份。et 模式是，这些同学先打包一份，然后拿回去吃掉了，再回来排队，在高峰期显然整个排队的效率和结果不一样。
 
-<div align=center><img src="/images/2023-07-01-16-02-17.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-07-01-16-02-17.png" data-action="zoom"></div>
 
 ---
 
@@ -233,14 +233,14 @@ static __poll_t ep_send_events_proc(struct eventpoll *ep,
 
 * 惊群现象。
 
-<div align=center><img src="/images/2021-11-05-10-49-41.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-05-10-49-41.png" data-action="zoom"/></div>
 
 * lt 模式连环唤醒。
 
 <center>
     <img style="border-radius: 0.3125em;
     box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);"
-    src="/images/2021-07-06-10-23-40.png" data-action="zoom">
+    src="/images/2021/2021-07-06-10-23-40.png" data-action="zoom">
     <br>
     <div style="color:orange; border-bottom: 1px solid #d9d9d9;
     display: inline-block;

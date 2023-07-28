@@ -29,7 +29,7 @@ author: wenfh2020
 
 了解一个新事物，可以从这三点开始（`what`，`why`，`how`）。这就是一个项目 [readme](https://github.com/antirez/redis/tree/2669fb8364c4c4080b7b75809ca94fc8022151de) 要干的活：简明扼要地给用户传递项目最基本信息，降低用户入门门槛，提高用户留存。所以我们第一次学习开源项目，第一步也得首先去看它的 `readme`。
 
-![what](/images/2020-03-18-17-04-16.png){: data-action="zoom"}
+![what](/images/2020/2020-03-18-17-04-16.png){: data-action="zoom"}
 
 ---
 
@@ -37,7 +37,7 @@ author: wenfh2020
 
 官方网站有你学习需要的第一手资料。
 
-![官网](/images/2020-02-20-16-01-33.png){: data-action="zoom"}
+![官网](/images/2020/2020-02-20-16-01-33.png){: data-action="zoom"}
 
 ---
 
@@ -45,9 +45,9 @@ author: wenfh2020
 
 好的书籍，往往是最好的老师。
 
-![纸质书籍](/images/2020-02-20-16-02-02.png){: data-action="zoom"}
+![纸质书籍](/images/2020/2020-02-20-16-02-02.png){: data-action="zoom"}
 
-![电子书籍](/images/2020-02-20-16-02-14.png){: data-action="zoom"}
+![电子书籍](/images/2020/2020-02-20-16-02-14.png){: data-action="zoom"}
 
 ---
 
@@ -55,7 +55,7 @@ author: wenfh2020
 
 从优秀的人上身上学习知识，现实生活很难遇见一个高手手把手地教你或者与你面对面交流，网络平台上有丰富的资源，可以互动，同时也可以保存并且分享自己的成果。
 
-![github](/images/2020-02-20-16-04-19.png){: data-action="zoom"}
+![github](/images/2020/2020-02-20-16-04-19.png){: data-action="zoom"}
 
 ---
 
@@ -63,7 +63,7 @@ author: wenfh2020
 
 在学生时代，我发现一个有趣现象：上课抄笔记勤奋的同学，往往成绩不好。顾此失彼，殊不知这些知识都在书本或者其它平台别人已经很好地总结出来了。上课主要目标是：认真听讲，思考理解课堂知识，不明白的地方标记下来，课后再解决。
 
-![其它平台](/images/2020-02-20-16-01-49.png){: data-action="zoom"}
+![其它平台](/images/2020/2020-02-20-16-01-49.png){: data-action="zoom"}
 
 ---
 
@@ -71,7 +71,7 @@ author: wenfh2020
 
 通过源码学习，深入了解作者思路和软件工作流程。
 
-![源码](/images/2020-02-20-16-02-48.png){: data-action="zoom"}
+![源码](/images/2020/2020-02-20-16-02-48.png){: data-action="zoom"}
 
 ---
 
@@ -79,7 +79,7 @@ author: wenfh2020
 
 #### 2.2.1. 调试
 
-![调试](/images/2020-02-20-16-03-19.png){: data-action="zoom"}
+![调试](/images/2020/2020-02-20-16-03-19.png){: data-action="zoom"}
 
 ---
 
@@ -87,7 +87,7 @@ author: wenfh2020
 
 通过具体实践，对知识工作流程进行梳理。
 
-![UML 流程时序](/images/2020-02-20-16-03-39.png){: data-action="zoom"}
+![UML 流程时序](/images/2020/2020-02-20-16-03-39.png){: data-action="zoom"}
 
 ---
 
@@ -97,7 +97,7 @@ author: wenfh2020
 
 将知识点提取成思维导图，让知识点脉络更加清晰。
 
-![知识脉络](/images/2020-02-20-16-03-03.png){: data-action="zoom"}
+![知识脉络](/images/2020/2020-02-20-16-03-03.png){: data-action="zoom"}
 
 ---
 
@@ -105,7 +105,7 @@ author: wenfh2020
 
 字不如表，表不如图。将复杂或抽象的思维，形象到图表。
 
-![压缩列表](/images/2020-02-20-16-44-19.png){: data-action="zoom"}
+![压缩列表](/images/2020/2020-02-20-16-44-19.png){: data-action="zoom"}
 
 ---
 
@@ -113,7 +113,7 @@ author: wenfh2020
 
 markdown，舒服的排版可以让知识归纳总结事半功倍。
 
-![markdown](/images/2020-02-20-16-03-58.png){: data-action="zoom"}
+![markdown](/images/2020/2020-02-20-16-03-58.png){: data-action="zoom"}
 
 ---
 
@@ -121,7 +121,7 @@ markdown，舒服的排版可以让知识归纳总结事半功倍。
 
 拿来主义，知识分类管理，pc和移动设备能同步数据到云端，知识随时随地可以查阅。
 
-![网络笔记](/images/2020-02-20-16-02-34.png){: data-action="zoom"}
+![网络笔记](/images/2020/2020-02-20-16-02-34.png){: data-action="zoom"}
 
 ---
 
@@ -129,4 +129,4 @@ markdown，舒服的排版可以让知识归纳总结事半功倍。
 
 学习总结归纳，将知识实时落地，条理化整理成文档，便于复盘 ——学而时习之,不亦说乎。
 
-![博客](/images/2020-02-20-16-07-43.png){: data-action="zoom"}
+![博客](/images/2020/2020-02-20-16-07-43.png){: data-action="zoom"}

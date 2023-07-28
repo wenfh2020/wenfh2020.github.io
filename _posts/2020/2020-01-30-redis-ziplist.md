@@ -37,7 +37,7 @@ author: wenfh2020
 
 `<zlbytes> <zltail> <zllen> <entry> <entry> ... <entry> <zlend>`
 
-![结构](/images/2020-02-20-16-44-19.png){: data-action="zoom"}
+![结构](/images/2020/2020-02-20-16-44-19.png){: data-action="zoom"}
 
 > 设计图来源 《[redis ziplist 压缩列表内存结构](https://www.processon.com/view/5e2d0707e4b049828097c0f7)》
 
@@ -325,7 +325,7 @@ gcc -g ziplist.c sds.c zmalloc.c util.c sha1.c -o ziplist  -I../deps/lua/src
 sudo gdb ziplist
 ```
 
-![调试](/images/2020-02-20-16-45-03.png){: data-action="zoom"}
+![调试](/images/2020/2020-02-20-16-45-03.png){: data-action="zoom"}
 
 ---
 
@@ -402,7 +402,7 @@ int main() {
 
 主要画了部分令人费解的地方。
 
-![插入流程](/images/2020-02-20-16-45-26.png){: data-action="zoom"}
+![插入流程](/images/2020/2020-02-20-16-45-26.png){: data-action="zoom"}
 
 > 设计图来源 《[redis ziplist 压缩列表加新工作流程](https://www.processon.com/view/5e867515e4b07e41dc273aa0)》
 

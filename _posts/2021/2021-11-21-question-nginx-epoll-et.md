@@ -80,7 +80,7 @@ ET 模式会使得新的其它 client fd 的就绪事件能快速被处理。（
 
 可以看下图 epoll_wait 的工作时序，假如 epoll_wait 每次最大从内核取一个事件。
 
-<div align=center><img src="/images/2023-07-01-16-02-17.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-07-01-16-02-17.png" data-action="zoom"></div>
 
 如果是 LT 模式，（就绪队列上的节点）epi 节点刚开始在内核被删除，然后数据从内核空间拷贝到用户空间后，内核马上将这个被删除的节点重新追加回就绪队列，这个速度很快，所以后面来的其它的 client fd 的就绪事件很大几率会排在已经处理过的事件后面。
 

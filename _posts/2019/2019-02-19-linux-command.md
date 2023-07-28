@@ -15,9 +15,9 @@ Centos 等 Linux 平台常用命令，记录起来，方便使用。
 
 ---
 
-<div align=center><img src="/images/2021-06-26-06-17-04.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-26-06-17-04.png" data-action="zoom"/></div>
 
-<div align=center><img src="/images/2021-06-26-06-17-30.jpeg" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-26-06-17-30.jpeg" data-action="zoom"/></div>
 
 > 图片来源：[Linux Performance](https://www.brendangregg.com/linuxperf.html)。
 
@@ -181,8 +181,6 @@ top
 vmstat 1 每秒输出一次统计结果
 
 不是 swap 空间占用性能就会下降，要看 si so 频率。
-
-<div align=center><img src="/images/image-20191113090543751.png" data-action="zoom"/></div>
 
 > 参考 [《Linux vmstat命令详解》](https://www.cnblogs.com/ftl1012/p/vmstat.html)
 
@@ -729,31 +727,31 @@ shift + m
 shit + p 
 ```
 
-<div align=center><img src="/images/image-20191113091943326.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2019/image-20191113091943326.png" data-action="zoom"/></div>
 
 ---
 
 ### 9.2. htop
 
-<div align=center><img src="/images/image-20191112180503405.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2019/image-20191112180503405.png" data-action="zoom"/></div>
 
 ---
 
 ### 9.3. iftop
 
-<div align=center><img src="/images/image-20191112175351966.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2019/image-20191112175351966.png" data-action="zoom"/></div>
 
 ---
 
 ### 9.4. nload
 
-<div align=center><img src="/images/image-20191112180429804.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2019/image-20191112180429804.png" data-action="zoom"/></div>
 
 ---
 
 ### 9.5. nethogs
 
-<div align=center><img src="/images/image-20191112175719733.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2019/image-20191112175719733.png" data-action="zoom"/></div>
 
 ---
 
@@ -770,7 +768,7 @@ shit + p
 16:12:22  5208 be/4 root        0.00 B/s 1721.45 K/s  0.00 %  0.00 % kim-logic_w_1
 ```
 
-<div align=center><img src="/images/image-20191112212348819.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2019/image-20191112212348819.png" data-action="zoom"/></div>
 
 ---
 

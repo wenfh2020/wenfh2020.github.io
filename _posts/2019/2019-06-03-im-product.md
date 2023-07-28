@@ -17,10 +17,10 @@ author: wenfh2020
 
 十年前的即时通讯产品，基本该有的功能都有了。
 
-![协同办公软件](/images/2020-06-03-11-26-10.png){:data-action="zoom"}
+![协同办公软件](/images/2020/2020-06-03-11-26-10.png){:data-action="zoom"}
 
 ## 2. 视频会议系统
 
 配套的视频会议产品，没怎么参与。
 
-![视频会议](/images/2020-06-03-11-28-13.png){:data-action="zoom"}
+![视频会议](/images/2020/2020-06-03-11-28-13.png){:data-action="zoom"}

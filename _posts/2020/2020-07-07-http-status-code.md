@@ -18,7 +18,7 @@ author: wenfh2020
 
 ## 1. 状态码概要
 
-<div align=center><img src="/images/2021-06-08-08-33-00.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-08-33-00.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 

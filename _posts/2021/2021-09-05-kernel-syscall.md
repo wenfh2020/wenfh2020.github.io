@@ -24,7 +24,7 @@ Linux 操作系统，为了避免用户程序非法操作设备资源，需要�
 
 Linux 应用程序要与内核通信，需要通过 `系统调用`。系统调用，相当于用户空间和内核空间之间添加了一个中间层。
 
-<div align=center><img src="/images/2021-11-09-11-31-35.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-09-11-31-35.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux 系统调用](https://processon.com/view/61355ba063768906a220a785?fromnew=1)
 
@@ -62,7 +62,7 @@ int main() {
 
 系统为了运行 c 程序，每条 c 语句，被编译器翻译成低级语言指令，然后将这些指令按照一种可执行 `目标程序` 的格式打包，并以二进制磁盘文件的形式存放起来，目标程序也称为可执行目标程序。
 
-<div align=center><img src="/images/2021-09-14-10-19-50.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-09-14-10-19-50.png" data-action="zoom"/></div>
 
 > 图片来源：《深入理解计算机系统》- 第一章 计算机系统漫游 - 1.2 程序被其它程序翻译成不同的个数。
 
@@ -202,7 +202,7 @@ rip    0x7ffff7afca8e   0x7ffff7afca8e <__write_nocancel+5>
 
 而用户空间的函数参数也像系统调用号一样，通过写入寄存器传递到内核。
 
-<div align=center><img src="/images/2021-09-15-10-37-15.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-09-15-10-37-15.png" data-action="zoom"/></div>
 
 > 图片来源：《深入理解计算机系统》- 8.1 异常
 

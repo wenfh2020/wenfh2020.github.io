@@ -17,7 +17,7 @@ author: wenfh2020
 
 ## 1. 应用场景
 
-![应用场景](/images/2020-03-29-19-03-42.png){: data-action="zoom"}
+![应用场景](/images/2020/2020-03-29-19-03-42.png){: data-action="zoom"}
 
 ### 1.1. 启动加载
 
@@ -422,7 +422,7 @@ werr:
   
   > 调试方法可以参考我的帖子： [用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)
   
-![调试走流程](/images/2020-03-25-16-40-24.png){: data-action="zoom"}
+![调试走流程](/images/2020/2020-03-25-16-40-24.png){: data-action="zoom"}
 
 * 开启日志
 

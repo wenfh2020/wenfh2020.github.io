@@ -8,7 +8,7 @@ author: wenfh2020
 
 快捷登录阿里云效果
 
-<div align=center><img src="/images/2020-02-20-17-22-08.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020/2020-02-20-17-22-08.png" data-action="zoom"/></div>
 
 
 

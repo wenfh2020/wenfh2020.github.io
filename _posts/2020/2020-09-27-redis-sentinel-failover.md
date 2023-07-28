@@ -84,7 +84,7 @@ void sentinelFailoverStateMachine(sentinelRedisInstance *ri) {
 | slave      | 127.0.0.1 | 6378  |
 | slave2     | 127.0.0.1 | 6377  |
 
-![故障转移测试环节](/images/2020-09-30-16-47-51.png){:data-action="zoom"}
+![故障转移测试环节](/images/2020/2020-09-30-16-47-51.png){:data-action="zoom"}
 
 * 测试脚本（[github](https://github.com/wenfh2020/shell/blob/master/redis/test_redis_sentinel.sh)）
 
@@ -816,7 +816,7 @@ void sentinelFailoverDetectEnd(sentinelRedisInstance *master) {
 
 sentinel 存储节点信息的拓扑结构(如下图)，所以当故障转移成功，sentinel leader 理应更新对应节点的数据和数据结构关系。
 
-![sentinelRedisInstance 节点保存关系](/images/2020-09-17-16-23-59.png){:data-action="zoom"}
+![sentinelRedisInstance 节点保存关系](/images/2020/2020-09-17-16-23-59.png){:data-action="zoom"}
 
 ```c
 /* 定时监控节点的工作情况。 */

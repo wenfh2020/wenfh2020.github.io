@@ -26,7 +26,7 @@ author: wenfh2020
 
 少数服从多数，当集群里超过半数的 sentinel 选某个 sentinel 为代表，那么它就是 leader，这样选举结束。
 
-![选举投票](/images/2020-09-27-12-46-37.png){:data-action="zoom"}
+![选举投票](/images/2020/2020-09-27-12-46-37.png){:data-action="zoom"}
 
 ---
 

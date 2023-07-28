@@ -46,7 +46,7 @@ epoll 应用，适合海量用户，一个时间段内部分活跃的用户群�
 
 * 使用流程。
 
-<div align=center><img src="/images/2021-06-21-16-25-36.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-21-16-25-36.png" data-action="zoom"/></div>
 
 > 图片来源：《[epoll 多路复用 I/O工作流程](https://wenfh2020.com/2020/04/14/epoll-workflow/)》
 
@@ -198,7 +198,7 @@ EXPORT_SYMBOL(tcp_poll);
 
 ## 5. 源码工作流程
 
-<div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
 > 图片来源：[tcp + epoll 内核睡眠唤醒工作流程](https://wenfh2020.com/2021/12/16/tcp-epoll-wakeup/)
 

@@ -120,7 +120,7 @@ reuseport 选项主要解决了两个问题：
 1. （A 图）单个 listen socket 遇到的性能瓶颈。
 2. （B 图）单个 listen socket 多个线程同时 accept，但是多个线程资源分配不均。
 
-<div align=center><img src="/images/2021-07-30-17-49-30.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-30-17-49-30.png" data-action="zoom"/></div>
 
 ---
 
@@ -150,13 +150,13 @@ TCP 客户端链接服务端，第一次握手，服务端被动收到第一次�
 
 * 三次握手流程。
 
-<div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 > 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 
 * 服务端被动第一次握手，查找合适的 listener，详看源码（Linux 5.0.1）。
 
-<div align=center><img src="/images/2021-07-31-13-57-48.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-31-13-57-48.png" data-action="zoom"/></div>
 
 ```c
 /* include/net/inet_hashtables.h */
@@ -338,7 +338,7 @@ nginx   88998 nobody    9u  IPv4 909212      0t0  TCP *:http (LISTEN)
 
 nginx 是多进程模型，Linux 环境下一般使用 epoll 事件驱动。
 
-<div align=center><img src="/images/2021-07-31-19-20-51.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-31-19-20-51.png" data-action="zoom"/></div>
 
 * strace 监控 nginx 进程的系统调用流程。
 

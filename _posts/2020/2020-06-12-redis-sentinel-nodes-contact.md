@@ -59,7 +59,7 @@ struct redisCommand sentinelcmds[] = {
 | sentinel B | 26377 |
 | sentinel C | 26378 |
 
-![角色关系](/images/2020-09-17-16-00-08.png){:data-action="zoom"}
+![角色关系](/images/2020/2020-09-17-16-00-08.png){:data-action="zoom"}
 
 ---
 
@@ -69,7 +69,7 @@ struct redisCommand sentinelcmds[] = {
 
 > 箭头代表节点 connect 的方向，箭头上面的数字是 fd，可以根据 strace 日志，对号入座。fd 从小到大，展示了创建链接的时序。
 
-![抓包工作流程](/images/2020-09-17-15-29-12.png){:data-action="zoom"}
+![抓包工作流程](/images/2020/2020-09-17-15-29-12.png){:data-action="zoom"}
 
 ---
 
@@ -212,7 +212,7 @@ read(15, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$21\r\nsentinel-de0ffb0d-cmd\r\
 
 sentinel 进程对 sentinel / master / slave 三个角色用数据结构 `sentinelRedisInstance` 进行管理。
 
-![sentinelRedisInstance 节点保存关系](/images/2020-09-17-16-23-59.png){:data-action="zoom"}
+![sentinelRedisInstance 节点保存关系](/images/2020/2020-09-17-16-23-59.png){:data-action="zoom"}
 
 ```c
 // 角色数据结构。
@@ -664,7 +664,7 @@ void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
 
 #### 2.3.6. 发布订阅 hello 频道
 
-![抓包工作流程](/images/2020-09-17-15-29-12.png){:data-action="zoom"}
+![抓包工作流程](/images/2020/2020-09-17-15-29-12.png){:data-action="zoom"}
 
 * sentinel 发布的文本内容。
 

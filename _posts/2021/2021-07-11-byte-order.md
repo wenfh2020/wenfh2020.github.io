@@ -29,7 +29,7 @@ author: wenfh2020
 
   > 上述文字主要来源于：《UNIX 网络编程》- 3.4 字节排序函数。
 
-<div align=center><img src="/images/2021-07-11-17-17-40.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-11-17-17-40.png" data-action="zoom"/></div>
 
 * 网络字节序。
   
@@ -66,7 +66,7 @@ uint32_t ntohl(uint32_t net32bitvalue);
   1. （htons）客户端主机字节序转网络字节序。
   2. （ntohs）网络字节序转服务器主机字节序。
 
-<div align=center><img src="/images/2021-07-11-20-32-22.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-11-20-32-22.png" data-action="zoom"/></div>
 
   我们再看看 glibc 字节序转换的源码实现，htons 和 ntohs 居然指向同一个函数。
   

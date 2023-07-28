@@ -26,7 +26,7 @@ macos + vmware + ubuntu  + gdb + qemu + linux kernel。
 
 > 调试环境是跑在虚拟机里的，相信 windows 也能搭建起来。
 
-<div align=center><img src="/images/2021-12-14-15-41-14.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-14-15-41-14.png" data-action="zoom"/></div>
 
 | 环境                                                              | 版本                                                        |
 | :---------------------------------------------------------------- | :---------------------------------------------------------- |
@@ -258,19 +258,19 @@ bt
 
 > 避免 remote-ssh 工作过程中频繁要求输入登录密码，最好设置一下 ssh 免密码登录（参考：[[shell] ssh 快捷登录](https://wenfh2020.com/2020/01/07/ssh-quick-login/)）。
 
-<div align=center><img src="/images/2021-06-23-13-18-31.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-13-18-31.png" data-action="zoom"/></div>
 
-<div align=center><img src="/images/2021-06-23-13-42-26.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-13-42-26.png" data-action="zoom"/></div>
 
 * ms-vscode.cpptools
 
-<div align=center><img src="/images/2021-06-23-13-17-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-13-17-05.png" data-action="zoom"/></div>
 
 ---
 
 #### 3.6.2. 项目调试配置
 
-<div align=center><img src="/images/2021-06-23-13-15-06.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-13-15-06.png" data-action="zoom"/></div>
 
 ```json
 {
@@ -380,7 +380,7 @@ telnet 192.168.10.221 5001
 
 前段时间有一位热心网友在我的博客上留言，给出了一个更好的解决方案：描述了使用 docker 搭建调试环境。
 
-<div align=center><img src="/images/2021-12-15-07-19-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-15-07-19-59.png" data-action="zoom"/></div>
 
 ---
 

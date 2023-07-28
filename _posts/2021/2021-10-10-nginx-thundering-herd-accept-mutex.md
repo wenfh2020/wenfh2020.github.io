@@ -157,7 +157,7 @@ void ngx_process_events_and_timers(ngx_cycle_t *cycle) {
 
 核心逻辑在这个函数 `ngx_trylock_accept_mutex`，获得锁的子进程，可以将共享的 listen socket 通过 epoll_ctl 添加到事件驱动进行监控，当有资源到来时，子进程通过 epoll_wait 获得通知处理。而没有获得锁的子进程的 epoll 没有关注 listen socket 的事件，所以它们的 epoll_wait 是不会通知 listen socket 的事件。
 
-<div align=center><img src="/images/2021-10-11-12-57-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-10-11-12-57-59.png" data-action="zoom"/></div>
 
 ---
 

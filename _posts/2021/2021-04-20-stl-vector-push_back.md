@@ -23,7 +23,7 @@ std::vecotr 有自己的动态内存分配策略，策略有优点也有缺点�
 * 优点：避免频繁向底层分配空间，增加开销。
 * 缺点：内存动态增长幅度比较大（2 倍），可能会浪费空间。而且数组是连续的内存空间，内存空间增长需要创建新的连续空间，涉及到内容拷贝，某些场景会增加系统开销。
 
-<div align=center><img src="/images/2021-04-20-10-45-24.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-20-10-45-24.png" data-action="zoom"/></div>
 
 > 图片来源：《STL 源码剖析》-- 侯捷 -- 第四章 - 序列式容器 - 4.2 vector
 

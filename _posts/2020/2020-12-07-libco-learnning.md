@@ -50,7 +50,7 @@ libco 是轻量级的协程库，看完下面几个帖子，应该能大致搞�
 
 将 libco 的源码结构展开，这样方便理清它的内部结构关系。
 
-![源码对象](/images/2020-12-07-22-12-57.png){:data-action="zoom"}
+![源码对象](/images/2020/2020-12-07-22-12-57.png){:data-action="zoom"}
 
 ---
 
@@ -202,7 +202,7 @@ total cnt: 30000, total time: 2.370038, avg: 12658.024719
 
 > 详细请参考：《[[co_kimserver] libco mysql 连接池](https://wenfh2020.com/2021/03/25/co-kimserver-mysql-pool/)》
 
-<div align=center><img src="/images/2021-03-25-16-06-10.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-03-25-16-06-10.png" data-action="zoom"/></div>
 
 ```shell
 # ./test_mysql_mgr r 100000 10
@@ -215,7 +215,7 @@ total cnt: 1000000, total time: 125.832877, avg: 7947.048692
 * libco 协程切换成本不高，主要是 mysqlclient 耗费性能，参考火焰图。
 * 压测频繁地申请内存空间也耗费了不少性能（参考火焰图的 __brk），尝试添加 jemalloc 优化，发现 jemalloc 与 libco 一起用在 Linux 竟然出现死锁！！！
 
-<div align=center><img src="/images/2021-01-16-13-30-28.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-01-16-13-30-28.png" data-action="zoom"/></div>
 
 > 火焰图参考：[如何生成火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)
 

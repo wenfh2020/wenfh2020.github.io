@@ -48,15 +48,15 @@ author: wenfh2020
 
 * [reuseport](https://wenfh2020.com/2021/10/12/thundering-herd-tcp-reuseport/).（目前比较优秀的解决方案：多个 listen socket 资源队列，链接资源多个进程负载均衡。）
 
-<div align=center><img src="/images/2021-07-31-19-20-51.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-31-19-20-51.png" data-action="zoom"/></div>
 
 * [epollexclusive](https://wenfh2020.com/2021/10/11/thundering-herd-nginx-epollexclusive/)（Linux 4.5+ 增加的 epoll 属性，只唤醒一个睡眠的进程去 accept 共享的资源）。
 
-<div align=center><img src="/images/2021-11-04-11-33-40.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-04-11-33-40.png" data-action="zoom"/></div>
 
 * [accept_mutex](https://wenfh2020.com/2021/10/10/nginx-thundering-herd-accept-mutex/)（通过共享锁，使得一个时间段内，只有一个子进程 accept 资源）。
 
-<div align=center><img src="/images/2021-10-11-12-57-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-10-11-12-57-59.png" data-action="zoom"/></div>
 
 ---
 
@@ -66,7 +66,7 @@ author: wenfh2020
 
 睡眠和唤醒也是典型的观察者模式。进程创建 epoll 实例，然后通过 epoll_ctl 添加关注 socket 事件，内核里的实现：调用了 `add_wait_queue` 函数将当前进程的等待唤醒事件，添加到 socket 的 socket.wq 等待队列，当 socket 有对应的事件发生时，内核就根据 socket.wq 等待队列上的等待事件唤醒对应的进程。而惊群产生的原因：共享 listen socket 的 socket.wq 等待队列上添加了多个进程等待事件，被内核通过 `__wake_up_common` 函数遍历唤醒了。详细可以参考下图的黄色图标第 3 个步骤和第 6 个步骤。
 
-<div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
 > 详细请参考文章：[tcp + epoll 内核睡眠唤醒工作流程](https://wenfh2020.com/2021/12/16/tcp-epoll-wakeup/)。
 

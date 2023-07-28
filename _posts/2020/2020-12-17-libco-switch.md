@@ -21,7 +21,7 @@ author: wenfh2020
 
 正常情况下，函数代码从头到尾串行执行，直到函数生命期结束。而协程切换却能将当前运行的函数，切换到另外一个函数运行，这是协程的神奇之处。
 
-<div align=center><img src="/images/2020-12-24-17-18-39.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020/2020-12-24-17-18-39.png" data-action="zoom"/></div>
 
 ---
 
@@ -56,7 +56,7 @@ struct stCoRoutine_t {
 };
 ```
 
-<div align=center><img src="/images/2020-12-23-10-00-40.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020/2020-12-23-10-00-40.png" data-action="zoom"/></div>
 
 
 ---
@@ -86,11 +86,11 @@ struct coctx_t {
 
 * 协程函数运行时内存空间。
 
-<div align=center><img src="/images/2020-12-23-15-53-33.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020/2020-12-23-15-53-33.png" data-action="zoom"/></div>
 
 * 协程运行时内存布局。
 
-<div align=center><img src="/images/2020-12-23-10-07-13.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020/2020-12-23-10-07-13.png" data-action="zoom"/></div>
 
 ---
 
@@ -137,7 +137,7 @@ struct coctx_t {
     ret
 ```
 
-<div align=center><img src="/images/2020-12-23-11-44-39.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020/2020-12-23-11-44-39.png" data-action="zoom"/></div>
 
 ---
 

@@ -37,7 +37,7 @@ author: wenfh2020
 3. 步骤 1 随即会打开快捷键 json 文件：keybindings.json。
 4. 添加要绑定的快捷键信息。
 
-![快捷键设置](/images/2020-10-24-17-25-43.png){:data-action="zoom"}
+![快捷键设置](/images/2020/2020-10-24-17-25-43.png){:data-action="zoom"}
 
 | key     | value                                                                          |
 | :------ | :----------------------------------------------------------------------------- |
@@ -66,9 +66,9 @@ author: wenfh2020
 3. 根据自己脚本的需要选择对应的类型，笔者选择了 `Others`。
 4. 步骤 3 后就可以编辑 tasks.json 文件即可。
 
-![编辑 tasks.json](/images/2020-10-24-17-55-14.png){:data-action="zoom"}
+![编辑 tasks.json](/images/2020/2020-10-24-17-55-14.png){:data-action="zoom"}
 
-![编辑 tasks.json](/images/2020-10-24-17-57-16.png){:data-action="zoom"}
+![编辑 tasks.json](/images/2020/2020-10-24-17-57-16.png){:data-action="zoom"}
 
 | key     | value                                  |
 | :------ | :------------------------------------- |

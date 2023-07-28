@@ -16,11 +16,11 @@ author: wenfh2020
 
 ---
 
-<div align=center><img src="/images/2021-06-13-07-37-38.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-13-07-37-38.png" data-action="zoom"/></div>
 
 ## 1. 网络通信流程
 
-<div align=center><img src="/images/2021-06-08-08-12-57.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-08-12-57.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
@@ -28,9 +28,9 @@ author: wenfh2020
 
 ## 2. OSI 七层网络协议
 
-<div align=center><img src="/images/2021-06-11-13-36-24.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-11-13-36-24.png" data-action="zoom"/></div>
 
-<div align=center><img src="/images/2021-06-11-13-35-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-11-13-35-05.png" data-action="zoom"/></div>
 
 > 图片来源：《图解 TCP_IP》
 
@@ -38,17 +38,17 @@ author: wenfh2020
 
 ## 3. 数据传输封包格式
 
-<div align=center><img src="/images/2021-06-08-08-30-32.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-08-30-32.png" data-action="zoom"/></div>
 
-<div align=center><img src="/images/2021-06-09-11-01-49.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-09-11-01-49.png" data-action="zoom"/></div>
 
 > 图片来源：《图解 TCP_IP》
 
-<div align=center><img src="/images/2021-06-09-06-44-35.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-09-06-44-35.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
-<div align=center><img src="/images/2021-06-09-06-44-13.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-09-06-44-13.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
@@ -58,11 +58,11 @@ author: wenfh2020
 
 #### 3.1.1. TCP 头部格式
 
-<div align=center><img src="/images/2021-06-11-16-02-53.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-11-16-02-53.png" data-action="zoom"/></div>
 
 > 图片来源：《图解 TCP_IP》 -- 6.7 TCP 首部格式
 
-<div align=center><img src="/images/2021-06-08-08-22-52.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-08-22-52.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
@@ -108,7 +108,7 @@ struct tcphdr {
 
 #### 3.1.2. TCP 数据传输
 
-<div align=center><img src="/images/2021-06-08-16-50-12.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-16-50-12.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
@@ -116,7 +116,7 @@ struct tcphdr {
 
 #### 3.1.3. TCP 握手挥手
 
-<div align=center><img src="/images/2021-06-08-17-01-28.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-17-01-28.png" data-action="zoom"/></div>
 
 > 图片来源：[抓包分析 tcp 握手和挥手](https://wenfh2020.com/2020/04/12/tcp-handshakes-waves/)
 
@@ -124,11 +124,11 @@ struct tcphdr {
 
 ### 3.2. IPv4 头部格式
 
-<div align=center><img src="/images/2021-06-11-13-43-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-11-13-43-59.png" data-action="zoom"/></div>
 
 >《图解 TCP_IP》 -- 4.7 IPv4 首部
 
-<div align=center><img src="/images/2021-06-08-08-40-07.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-08-40-07.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
@@ -161,7 +161,7 @@ struct iphdr {
 
 ### 3.3. MAC 头部格式
 
-<div align=center><img src="/images/2021-06-08-09-27-42.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-09-27-42.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 
@@ -169,11 +169,11 @@ struct iphdr {
 
 ### 3.4. UDP 头部格式
 
-<div align=center><img src="/images/2021-06-11-16-10-54.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-11-16-10-54.png" data-action="zoom"/></div>
 
 >图片来源：《图解 TCP_IP》 -- 6.6 UDP 的首部格式
 
-<div align=center><img src="/images/2021-06-08-16-29-20.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-08-16-29-20.png" data-action="zoom"/></div>
 
 > 图片来源：《网络是怎样连接的》
 

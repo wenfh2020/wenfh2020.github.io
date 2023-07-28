@@ -20,7 +20,7 @@ author: wenfh2020
 
 ### 1.1. 客户端与服务通信
 
-![client 与 server 通信流程](/images/2020-11-10-10-41-39.png){:data-action="zoom"}
+![client 与 server 通信流程](/images/2020/2020-11-10-10-41-39.png){:data-action="zoom"}
 
 ---
 
@@ -37,7 +37,7 @@ A 节点与 B 节点数据透传 --> A1 与 B1 子进程建立通信。
 * A1 收到 B1 回包，将 B1 的 fd 保存起来。
 * A1 与 B1 的通道被打通后，发送缓冲区里等待发送的的业务数据包。
 
-![分布式系统节点通信详细流程](/images/2020-11-10-10-29-50.png){:data-action="zoom"}
+![分布式系统节点通信详细流程](/images/2020/2020-11-10-10-29-50.png){:data-action="zoom"}
 
 ---
 
@@ -53,7 +53,7 @@ kimserver 作为异步服务，核心功能是把异步的逻辑封装在 `Cmd` 
 
 ### 2.1. 实现逻辑
 
-![源码逻辑](/images/2020-11-25-08-54-00.png){:data-action="zoom"}
+![源码逻辑](/images/2020/2020-11-25-08-54-00.png){:data-action="zoom"}
 
 ---
 

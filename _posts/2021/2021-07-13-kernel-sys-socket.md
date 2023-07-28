@@ -32,9 +32,9 @@ socket 是管理网络通信的对象，适合本地或网络环境的进程间�
 int socket(int domain/family, int type, int protocol);
 ```
 
-<div align=center><img src="/images/2021-07-14-16-13-58.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-14-16-13-58.png" data-action="zoom"/></div>
 
-<div align=center><img src="/images/2021-07-14-16-21-37.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-14-16-21-37.png" data-action="zoom"/></div>
 
 > 图片来源：《UNIX 网络编程_卷1》
 
@@ -64,7 +64,7 @@ entry_SYSCALL_64() (/root/linux-5.0.1/arch/x86/entry/entry_64.S:175)
 
 socket 结构主要分两部分：与文件系统关系密切的部分，与通信关系密切的部分。
 
-<div align=center><img src="/images/2021-07-20-00-12-01.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-20-00-12-01.png" data-action="zoom"/></div>
 
 > 图片来源：[sys-socket - linux 内核 socket 结构关系](https://www.processon.com/view/60eea22763768906ea233da0?fromnew=1)
 
@@ -200,7 +200,7 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 
 Linux 系统一切皆文件，Linux 通过 vfs（虚拟文件系统）管理文件，内核为 socket 定义了一种特殊的文件类型，形成了一种特殊的文件系统：sockfs，系统初始化时，进行安装。
 
-<div align=center><img src="/images/2021-07-20-07-51-52.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-20-07-51-52.png" data-action="zoom"/></div>
 
 > 图片来源：《Linux 内核源代码情景分析》- 第五章 - 文件系统
 

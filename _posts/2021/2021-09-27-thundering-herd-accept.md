@@ -36,7 +36,7 @@ author: wenfh2020
 
 如下图，多个子进程共同 accept 主进程的共享 socket 的链接资源，当资源到来时，只唤醒其中一个进程处理，这样就避免了惊群问题。
 
-<div align=center><img src="/images/2021-10-12-15-00-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-10-12-15-00-05.png" data-action="zoom"/></div>
 
 * 子进程阻塞睡眠等待，添加排它唤醒标识（WQ_FLAG_EXCLUSIVE）的等待事件到等待队列。
 
@@ -90,7 +90,7 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 通过 TCP 服务端和客户端的链接流程，了解 accept 从 listener 的 `全连接队列` 获取新链接资源的工作流程。（参考下图TCP 三次握手流程。）
 
-<div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 ---
 

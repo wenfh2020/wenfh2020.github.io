@@ -20,13 +20,13 @@ author: wenfh2020
 
 * 设备关系。
 
-<div align=center><img src="/images/2021-04-19-13-11-50.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-19-13-11-50.png" data-action="zoom"/></div>
 
 > 图片来源：《深入理解计算机系统》- 第一章 - 计算机漫游
 
 * 存储关系。
 
-<div align=center><img src="/images/2021-04-19-13-13-12.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-19-13-13-12.png" data-action="zoom"/></div>
 
 > 图片来源：《深入理解计算机系统》- 第一章 - 计算机漫游
 
@@ -36,47 +36,47 @@ author: wenfh2020
 
 * 存储。
 
-<div align=center><img src="/images/2021-04-19-13-14-58.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-19-13-14-58.png" data-action="zoom"/></div>
 
 > 图片来源：《深入理解计算机系统》- 第一章 - 计算机漫游
 
 * 模型：node - 存储节点；zone - 管理区；page - 页面。
 
-<div align=center><img src="/images/2021-04-15-10-46-25.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-15-10-46-25.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux 内存管理窥探（2）：内存模型](https://blog.csdn.net/zhoutaopower/article/details/86710017)
 
-<div align=center><img src="/images/2021-04-15-10-59-03.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-15-10-59-03.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux 内存管理窥探（2）：内存模型](https://blog.csdn.net/zhoutaopower/article/details/86710017)
 
 * 虚拟内存。
 
-<div align=center><img src="/images/2021-04-15-10-26-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-15-10-26-18.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux 内存管理窥探（1）：内存规划与分布](https://blog.csdn.net/zhoutaopower/article/details/86700419)
 
-<div align=center><img src="/images/2021-04-15-10-29-24.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-15-10-29-24.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux 内存管理窥探（1）：内存规划与分布](https://blog.csdn.net/zhoutaopower/article/details/86700419)
 
-<div align=center><img src="/images/2021-04-10-11-10-30.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-10-11-10-30.png" data-action="zoom"/></div>
 
 > 图片来源：《深入理解计算机系统》- 第九章 - 虚拟内存
 
 * MMU 地址翻译。
 
-<div align=center><img src="/images/2021-04-19-13-19-47.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-19-13-19-47.png" data-action="zoom"/></div>
 
 > 图片来源：《深入理解计算机系统》- 第九章 - 虚拟内存
 
-<div align=center><img src="/images/2021-04-15-12-16-33.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-15-12-16-33.png" data-action="zoom"/></div>
 
 > 图片来源：[初探 MMU](https://blog.csdn.net/zhoutaopower/article/details/87934818)
 
 * 页表分页机制。
 
-<div align=center><img src="/images/2021-04-12-17-19-02.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-12-17-19-02.png" data-action="zoom"/></div>
 
 ---
 
@@ -84,7 +84,7 @@ author: wenfh2020
 
 Linux 系统内存分配流程。
 
-<div align=center><img src="/images/2021-04-14-17-13-58.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-14-17-13-58.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux内核内存管理算法Buddy和Slab](https://cloud.tencent.com/developer/article/1106795)
 
@@ -94,7 +94,7 @@ Linux 系统内存分配流程。
 
 伙伴算法分配内存最小单位页（page）。缺点：分配粒度大。
 
-<div align=center><img src="/images/2021-04-14-22-12-24.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-14-22-12-24.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux内核内存管理算法Buddy和Slab](https://cloud.tencent.com/developer/article/1106795)
 
@@ -141,11 +141,11 @@ static inline struct page *alloc_pages_node(int nid, gfp_t gfp_mask, unsigned in
 
 * slab 算法框架。
 
-<div align=center><img src="/images/2021-04-14-21-56-46.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-14-21-56-46.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux内核内存管理算法Buddy和Slab](https://cloud.tencent.com/developer/article/1106795)
 
-<div align=center><img src="/images/2021-04-19-11-21-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-19-11-21-59.png" data-action="zoom"/></div>
 
 > 图片来源：[linux 内核 内存管理 slub算法 （一） 原理](https://blog.csdn.net/lukuen/article/details/6935068)
 

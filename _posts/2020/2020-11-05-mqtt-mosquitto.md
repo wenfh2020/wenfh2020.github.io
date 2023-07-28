@@ -24,11 +24,11 @@ author: wenfh2020
 
 * 硬件设备。
 
-<div align=center><img src="/images/2021-01-07-09-31-49.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-01-07-09-31-49.png" data-action="zoom"/></div>
 
 * 工作流程。
 
-<div align=center><img src="/images/2020-11-08-11-31-48.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2020/2020-11-08-11-31-48.png" data-action="zoom"/></div>
 
 ---
 

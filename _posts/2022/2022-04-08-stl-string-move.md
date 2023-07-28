@@ -23,7 +23,7 @@ author: wenfh2020
 
 ### 1.1. 移动语义
 
-<div align=center><img src="/images/2023-07-04-22-05-02.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-07-04-22-05-02.png" data-action="zoom"></div>
 
 ---
 
@@ -37,7 +37,7 @@ C++ 移动语义是一种在 C++11 中引入的特性，它允许对象的资源
 
 ### 1.2. std::move
 
-<div align=center><img src="/images/2023-07-05-07-17-05.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-07-05-07-17-05.png" data-action="zoom"></div>
 
 ---
 
@@ -65,7 +65,7 @@ move(_Tp&& __t) noexcept {
 
 ### 2.1. std::string
 
-<div align=center><img src="/images/2022-04-09-12-58-38.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-04-09-12-58-38.png" data-action="zoom"/></div>
 
 ---
 
@@ -246,7 +246,7 @@ int main() {
 
 * stl 源码，通过 gdb 调试方式，看看关键部分代码的处理。
 
-<div align=center><img src="/images/2022-04-09-12-36-04.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-04-09-12-36-04.png" data-action="zoom"/></div>
 
 ```cpp
 /* /usr/include/c++/9/debug/vector */

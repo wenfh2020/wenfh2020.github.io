@@ -32,7 +32,7 @@ redis 在 Linux 上有三种内存池选择：
 
 轻量级的也可以参考 nginx 的内存池：[ngx_pool_t](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.h)，但是它的内存回收管理比较弱。
 
-![nginx 内存池](/images/2020-04-25-17-15-19.png){: data-action="zoom"}
+![nginx 内存池](/images/2020/2020-04-25-17-15-19.png){: data-action="zoom"}
 
 > 设计图来源：《[nginx 内存池结构图](https://www.processon.com/view/5e24d976e4b049828093bebe)》
 
@@ -59,7 +59,7 @@ redis 在 Linux 上有三种内存池选择：
 
 > 看下图，只要 n2 这块小内存用户不释放，其它节点内存释放了，也不给返还系统。
 
-<div align=center><img src="/images/2021-04-27-09-13-26.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-27-09-13-26.png" data-action="zoom"/></div>
 
 所以程序在 Linux 上分配内存，需要避免分阶段分配内存，就是后面分配的内存如果一直不释放，前面申请的内存即便释放了，底层可能不给你返还系统，出现"泄漏"的问题。
 

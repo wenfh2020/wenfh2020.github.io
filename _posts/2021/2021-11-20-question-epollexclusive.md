@@ -56,18 +56,18 @@ nginx 也有 EPOLLEXCLUSIVE 解决惊群问题的方案，跟问题提到的应�
 
 * nginx 的 EPOLLEXCLUSIVE 工作模型。
 
-<div align=center><img src="/images/2021-11-04-11-07-09.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-04-11-07-09.png" data-action="zoom"/></div>
 
 * socket 唤醒流程。
 
-<div align=center><img src="/images/2021-11-04-11-33-40.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-04-11-33-40.png" data-action="zoom"/></div>
 
 * 结合源码看下图，（黄色序号）步骤 2 和步骤 4，epoll 是如何添加等待事件的，步骤 6 是如何唤醒的。
 
 <center>
     <img style="border-radius: 0.3125em;
     box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);"
-    src="/images/2021-11-09-11-26-53.png" data-action="zoom">
+    src="/images/2021/2021-11-09-11-26-53.png" data-action="zoom">
     <br>
     <div style="color:orange; border-bottom: 1px solid #d9d9d9;
     display: inline-block;

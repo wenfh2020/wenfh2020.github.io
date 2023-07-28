@@ -93,7 +93,7 @@ ev_timer_start (struct ev_loop *loop, ev_timer *w)
 
 > 详细请参考：[gdb & libev 调试视频](https://www.bilibili.com/video/BV1U54y1D7uM/)
 
-![libev 调试](/images/2020-05-28-21-04-53.png){:data-action="zoom"}
+![libev 调试](/images/2020/2020-05-28-21-04-53.png){:data-action="zoom"}
 
 ---
 

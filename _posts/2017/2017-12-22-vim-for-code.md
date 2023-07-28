@@ -15,7 +15,7 @@ author: wenfh2020
 
 ---
 
-![效果图](/images/2020-04-22-13-31-34.png){: data-action="zoom"}
+![效果图](/images/2020/2020-04-22-13-31-34.png){: data-action="zoom"}
 
 ## 1. 环境
 
@@ -79,4 +79,4 @@ ycm 对于复杂的 C++ 项目，无法跳转问题。错误：Can't jump to def
 
 参考：https://www.golangtc.com/download/package
 
-![golang 编译依赖配置](/images/2020-04-22-13-30-01.png){: data-action="zoom"}
+![golang 编译依赖配置](/images/2020/2020-04-22-13-30-01.png){: data-action="zoom"}

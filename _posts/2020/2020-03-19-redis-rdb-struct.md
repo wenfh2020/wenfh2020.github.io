@@ -105,7 +105,7 @@ static size_t rioFileWrite(rio *r, const void *buf, size_t len) {
 
 粗略将 rdb 文件的结构元素添加到图表，可以看作是“伪代码”吧，有些元素是建立在一定条件下才会添加进去。
 
-![rdb 文件结构](/images/2020-03-19-13-57-01.png){: data-action="zoom"}
+![rdb 文件结构](/images/2020/2020-03-19-13-57-01.png){: data-action="zoom"}
 
 > 有兴趣的朋友，可以参考我的帖子：[用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)，下个断点，走一下 redis 保存和加载 rdb 文件的工作流程。
 

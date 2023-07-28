@@ -23,7 +23,7 @@ author: wenfh2020
 * 中心服务管理是 B 图的节点管理模式，关系简单，逻辑清晰。
 * 当集群节点通过中心相互发现，彼此连接，那么就成了 A 图的关系模型。
 
-![通信解耦](/images/2020-05-21-20-02-12.png){:data-action="zoom"}
+![通信解耦](/images/2020/2020-05-21-20-02-12.png){:data-action="zoom"}
 
 ---
 
@@ -36,7 +36,7 @@ author: wenfh2020
 
 > 节点发现原理可以参考下这个帖子： [《徒手教你使用zookeeper编写服务发现》](https://zhuanlan.zhihu.com/p/34156758)，我觉得它说得简单易懂。
 
-![节点管理](/images/2020-10-24-10-11-56.png){:data-action="zoom"}
+![节点管理](/images/2020/2020-10-24-10-11-56.png){:data-action="zoom"}
 
 ---
 
@@ -88,7 +88,7 @@ zookeeper 源码目录下有一个 [zookeeper-client-c](https://github.com/apach
 * 主线程向 zookeeper 发送命令，命令将以任务方式将其添加到任务队列，提供新线程消费。
 * 主线程通过时钟定时消费，新线程处理任务的结果。
 
-![整合 zookeeper-client-c](/images/2020-11-07-16-38-36.png){:data-action="zoom"}
+![整合 zookeeper-client-c](/images/2020/2020-11-07-16-38-36.png){:data-action="zoom"}
 
 ---
 

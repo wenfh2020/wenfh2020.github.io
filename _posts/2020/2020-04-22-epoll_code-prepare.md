@@ -225,7 +225,7 @@ void sock_init_data(struct socket *sock, struct sock *sk) {
 
 fd 与回调 `ep_poll_callback` 建立联系，当网络事件到来，触发回调来筛选出用户关注的事件进行处理。
 
-![驱动粘合设备和内核](/images/2020-05-12-16-53-50.png){:data-action="zoom"}
+![驱动粘合设备和内核](/images/2020/2020-05-12-16-53-50.png){:data-action="zoom"}
 
 ---
 

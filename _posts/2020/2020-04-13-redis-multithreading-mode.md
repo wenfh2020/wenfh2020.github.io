@@ -44,7 +44,7 @@ redis 作者建议：
 
 ## 2. 主线程工作流程
 
-![redis 多线程I/O通信流程](/images/2020-05-03-12-47-36.png){:data-action="zoom"}
+![redis 多线程I/O通信流程](/images/2020/2020-05-03-12-47-36.png){:data-action="zoom"}
 
 > 流程图来源：《[redis 异步网络I/O通信流程 - 多线程](https://www.processon.com/view/5e9bc2cde401fd262e2448dd)》
 
@@ -127,7 +127,7 @@ void afterSleep(struct aeEventLoop *eventLoop) {
 
 ## 3. 多线程协作
 
-![redis 多线程I/O通信流程](/images/2020-05-03-12-47-36.png){:data-action="zoom"}
+![redis 多线程I/O通信流程](/images/2020/2020-05-03-12-47-36.png){:data-action="zoom"}
 
 > 流程图来源：《[redis 异步网络I/O通信流程 - 多线程](https://www.processon.com/view/5e9bc2cde401fd262e2448dd)》
 
@@ -647,7 +647,7 @@ ulimit -n 16384
 
 在 mac book 上测试，从测试结果看，**多线程没有单线程好**。看到网上很多同学用压测工具测试，性能有很大的提升，有时间用其它机器跑下。可能是机器配置不一样，但是至少一点，这个多线程功能目前还有很大的优化空间，所以新特性，还需要放到真实环境中测试过，才能投产。
 
-![redis 压测过程](/images/2020-04-21-14-19-22.png){: data-action="zoom"}
+![redis 压测过程](/images/2020/2020-04-21-14-19-22.png){: data-action="zoom"}
 
 ---
 

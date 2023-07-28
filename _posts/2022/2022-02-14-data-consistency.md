@@ -82,7 +82,7 @@ def update_data(key, obj):
 2. redis 读写分离，主从同步。
 3. mysql 读写分离，主从同步。
 
-<div align=center><img src="/images/2022-02-14-09-58-56.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-02-14-09-58-56.png" data-action="zoom"/></div>
 
 ---
 
@@ -96,11 +96,11 @@ def update_data(key, obj):
 
 * 先改缓存再改数据库。
 
-<div align=center><img src="/images/2022-02-14-12-37-08.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-02-14-12-37-08.png" data-action="zoom"/></div>
 
 * 先改数据库再改缓存。
 
-<div align=center><img src="/images/2022-02-14-17-44-28.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-02-14-17-44-28.png" data-action="zoom"/></div>
 
 ---
 
@@ -108,7 +108,7 @@ def update_data(key, obj):
 
 第一次删除是为了快点实现一致，第二次删除为了最终一致。
 
-<div align=center><img src="/images/2022-02-14-12-38-47.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-02-14-12-38-47.png" data-action="zoom"/></div>
 
 ---
 
@@ -148,7 +148,7 @@ redis 作为高速缓存，优点很明显：快；缺点也很明显：消耗�
 
 > 当然这里面涉及到节点的变动带来的问题，所以没有万能的方案，只能根据场景进行取舍。
 
-<div align=center><img src="/images/2022-02-21-11-01-08.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-02-21-11-01-08.png" data-action="zoom"/></div>
 
 ---
 

@@ -28,7 +28,7 @@ drwxr-xr-x  7 wenfh2020  staff   224B  3 13 14:51 lru
 -rw-r--r--  1 wenfh2020  staff   2.7K 12 30 05:59 main.cpp
 ```
 
-![linux 权限属性](/images/2020-03-17-11-00-14.png){: data-action="zoom"}
+![linux 权限属性](/images/2020/2020-03-17-11-00-14.png){: data-action="zoom"}
 
 ---
 

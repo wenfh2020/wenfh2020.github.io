@@ -64,7 +64,7 @@ struct stCoRoutine_t* co_create_env(stCoRoutineEnv_t* env,
 3. 同理新切入的协程，需要将以前保存的内存上下文，重新拷贝到共享栈上工作。
 4. 内存拷贝不是必然的，因为有多个共享内存块，每个块都会被指派给多个协程，只有当相同共享栈上的协程切换才会出现内存拷贝。
 
-<div align=center><img src="/images/2021-03-17-13-46-03.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-03-17-13-46-03.png" data-action="zoom"/></div>
 
 * 共享栈，协程栈空间指向指定共享栈空间。
 

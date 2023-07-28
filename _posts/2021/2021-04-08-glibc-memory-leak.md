@@ -25,7 +25,7 @@ author: wenfh2020
 
 上测试源码看看：
 
-<div align=center><img src="/images/2021-04-21-14-09-49.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-21-14-09-49.png" data-action="zoom"/></div>
 
 ```c
 /* g++ -g -std='c++11' example_pressure.cpp -o ep111  && ./ep111 10000 */
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 
 用 pmap 命令查看进程，发现 640600K 这一块 [ anon ] 内存很大，应该是这个地方“泄漏”了。
 
-<div align=center><img src="/images/2021-04-21-14-19-25.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-21-14-19-25.png" data-action="zoom"/></div>
 
 > 图片来源：《深入理解计算机系统》
 
@@ -253,7 +253,7 @@ ptmalloc2 支持多线程，它为多个线程提供了多个 `arena` 分区（m
 
 * ptmalloc2 主要通过 `sbrk` 和 `mmap` 这两个函数，向内核申请内存空间。因为上述例子是单线程的，而且每次(new/malloc)申请的内存小于 128k，所以用户空间向内核申请内存通过 sbrk 而不是 mmap。
 
-<div align=center><img src="/images/2021-04-14-17-13-58.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-14-17-13-58.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux内核内存管理算法Buddy和Slab](https://cloud.tencent.com/developer/article/1106795)
 
@@ -344,7 +344,7 @@ struct malloc_state {
 
 当 top chunk 内存达到一个回收阈值时，它才会通过 sbrk 返还内存给系统。所以说理解 malloc_state.top 是解决问题的关键。
 
-<div align=center><img src="/images/2021-04-27-09-13-26.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-04-27-09-13-26.png" data-action="zoom"/></div>
 
 ---
 

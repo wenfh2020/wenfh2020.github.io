@@ -14,7 +14,7 @@ author: wenfh2020
 * content
 {:toc}
 
-<div align=center><img src="/images/2021-06-24-16-20-49.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-24-16-20-49.png" data-action="zoom"/></div>
 
 ---
 
@@ -38,21 +38,21 @@ author: wenfh2020
 
 * ms-vscode.cpptools
 
-<div align=center><img src="/images/2021-06-23-13-17-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-13-17-05.png" data-action="zoom"/></div>
 
 * remote-ssh
 
 > 避免 remote-ssh 工作过程中频繁要求输入登录密码，最好设置一下 ssh 免密码登录（参考：[[shell] ssh 快捷登录](https://wenfh2020.com/2020/01/07/ssh-quick-login/)）。
 
-<div align=center><img src="/images/2021-06-23-13-18-31.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-13-18-31.png" data-action="zoom"/></div>
 
-<div align=center><img src="/images/2021-06-23-13-42-26.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-13-42-26.png" data-action="zoom"/></div>
 
 ---
 
 ### 3.2. 项目调试配置
 
-<div align=center><img src="/images/2021-06-23-13-15-06.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-13-15-06.png" data-action="zoom"/></div>
 
 ```json
 {
@@ -119,7 +119,7 @@ c
 3. vscode 在 Linux 内核源码的 eventpoll.c 文件，对对应接口（epoll_create, epoll_wait, epoll_ctl）下断点。
 4. F5 快捷键启动 vscode 调试。
 
-<div align=center><img src="/images/2021-06-23-12-48-59.jpeg" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-06-23-12-48-59.jpeg" data-action="zoom"/></div>
 
 ---
 

@@ -133,7 +133,7 @@ Shortest transaction:           0.00
 
 压力测试过程中系统负载情况。
 
-![系统负载](/images/2020-03-11-08-23-10.png){: data-action="zoom"}
+![系统负载](/images/2020/2020-03-11-08-23-10.png){: data-action="zoom"}
 
 ---
 

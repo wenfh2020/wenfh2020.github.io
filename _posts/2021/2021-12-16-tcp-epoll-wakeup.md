@@ -17,7 +17,7 @@ author: wenfh2020
 
 ## 1. 流程
 
-<div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
 > 图片来源：[tcp + epoll 内核睡眠唤醒时序流程](https://www.processon.com/view/61669e405653bb1336db3c86)
 

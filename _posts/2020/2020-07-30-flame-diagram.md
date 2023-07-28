@@ -22,7 +22,7 @@ author: wenfh2020
 
 基于 Linux 平台的 `perf` 采样脚本（[fg.sh](https://github.com/wenfh2020/shell/blob/master/fg.sh)），对指定进程进行采样，生成火焰图 `perf.svg`。
 
-<div align=center><img src="/images/2021-11-10-12-21-06.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-10-12-21-06.png" data-action="zoom"/></div>
 
 > 图片来源：[Linux Performance](https://www.brendangregg.com/linuxperf.html)。
 
@@ -37,7 +37,7 @@ perf 采集的数据，可以通过插件生成二维火焰图：
 
 通过图象，我们对自己写的代码工作效率一目了然，这样可以针对性优化源码性能。
 
-![火焰图](/images/2020-07-30-19-33-44.png){:data-action="zoom"}
+![火焰图](/images/2020/2020-07-30-19-33-44.png){:data-action="zoom"}
 
 ---
 
@@ -102,7 +102,7 @@ perf script -i perf_with_stack.data | stackcollapse-perf.pl | flamegraph.pl > pe
 
 #### 3.2.1. 问题一
 
-<div align=center><img src="/images/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
+<div align=center><img src="/images/2020/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
 
 上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 vsnprintf，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致不需要存盘的日志数据，仍然执行了 vsnprintf 操作。后面将日志过滤判断放在 vsnprintf 前，重复进行测试，占 1.54%，性能比之前提高了 5 个百分点 —— good 😄!
 
@@ -130,7 +130,7 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
 
 > 参考：《[[stl 源码分析] std::list::size 时间复杂度](https://wenfh2020.com/2021/04/09/stl-list-size/)》
 
-![火焰图问题二](/images/2020-12-11-17-43-59.png){:data-action="zoom"}
+![火焰图问题二](/images/2020/2020-12-11-17-43-59.png){:data-action="zoom"}
 
 ---
 
@@ -140,7 +140,7 @@ bool Log::log_data(const char* file_name, int file_line, const char* func_name, 
 
 * 慢操作。
 
-<div align=center><img src="/images/2021-11-12-17-41-58.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-12-17-41-58.png" data-action="zoom"/></div>
 
 > 图片来源：[Off-CPU Analysis](https://www.brendangregg.com/offcpuanalysis.html)
 
@@ -174,7 +174,7 @@ perf script -i perf.data | stackcollapse-perf.pl | \
 
 * off-cpu 火焰图。展示了程序写日志到磁盘的阻塞操作的可视化记录。
 
-<div align=center><img src="/images/2021-11-12-17-35-21.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-12-17-35-21.png" data-action="zoom"/></div>
 
 ---
 

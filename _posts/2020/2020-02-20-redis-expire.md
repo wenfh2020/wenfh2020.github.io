@@ -23,7 +23,7 @@ redis 有丰富的数据结构，`key-value`， `value` 数据结构对象（[re
 
 主服务检查过期/删除过期逻辑 -> 删除过期键值 -> 异步/同步删除数据 -> 主从同步。
 
-![流程](/images/2020-10-10-12-32-27.png){:data-action="zoom"}
+![流程](/images/2020/2020-10-10-12-32-27.png){:data-action="zoom"}
 
 > 设计图来源：[《redis 过期数据淘汰流程》](https://www.processon.com/view/5e4cd648e4b01f766b4c099b)
 

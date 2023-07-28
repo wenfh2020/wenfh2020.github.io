@@ -32,7 +32,7 @@ libco 定时器核心数据结构：数组 + 双向链表（下面左图）。
 
 libco 定时器也被称为时间轮（右图）：因为数组数据结构，下标是以毫秒为单位，当前时间下标 `stTimeout_t.llStartIdx`，沿着这个下标，随着时间推移，顺时针读写数据。
 
-<div align=center><img src="/images/2021-03-30-14-03-54.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-03-30-14-03-54.png" data-action="zoom"/></div>
 
 > 图片来源：[processon](https://www.processon.com/view/6062b09e1e085332583e7783)
 

@@ -90,7 +90,7 @@ telnet 127.0.0.1 80
 ...
 ```
 
-<div align=center><img src="/images/2021-11-05-10-49-41.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-05-10-49-41.png" data-action="zoom"/></div>
 
 * 惊群现象。
 
@@ -201,7 +201,7 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 4. 内核将链接资源保存到 listen socket 的完全队列中。
 5. 内核唤醒步骤2的进程去 accept 获取 listen socket 完全队列中的链接资源。
 
-<div align=center><img src="/images/2021-10-14-11-21-46.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-10-14-11-21-46.png" data-action="zoom"/></div>
 
 ---
 
@@ -209,7 +209,7 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 通过下图，了解一下服务端 tcp 的第三次握手和 epoll 内核的等待唤醒工作流程。
 
-<div align=center><img src="/images/2021-12-31-12-44-05.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-12-31-12-44-05.png" data-action="zoom"/></div>
 
 1. 进程通过 epoll_create 创建 eventpoll 对象。
 2. 进程通过 epoll_ctl 添加关注 listen socket 的 EPOLLIN 可读事件。
@@ -242,7 +242,7 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
 
 客户端主动链接服务端，TCP 三次握手成功后，服务端产生新的 tcp 链接资源，内核将唤醒 socket.wq 上的等待进程，通过 accept 从 listen socket 上的 `全链接队列` 中获取 TCP 链接资源。
 
-<div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 > 参考：[《[内核源码] 网络协议栈 - tcp 三次握手状态》](https://wenfh2020.com/2021/08/17/kernel-tcp-handshakes/) [《[内核源码] 网络协议栈 - listen (tcp)》](https://wenfh2020.com/2021/07/21/kernel-sys-listen/)
 
@@ -739,7 +739,7 @@ httpclient <--> nginx <--> httpserver
 
 nginx 作为代理，httpclient 模拟多个短链接发包，测试 nginx 的惊群问题。
 
-<div align=center><img src="/images/2021-11-02-10-54-10.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-02-10-54-10.png" data-action="zoom"/></div>
 
 ---
 
@@ -976,11 +976,11 @@ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
 
 * 对比两个场景的中断数据。(th_in：惊群，re_in：非惊群。)
 
-<div align=center><img src="/images/2021-11-02-16-51-23.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-02-16-51-23.png" data-action="zoom"/></div>
 
 * 对比两个场景的上下文切换数据。(th_cs：惊群，re_cs：非惊群。)
 
-<div align=center><img src="/images/2021-11-02-16-52-41.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-02-16-52-41.png" data-action="zoom"/></div>
 
 ---
 

@@ -124,7 +124,7 @@ int main() {
 
 ## 3. zookeeper-client-c 源码分析
 
-![client 工作流程](/images/2020-10-18-21-59-50.png){:data-action="zoom"}
+![client 工作流程](/images/2020/2020-10-18-21-59-50.png){:data-action="zoom"}
 
 ---
 

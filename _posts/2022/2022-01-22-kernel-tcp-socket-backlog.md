@@ -37,13 +37,13 @@ tcp 通过三次握手，客户端与服务端建立完整连接。
 
 * 三次握手流程。
 
-<div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 > 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 
 * 三次握手源码流程。
 
-<div align=center><img src="/images/2021-08-18-15-42-54.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-18-15-42-54.png" data-action="zoom"/></div>
 
 > 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 
@@ -68,7 +68,7 @@ listen socket 的 struct sock 数据结构 inet_connection_sock。
 * 当前半连接队列长度：
   inet_connection_sock.icsk_accept_queue.qlen
 
-<div align=center><img src="/images/2021-07-28-10-01-09.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-28-10-01-09.png" data-action="zoom"/></div>
 
 > 图片来源：[linux 内核 listen (tcp/IPv4) 结构关系](https://processon.com/view/60fa6dfe7d9c083494e37a9a)
 

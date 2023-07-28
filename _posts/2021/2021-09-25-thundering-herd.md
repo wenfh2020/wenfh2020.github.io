@@ -77,7 +77,7 @@ author: wenfh2020
 1. 每个子进程拥有独立的 listen socket 资源队列，避免资源争抢；多个队列也提升了并发吞吐。
 2. 新链接通过网络四元组通过哈希分配到各个子进程的 listen socket 资源队列，资源分配相对合理（负载均衡）。
 
-<div align=center><img src="/images/2021-07-31-19-20-51.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-31-19-20-51.png" data-action="zoom"/></div>
 
 ---
 
@@ -92,7 +92,7 @@ author: wenfh2020
 1. 多个进程争抢一个 listen socket 的共享资源。
 2. 单个资源队列，将会是并发吞吐瓶颈。
 
-<div align=center><img src="/images/2021-11-04-11-33-40.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-11-04-11-33-40.png" data-action="zoom"/></div>
 
 ---
 
@@ -108,7 +108,7 @@ author: wenfh2020
 2. 一个时间段内，只有一个子进程独占 listen socket 的共享资源，无法同时利用多核优势。
 3. 单个资源队列，将会是并发吞吐瓶颈。
 
-<div align=center><img src="/images/2021-10-11-12-57-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-10-11-12-57-59.png" data-action="zoom"/></div>
 
 ---
 

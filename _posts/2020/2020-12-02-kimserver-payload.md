@@ -61,7 +61,7 @@ message PayloadStats {
 3. 父进程统计自己的以及多个子进程上报的负载信息。
 4. 父进程定时将统计信息转化为 json 数据，更新到 zookeeper 对应节点。
 
-![负载统计流程](/images/2020-12-02-23-22-36.png){:data-action="zoom"}
+![负载统计流程](/images/2020/2020-12-02-23-22-36.png){:data-action="zoom"}
 
 ---
 

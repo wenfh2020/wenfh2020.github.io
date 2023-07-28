@@ -35,7 +35,7 @@ int accept(int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
 
 ## 2. 内核
 
-<div align=center><img src="/images/2021-07-28-14-07-24.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-07-28-14-07-24.png" data-action="zoom"/></div>
 
 > 图片来源：[linux 内核 listen (tcp/IPv4) 结构关系](https://processon.com/view/60fa6dfe7d9c083494e37a9a)
 

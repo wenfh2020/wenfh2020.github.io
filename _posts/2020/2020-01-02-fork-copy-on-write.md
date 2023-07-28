@@ -25,9 +25,9 @@ macos
 
 测试对象申请一块内存，主进程 fork 子进程后监测子进程对内存数据修改前后状况。
 
-![子进程数据修改前](/images/2020-03-11-10-09-06.png){: data-action="zoom"}
+![子进程数据修改前](/images/2020/2020-03-11-10-09-06.png){: data-action="zoom"}
 
-![子进程数据修改后](/images/2020-03-11-10-09-21.png){: data-action="zoom"}
+![子进程数据修改后](/images/2020/2020-03-11-10-09-21.png){: data-action="zoom"}
 
 > 测试进程跑得比较快，跑了两次去抓图，所以两次抓图的进程不一样。感兴趣的朋友可以拿[源码](https://github.com/wenfh2020/c_test/blob/master/normal/proc.cpp)测试下。
 

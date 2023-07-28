@@ -23,7 +23,7 @@ author: wenfh2020
 
 tcp 通信，客户端和服务端通过三次握手进行连接；握手流程，查看下图。
 
-<div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 > 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 
@@ -31,7 +31,7 @@ tcp 通信，客户端和服务端通过三次握手进行连接；握手流程�
 
 ## 2. 源码
 
-<div align=center><img src="/images/2021-08-18-15-42-54.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-18-15-42-54.png" data-action="zoom"/></div>
 
 > 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 

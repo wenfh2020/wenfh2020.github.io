@@ -20,7 +20,7 @@ author: wenfh2020
 
 先阅读 [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 源码，查看它的工作方式。
 
-![zookeeper-client-c 工作流程](/images/2020-10-18-21-59-50.png){:data-action="zoom"}
+![zookeeper-client-c 工作流程](/images/2020/2020-10-18-21-59-50.png){:data-action="zoom"}
 
 ---
 
@@ -28,11 +28,11 @@ author: wenfh2020
 
 * 异步。
 
-![异步使用流程](/images/2020-11-08-12-25-55.png){:data-action="zoom"}
+![异步使用流程](/images/2020/2020-11-08-12-25-55.png){:data-action="zoom"}
 
 * 同步。
 
-![同步使用流程](/images/2020-11-08-12-27-27.png){:data-action="zoom"}
+![同步使用流程](/images/2020/2020-11-08-12-27-27.png){:data-action="zoom"}
 
 ---
 
@@ -44,7 +44,7 @@ author: wenfh2020
 * [zookeeper-client-c](https://github.com/apache/zookeeper/tree/master/zookeeper-client/zookeeper-client-c) 通知被写进任务完成队列。
 * 主线程消费任务完成队列。
 
-![接入方案](/images/2020-11-08-12-28-20.png){:data-action="zoom"}
+![接入方案](/images/2020/2020-11-08-12-28-20.png){:data-action="zoom"}
 
 ---
 

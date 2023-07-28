@@ -62,7 +62,7 @@ void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
 
 ## 2. 故障发现
 
-![主客观下线时序](/images/2020-09-26-07-38-49.png){:data-action="zoom"}
+![主客观下线时序](/images/2020/2020-09-26-07-38-49.png){:data-action="zoom"}
 
 ### 2.1. 主观下线
 

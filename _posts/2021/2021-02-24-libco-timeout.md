@@ -75,12 +75,12 @@ int main() {
 
 ### 3.2. cpu
 
-<div align=center><img src="/images/2021-02-24-09-56-39.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-02-24-09-56-39.png" data-action="zoom"/></div>
 
 ---
 
 ### 3.3. 性能火焰图
 
-<div align=center><img src="/images/2021-02-24-09-52-08.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-02-24-09-52-08.png" data-action="zoom"/></div>
 
 > 火焰图参考：[如何生成火焰图🔥](https://wenfh2020.com/2020/07/30/flame-diagram/)

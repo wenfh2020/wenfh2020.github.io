@@ -81,7 +81,7 @@ co_create -> co_resume -> CoRoutineFunc -> co_handler_mysql_query -> socket -> f
 epoll_wait -> co_resume -> co_handler_mysql_query --> epoll_ctl(EPOLL_CTL_DELETE)
 ```
 
-<div align=center><img src="/images/2021-03-11-12-27-06.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-03-11-12-27-06.png" data-action="zoom"/></div>
 
 ---
 

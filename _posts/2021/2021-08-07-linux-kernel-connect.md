@@ -37,7 +37,7 @@ int connect(int sockfd, const struct sockaddr *servaddr, socklen_t addrlen);
 
 连接需要通过三次握手（参考：《UNIX 网络编程_卷_1》- 2.6.1 三路握手。），握手🤝流程详见下图。
 
-<div align=center><img src="/images/2021-08-18-13-26-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-08-18-13-26-18.png" data-action="zoom"/></div>
 
 > 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 

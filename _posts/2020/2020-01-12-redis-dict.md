@@ -22,7 +22,7 @@ dict 还有动态扩容/缩容功能，能灵活高效地使用机器内存。
 
 ## 1. 数据结构
 
-![数据结构](/images/2020-02-20-16-49-43.png){: data-action="zoom"}
+![数据结构](/images/2020/2020-02-20-16-49-43.png){: data-action="zoom"}
 
 > 设计图来源：《[redis dict 字典数据结构](https://www.processon.com/view/5e1deaa3e4b0a55fbb5dcc8e)》
 

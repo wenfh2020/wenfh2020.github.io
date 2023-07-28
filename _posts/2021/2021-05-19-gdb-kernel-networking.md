@@ -24,7 +24,7 @@ author: wenfh2020
 * 环境：macos + [vmware](https://wenfh2020.com/2021/02/23/macos-virtual-machine/) + ubuntu + qemu + gdb + linux kernel。
 * 参考：[构建调试Linux内核网络代码的环境MenuOS系统](https://www.cnblogs.com/AmosYang6814/p/12027988.html)。
 
-<div align=center><img src="/images/2021-05-19-16-08-52.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-05-19-16-08-52.png" data-action="zoom"/></div>
 
 ---
 
@@ -214,7 +214,7 @@ c
 
 用户可以根据自己的需要去下断点，也可以修改 linuxnet 源码进行调试。
 
-<div align=center><img src="/images/2021-05-19-17-43-51.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2021/2021-05-19-17-43-51.png" data-action="zoom"/></div>
 
 ---
 

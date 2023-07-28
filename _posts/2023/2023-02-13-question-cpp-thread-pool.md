@@ -22,7 +22,7 @@ Github 上有个[轻量级线程池](https://github.com/mtrebi/thread-pool)，�
 
 缺点是数据拷贝有点多，一般对性能不是特别苛刻的应用场景使用应该没啥问题。
 
-<div align=center><img src="/images/2023-02-13-23-39-27.png"/></div>
+<div align=center><img src="/images/2023/2023-02-13-23-39-27.png"/></div>
 
 ---
 

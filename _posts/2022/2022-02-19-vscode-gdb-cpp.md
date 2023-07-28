@@ -37,7 +37,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 在 .vscode 目录上添加两个文件：launch.json，tasks.json。
 
-<div align=center><img src="/images/2022-02-19-22-37-06.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-02-19-22-37-06.png" data-action="zoom"/></div>
 
 * launch.json，选择对应的调试器和调试目录。
 
@@ -99,4 +99,4 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 编写对应的测试源码，下断点进行调试。
 
-<div align=center><img src="/images/2022-02-19-22-44-07.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2022/2022-02-19-22-44-07.png" data-action="zoom"/></div>
