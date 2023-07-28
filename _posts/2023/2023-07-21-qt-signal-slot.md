@@ -149,7 +149,7 @@ QMetaObject::Connection QObject::connectImpl(
     const QObject *sender, void **signal, const QObject *receiver, void **slot,
     QtPrivate::QSlotObjectBase *slotObj, Qt::ConnectionType type,
     const int *types, const QMetaObject *senderMetaObject) {
-    // ...
+    ...
     int signal_index = -1;
     void *args[] = {&signal_index, signal};
     for (; senderMetaObject && signal_index < 0;
@@ -159,7 +159,7 @@ QMetaObject::Connection QObject::connectImpl(
             signal_index < QMetaObjectPrivate::get(senderMetaObject)->signalCount)
             break;
     }
-    // ...
+    ...
     signal_index += QMetaObjectPrivate::signalOffset(senderMetaObject);
     return QObjectPrivate::connectImpl(sender, signal_index, receiver, slot,
                                        slotObj, type, types, senderMetaObject);
@@ -170,10 +170,11 @@ QMetaObject::Connection QObjectPrivate::connectImpl(
     const QObject *sender, int signal_index, const QObject *receiver,
     void **slot, QtPrivate::QSlotObjectBase *slotObj, Qt::ConnectionType type,
     const int *types, const QMetaObject *senderMetaObject) {
-    // ...
+    ...
     QObject *s = const_cast<QObject *>(sender);
     QObject *r = const_cast<QObject *>(receiver);
-    // ...
+    ...
+    // 创建链接结构体。
     std::unique_ptr<QObjectPrivate::Connection> c{
         new QObjectPrivate::Connection};
     c->sender = s;
@@ -193,7 +194,7 @@ QMetaObject::Connection QObjectPrivate::connectImpl(
     // 将 connection 保存在 sender 对象中。
     QObjectPrivate::get(s)->addConnection(signal_index, c.get());
     QMetaObject::Connection ret(c.release());
-    // ...
+    ...
     return ret;
 }
 ```
@@ -204,7 +205,7 @@ QMetaObject::Connection QObjectPrivate::connectImpl(
 
 信号索引：signal_index，它是一个数组下标，便于搜索对应的信号信息；它是信号槽中非常重要的一环。
 
-> 这个值三言两语说不清楚，还是上图吧。
+> 这个值不是三言两语能说清楚的，还是上图吧。
 
 <div align=center><img src="/images/2023-07-27-14-12-16.png" data-action="zoom"></div>
 
@@ -218,15 +219,17 @@ QMetaObject::Connection QObjectPrivate::connectImpl(
 
 ```cpp
 // SIGNAL 0
-void TestThread::sigThreadNotify(qint64 _t1, const QString & _t2)
-{
-    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))) };
+void TestThread::sigThreadNotify(qint64 _t1, const QString &_t2) {
+    void *_a[] = {
+        nullptr,
+        const_cast<void *>(reinterpret_cast<const void *>(std::addressof(_t1))),
+        const_cast<void *>(reinterpret_cast<const void *>(std::addressof(_t2)))};
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 
 void TestThread::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
-    // ...
+    ...
     else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         {
@@ -250,7 +253,7 @@ QMetaObject::Connection QObject::connectImpl(const QObject *sender, void **signa
                                              QtPrivate::QSlotObjectBase *slotObj, Qt::ConnectionType type,
                                              const int *types, const QMetaObject *senderMetaObject)
 {
-    // ...
+    ...
     int signal_index = -1;
     void *args[] = { &signal_index, signal };
     for (; senderMetaObject && signal_index < 0; senderMetaObject = senderMetaObject->superClass()) {
@@ -260,7 +263,7 @@ QMetaObject::Connection QObject::connectImpl(const QObject *sender, void **signa
             break;
     }
 
-    // 有可能当前 QObject 有父类，父类也有默认的信号或者自定义的信号，所以需要经过统计，计算出合适的偏移量。
+    // 有可能当前 QObject 对象有父类，父类也有默认信号或者自定义信号，所以需要经过统计，计算出合适的偏移量。
     signal_index += QMetaObjectPrivate::signalOffset(senderMetaObject);
     return QObjectPrivate::connectImpl(sender, signal_index, receiver, slot, slotObj, type, types, senderMetaObject);
 }
@@ -277,10 +280,19 @@ QMetaObject::Connection QObject::connectImpl(const QObject *sender, void **signa
 * 测试用例代码。
 
 ```cpp
-// 线程任务处理函数
-void TestThread::handleTask(qint64 task) {
-    emit sigThreadNotify(task, "hello world!");
-}
+class TestThread : public WorkThread {
+    Q_OBJECT
+    
+ public signals:
+    // 自定义信号
+    void sigThreadNotify(qint64 task, const QString& data);
+
+ private:
+    // 线程任务处理函数
+    virtual void handleTask(qint64 task) override {
+        emit sigThreadNotify(task, "hello world!");
+    }
+};
 ```
 
 * 测试代码，MOC 自动生成的 moc_TestApp.cpp 文件内容。
@@ -288,9 +300,11 @@ void TestThread::handleTask(qint64 task) {
 ```cpp
 // moc_TestApp.cpp
 // SIGNAL 0
-void TestThread::sigThreadNotify(qint64 _t1, const QString & _t2)
-{
-    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))) };
+void TestThread::sigThreadNotify(qint64 _t1, const QString &_t2) {
+    void *_a[] = {
+        nullptr,
+        const_cast<void *>(reinterpret_cast<const void *>(std::addressof(_t1))),
+        const_cast<void *>(reinterpret_cast<const void *>(std::addressof(_t2)))};
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 ```
@@ -329,16 +343,15 @@ void doActivate(QObject *sender, int signal_index, void **argv) {
     // 观察者模式：遍历 connection 列表。
     do {
         QObjectPrivate::Connection *c = list->first.loadRelaxed();
-        if (!c)
-            continue;
+        if (!c) continue;
 
         do {
-            QObject * const receiver = c->receiver.loadRelaxed();
-            if (!receiver)
-                continue;
+            QObject *const receiver = c->receiver.loadRelaxed();
+            if (!receiver) continue;
             ...
             // 如果发送者和接收者处在不同线程，那么事件放到队列异步触发信号对应的槽函数。
-            if ((c->connectionType == Qt::AutoConnection && !receiverInSameThread) ||
+            if ((c->connectionType == Qt::AutoConnection &&
+                 !receiverInSameThread) ||
                 (c->connectionType == Qt::QueuedConnection)) {
                 queued_activate(sender, signal_index, c, argv);
                 continue;
@@ -346,17 +359,19 @@ void doActivate(QObject *sender, int signal_index, void **argv) {
             ...
             if (c->isSlotObject) {
                 ...
-                const std::unique_ptr<QtPrivate::QSlotObjectBase, Deleter> obj{c->slotObj};
+                const std::unique_ptr<QtPrivate::QSlotObjectBase, Deleter> obj{
+                    c->slotObj};
                 {
                     // 如果发送者和接收者处在相同线程，直接调用槽函数
                     obj->call(receiver, argv);
                 }
             }
-        } while ((c = c->nextConnectionList.loadRelaxed()) != nullptr && c->id <= highestConnectionId);
+        } while ((c = c->nextConnectionList.loadRelaxed()) != nullptr &&
+                 c->id <= highestConnectionId);
 
     } while (list != &signalVector->at(-1) &&
-        //start over for all signals;
-        ((list = &signalVector->at(-1)), true));
+             // start over for all signals;
+             ((list = &signalVector->at(-1)), true));
     ...
 }
 ```
