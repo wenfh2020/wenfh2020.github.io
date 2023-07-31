@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "pthread_cond_wait"
+title:  "[多线程] 条件变量 pthread_cond_wait"
 categories: c/c++
 tags: 多线程 pthread_cond_wait
 author: wenfh2020
