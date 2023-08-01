@@ -124,16 +124,86 @@ A::~A()
 * 分析。
 
 1. C 类被 new 实例化后，是先调用基类进行构造，然后才到派生类。如果有多个基类，那么按继承的基类顺序进行构造，类析构顺序刚好与类构造相反。
-2. C 类对象实例在 64 位机器上的占的空间是 16 字节，因为继承了两个基类 B，K，它们有各自的虚函数指针，分别占 8 个字节
+2. C 类对象实例在 64 位机器上的占的空间是 16 字节，因为多重继承了两个基类 B，K，它们有各自的虚函数指针，分别占 8 个字节。
 3. func 函数多态特性，虽然基类指针指向了派生类对象地址，但是基类指针调用多态的 func 函数是 C 对象实例的。
 4. `注意`，基类的析构函数需要添加上 virtual 关键字，避免对象实例销毁时，只调用了基类析构函数，没有调用派生类的析构函数，这可能导致内存泄漏。
 5. 基类构造函数调用虚函数，并没有发生多态现象，原因：派生类构造，先构造基类，vptr 先指向基类的虚函数表，然后到了派生类的构造函数，vptr 才指向派生类的虚函数表。
 
 ---
 
-### 1.4. 字符串类
+### 1.4. C++ 对象构造和析构顺序
 
-#### 1.4.1. demo1
+```cpp
+/* g++ -std='c++11' test.cpp -o t && ./t */
+#include <iostream>
+
+class BaseMemberA {
+ public:
+    BaseMemberA() { std::cout << __FUNCTION__<< std::endl; }
+    ~BaseMemberA() { std::cout << __FUNCTION__ << std::endl; }
+};
+
+class BaseMemberB {
+ public:
+    BaseMemberB() { std::cout << __FUNCTION__<< std::endl; }
+    ~BaseMemberB() { std::cout << __FUNCTION__ << std::endl; }
+};
+
+class Base {
+ public:
+    Base() { std::cout << __FUNCTION__ << std::endl; }
+    ~Base() { std::cout << __FUNCTION__ << std::endl; }
+
+    BaseMemberA m_base_a;
+    BaseMemberB m_base_b;
+};
+
+class DerivedMemberA {
+ public:
+    DerivedMemberA() { std::cout << __FUNCTION__<< std::endl; }
+    ~DerivedMemberA() { std::cout << __FUNCTION__ << std::endl; }
+};
+
+class DerivedMemberB {
+ public:
+    DerivedMemberB() { std::cout << __FUNCTION__<< std::endl; }
+    ~DerivedMemberB() { std::cout << __FUNCTION__ << std::endl; }
+};
+
+class Derived : public Base {
+ public:
+    Derived() { std::cout << __FUNCTION__ << std::endl; }
+    ~Derived() { std::cout << __FUNCTION__ << std::endl; }
+    
+    DerivedMemberA m_derived_a;
+    DerivedMemberB m_derived_b;
+};
+
+int main() {
+    Derived d;
+    return 0;
+}
+```
+
+```shell
+BaseMemberA
+BaseMemberB
+Base
+DerivedMemberA
+DerivedMemberB
+Derived
+~Derived
+~DerivedMemberB
+~DerivedMemberA
+~Base
+~BaseMemberB
+~BaseMemberA
+```
+---
+
+### 1.5. 字符串类
+
+#### 1.5.1. demo1
 
 * demo1
 
@@ -223,22 +293,27 @@ int main() {
 
 ---
 
-#### 1.4.2. demo2
+#### 1.5.2. demo2
 
 ```cpp
 struct A {
     std::string s;
-    A(std::string str) : s(std::move(str))  { std::cout << " constructed\n"; }
-    A(const A& o) : s(o.s) { std::cout << " copy constructed\n"; }
-    A(A&& o) : s(std::move(o.s)) { std::cout << " move constructed\n"; }
-    A& operator=(const A& other) {
-        s = other.s;
-        std::cout << " copy assigned\n";
+    A(std::string str) : s(std::move(str)) { std::cout << "constructed\n"; }
+    A(const A& o) : s(o.s) { std::cout << "copy constructed\n"; }
+    A(A&& o) : s(std::move(o.s)) { std::cout << "move constructed\n"; }
+    ~A() { std::cout << "destructed\n"; }
+    A& operator=(const A& rhs) {
+        if (&rhs != this) {
+            s = rhs.s;
+            std::cout << " copy assigned\n";
+        }
         return *this;
     }
-    A& operator=(A&& other) {
-        s = std::move(other.s);
-        std::cout << " move assigned\n";
+    A& operator=(A&& rhs) {
+        if (&rhs != this) {
+            s = std::move(rhs.s);
+            std::cout << " move assigned\n";
+        }
         return *this;
     }
 };
@@ -326,7 +401,7 @@ int main() {
     char s[] = "1 2 3 4 5 6 ";
     std::vector<std::string> words;
     if (get_words(s, " ", words)) {
-        for (auto v : words) {
+        for (const auto& v : words) {
             std::cout << v << std::endl;
         }
     }

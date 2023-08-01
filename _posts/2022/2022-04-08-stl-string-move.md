@@ -302,14 +302,18 @@ struct A {
     A(const A& o) : s(o.s) { std::cout << "copy constructed\n"; }
     A(A&& o) : s(std::move(o.s)) { std::cout << "move constructed\n"; }
     ~A() { std::cout << "destructed\n"; }
-    A& operator=(const A& other) {
-        s = other.s;
-        std::cout << " copy assigned\n";
+    A& operator=(const A& rhs) {
+        if (&rhs != this) {
+            s = rhs.s;
+            std::cout << " copy assigned\n";
+        }
         return *this;
     }
-    A& operator=(A&& other) {
-        s = std::move(other.s);
-        std::cout << " move assigned\n";
+    A& operator=(A&& rhs) {
+        if (&rhs != this) {
+            s = std::move(rhs.s);
+            std::cout << " move assigned\n";
+        }
         return *this;
     }
 };
