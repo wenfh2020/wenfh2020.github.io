@@ -7,7 +7,7 @@ author: wenfh2020
 
 本文通过测试和走读 `std::vector::emplace_back` 源码，理解 C++11 引入的 emplace 新特性。
 
-划重点：右值引用，完美转发。
+原理相对简单：emplace_back 函数的参数类型是 `万能引用`，参数通过 `完美转发` 到 std::vector 内部进行对象创建构造，可以有效减少临时对象的产生，避免对象的移动和拷贝。
 
 
 * content
@@ -135,9 +135,13 @@ ee constructed
 
 通过走读源码：
 
-1. 我们可以发现 emplace_back 的输入参数类型是 `右值引用`，入参通过 `完美转发` 给内部 ::new 实现对象构造，并将其追加到数组对应的位置。
+1. 我们可以发现 emplace_back 的输入参数类型是 `万能引用`，入参通过 `完美转发` 给内部 ::new 实现对象构造，并将其追加到数组对应的位置。
 
 2. 测试例程里 `datas.emplace_back("ee");`，它插入对象元素，并没有触发拷贝构造和移动构造。因为 emplace_back 接口传递的是字符串常量，而真正的对象构造是在内部实现的：`::new ((void*)__p) _Up(std::forward<_Args>(__args)...);` ，在插入对象元素的整个过程中，并未产生须要拷贝和移动的任何 `临时对象`。
+
+* 万能引用参数类型 + 完美转发。
+
+> 详细知识请查看《Effective Modern C++》- 第五章：右值引用、移动语义和完美转发。
 
 ```cpp
 /* /usr/include/c++/4.8.2/debug/vector */
@@ -145,26 +149,22 @@ template <typename _Tp, typename _Allocator = std::allocator<_Tp> >
 class vector : public _GLIBCXX_STD_C::vector<_Tp, _Allocator>,
                public __gnu_debug::_Safe_sequence<vector<_Tp, _Allocator> > {
     ...
-#if __cplusplus >= 201103L
-        template <typename _Up = _Tp>
-        typename __gnu_cxx::__enable_if<!std::__are_same<_Up, bool>::__value,
-                                        void>::__type
-        push_back(_Tp&& __x) {
-        emplace_back(std::move(__x));
-    }
-
-    // emplace_back 参数是右值引用。
+    // emplace_back 参数是万能引用。
     template <typename... _Args>
     void emplace_back(_Args&&... __args) {
         bool __realloc = _M_requires_reallocation(this->size() + 1);
-        // 参数的传递使用完美转发。
+        // 完美转发传递参数。
         _Base::emplace_back(std::forward<_Args>(__args)...);
         ...
     }
 #endif
     ...
 };
+```
 
+* 参数转发到内部进行对象构造。
+
+```cpp
 /* /usr/include/c++/4.8.2/bits/vector.tcc */
 #if __cplusplus >= 201103L
 template <typename _Tp, typename _Alloc>
@@ -199,7 +199,7 @@ class new_allocator {
 #if __cplusplus >= 201103L
     template <typename _Up, typename... _Args>
     void construct(_Up* __p, _Args&&... __args) {
-        // 新建构造对象，并通过完美转发传递给对象传递对应的参数。
+        // 新建构造对象，并通过完美转发给对象传递对应的参数。
         ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
     }
 #endif
@@ -237,3 +237,9 @@ cc copy constructed
 dd copy constructed
 -------------
 ```
+
+---
+
+## 5. 引用
+
+* 《Effective Modern C++》
