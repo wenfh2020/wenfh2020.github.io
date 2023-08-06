@@ -265,7 +265,8 @@ ngx_int_t ngx_trylock_accept_mutex(ngx_cycle_t *cycle) {
     }
 
     if (ngx_accept_mutex_held) {
-        /* 获取锁失败，如果之前是曾经成功获取锁的，不能再获取资源了，将 listen socket 从 epoll 里删除。 */
+        /* 获取锁失败，如果之前是曾经成功获取锁的，不能再获取资源了，
+           将 listen socket 从 epoll 里删除。 */
         if (ngx_disable_accept_events(cycle, 0) == NGX_ERROR) {
             return NGX_ERROR;
         }
