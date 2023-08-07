@@ -72,7 +72,7 @@ author: wenfh2020
 |go|[【尚硅谷】全新2022版Docker与微服务实战教程（从入门到进阶）](https://www.bilibili.com/video/BV1gr4y1U7CY?p=18)|
 |分布式|[简单理解CAP-BASE](https://www.modb.pro/db/253205)|
 |加密|[https1](https://www.lmonkey.com/t/6EoXKzWyl) <br> [https2](https://xiaolincoding.com/network/2_http/https_rsa.html)|
-| 管理  | [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp) |
+| 管理  | [UML类图与类的关系详解](http://www.uml.org.cn/oobject/201104212.asp) <br/> [深入浅出UML类图](http://www.uml.org.cn/oobject/201211231.asp)|
 | ebook | [book1](https://evanli.github.io/programming-book/Git/) <br/> [book2](https://github.com/wenfh2020/books) <br/> [book3](https://github.com/hello2dj/Books-1)   <br/> [book4](https://github.com/yuebaii/books)     <br/> [book5](https://github.com/lancetw/ebook-1)   <br/> [book6](https://github.com/woai3c/recommended-books) |
 | 素材  | [iconarchive](http://www.iconarchive.com/) <br/> [download video from url](https://en.savefrom.net/11/) <br/> [shareicon](https://www.shareicon.net/) <br/> [在线图片压缩](https://docsmall.com/image-compress) <br/> [阿里开源矢量图](https://www.iconfont.cn/) <br/> [字节开源图标](https://iconpark.oceanengine.com/home)|
 

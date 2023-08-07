@@ -38,9 +38,10 @@ bool Bio::add_req_task(...) {
     ...
     pthread_mutex_lock(&m_mutex);
     m_req_tasks.push_back(task);
+    pthread_mutex_unlock(&m_mutex);
+
     /* 发“信号”唤醒正在睡眠的一个线程。*/
     pthread_cond_signal(&m_cond);
-    pthread_mutex_unlock(&m_mutex);
     ...
 }
 
