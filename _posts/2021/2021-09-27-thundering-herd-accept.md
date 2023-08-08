@@ -42,7 +42,8 @@ author: wenfh2020
 
 ```c
 /* kernel/sched/wait.c */
-void prepare_to_wait_exclusive(struct wait_queue_head *wq_head, struct wait_queue_entry *wq_entry, int state) {
+void prepare_to_wait_exclusive(struct wait_queue_head *wq_head,
+                               struct wait_queue_entry *wq_entry, int state) {
     unsigned long flags;
 
     /* 添加排它唤醒标识 WQ_FLAG_EXCLUSIVE，也就是当资源到来时，内核只唤醒一个进程/线程。 */
@@ -60,23 +61,26 @@ void prepare_to_wait_exclusive(struct wait_queue_head *wq_head, struct wait_queu
 
 ```c
 static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
-            int nr_exclusive, int wake_flags, void *key,
-            wait_queue_entry_t *bookmark) {
+                            int nr_exclusive, int wake_flags, void *key,
+                            wait_queue_entry_t *bookmark) {
     wait_queue_entry_t *curr, *next;
     int cnt = 0;
     ...
     /* 遍历唤醒等待队列。 */
     list_for_each_entry_safe_from(curr, next, &wq_head->head, entry) {
-        unsigned flags = curr->flags;
         int ret;
+        unsigned flags = curr->flags;
         ...
         /* 将睡眠的进程唤醒。*/
         ret = curr->func(curr, mode, wake_flags, key);
-        if (ret < 0)
+        if (ret < 0) {
             break;
-        /* 如果设置了 WQ_FLAG_EXCLUSIVE 标签的话，执行一次唤醒（nr_exclusive == 1），就退出循环。 */
-        if (ret && (flags & WQ_FLAG_EXCLUSIVE) && !--nr_exclusive)
+        }
+        /* 如果设置了 WQ_FLAG_EXCLUSIVE 标签的话，
+         * 执行一次唤醒（nr_exclusive == 1），就退出循环。 */
+        if (ret && (flags & WQ_FLAG_EXCLUSIVE) && !--nr_exclusive) {
             break;
+        }
         ...
     }
 
@@ -178,7 +182,8 @@ static int inet_csk_wait_for_connect(struct sock *sk, long timeo) {
      * having to remove and re-insert us on the wait queue.
      */
     for (;;) {
-        /* 将当前进程添加到等待唤醒队列，然后睡眠，直到等待资源到来时候被唤醒或者满足其它条件被唤醒。 */
+        /* 将当前进程添加到等待唤醒队列，然后睡眠，
+         * 直到等待资源到来时候被唤醒或者满足其它条件被唤醒。 */
         prepare_to_wait_exclusive(sk_sleep(sk), &wait,
                       TASK_INTERRUPTIBLE);
         release_sock(sk);
@@ -197,7 +202,8 @@ static int inet_csk_wait_for_connect(struct sock *sk, long timeo) {
 
 /* kernel/sched/wait.c
  * 添加等待唤醒队列，等待唤醒 */
-void prepare_to_wait_exclusive(struct wait_queue_head *wq_head, struct wait_queue_entry *wq_entry, int state) {
+void prepare_to_wait_exclusive(struct wait_queue_head *wq_head, 
+                               struct wait_queue_entry *wq_entry, int state) {
     unsigned long flags;
 
     /* 添加排它唤醒标识 WQ_FLAG_EXCLUSIVE，也就是当资源到来时，内核只唤醒一个进程/线程。 */
@@ -346,15 +352,16 @@ static int __wake_up_common(struct wait_queue_head *wq_head, unsigned int mode,
     ...
     /* 遍历唤醒等待队列。 */
     list_for_each_entry_safe_from(curr, next, &wq_head->head, entry) {
-        unsigned flags = curr->flags;
         int ret;
+        unsigned flags = curr->flags;
         ...
         /* 将睡眠的进程唤醒。
          * curr->func ---> autoremove_wake_function */
         ret = curr->func(curr, mode, wake_flags, key);
         if (ret < 0)
             break;
-        /* 如果设置了 WQ_FLAG_EXCLUSIVE 标签的话，执行一次唤醒（nr_exclusive == 1），就退出循环。 */
+        /* 如果设置了 WQ_FLAG_EXCLUSIVE 标签的话，
+         * 执行一次唤醒（nr_exclusive == 1），就退出循环。 */
         if (ret && (flags & WQ_FLAG_EXCLUSIVE) && !--nr_exclusive)
             break;
         ...
