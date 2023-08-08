@@ -2,12 +2,13 @@
 layout: post
 title:  "[stl 源码分析] 浅析 std::vector::emplace_back"
 categories: c/c++
+tags: stl emplace
 author: wenfh2020
 ---
 
 本文通过测试和走读 [std::vector::emplace_back](https://cplusplus.com/reference/vector/vector/emplace_back/) 源码，理解 C++11 引入的 emplace 新特性。
 
-原理相对简单：emplace_back 函数的参数类型是 `万能引用`，参数通过 `完美转发` 到 std::vector 内部进行对象创建构造，可以有效减少参数传递过程中产生临时对象，避免了对象的移动和拷贝。
+原理相对简单：emplace_back 函数的参数类型是可变数量的 `万能引用`，参数通过 `完美转发` 到 std::vector 内部进行对象创建构造，可以有效减少参数传递过程中产生临时对象，避免了对象的移动和拷贝。
 
 ```cpp
 /* /usr/include/c++/4.8.2/debug/vector */
@@ -38,9 +39,9 @@ class vector : public _GLIBCXX_STD_C::vector<_Tp, _Allocator>,
 
 ## 1. 概述
 
-std::vector::emplace_back 是 C++ 中 std::vector 类的成员函数之一。
+std::vector::emplace_back 是 C++ 中 std::vector 类的成员函数之一，它用于在 std::vector 的末尾插入一个新元素，`而不需要进行额外的拷贝或移动操作`。
 
-它用于在 std::vector 的末尾插入一个新元素，`而不需要进行额外的拷贝或移动操作`。具体来说，std::vector::emplace_back 函数接受可变数量的参数，并使用这些参数构造一个新元素，然后将其插入到 std::vector 的末尾。这个函数的优点是可以避免额外的拷贝或移动操作，从而提高性能。
+具体来说，std::vector::emplace_back 函数接受可变数量的参数，并使用这些参数构造一个新元素，然后将其插入到 std::vector 的末尾，这个函数的优点是可以避免额外的拷贝或移动操作，从而提高性能。
 
 > 文字来源：ChatGPT
 
@@ -51,7 +52,11 @@ std::vector::emplace_back 是 C++ 中 std::vector 类的成员函数之一。
 * 系统。
 
 ```shell
-g++ --version                                 
+# cat /proc/version
+Linux version 3.10.0-1127.19.1.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) 
+(gcc version 4.8.5 20150623 (Red Hat 4.8.5-39) (GCC) )
+
+# g++ --version                                 
 g++ (GCC) 4.8.5 20150623 (Red Hat 4.8.5-44)
 Copyright (C) 2015 Free Software Foundation, Inc.
 This is free software; see the source for copying conditions.  There is NO
@@ -59,8 +64,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 
 * 测试源码。
-
-<div align=center><img src="/images/2023/2023-08-01-23-18-17.png" data-action="zoom"></div>
 
 ```cpp
 /* g++ -O0 -std=c++11 test.cpp -o test && ./test */
@@ -122,9 +125,7 @@ int main() {
 }
 ```
 
----
-
-* 结果。
+* 测试结果。
 
 ```shell
 # g++ -O0 -std=c++11 test.cpp -o test && ./test 
@@ -146,17 +147,17 @@ ee constructed
 
 ---
 
-## 3. 源码剖析
+## 3. STL 源码剖析
 
-上面的测试结果反馈了一些有趣的信息：在对象元素的插入过程中，有的触发拷贝构造，有的触发移动构造，有的两者都没触发。为什么会这样呢？通过查看 emplace_back 的内部源码实现，我们将会找到答案。
+上面的测试结果反馈了一些有趣的信息：在对象元素的插入过程中，有的触发拷贝构造，有的触发移动构造，有的两者都没触发。为什么会这样呢？通过查看 emplace_back 的内部实现源码，我们将会找到答案。
 
 ---
 
 通过走读源码：
 
-1. 我们可以发现 emplace_back 的输入参数类型是 `万能引用`，入参通过 `完美转发` 给内部 ::new 实现对象构造，并将其追加到数组对应的位置。
+1. 我们可以发现 emplace_back 的输入参数类型是 `万能引用`，入参通过 `完美转发` 给内部 ::new 进行对象构造，并将其追加到数组对应的位置。
 
-2. 测试例程里 `datas.emplace_back("ee");`，它插入对象元素，并没有触发拷贝构造和移动构造。因为 emplace_back 接口传递的是字符串常量，而真正的对象构造是在内部实现的：`::new ((void*)__p) _Up(std::forward<_Args>(__args)...);` ，在插入对象元素的整个过程中，并未产生须要拷贝和移动的任何 `临时对象`。
+2. 测试例程里 `datas.emplace_back("ee");`，它插入对象元素，并没有触发拷贝构造和移动构造。因为 emplace_back 接口传递的是字符串常量，而真正的对象构造是在内部实现的：`::new ((void*)__p) _Up(std::forward<_Args>(__args)...);` ，在插入对象元素的整个过程中，并未产生须要拷贝和移动的 `临时对象`。
 
 * 万能引用参数类型 + 完美转发。
 
@@ -255,14 +256,14 @@ dd copy constructed
 -------------
 ```
 
-因为动态数组，使用的是连续的内存空间，一些操作可能会触发内存的动态扩展，这个过程中可能产生数据拷贝或者移动。所以当我们不了解容器内部具体实现时，最好不要往容器里保存类/结构对象这样的元素，保存 `对象指针` 是个不错的选择，这样即使容器内部发生数据拷贝，成本也比较低。
+因为动态数组，使用的是连续的内存空间，一些操作可能会触发内存的动态扩展，这个过程中可能产生数据拷贝或者移动。所以当我们不了解容器内部具体实现时，最好不要往容器里保存类/结构对象元素，保存 `对象指针` 是个不错的选择，即便容器内部发生数据拷贝，成本也比较低。
 
-std::vector 内部内存扩展，元素对象为什么不是转移而是拷贝呢？我们应该为移动构造函数添加 `noexcept` 标识，这样才会进行移动，这里就不展开讨论了。
+std::vector 内部内存扩展，元素对象为什么不是转移而是拷贝构造呢？我们应该为移动构造函数添加 `noexcept` 标识，这样才会进行移动，这里就不展开讨论了。
 
 ---
 
 ## 5. 引用
 
 * 《Effective Modern C++》
-* [std::move_if_noexcept](https://www.apiref.com/cpp-zh/cpp/utility/move_if_noexcept.html)
 * [std::vector::emplace_back](https://cplusplus.com/reference/vector/vector/emplace_back/)
+* [std::move_if_noexcept](https://www.apiref.com/cpp-zh/cpp/utility/move_if_noexcept.html)

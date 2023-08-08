@@ -2,7 +2,7 @@
 layout: post
 title:  "[stl 源码分析] 移动语义是如何影响程序性能的（C++11）"
 categories: c/c++
-tags: stl sort
+tags: stl move
 author: wenfh2020
 ---
 
