@@ -832,7 +832,162 @@ int main() {
 
 ---
 
-## 7. 引用
+## 7. dynamic_cast
+
+`dynamic_cast` 是 C++ 中的一个类型转换运算符，用于在运行时进行类型转换。它可以将一个指向基类的指针或引用转换为指向派生类的指针或引用。dynamic_cast 会检查转换是否安全，如果转换不安全，则返回一个空指针或引发一个std::bad_cast异常。它主要用于在多态的情况下进行安全的向下转型。它的语法如下：
+
+```cpp
+dynamic_cast<new_type>(expression)
+```
+
+其中，`new_type` 是要转换的目标类型，`expression` 是要转换的表达式。dynamic_cast 会在运行时检查类型信息，如果转换是合法的，则返回指向目标类型的指针或引用，否则返回 `nullptr`。
+
+需要注意的是，dynamic_cast 只能用于具有多态性的类层次结构中，即其中至少有一个虚函数。否则，编译器会报错。此外，dynamic_cast 的性能相对较低，因为它需要在运行时进行类型检查。因此，在使用 dynamic_cast 时要谨慎考虑性能问题。
+
+> 部分文字来源：ChatGPT 3.5，详细定义请参考：[dynamic_cast conversion](https://en.cppreference.com/w/cpp/language/dynamic_cast)
+
+---
+
+### 7.1. 测试实例
+
+通过调试去观测 dynamic_cast 函数的内部源码相关数据信息。
+
+* 源码。
+
+```cpp
+/* g++ -O0 -std=c++11 test.cpp -o test && ./test */
+#include <iostream>
+
+class Base {
+   public:
+    virtual void vBaseFunc() { std::cout << "Base::vBaseFunc2" << std::endl; }
+    virtual void vBaseFunc2() { std::cout << "Base::vBaseFunc2" << std::endl; }
+};
+
+class Drived : public Base {
+   public:
+    virtual void vBaseFunc2() { std::cout << "Drived::vBaseFunc2" << std::endl; }
+    virtual void vDrivedFunc() { std::cout << "Drived::vDrivedFunc" << std::endl; }
+};
+
+int main() {
+    Base *b = new Drived;
+    auto d = dynamic_cast<Drived *>(b);
+    if (d) {
+        d->vBaseFunc2();
+    }
+    return 0;
+}
+```
+
+* 反汇编查看该函数的调用，以及变量参数数据。
+
+<div align=center><img src="/images/2023/2023-08-09-13-51-26.png" data-action="zoom"></div>
+
+```shell
+# objdump -dS test > asm.log
+  ; src2dst
+  40098f:    b9 00 00 00 00           mov    $0x0,%ecx
+  ; dst_type
+  400994:    ba 70 0c 40 00           mov    $0x400c70,%edx
+  ; src_ptr
+  400999:    be 90 0c 40 00           mov    $0x400c90,%esi
+  ; src_ptr
+  40099e:    48 89 c7                 mov    %rax,%rdi
+  ; 调用 dynamic_cast 函数
+  4009a1:    e8 8a fe ff ff           callq  400830 <__dynamic_cast@plt>
+```
+
+* 通过调试，我们可以比较直观看到该函数的参数变量相关信息。
+
+<div align=center><img src="/images/2023/2023-08-09-13-49-18.png" data-action="zoom"></div>
+
+> 调试方式请参考：[《(ubuntu) vscode + gdb 调试 c++》](https://www.wenfh2020.com/2022/02/19/vscode-gdb-cpp/)
+
+---
+
+### 7.2. 源码剖析
+
+`待续...`
+
+```cpp
+/* /usr/src/debug/gcc-4.8.5-20150702/libstdc++-v3/libsupc++/dyncast.cc */
+
+// this is the external interface to the dynamic cast machinery
+/* sub: source address to be adjusted; nonnull, and since the
+ *      source object is polymorphic, *(void**)sub is a virtual pointer.
+ * src: static type of the source object.
+ * dst: destination type (the "T" in "dynamic_cast<T>(v)").
+ * src2dst_offset: a static hint about the location of the
+ *    source subobject with respect to the complete object;
+ *    special negative values are:
+ *       -1: no hint
+ *       -2: src is not a public base of dst
+ *       -3: src is a multiple public base type but never a virtual base type
+ *    otherwise, the src type is a unique public nonvirtual
+ *    base type of dst at offset src2dst_offset from the origin of dst.  */
+extern "C" void *__dynamic_cast(
+    const void *src_ptr,                // object started from
+    const __class_type_info *src_type,  // type of the starting object
+    const __class_type_info *dst_type,  // desired target type
+    ptrdiff_t src2dst)                  // how src and dst are related
+{
+    const void *vtable = *static_cast<const void *const *>(src_ptr);
+    const vtable_prefix *prefix =
+        adjust_pointer<vtable_prefix>(vtable, -offsetof(vtable_prefix, origin));
+    const void *whole_ptr = adjust_pointer<void>(src_ptr, prefix->whole_object);
+    const __class_type_info *whole_type = prefix->whole_type;
+    __class_type_info::__dyncast_result result;
+
+    // If the whole object vptr doesn't refer to the whole object type, we're
+    // in the middle of constructing a primary base, and src is a separate
+    // base.  This has undefined behavior and we can't find anything outside
+    // of the base we're actually constructing, so fail now rather than
+    // segfault later trying to use a vbase offset that doesn't exist.
+    const void *whole_vtable = *static_cast<const void *const *>(whole_ptr);
+    const vtable_prefix *whole_prefix = adjust_pointer<vtable_prefix>(
+        whole_vtable, -offsetof(vtable_prefix, origin));
+    if (whole_prefix->whole_type != whole_type) {
+        return NULL;
+    }
+
+    whole_type->__do_dyncast(src2dst, __class_type_info::__contained_public,
+                             dst_type, whole_ptr, src_type, src_ptr, result);
+    if (!result.dst_ptr) {
+        return NULL;
+    }
+    if (contained_public_p(result.dst2src)) {
+        // Src is known to be a public base of dst.
+        return const_cast<void *>(result.dst_ptr);
+    }
+    if (contained_public_p(__class_type_info::__sub_kind(result.whole2src &
+                                                         result.whole2dst))) {
+        // Both src and dst are known to be public bases of whole. Found a valid
+        // cross cast.
+        return const_cast<void *>(result.dst_ptr);
+    }
+    if (contained_nonvirtual_p(result.whole2src)) {
+        // Src is known to be a non-public nonvirtual base of whole, and not a
+        // base of dst. Found an invalid cross cast, which cannot also be a down
+        // cast
+        return NULL;
+    }
+    if (result.dst2src == __class_type_info::__unknown) {
+        result.dst2src = dst_type->__find_public_src(src2dst, result.dst_ptr,
+                                                     src_type, src_ptr);
+    }
+    if (contained_public_p(result.dst2src)) {
+        // Found a valid down cast
+        return const_cast<void *>(result.dst_ptr);
+    }
+    // Must be an invalid down cast, or the cross cast wasn't bettered
+    return NULL;
+}
+```
+
+---
+
+## 8. 引用
 
 * [dynamic_cast conversion](https://en.cppreference.com/w/cpp/language/dynamic_cast)
 * [c++对象内存布局](https://mp.weixin.qq.com/s?__biz=Mzk0MzI4OTI1Ng==&mid=2247484652&idx=1&sn=087f34d20572614a3273c4f1028a4be2&chksm=c337622bf440eb3d0875a5e115c3545c169cbbd5fd5cae834f9387479c202d5eff1c350b3f2f&mpshare=1&scene=24&srcid=0214RAacGDpYpm1JFHL7I8iV&sharer_sharetime=1676387723635&sharer_shareid=0b4fc3750818fb2c58eb60e71e3d1c6f#rd)
