@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[c++] 深入探索 C++ 多态 - 继承关系"
+title:  "深入探索 C++ 多态 - 继承关系"
 categories: c/c++
 author: wenfh2020
 ---
