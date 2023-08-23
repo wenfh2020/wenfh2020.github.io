@@ -5,9 +5,9 @@ categories: c/c++
 author: wenfh2020
 ---
 
-上一章《[[c++] 深入探索 C++ 多态 - 虚函数调用链路](https://wenfh2020.com/2022/12/27/deep-cpp/)》简述了无继承关系对象是如何调用虚函数的。本章主要探索有继承关系的 C++ 多态对象的内存布局。
+[上一章](https://wenfh2020.com/2022/12/27/deep-cpp/) 简述了虚函数的调用链路，本章主要探索各种继承关系的 C++ 动态多态对象的内存布局。
 
-C++ 继承特性与多态的实现有着密不可分的关系。有继承关系的对象，被创建时，派生类和基类通过层层构造对对象实例进行初始化，其中对象指针，虚指针，虚表也在这个构造过程中建立了关系。
+C++ 继承特性与多态的实现有着密不可分的关系。有继承关系的对象，被创建时，派生类和基类通过层层构造对对象实例进行初始化，其中（this）对象指针，虚指针，虚表也在这个构造过程中建立了关系。
 
 
 
@@ -34,20 +34,16 @@ C++ 继承特性与多态的实现有着密不可分的关系。有继承关系�
 
 ## 2. 继承关系
 
-我们将通过 Demo 去探索上述各种继承关系的动态多态对象的内存布局。
-
 ### 2.1. 单一继承
 
 C++ 的单一继承是指一个类只能从一个父类继承属性和方法。
 
 > 文字来源：ChatGPT
 
-动态多态的单一继承对象类层次结构比较简单：
+动态多态的单一继承对象类层次结构相对简单：
 
 1. 对象内存只有一个虚指针，并且在其首位。
 2. 虚表上的虚函数，通过层层覆盖，最终得出对象对应的虚函数表，详看下图。
-
-> 部分细节没有写测试，有兴趣的朋友可以自己动手试试。
 
 * 测试代码。
 
@@ -61,34 +57,30 @@ class Base {
     virtual void vBaseFunc2() {}
     virtual void vBaseFunc3() {}
 
-    double m_base_data;
-    double m_base_data2;
+    long long m_base_data;
+    long long m_base_data2;
 };
 
 class Base2 : public Base {
    public:
     virtual void vBaseFunc() {}
-    virtual void vBase2Func() {}
+    virtual void vBase2Func() { std::cout << "Base2::vBase2Func" << std::endl; }
     virtual void vBase2Func2() {}
 
-    double m_base2_data;
-    double m_base2_data2;
+    long long m_base2_data;
+    long long m_base2_data2;
 };
 
 class Drived : public Base2 {
    public:
     virtual void vBaseFunc2() {}
-    virtual void vBase2Func() {}
+    virtual void vBase2Func() { std::cout << "Drived::vBase2Func" << std::endl; }
     virtual void vDrivedFunc() {}
     virtual void vDrivedFunc2() {}
 
-    double m_drived_data;
-    double m_drived_data2;
+    long long m_drived_data;
+    long long m_drived_data2;
 };
-
-int main() {
-    return 0;
-}
 ```
 
 * 类布局层次。
@@ -163,6 +155,23 @@ Drived (0x0x7fe6a1056478) 0
 
 <div align=center><img src="/images/2023/2023-08-22-15-38-09.png" data-action="zoom"/></div>
 
+* 虚函数调用。
+
+  1. 对象首位保存的是虚指针地址，虚指针指向虚表。
+  2. 虚指针向高地址偏移 0x18 位，指向 Drived::vBase2Func 虚函数进行调用。
+
+```cpp
+int main() {
+    auto d = new Drived;
+    d->vBase2Func();
+    return 0;
+}
+
+// 输出：Drived::vBase2Func
+```
+
+<div align=center><img src="/images/2023/2023-08-23-11-37-03.png" data-action="zoom"/></div>
+
 ---
 
 ### 2.2. 多重继承
@@ -182,17 +191,17 @@ class Base {
     virtual void vBaseFunc() {}
     virtual void vBaseFunc2() {}
 
-    double m_base_data;
-    double m_base_data2;
+    long long m_base_data;
+    long long m_base_data2;
 };
 
 class Base2 {
    public:
     virtual void vBase2Func() {}
-    virtual void vBase2Func2() {}
+    virtual void vBase2Func2() { std::cout << "Base2::vBase2Func2" << std::endl; }
 
-    double m_base2_data;
-    double m_base2_data2;
+    long long m_base2_data;
+    long long m_base2_data2;
 };
 
 class Base3 {
@@ -200,25 +209,21 @@ class Base3 {
     virtual void vBase3Func() {}
     virtual void vBase3Func2() {}
 
-    double m_base3_data;
-    double m_base3_data2;
+    long long m_base3_data;
+    long long m_base3_data2;
 };
 
 class Drived : public Base, public Base2, public Base3 {
    public:
     virtual void vBaseFunc() {}
-    virtual void vBase2Func2() {}
+    virtual void vBase2Func2() { std::cout << "Drived::vBase2Func2" << std::endl; }
     virtual void vBase3Func2() {}
     virtual void vDrivedFunc() {}
     virtual void vDrivedFunc2() {}
 
-    double m_drived_data;
-    double m_drived_data2;
+    long long m_drived_data;
+    long long m_drived_data2;
 };
-
-int main() {
-    return 0;
-}
 ```
 
 * 类内存布局层次。
@@ -310,9 +315,39 @@ Drived (0x0x7f8e4babcd98) 0
   1. 多重继承有多个虚指针，并指向对应的虚表。
   2. 如果派生类有 N 个多重继承单一基类，那么它的对象有 N 多虚指针和虚表。
 
-<div align=center><img src="/images/2023/2023-08-12-14-36-56.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-08-23-10-19-28.png" data-action="zoom"/></div>
 
-* 思考，上面多重继承的多态实例，这样操作是否正常。
+* 虚函数调用。有了上面内存布局的理解，我们应该不难理解下面这个基类指针是怎么调用派生类虚函数的：
+
+```cpp
+int main() {
+    auto d = new Drived;
+    std::cout << d << std::endl;
+
+    Base2 *b = static_cast<Base2 *>(d);
+    std::cout << b << std::endl;
+    b->vBase2Func2();
+    return 0;
+}
+
+// 输出：
+// 0xbcf010
+// 0xbcf028
+// Drived::vBase2Func2
+```
+
+  1. Base2 指针指向存储 vptr2 的地址：从对象内存顶部 vptr1 向高地址偏移 0x18 位，获得 vptr2 虚指针地址。
+  2. vptr2 指针地址向高地址偏移 0x8 位，获得 _ZThn24_N6Drived11vBase2Func2Ev 地址。
+  3. 通过 _ZThn24_N6Drived11vBase2Func2Ev 地址跳转到 Drived::vBase3Func2 函数进行调用。
+
+```shell
+# c++filt _ZThn24_N6Drived11vBase2Func2Ev
+non-virtual thunk to Drived::vBase2Func2()
+```
+
+<div align=center><img src="/images/2023/2023-08-23-11-35-39.png" data-action="zoom"/></div>
+
+* 思考，上面多重继承的多态实例，这样操作是否正确。
 
 ```cpp
 int main() {
@@ -371,7 +406,7 @@ class Base3 : virtual public Base {
    public:
     virtual void vBaseFunc2() {}
     virtual void vBase3Func() {}
-    virtual void vBase3Func2() {}
+    virtual void vBase3Func2() { std::cout << "Base3::vBase3Func2" << std::endl; }
     long long m_base3_data = 0x31;
     long long m_base3_data2 = 0x32;
 };
@@ -379,17 +414,13 @@ class Base3 : virtual public Base {
 class Drived : public Base2, public Base3 {
    public:
     virtual void vBase2Func() {}
-    virtual void vBase3Func2() {}
+    virtual void vBase3Func2() { std::cout << "Drived::vBase3Func2" << std::endl; }
     virtual void vDrivedFunc() {}
     virtual void vDrivedFunc2() {}
 
     long long m_drived_data = 0x41;
     long long m_drived_data2 = 0x42;
 };
-
-int main() {
-    return 0;
-}
 ```
 
 * 类内存布局层次。
@@ -563,9 +594,31 @@ Drived (0x0x7f45f388d620) 0
 
 <div align=center><img src="/images/2023/2023-08-22-15-14-01.jpg" data-action="zoom"/></div>
 
+* 虚函数调用。
+
+```cpp
+int main() {
+    auto d = new Drived;
+    auto b = static_cast<Base3 *>(d);
+    b->vBase3Func2();
+    return 0;
+}
+
+// 输出：
+// Drived::vBase3Func2
+```
+
+  1. Base3 指针指向存储 vptr.base3 的地址：从对象内存顶部 vptr.drived 向高地址偏移 0x18 位，获得 vptr.base3 虚指针地址。
+  2. vptr.base3 指针地址向高地址偏移 0x10 位，获得 Drived::_ZThn24_N6Drived11vBase3Func2Ev 地址。
+  3. 通过 Drived::_ZThn24_N6Drived11vBase3Func2Ev 地址跳转到 Drived::vBase3Func2 函数进行调用。
+
+<div align=center><img src="/images/2023/2023-08-23-14-22-36.png" data-action="zoom"/></div>
+
 ---
 
 ## 3. 后记
+
+* 要理解多态的对象内存布局，要注意理解（多个）虚指针是如何根据不同的基类指针进行偏移的，当虚指针指向虚表后，要获得对应的虚函数，虚指针要偏移一定的位置才能定位到对应的虚表上的虚函数。
 
 * 如果要用一个词来形容多态，那就是 `覆盖`，派生类重写基类虚函数，像图层一样，（派生类）上层覆盖下层（基类），层层叠加，最后得出了被覆盖的结果；这也是我们理解 `虚表` 结构的核心思维方式。
 
