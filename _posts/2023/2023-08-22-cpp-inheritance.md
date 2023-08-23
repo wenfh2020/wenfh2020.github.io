@@ -154,8 +154,8 @@ Drived (0x0x7fe6a1056478) 0
 
 * 虚函数调用。
 
-  1. 对象首位保存的是虚指针地址，虚指针指向虚表。
-  2. 虚指针向高地址偏移 0x18 位，指向 Drived::vBase2Func 虚函数进行调用。
+  1. 对象首位保存的是虚指针 vptr，虚指针指向虚表。
+  2. 虚指针指向的虚表地址向高地址偏移 0x18 个字节，这样可以获取 Drived::vBase2Func 虚函数地址，然后进行调用。
 
 ```cpp
 int main() {
@@ -333,9 +333,9 @@ int main() {
 // Drived::vBase2Func2
 ```
 
-  1. Base2 指针指向存储 vptr2 的地址：从对象内存顶部 vptr1 向高地址偏移 0x18 位，获得 vptr2 虚指针地址。
-  2. vptr2 指针地址向高地址偏移 0x8 位，获得 _ZThn24_N6Drived11vBase2Func2Ev 地址。
-  3. 通过 _ZThn24_N6Drived11vBase2Func2Ev 地址跳转到 Drived::vBase3Func2 函数进行调用。
+  1. Base2 指针指向存储 vptr2 的地址：从对象内存顶部向高地址偏移 0x18 个字节，获得 vptr2 虚指针。
+  2. vptr2 指针指向的虚表地址向高地址偏移 0x8 个字节，获得 _ZThn24_N6Drived11vBase2Func2Ev 地址。
+  3. 通过 _ZThn24_N6Drived11vBase2Func2Ev 地址跳转到 Drived::vBase3Func2 虚函数，获取虚表上对应的虚函数地址进行调用。
 
 ```shell
 # c++filt _ZThn24_N6Drived11vBase2Func2Ev
@@ -605,9 +605,9 @@ int main() {
 // Drived::vBase3Func2
 ```
 
-  1. Base3 指针指向存储 vptr.base3 的地址：从对象内存顶部 vptr.drived 向高地址偏移 0x18 位，获得 vptr.base3 虚指针地址。
-  2. vptr.base3 指针地址向高地址偏移 0x10 位，获得 Drived::_ZThn24_N6Drived11vBase3Func2Ev 地址。
-  3. 通过 Drived::_ZThn24_N6Drived11vBase3Func2Ev 地址跳转到 Drived::vBase3Func2 函数进行调用。
+  1. Base3 指针指向存储 vptr.base3 的地址：从对象内存顶部向高地址偏移 0x18 个字节，获得 vptr.base3 虚指针。
+  2. vptr.base3 指针指向的虚表地址向高地址偏移 0x10 个字节，获得 Drived::_ZThn24_N6Drived11vBase3Func2Ev 地址。
+  3. 通过 Drived::_ZThn24_N6Drived11vBase3Func2Ev 地址跳转到 Drived::vBase3Func2 虚函数，获取虚表上对应的虚函数进行调用。
 
 <div align=center><img src="/images/2023/2023-08-23-14-22-36.png" data-action="zoom"/></div>
 
