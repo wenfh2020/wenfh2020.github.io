@@ -321,7 +321,7 @@ int main() {
     auto d = new Drived;
     std::cout << d << std::endl;
 
-    Base2 *b = static_cast<Base2 *>(d);
+    auto b = static_cast<Base2 *>(d);
     std::cout << b << std::endl;
     b->vBase2Func2();
     return 0;
