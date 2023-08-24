@@ -340,11 +340,11 @@ int main() {
 ```
 
   1. Base2 指针指向存储 vptr2 的地址：从对象内存顶部向高地址偏移 0x18 个字节，获得 vptr2 虚指针。
-  2. vptr2 指针指向的虚表地址向高地址偏移 0x8 个字节，获得 _ZThn24_N6Derived11vBase2Func2Ev 地址。
-  3. 通过 _ZThn24_N6Derived11vBase2Func2Ev 地址跳转到 Derived::vBase3Func2 虚函数，获取虚表上对应的虚函数地址进行调用。
+  2. vptr2 指针指向的虚表地址向高地址偏移 0x8 个字节，获得 _ZThn24_N7Derived11vBase2Func2Ev 地址。
+  3. 通过 _ZThn24_N7Derived11vBase2Func2Ev 地址跳转到 Derived::vBase3Func2 虚函数，获取虚表上对应的虚函数地址进行调用。
 
 ```shell
-# c++filt _ZThn24_N6Derived11vBase2Func2Ev
+# c++filt _ZThn24_N7Derived11vBase2Func2Ev
 non-virtual thunk to Derived::vBase2Func2()
 ```
 
