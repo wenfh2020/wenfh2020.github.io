@@ -68,15 +68,15 @@ class Base2 : public Base {
     long long m_base2_data2;
 };
 
-class Drived : public Base2 {
+class Derived : public Base2 {
    public:
     virtual void vBaseFunc2() {}
-    virtual void vBase2Func() { std::cout << "Drived::vBase2Func" << std::endl; }
-    virtual void vDrivedFunc() {}
-    virtual void vDrivedFunc2() {}
+    virtual void vBase2Func() { std::cout << "Derived::vBase2Func" << std::endl; }
+    virtual void vDerivedFunc() {}
+    virtual void vDerivedFunc2() {}
 
-    long long m_drived_data;
-    long long m_drived_data2;
+    long long m_derived_data;
+    long long m_derived_data2;
 };
 ```
 
@@ -97,8 +97,7 @@ Base::_ZTV4Base: 5u entries
 Class Base
    size=24 align=8
    base size=24 base align=8
-Base (0x0x7fe6a109f180) 0
-    # 虚指针指向虚表的这个位置：16    (int (*)(...))Base::vBaseFunc
+Base (0x0x7fb058ee8720) 0
     vptr=((& Base::_ZTV4Base) + 16u)
 
 Vtable for Base2
@@ -114,52 +113,52 @@ Base2::_ZTV5Base2: 7u entries
 Class Base2
    size=40 align=8
    base size=40 base align=8
-Base2 (0x0x7fe6a1056f70) 0
+Base2 (0x0x7fb058fa8f70) 0
     vptr=((& Base2::_ZTV5Base2) + 16u)
-  Base (0x0x7fe6a109f1e0) 0
-      primary-for Base2 (0x0x7fe6a1056f70)
+  Base (0x0x7fb058ee8780) 0
+      primary-for Base2 (0x0x7fb058fa8f70)
 
-# 虚表的结构。
-Vtable for Drived
-Drived::_ZTV6Drived: 9u entries
+# Derived 虚表。
+Vtable for Derived
+Derived::_ZTV7Derived: 9u entries
 0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI6Drived)
+8     (int (*)(...))(& _ZTI7Derived)
 16    (int (*)(...))Base2::vBaseFunc
-24    (int (*)(...))Drived::vBaseFunc2
+24    (int (*)(...))Derived::vBaseFunc2
 32    (int (*)(...))Base::vBaseFunc3
-40    (int (*)(...))Drived::vBase2Func
+40    (int (*)(...))Derived::vBase2Func
 48    (int (*)(...))Base2::vBase2Func2
-56    (int (*)(...))Drived::vDrivedFunc
-64    (int (*)(...))Drived::vDrivedFunc2
+56    (int (*)(...))Derived::vDerivedFunc
+64    (int (*)(...))Derived::vDerivedFunc2
 
-# 类的层次结构。
-Class Drived
+Class Derived
    size=56 align=8
    base size=56 base align=8
-Drived (0x0x7fe6a1056478) 0
-    vptr=((& Drived::_ZTV6Drived) + 16u)
-  Base2 (0x0x7fe6a1056a28) 0
-      primary-for Drived (0x0x7fe6a1056478)
-    Base (0x0x7fe6a109f240) 0
-        primary-for Base2 (0x0x7fe6a1056a28)
+Derived (0x0x7fb058fa8478) 0
+    # 虚指针指向虚表的第 16 个字节处。
+    vptr=((& Derived::_ZTV7Derived) + 16u)
+  Base2 (0x0x7fb058fa8a28) 0
+      primary-for Derived (0x0x7fb058fa8478)
+    Base (0x0x7fb058ee87e0) 0
+        primary-for Base2 (0x0x7fb058fa8a28)
 ```
 
 * 虚表整合。
 
-<div align=center><img src="/images/2023/2023-08-22-15-37-53.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-08-24-16-05-28.png" data-action="zoom"/></div>
 
-* 对象整体对局。
+* 对象整体布局。
 
-<div align=center><img src="/images/2023/2023-08-22-15-38-09.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-08-24-16-06-05.png" data-action="zoom"/></div>
 
 * 虚函数调用。
 
   1. 对象首位保存的是虚指针 vptr，虚指针指向虚表。
-  2. 虚指针指向的虚表地址向高地址偏移 0x18 个字节，这样可以获取 Drived::vBase2Func 虚函数地址，然后进行调用。
+  2. 虚指针指向的虚表地址向高地址偏移 0x18 个字节，这样可以获取 Derived::vBase2Func 虚函数地址，然后进行调用。
 
 ```cpp
 int main() {
-    auto d = new Drived;
+    auto d = new Derived;
     std::cout << d << std::endl;
 
     auto b = static_cast<Base2 *>(d);
@@ -168,14 +167,13 @@ int main() {
     return 0;
 }
 
-
 // 输出：
-// 0x23c6010
-// 0x23c6010
-// Drived::vBase2Func
+// 0x13a0010
+// 0x13a0010
+// Derived::vBase2Func
 ```
 
-<div align=center><img src="/images/2023/2023-08-23-11-37-03.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-08-24-17-05-20.png" data-action="zoom"/></div>
 
 ---
 
@@ -218,16 +216,16 @@ class Base3 {
     long long m_base3_data2;
 };
 
-class Drived : public Base, public Base2, public Base3 {
+class Derived : public Base, public Base2, public Base3 {
    public:
     virtual void vBaseFunc() {}
-    virtual void vBase2Func2() { std::cout << "Drived::vBase2Func2" << std::endl; }
+    virtual void vBase2Func2() { std::cout << "Derived::vBase2Func2" << std::endl; }
     virtual void vBase3Func2() {}
-    virtual void vDrivedFunc() {}
-    virtual void vDrivedFunc2() {}
+    virtual void vDerivedFunc() {}
+    virtual void vDerivedFunc2() {}
 
-    long long m_drived_data;
-    long long m_drived_data2;
+    long long m_derived_data;
+    long long m_derived_data2;
 };
 ```
 
@@ -247,7 +245,7 @@ Base::_ZTV4Base: 4u entries
 Class Base
    size=24 align=8
    base size=24 base align=8
-Base (0x0x7f8e4bd3da80) 0
+Base (0x0x7f4195f3e720) 0
     vptr=((& Base::_ZTV4Base) + 16u)
 
 Vtable for Base2
@@ -260,7 +258,7 @@ Base2::_ZTV5Base2: 4u entries
 Class Base2
    size=24 align=8
    base size=24 base align=8
-Base2 (0x0x7f8e4bd3dae0) 0
+Base2 (0x0x7f4195f3e780) 0
     vptr=((& Base2::_ZTV5Base2) + 16u)
 
 Vtable for Base3
@@ -273,39 +271,39 @@ Base3::_ZTV5Base3: 4u entries
 Class Base3
    size=24 align=8
    base size=24 base align=8
-Base3 (0x0x7f8e4bd3db40) 0
+Base3 (0x0x7f4195f3e7e0) 0
     vptr=((& Base3::_ZTV5Base3) + 16u)
 
-Vtable for Drived
-Drived::_ZTV6Drived: 16u entries
+Vtable for Derived
+Derived::_ZTV7Derived: 16u entries
 0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI6Drived)
-16    (int (*)(...))Drived::vBaseFunc
+8     (int (*)(...))(& _ZTI7Derived)
+16    (int (*)(...))Derived::vBaseFunc
 24    (int (*)(...))Base::vBaseFunc2
-32    (int (*)(...))Drived::vBase2Func2
-40    (int (*)(...))Drived::vBase3Func2
-48    (int (*)(...))Drived::vDrivedFunc
-56    (int (*)(...))Drived::vDrivedFunc2
+32    (int (*)(...))Derived::vBase2Func2
+40    (int (*)(...))Derived::vBase3Func2
+48    (int (*)(...))Derived::vDerivedFunc
+56    (int (*)(...))Derived::vDerivedFunc2
 64    (int (*)(...))-24
-72    (int (*)(...))(& _ZTI6Drived)
+72    (int (*)(...))(& _ZTI7Derived)
 80    (int (*)(...))Base2::vBase2Func
-88    (int (*)(...))Drived::_ZThn24_N6Drived11vBase2Func2Ev
+88    (int (*)(...))Derived::_ZThn24_N7Derived11vBase2Func2Ev
 96    (int (*)(...))-48
-104   (int (*)(...))(& _ZTI6Drived)
+104   (int (*)(...))(& _ZTI7Derived)
 112   (int (*)(...))Base3::vBase3Func
-120   (int (*)(...))Drived::_ZThn48_N6Drived11vBase3Func2Ev
+120   (int (*)(...))Derived::_ZThn48_N7Derived11vBase3Func2Ev
 
-Class Drived
+Class Derived
    size=88 align=8
    base size=88 base align=8
-Drived (0x0x7f8e4babcd98) 0
-    vptr=((& Drived::_ZTV6Drived) + 16u)
-  Base (0x0x7f8e4bd3dba0) 0
-      primary-for Drived (0x0x7f8e4babcd98)
-  Base2 (0x0x7f8e4bd3dc00) 24
-      vptr=((& Drived::_ZTV6Drived) + 80u)
-  Base3 (0x0x7f8e4bd3dc60) 48
-      vptr=((& Drived::_ZTV6Drived) + 112u)
+Derived (0x0x7f4196042348) 0
+    vptr=((& Derived::_ZTV7Derived) + 16u)
+  Base (0x0x7f4195f3e840) 0
+      primary-for Derived (0x0x7f4196042348)
+  Base2 (0x0x7f4195f3e8a0) 24
+      vptr=((& Derived::_ZTV7Derived) + 80u)
+  Base3 (0x0x7f4195f3e900) 48
+      vptr=((& Derived::_ZTV7Derived) + 112u)
 ```
 
 * 虚表整合。
@@ -313,20 +311,20 @@ Drived (0x0x7f8e4babcd98) 0
   1. 首先派生类的虚表与第一个基类的虚表结合成一个虚表单元，并覆盖基类的虚函数。
   2. 其它的基类，作为一个独立虚表单元。当派生类虚函数有重写基类的虚函数时，基类对应虚函数，通过 [thunk 技术](https://zhuanlan.zhihu.com/p/496115833) ，跳转到第一个虚表单元的对应虚函数。
 
-<div align=center><img src="/images/2023/2023-08-22-15-34-28.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-08-24-16-59-19.png" data-action="zoom"/></div>
 
 * 对象整体布局。由下图可见：
 
   1. 多重继承有多个虚指针，并指向对应的虚表。
   2. 如果派生类有 N 个多重继承单一基类，那么它的对象有 N 多虚指针和虚表。
 
-<div align=center><img src="/images/2023/2023-08-23-10-19-28.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-08-24-17-01-40.png" data-action="zoom"/></div>
 
 * 虚函数调用。有了上面内存布局的理解，我们应该不难理解下面这个基类指针是怎么调用派生类虚函数的：
 
 ```cpp
 int main() {
-    auto d = new Drived;
+    auto d = new Derived;
     std::cout << d << std::endl;
 
     auto b = static_cast<Base2 *>(d);
@@ -336,27 +334,27 @@ int main() {
 }
 
 // 输出：
-// 0xbcf010
-// 0xbcf028
-// Drived::vBase2Func2
+// 0x13db010
+// 0x13db028
+// Derived::vBase2Func2
 ```
 
   1. Base2 指针指向存储 vptr2 的地址：从对象内存顶部向高地址偏移 0x18 个字节，获得 vptr2 虚指针。
-  2. vptr2 指针指向的虚表地址向高地址偏移 0x8 个字节，获得 _ZThn24_N6Drived11vBase2Func2Ev 地址。
-  3. 通过 _ZThn24_N6Drived11vBase2Func2Ev 地址跳转到 Drived::vBase3Func2 虚函数，获取虚表上对应的虚函数地址进行调用。
+  2. vptr2 指针指向的虚表地址向高地址偏移 0x8 个字节，获得 _ZThn24_N6Derived11vBase2Func2Ev 地址。
+  3. 通过 _ZThn24_N6Derived11vBase2Func2Ev 地址跳转到 Derived::vBase3Func2 虚函数，获取虚表上对应的虚函数地址进行调用。
 
 ```shell
-# c++filt _ZThn24_N6Drived11vBase2Func2Ev
-non-virtual thunk to Drived::vBase2Func2()
+# c++filt _ZThn24_N6Derived11vBase2Func2Ev
+non-virtual thunk to Derived::vBase2Func2()
 ```
 
-<div align=center><img src="/images/2023/2023-08-23-11-35-39.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-08-24-17-00-08.png" data-action="zoom"/></div>
 
 * 思考，上面多重继承的多态实例，这样操作是否正确。
 
 ```cpp
 int main() {
-    Base2* b = new Drived;
+    Base2* b = new Derived;
     delete b;
     return 0;
 }
@@ -416,15 +414,15 @@ class Base3 : virtual public Base {
     long long m_base3_data2 = 0x32;
 };
 
-class Drived : public Base2, public Base3 {
+class Derived : public Base2, public Base3 {
    public:
     virtual void vBase2Func() {}
-    virtual void vBase3Func2() { std::cout << "Drived::vBase3Func2" << std::endl; }
-    virtual void vDrivedFunc() {}
-    virtual void vDrivedFunc2() {}
+    virtual void vBase3Func2() { std::cout << "Derived::vBase3Func2" << std::endl; }
+    virtual void vDerivedFunc() {}
+    virtual void vDerivedFunc2() {}
 
-    long long m_drived_data = 0x41;
-    long long m_drived_data2 = 0x42;
+    long long m_derived_data = 0x41;
+    long long m_derived_data2 = 0x42;
 };
 ```
 
@@ -441,7 +439,7 @@ Base::_ZTV4Base: 4u entries
 Class Base
    size=24 align=8
    base size=24 base align=8
-Base (0x0x7f45f3a72a80) 0
+Base (0x0x7fd19d5ee720) 0
     vptr=((& Base::_ZTV4Base) + 16u)
 
 Vtable for Base2
@@ -467,9 +465,9 @@ Base2::_ZTT5Base2: 2u entries
 Class Base2
    size=48 align=8
    base size=24 base align=8
-Base2 (0x0x7f45f385e750) 0
+Base2 (0x0x7fd19d6aef70) 0
     vptridx=0u vptr=((& Base2::_ZTV5Base2) + 24u)
-  Base (0x0x7f45f3a72ae0) 24 virtual
+  Base (0x0x7fd19d5ee780) 24 virtual
       vptridx=8u vbaseoffset=-24 vptr=((& Base2::_ZTV5Base2) + 80u)
 
 Vtable for Base3
@@ -495,37 +493,37 @@ Base3::_ZTT5Base3: 2u entries
 Class Base3
    size=48 align=8
    base size=24 base align=8
-Base3 (0x0x7f45f385e820) 0
+Base3 (0x0x7fd19d6ae478) 0
     vptridx=0u vptr=((& Base3::_ZTV5Base3) + 24u)
-  Base (0x0x7f45f3a72b40) 24 virtual
+  Base (0x0x7fd19d5ee7e0) 24 virtual
       vptridx=8u vbaseoffset=-24 vptr=((& Base3::_ZTV5Base3) + 80u)
 
-Vtable for Drived
-Drived::_ZTV6Drived: 21u entries
+Vtable for Derived
+Derived::_ZTV7Derived: 21u entries
 0     64u
 8     (int (*)(...))0
-16    (int (*)(...))(& _ZTI6Drived)
+16    (int (*)(...))(& _ZTI7Derived)
 24    (int (*)(...))Base2::vBaseFunc
-32    (int (*)(...))Drived::vBase2Func
+32    (int (*)(...))Derived::vBase2Func
 40    (int (*)(...))Base2::vBase2Func2
-48    (int (*)(...))Drived::vBase3Func2
-56    (int (*)(...))Drived::vDrivedFunc
-64    (int (*)(...))Drived::vDrivedFunc2
+48    (int (*)(...))Derived::vBase3Func2
+56    (int (*)(...))Derived::vDerivedFunc
+64    (int (*)(...))Derived::vDerivedFunc2
 72    40u
 80    (int (*)(...))-24
-88    (int (*)(...))(& _ZTI6Drived)
+88    (int (*)(...))(& _ZTI7Derived)
 96    (int (*)(...))Base3::vBaseFunc2
 104   (int (*)(...))Base3::vBase3Func
-112   (int (*)(...))Drived::_ZThn24_N6Drived11vBase3Func2Ev
-120   18446744073709551576u   # -40
-128   18446744073709551552u   # -64
+112   (int (*)(...))Derived::_ZThn24_N7Derived11vBase3Func2Ev
+120   18446744073709551576u
+128   18446744073709551552u
 136   (int (*)(...))-64
-144   (int (*)(...))(& _ZTI6Drived)
+144   (int (*)(...))(& _ZTI7Derived)
 152   (int (*)(...))Base2::_ZTv0_n24_N5Base29vBaseFuncEv
 160   (int (*)(...))Base3::_ZTv0_n32_N5Base310vBaseFunc2Ev
 
-Construction vtable for Base2 (0x0x7f45f385e8f0 instance) in Drived
-Drived::_ZTC6Drived0_5Base2: 12u entries
+Construction vtable for Base2 (0x0x7fd19d6aea90 instance) in Derived
+Derived::_ZTC7Derived0_5Base2: 12u entries
 0     64u
 8     (int (*)(...))0
 16    (int (*)(...))(& _ZTI5Base2)
@@ -539,8 +537,8 @@ Drived::_ZTC6Drived0_5Base2: 12u entries
 80    (int (*)(...))Base2::_ZTv0_n24_N5Base29vBaseFuncEv
 88    (int (*)(...))Base::vBaseFunc2
 
-Construction vtable for Base3 (0x0x7f45f385e958 instance) in Drived
-Drived::_ZTC6Drived24_5Base3: 12u entries
+Construction vtable for Base3 (0x0x7fd19d6aeaf8 instance) in Derived
+Derived::_ZTC7Derived24_5Base3: 12u entries
 0     40u
 8     (int (*)(...))0
 16    (int (*)(...))(& _ZTI5Base3)
@@ -554,39 +552,39 @@ Drived::_ZTC6Drived24_5Base3: 12u entries
 80    (int (*)(...))Base::vBaseFunc
 88    (int (*)(...))Base3::_ZTv0_n32_N5Base310vBaseFunc2Ev
 
-VTT for Drived
-Drived::_ZTT6Drived: 7u entries
-0     ((& Drived::_ZTV6Drived) + 24u)
-8     ((& Drived::_ZTC6Drived0_5Base2) + 24u)
-16    ((& Drived::_ZTC6Drived0_5Base2) + 80u)
-24    ((& Drived::_ZTC6Drived24_5Base3) + 24u)
-32    ((& Drived::_ZTC6Drived24_5Base3) + 80u)
-40    ((& Drived::_ZTV6Drived) + 152u)
-48    ((& Drived::_ZTV6Drived) + 96u)
+VTT for Derived
+Derived::_ZTT7Derived: 7u entries
+0     ((& Derived::_ZTV7Derived) + 24u)
+8     ((& Derived::_ZTC7Derived0_5Base2) + 24u)
+16    ((& Derived::_ZTC7Derived0_5Base2) + 80u)
+24    ((& Derived::_ZTC7Derived24_5Base3) + 24u)
+32    ((& Derived::_ZTC7Derived24_5Base3) + 80u)
+40    ((& Derived::_ZTV7Derived) + 152u)
+48    ((& Derived::_ZTV7Derived) + 96u)
 
-Class Drived
+Class Derived
    size=88 align=8
    base size=64 base align=8
-Drived (0x0x7f45f388d620) 0
-    vptridx=0u vptr=((& Drived::_ZTV6Drived) + 24u)
-  Base2 (0x0x7f45f385e8f0) 0
-      primary-for Drived (0x0x7f45f388d620)
+Derived (0x0x7fd19d7401c0) 0
+    vptridx=0u vptr=((& Derived::_ZTV7Derived) + 24u)
+  Base2 (0x0x7fd19d6aea90) 0
+      primary-for Derived (0x0x7fd19d7401c0)
       subvttidx=8u
-    Base (0x0x7f45f3a72ba0) 64 virtual
-        vptridx=40u vbaseoffset=-24 vptr=((& Drived::_ZTV6Drived) + 152u)
-  Base3 (0x0x7f45f385e958) 24
-      subvttidx=24u vptridx=48u vptr=((& Drived::_ZTV6Drived) + 96u)
-    Base (0x0x7f45f3a72ba0) alternative-path
+    Base (0x0x7fd19d5ee840) 64 virtual
+        vptridx=40u vbaseoffset=-24 vptr=((& Derived::_ZTV7Derived) + 152u)
+  Base3 (0x0x7fd19d6aeaf8) 24
+      subvttidx=24u vptridx=48u vptr=((& Derived::_ZTV7Derived) + 96u)
+    Base (0x0x7fd19d5ee840) alternative-path
 ```
 
 * 对象整体布局。
 
-<div align=center><img src="/images/2023/2023-08-18-18-58-08.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-08-24-18-32-22.png" data-action="zoom"/></div>
 
-* 构造顺序。我们可以通过类的构造顺序去理解，对象的内存布局和虚表是如何一步一步构造出来的。在构造派生类 Drived 时，先构造基类，当基类构造完了，才构造自己：1. Base()，2. Base2()，3. Base3()，4.Drived()。
+* 构造顺序。我们可以通过类的构造顺序去理解，对象的内存布局和虚表是如何一步一步构造出来的。在构造派生类 Derived 时，先构造基类，当基类构造完了，才构造自己：1. Base()，2. Base2()，3. Base3()，4.Derived()。
 
 ```shell
-0x400b33:    e8 34 02 00 00    callq  0x400d6c <Drived::Drived()>
+0x400b33:    e8 34 02 00 00    callq  0x400d6c <Derived::Derived()>
 ...
 0x400d83:    e8 06 ff ff ff    callq  400c8e <Base::Base()>
 ...
@@ -603,7 +601,7 @@ Drived (0x0x7f45f388d620) 0
 
 ```cpp
 int main() {
-    auto d = new Drived;
+    auto d = new Derived;
     std::cout << d << std::endl;
 
     auto b = static_cast<Base3 *>(d);
@@ -613,16 +611,16 @@ int main() {
 }
 
 // 输出：
-// 0x1b4c010
-// 0x1b4c028
-// Drived::vBase3Func2
+// 0x9fa010
+// 0x9fa028
+// Derived::vBase3Func2
 ```
 
   1. Base3 指针指向存储 vptr.base3 的地址：从对象内存顶部向高地址偏移 0x18 个字节，获得 vptr.base3 虚指针。
-  2. vptr.base3 指针指向的虚表地址向高地址偏移 0x10 个字节，获得 Drived::_ZThn24_N6Drived11vBase3Func2Ev 地址。
-  3. 通过 Drived::_ZThn24_N6Drived11vBase3Func2Ev 地址跳转到 Drived::vBase3Func2 虚函数，获取虚表上对应的虚函数进行调用。
+  2. vptr.base3 指针指向的虚表地址向高地址偏移 0x10 个字节，获得 Derived::_ZThn24_N7Derived11vBase3Func2Ev 地址。
+  3. 通过 Derived::_ZThn24_N7Derived11vBase3Func2Ev 地址跳转到 Derived::vBase3Func2 虚函数，获取虚表上对应的虚函数进行调用。
 
-<div align=center><img src="/images/2023/2023-08-23-14-22-36.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-08-24-18-32-48.png" data-action="zoom"/></div>
 
 ---
 
