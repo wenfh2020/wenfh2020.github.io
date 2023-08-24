@@ -160,11 +160,19 @@ Drived (0x0x7fe6a1056478) 0
 ```cpp
 int main() {
     auto d = new Drived;
-    d->vBase2Func();
+    std::cout << d << std::endl;
+
+    auto b = static_cast<Base2 *>(d);
+    std::cout << b << std::endl;
+    b->vBase2Func();
     return 0;
 }
 
-// 输出：Drived::vBase2Func
+
+// 输出：
+// 0x23c6010
+// 0x23c6010
+// Drived::vBase2Func
 ```
 
 <div align=center><img src="/images/2023/2023-08-23-11-37-03.png" data-action="zoom"/></div>
@@ -596,12 +604,17 @@ Drived (0x0x7f45f388d620) 0
 ```cpp
 int main() {
     auto d = new Drived;
+    std::cout << d << std::endl;
+
     auto b = static_cast<Base3 *>(d);
+    std::cout << b << std::endl;
     b->vBase3Func2();
     return 0;
 }
 
 // 输出：
+// 0x1b4c010
+// 0x1b4c028
 // Drived::vBase3Func2
 ```
 
