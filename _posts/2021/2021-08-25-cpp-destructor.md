@@ -33,7 +33,7 @@ author: wenfh2020
   
   A function that, in addition to the actions required of a complete object destructor, calls the appropriate deallocation function (i.e,. operator delete) for T.
 
-> 文字来源：[Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html) 
+> 文字来源：[Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 
 ---
 
@@ -219,7 +219,7 @@ main:
 # 程序通过虚指针找到虚表上的虚函数。
 Derived::~Derived() [deleting destructor]:
         ...
-        # 调用 ~Derived 析构函数。
+        # 调用 Derived 析构函数。
         call    Derived::~Derived() [complete object destructor]
         ...
         # 调用 delete 释放对象
@@ -228,15 +228,24 @@ Derived::~Derived() [deleting destructor]:
 
 Derived::~Derived() [base object destructor]:
         ...
+        # 虚指针指向 Derived 虚表。
+        movq    $vtable for Derived+16, (%rax)
+        # 调用 Base2 析构函数。
         call    Base2::~Base2() [base object destructor]
         ...
 
 Base2::~Base2() [base object destructor]:
         ...
+        # 虚指针指向 Base2 虚表。
+        movq    $vtable for Base2+16, (%rax)
+        # 调用 Base 析构函数。
         call    Base::~Base() [base object destructor]
         ...
 
 Base::~Base() [base object destructor]:
+        ...
+        # 虚指针指向 Base 虚表。
+        movq    $vtable for Base+16, (%rax)
         ...
 
 # Derived 虚表。
@@ -247,12 +256,14 @@ vtable for Derived:
         # main 函数调用 delete 操作符时，调用 [deleting destructor] 类型的析构函数。
         .quad   Derived::~Derived() [deleting destructor]
 
+# Base2 虚表。
 vtable for Base2:
         .quad   0
         .quad   typeinfo for Base2
         .quad   Base2::~Base2() [complete object destructor]
         .quad   Base2::~Base2() [deleting destructor]
 
+# Base 虚表。
 vtable for Base:
         .quad   0
         .quad   typeinfo for Base
@@ -267,30 +278,34 @@ vtable for Base:
     |-- ...
     |-- delete b;
         |-- Derived::~Derived() [deleting destructor] # 程序调用虚表上的虚析构函数。
-            |-- Derived::~Derived() [complete object destructor] # 程序执行 Derived 对象析构。
-                |-- Base2::~Base2() [base object destructor] # Base2 对象析构。
-                    |-- Base::~Base() [base object destructor] # Base 对象析构。
-            |-- operator delete(void*) # delelte 释放对象内存。
+            |-- Derived::~Derived() [complete object destructor] # 调用 Derived 析构函数。
+                |-- Base2::~Base2() [base object destructor] # 调用 Base2 对象函数。
+                    |-- Base::~Base() [base object destructor] # 调用 Base 析构函数。
+            |-- operator delete(void*) # delelte 释放对象。
 ```
 
 1. 程序通过虚指针找到虚表，虚指针指向虚表的位置向高位偏移 8 个字节，找到对应的虚函数：Derived::~Derived() [deleting destructor] 进行调用，接着调用 Derived::~Derived() [complete object destructor] 开始析构对象。
-2. Derived::~Derived() [complete object destructor] 内部调用 Base2::~Base2() [base object destructor] 对 Base2 类进行析构，并将虚指针指向 Base2 虚表（上面汇编省略了虚指针这部分编码，有兴趣的朋友自己动手观察一下）。
+2. Derived::~Derived() [complete object destructor] 内部调用 Base2::~Base2() [base object destructor] 对 Base2 类进行析构，并将虚指针指向 Base2 虚表。
 3. Base2::~Base2() [base object destructor] 内部调用 Base::~Base() [base object destructor] 对 Base 类进行析构，并将虚指针指向 Base 虚表。
-4. 各个类的析构函数都调用完毕后，程序调用 delete 操作符，释放 Derived 对象内存。
+4. 各个类的析构函数都调用完毕后，程序调用 delete 操作符，释放 Derived 对象。
 
-> 这里 [complete object destructor] 和 [base object destructor] 析构函数，其实没什么区别，都指向了相同的函数。
+> 这里的 [complete object destructor] 和 [base object destructor] 类型的析构函数，没有区别，都指向了相同的函数。
 
 <div align=center><img src="/images/2023/2023-08-29-16-37-04.png" data-action="zoom"/></div>
 
 ---
 
-## 3. 小结
+## 3. 多重继承
+
+---
+
+## 4. 小结
 
 C++ 多态对象的析构工作机制，使得事情变得复杂，用户稍不留神就会踩坑。个人认为，好的语言应该把复杂的事情变简单，显然 C++ 这门语言，还有很大进步空间。
 
 ---
 
-## 4. 引用
+## 5. 引用
 
 * [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 * [GNU GCC (g++): Why does it generate multiple dtors?](https://stackoverflow.com/questions/6613870/gnu-gcc-g-why-does-it-generate-multiple-dtors/6614369#6614369)
