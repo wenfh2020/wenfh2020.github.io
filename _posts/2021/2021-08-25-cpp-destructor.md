@@ -450,13 +450,123 @@ vtable for Base:
 
 ---
 
-## 4. 后记
+## 4. 虚析构
+
+### 4.1. 测试代码
+
+```cpp
+```
+
+---
+
+### 4.2. 汇编代码
+
+* 析构流程。
+
+* 汇编。
+
+```shell
+main:
+        ...
+        movq    -32(%rbp), %rax
+        movq    (%rax), %rax
+        addq    $8, %rax
+        movq    (%rax), %rax
+        movq    -32(%rbp), %rdx
+        movq    %rdx, %rdi
+        call    *%rax
+        ...
+
+vtable for Derived:
+        .quad   40
+        .quad   0
+        .quad   typeinfo for Derived
+        .quad   Derived::~Derived() [complete object destructor]
+        .quad   Derived::~Derived() [deleting destructor]
+        .quad   24
+        .quad   -16
+        .quad   typeinfo for Derived
+        .quad   non-virtual thunk to Derived::~Derived() [complete object destructor]
+        .quad   non-virtual thunk to Derived::~Derived() [deleting destructor]
+        .quad   -40
+        .quad   -40
+        .quad   typeinfo for Derived
+        .quad   virtual thunk to Derived::~Derived() [complete object destructor]
+        .quad   virtual thunk to Derived::~Derived() [deleting destructor]
+VTT for Derived:
+        .quad   vtable for Derived+24
+        .quad   construction vtable for Base2-in-Derived+24
+        .quad   construction vtable for Base2-in-Derived+64
+        .quad   construction vtable for Base3-in-Derived+24
+        .quad   construction vtable for Base3-in-Derived+64
+        .quad   vtable for Derived+104
+        .quad   vtable for Derived+64
+construction vtable for Base2-in-Derived:
+        .quad   40
+        .quad   0
+        .quad   typeinfo for Base2
+        .quad   Base2::~Base2() [complete object destructor]
+        .quad   Base2::~Base2() [deleting destructor]
+        .quad   -40
+        .quad   -40
+        .quad   typeinfo for Base2
+        .quad   virtual thunk to Base2::~Base2() [complete object destructor]
+        .quad   virtual thunk to Base2::~Base2() [deleting destructor]
+construction vtable for Base3-in-Derived:
+        .quad   24
+        .quad   0
+        .quad   typeinfo for Base3
+        .quad   Base3::~Base3() [complete object destructor]
+        .quad   Base3::~Base3() [deleting destructor]
+        .quad   -24
+        .quad   -24
+        .quad   typeinfo for Base3
+        .quad   virtual thunk to Base3::~Base3() [complete object destructor]
+        .quad   virtual thunk to Base3::~Base3() [deleting destructor]
+vtable for Base3:
+        .quad   16
+        .quad   0
+        .quad   typeinfo for Base3
+        .quad   Base3::~Base3() [complete object destructor]
+        .quad   Base3::~Base3() [deleting destructor]
+        .quad   -16
+        .quad   -16
+        .quad   typeinfo for Base3
+        .quad   virtual thunk to Base3::~Base3() [complete object destructor]
+        .quad   virtual thunk to Base3::~Base3() [deleting destructor]
+VTT for Base3:
+        .quad   vtable for Base3+24
+        .quad   vtable for Base3+64
+vtable for Base2:
+        .quad   16
+        .quad   0
+        .quad   typeinfo for Base2
+        .quad   Base2::~Base2() [complete object destructor]
+        .quad   Base2::~Base2() [deleting destructor]
+        .quad   -16
+        .quad   -16
+        .quad   typeinfo for Base2
+        .quad   virtual thunk to Base2::~Base2() [complete object destructor]
+        .quad   virtual thunk to Base2::~Base2() [deleting destructor]
+VTT for Base2:
+        .quad   vtable for Base2+24
+        .quad   vtable for Base2+64
+vtable for Base:
+        .quad   0
+        .quad   typeinfo for Base
+        .quad   Base::~Base() [complete object destructor]
+        .quad   Base::~Base() [deleting destructor]
+```
+
+---
+
+## 5. 后记
 
 C++ 多态对象的析构工作机制，看似使用简单，实则复杂，用户稍不留神就会踩坑。个人认为，好的语言应该把复杂的事情变简单，显然 C++ 这门语言，还有很大进步空间。
 
 ---
 
-## 5. 引用
+## 6. 引用
 
 * [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 * [GNU GCC (g++): Why does it generate multiple dtors?](https://stackoverflow.com/questions/6613870/gnu-gcc-g-why-does-it-generate-multiple-dtors/6614369#6614369)
