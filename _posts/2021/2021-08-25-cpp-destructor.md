@@ -1,14 +1,17 @@
 ---
 layout: post
-title:  "深入探索 C++ 多态 - 析构函数（进行中）"
+title:  "深入探索 C++ 多态 ③ - 虚析构（进行中）"
 categories: c/c++
 author: wenfh2020
 ---
 
 本章主要探索 C++ 具有多态特性的类的析构函数工作原理。
 
+多态的核心思维是 `覆盖`，普通的虚函数调用一般是：派生类继承基类，重写基类的虚函数，由基类的指针或引用指向派生类对象，调用派生类重写的虚函数。
 
+虚析构函数有点不一样，派生类的析构函数，不需要重写基类的析构函数，要实现虚析构的效果，虚函数名称不需要相同，只需要将基类的析构函数设置成虚析构函数即可。
 
+> 有了前两章对 C++ 多态特性原理的探索基础，本章内容应该更好理解一点。
 
 ---
 
@@ -17,9 +20,9 @@ author: wenfh2020
 
 ---
 
-## 1. 概述
+## 1. 析构函数类型
 
-要理解 C++ 虚析构函数，我们需要了解一些概念，编译器会根据不同的场景，生成不同的析构函数供程序进行调用。这些概念下面实例将会提到。
+要理解 C++ 虚析构函数，我们需要了解一些概念，编译器会根据不同的场景，生成不同类型的析构函数供程序进行调用。这些概念下面实例将会提到。
 
 * base object destructor of a class T
   
@@ -51,13 +54,11 @@ author: wenfh2020
 
 通过单一继承，我们来观察一下普通析构和虚析构代码产生的结果。
 
-### 2.1. 普通析构
+### 2.1. 非虚析构
 
 #### 2.1.1. 测试源码
 
 下面测试代码，Derived 类的析构函数没有执行。
-
-* 测试代码。
 
 ```cpp
 /* g++ -O0 -std=c++11 test.cpp -o test */
@@ -90,13 +91,10 @@ int main() {
     delete b;
     return 0;
 }
-```
 
-* 测试输出结果。
-
-```shell
-~Base2
-~Base
+// 输出：
+// ~Base2
+// ~Base
 ```
 
 ---
@@ -126,12 +124,10 @@ main:
         # delete 对象
         call    operator delete(void*, unsigned long)
 
-
 Base2::~Base2() [base object destructor]:
         ...
         call    Base::~Base() [base object destructor]
         ...
-
 
 Base::~Base() [base object destructor]:
         ...
@@ -144,8 +140,6 @@ Base::~Base() [base object destructor]:
 我们在基类 ~Base（或在 ~Base2）析构函数前添加 `virtual` 关键字，程序运行结果符合预期。
 
 #### 2.2.1. 测试源码
-
-* 测试源码。
 
 ```cpp
 /* g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test */
@@ -178,21 +172,40 @@ int main() {
     delete b;
     return 0;
 }
-```
 
-* 运行结果。
-
-```shell
-~Derived
-~Base2
-~Base
+// 输出：
+// ~Derived
+// ~Base2
+// ~Base
 ```
 
 ---
 
 #### 2.2.2. 汇编源码
 
-* 汇编源码。我们通过汇编源码可以比较直观地去观察对象析构的流程。
+* 析构流程。
+
+```shell
+|-- main
+    |-- ...
+    |-- delete b;
+        |-- Derived::~Derived() [deleting destructor] # 程序调用虚表上的虚析构函数。
+            |-- Derived::~Derived() [complete object destructor] # 调用 Derived 析构函数。
+                |-- Base2::~Base2() [base object destructor] # 调用 Base2 对象函数。
+                    |-- Base::~Base() [base object destructor] # 调用 Base 析构函数。
+            |-- operator delete(void*) # delelte 释放对象。
+```
+
+1. 程序通过虚指针找到虚表，虚指针指向虚表的位置向高位偏移 8 个字节，找到对应的虚函数：Derived::~Derived() [deleting destructor] 进行调用，接着调用 Derived::~Derived() [complete object destructor] 开始析构对象。
+2. Derived::~Derived() [complete object destructor] 内部调用 Base2::~Base2() [base object destructor] 对 Base2 类进行析构，并将虚指针指向 Base2 虚表。
+3. Base2::~Base2() [base object destructor] 内部调用 Base::~Base() [base object destructor] 对 Base 类进行析构，并将虚指针指向 Base 虚表。
+4. 各个类的析构函数都调用完毕后，程序调用 delete 操作符，释放 Derived 对象。
+
+> 这里的 [complete object destructor] 和 [base object destructor] 类型的析构函数，没有区别，都指向了相同的函数。
+
+<div align=center><img src="/images/2023/2023-08-30-15-25-58.png" data-action="zoom"/></div>
+
+* 汇编源码。
 
 ```shell
 main:
@@ -215,14 +228,13 @@ main:
         # 调用析构函数的虚函数（Derived::~Derived() [deleting destructor]）。
         call    *%rax
 
-
 # 程序通过虚指针找到虚表上的虚函数。
 Derived::~Derived() [deleting destructor]:
         ...
         # 调用 Derived 析构函数。
         call    Derived::~Derived() [complete object destructor]
         ...
-        # 调用 delete 释放对象
+        # 调用 delete 释放对象。
         call    operator delete(void*)
         ...
 
@@ -271,37 +283,176 @@ vtable for Base:
         .quad   Base::~Base() [deleting destructor]
 ```
 
-* 析构流程。归纳一下上述汇编的工作流程。
-
-```shell
-|-- main
-    |-- ...
-    |-- delete b;
-        |-- Derived::~Derived() [deleting destructor] # 程序调用虚表上的虚析构函数。
-            |-- Derived::~Derived() [complete object destructor] # 调用 Derived 析构函数。
-                |-- Base2::~Base2() [base object destructor] # 调用 Base2 对象函数。
-                    |-- Base::~Base() [base object destructor] # 调用 Base 析构函数。
-            |-- operator delete(void*) # delelte 释放对象。
-```
-
-1. 程序通过虚指针找到虚表，虚指针指向虚表的位置向高位偏移 8 个字节，找到对应的虚函数：Derived::~Derived() [deleting destructor] 进行调用，接着调用 Derived::~Derived() [complete object destructor] 开始析构对象。
-2. Derived::~Derived() [complete object destructor] 内部调用 Base2::~Base2() [base object destructor] 对 Base2 类进行析构，并将虚指针指向 Base2 虚表。
-3. Base2::~Base2() [base object destructor] 内部调用 Base::~Base() [base object destructor] 对 Base 类进行析构，并将虚指针指向 Base 虚表。
-4. 各个类的析构函数都调用完毕后，程序调用 delete 操作符，释放 Derived 对象。
-
-> 这里的 [complete object destructor] 和 [base object destructor] 类型的析构函数，没有区别，都指向了相同的函数。
-
-<div align=center><img src="/images/2023/2023-08-29-16-37-04.png" data-action="zoom"/></div>
-
 ---
 
 ## 3. 多重继承
 
+### 3.1. 测试代码
+
+```cpp
+/* g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test */
+#include <iostream>
+
+class Base {
+   public:
+    virtual ~Base() { std::cout << __FUNCTION__ << std::endl; }
+
+    long long m_base_data = 0x11;
+};
+
+class Base2 {
+   public:
+    virtual ~Base2() { std::cout << __FUNCTION__ << std::endl; }
+
+    long long m_base2_data = 0x21;
+};
+
+class Derived : public Base, public Base2 {
+   public:
+    ~Derived() { std::cout << __FUNCTION__ << std::endl; }
+
+    long long m_derived_data = 0x31;
+};
+
+int main() {
+    auto d = new Derived;
+    auto b = static_cast<Base2*>(d);
+    delete b;
+    return 0;
+}
+
+// 输出：
+// ~Derived
+// ~Base2
+// ~Base
+```
+
 ---
 
-## 4. 小结
+### 3.2. 汇编源码
 
-C++ 多态对象的析构工作机制，使得事情变得复杂，用户稍不留神就会踩坑。个人认为，好的语言应该把复杂的事情变简单，显然 C++ 这门语言，还有很大进步空间。
+* 析构流程。详细逻辑，结合汇编源码和图片去理解吧。
+
+```shell
+|-- main
+    |-- ...
+    |-- delete b
+        |-- non-virtual thunk to Derived::~Derived() [deleting destructor]
+        |-- Derived::~Derived() [deleting destructor]
+            |-- Derived::~Derived() [complete object destructor]
+                |-- Base2::~Base2() [base object destructor]
+                    |-- Base::~Base() [base object destructor]
+        |-- operator delete(void*)
+```
+
+<div align=center><img src="/images/2023/2023-08-30-13-52-22.png" data-action="zoom"/></div>
+
+* 汇编。
+
+```shell
+main:
+        ...
+        # 程序通过虚指针 vptr2 找到虚表。
+        movq    -32(%rbp), %rax
+        movq    (%rax), %rax
+        # 在虚表上进行偏移，找到对应的虚析构函数。
+        addq    $8, %rax
+        movq    (%rax), %rax
+        # 将 b 指针指向的地址传递给虚析构函数作为函数参数。
+        movq    -32(%rbp), %rdx
+        movq    %rdx, %rdi
+        # 调用（non-virtual thunk to Derived::~Derived() [deleting destructor]）。
+        call    *%rax
+
+# delete 操作符触发调用的虚析构函数，跳转到 Derived::~Derived() [deleting destructor]
+non-virtual thunk to Derived::~Derived() [deleting destructor]:
+        # 通过偏移，对象内存首地址传给 Derived::~Derived() [deleting destructor]。
+        subq    $16, %rdi
+        jmp     .LTHUNK1
+
+# delete Derived 虚析构函数。
+Derived::~Derived() [deleting destructor]:
+        ...
+        # 将 Derived 的 this 指针作为参数传给 Derived 析构函数。
+        movq    -8(%rbp), %rax
+        movq    %rax, %rdi
+        # 调用 Derived 析构函数。
+        call    Derived::~Derived() [complete object destructor]
+        # 将 Derived 的 this 指针作为参数传给 delete 操作函数。
+        movq    -8(%rbp), %rax
+        movq    %rax, %rdi
+        # 调用 delete 释放 Derived 对象。
+        call    operator delete(void*)
+        ...
+
+Derived::~Derived() [base object destructor]:
+        ...
+        # vptr1 指向 Derived 虚表对应位置。
+        movq    %rdi, -8(%rbp)
+        movq    -8(%rbp), %rax
+        movq    $vtable for Derived+16, (%rax)
+        # vptr2 指向 Derived 虚表对应位置。
+        movq    -8(%rbp), %rax
+        movq    $vtable for Derived+48, 16(%rax)
+        movq    -8(%rbp), %rax
+        # 将 b 指针指向的地址传给 Base2 析构函数。
+        addq    $16, %rax
+        movq    %rax, %rdi
+        # 调用 Base2 对象析构函数。
+        call    Base2::~Base2() [base object destructor]
+        # 将 Derived 对象首地址传给 Base 析构函数。
+        movq    -8(%rbp), %rax
+        movq    %rax, %rdi
+        # 调用 Base 对象析构函数。
+        call    Base::~Base() [base object destructor]
+        ...
+
+Base2::~Base2() [base object destructor]:
+        ...
+        # vptr2 指向 Base2 虚表。
+        movq    %rdi, -8(%rbp)
+        movq    -8(%rbp), %rax
+        movq    $vtable for Base2+16, (%rax)
+        ...
+
+Base::~Base() [base object destructor]:
+        ...
+        # vptr1 指向 Base 虚表。
+        movq    %rdi, -8(%rbp)
+        movq    -8(%rbp), %rax
+        movq    $vtable for Base+16, (%rax)
+        ...
+
+# 类虚表。
+vtable for Derived:
+        .quad   0
+        .quad   typeinfo for Derived
+        .quad   Derived::~Derived() [complete object destructor]
+        # delete 操作符调用的虚析构函数。
+        .quad   Derived::~Derived() [deleting destructor]
+        .quad   -16
+        .quad   typeinfo for Derived
+        .quad   non-virtual thunk to Derived::~Derived() [complete object destructor]
+        .quad   non-virtual thunk to Derived::~Derived() [deleting destructor]
+
+vtable for Base2:
+        .quad   0
+        .quad   typeinfo for Base2
+        .quad   Base2::~Base2() [complete object destructor]
+        .quad   Base2::~Base2() [deleting destructor]
+
+vtable for Base:
+        .quad   0
+        .quad   typeinfo for Base
+        .quad   Base::~Base() [complete object destructor]
+        .quad   Base::~Base() [deleting destructor]
+```
+
+---
+
+## 4. 后记
+
+C++ 多态对象的析构工作机制，看似使用简单，实则复杂，用户稍不留神就会踩坑。个人认为，好的语言应该把复杂的事情变简单，显然 C++ 这门语言，还有很大进步空间。
 
 ---
 
