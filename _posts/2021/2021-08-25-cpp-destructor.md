@@ -7,9 +7,13 @@ author: wenfh2020
 
 本章主要探索 C++ 具有多态特性的类的析构函数工作原理。
 
-多态的核心思维是 `覆盖`，普通的虚函数调用一般是：派生类继承基类，重写基类的虚函数，由基类的指针或引用指向派生类对象，调用派生类重写的虚函数。
+多态的核心思维是 `覆盖`：派生类继承基类，重写基类的虚函数，由基类的指针或引用指向派生类对象，调用派生类重写的虚函数。虚析构函数有点不一样，派生类的析构函数，不需要重写基类的析构函数，要实现虚析构的效果，虚函数名称不须要相同，将基类的析构函数设置成虚析构函数即可。
 
-虚析构函数有点不一样，派生类的析构函数，不需要重写基类的析构函数，要实现虚析构的效果，虚函数名称不需要相同，只需要将基类的析构函数设置成虚析构函数即可。
+虚析构本质上还是原来那套：虚函数，虚表，虚指针。具有多态特征的类对象，被释放时：
+
+* 有继承关系的多态类，会先析构派生类，再析构基类，与它的构造顺序刚好相反。
+* 多态类的析构函数被调用时，对象的 this 指针和虚指针会被重置，指向当前类对象对应的内存位置，虚指针也会被重置指向当前类对应的虚表。
+* 释放当前派生类对象内存。
 
 > 有了前两章对 C++ 多态特性原理的探索基础，本章内容应该更好理解一点。
 
@@ -40,11 +44,11 @@ author: wenfh2020
 
 ---
 
-* [base object destructor]：它销毁对象本身，以及数据成员和非虚基类。
+* **[base object destructor]**：它销毁对象本身，以及数据成员和非虚基类。
 
-* [complete object destructor]：除了执行 [base object destructor]，它还会销毁虚拟基类。
+* **[complete object destructor]**：除了执行 [base object destructor]，它还会销毁虚拟基类。
 
-* [deleting object destructor]：除了执行 [deleting object destructor]，它还调用 operator delete 来实际释放内存。
+* **[deleting object destructor]**：除了执行 [deleting object destructor]，它还调用 operator delete 来实际释放内存。
 
 > 【注意】如果没有虚拟基类，[complete object destructor] 和 [base object destructor] 基本是相同的。部分文字来源：[GNU GCC (g++): Why does it generate multiple dtors?](https://stackoverflow.com/questions/6613870/gnu-gcc-g-why-does-it-generate-multiple-dtors/6614369#6614369)
 
@@ -342,7 +346,7 @@ int main() {
             |-- Derived::~Derived() [complete object destructor]
                 |-- Base2::~Base2() [base object destructor]
                     |-- Base::~Base() [base object destructor]
-        |-- operator delete(void*)
+            |-- operator delete(void*)
 ```
 
 <div align=center><img src="/images/2023/2023-08-30-13-52-22.png" data-action="zoom"/></div>
@@ -373,7 +377,7 @@ non-virtual thunk to Derived::~Derived() [deleting destructor]:
 # delete Derived 虚析构函数。
 Derived::~Derived() [deleting destructor]:
         ...
-        # 将 Derived 的 this 指针作为参数传给 Derived 析构函数。
+        # 将 Derived 对象的 this 指针作为参数传给 Derived 析构函数。
         movq    -8(%rbp), %rax
         movq    %rax, %rdi
         # 调用 Derived 析构函数。
@@ -455,28 +459,62 @@ vtable for Base:
 ### 4.1. 测试代码
 
 ```cpp
+/* g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test */
+#include <iostream>
+
+class Base {
+   public:
+    virtual ~Base() { std::cout << __FUNCTION__ << std::endl; }
+    long long m_base_data = 0x11;
+};
+
+class Base2 : virtual public Base {
+   public:
+    ~Base2() { std::cout << __FUNCTION__ << std::endl; }
+    long long m_base2_data = 0x21;
+};
+
+class Base3 : virtual public Base {
+   public:
+    ~Base3() { std::cout << __FUNCTION__ << std::endl; }
+    long long m_base2_data = 0x31;
+};
+
+class Derived : public Base2, public Base3 {
+   public:
+    ~Derived() { std::cout << __FUNCTION__ << std::endl; }
+
+    long long m_derived_data = 0x41;
+};
+
+int main() {
+    auto d = new Derived;
+    auto b = static_cast<Base*>(d);
+    delete b;
+    return 0;
+}
+
+// 输出：
+// ~Derived
+// ~Base3
+// ~Base2
+// ~Base
 ```
 
 ---
 
 ### 4.2. 汇编代码
 
-* 析构流程。
+#### 4.2.1. 对象内存布局
 
-* 汇编。
+我们先来看看 Derived 整体的对象内存布局特点：
+  
+1. 共享基类的数据存储于对象内存底部。
+2. 编译器为虚拟继承增加了一个 VTT (virtual table table)，它协调构造出了 Derived 的虚表（详看下图）。
+
+<div align=center><img src="/images/2023/2023-09-03-08-16-28.png" data-action="zoom"></div>
 
 ```shell
-main:
-        ...
-        movq    -32(%rbp), %rax
-        movq    (%rax), %rax
-        addq    $8, %rax
-        movq    (%rax), %rax
-        movq    -32(%rbp), %rdx
-        movq    %rdx, %rdi
-        call    *%rax
-        ...
-
 vtable for Derived:
         .quad   40
         .quad   0
@@ -493,6 +531,7 @@ vtable for Derived:
         .quad   typeinfo for Derived
         .quad   virtual thunk to Derived::~Derived() [complete object destructor]
         .quad   virtual thunk to Derived::~Derived() [deleting destructor]
+
 VTT for Derived:
         .quad   vtable for Derived+24
         .quad   construction vtable for Base2-in-Derived+24
@@ -501,6 +540,7 @@ VTT for Derived:
         .quad   construction vtable for Base3-in-Derived+64
         .quad   vtable for Derived+104
         .quad   vtable for Derived+64
+
 construction vtable for Base2-in-Derived:
         .quad   40
         .quad   0
@@ -512,6 +552,7 @@ construction vtable for Base2-in-Derived:
         .quad   typeinfo for Base2
         .quad   virtual thunk to Base2::~Base2() [complete object destructor]
         .quad   virtual thunk to Base2::~Base2() [deleting destructor]
+
 construction vtable for Base3-in-Derived:
         .quad   24
         .quad   0
@@ -523,39 +564,117 @@ construction vtable for Base3-in-Derived:
         .quad   typeinfo for Base3
         .quad   virtual thunk to Base3::~Base3() [complete object destructor]
         .quad   virtual thunk to Base3::~Base3() [deleting destructor]
-vtable for Base3:
-        .quad   16
-        .quad   0
-        .quad   typeinfo for Base3
-        .quad   Base3::~Base3() [complete object destructor]
-        .quad   Base3::~Base3() [deleting destructor]
-        .quad   -16
-        .quad   -16
-        .quad   typeinfo for Base3
-        .quad   virtual thunk to Base3::~Base3() [complete object destructor]
-        .quad   virtual thunk to Base3::~Base3() [deleting destructor]
-VTT for Base3:
-        .quad   vtable for Base3+24
-        .quad   vtable for Base3+64
-vtable for Base2:
-        .quad   16
-        .quad   0
-        .quad   typeinfo for Base2
-        .quad   Base2::~Base2() [complete object destructor]
-        .quad   Base2::~Base2() [deleting destructor]
-        .quad   -16
-        .quad   -16
-        .quad   typeinfo for Base2
-        .quad   virtual thunk to Base2::~Base2() [complete object destructor]
-        .quad   virtual thunk to Base2::~Base2() [deleting destructor]
-VTT for Base2:
-        .quad   vtable for Base2+24
-        .quad   vtable for Base2+64
-vtable for Base:
-        .quad   0
-        .quad   typeinfo for Base
-        .quad   Base::~Base() [complete object destructor]
-        .quad   Base::~Base() [deleting destructor]
+```
+
+---
+
+#### 4.2.2. 析构流程
+
+虽然虚拟继承内存布局有一些特殊，但对象的析构流程与其它继承关系的对象析构流程并没有多大区别。
+
+```shell
+|-- main
+    |-- ...
+    |-- delete b
+        |-- virtual thunk to Derived::~Derived() [deleting destructor]
+        |-- Derived::~Derived() [deleting destructor]
+            |-- Derived::~Derived() [complete object destructor]
+                |-- Base3::~Base3() [base object destructor]
+                |-- Base2::~Base2() [base object destructor]
+                |-- Base::~Base() [base object destructor]
+            |-- operator delete(void*)
+```
+
+<div align=center><img src="/images/2023/2023-09-03-18-13-28.png" data-action="zoom"></div>
+
+```shell
+main:
+        ...
+        # 对象内存首位保存了虚指针。
+        movq    -32(%rbp), %rax
+        # 虚指针指向虚表保存虚函数的起始地址。
+        movq    (%rax), %rax
+        # 程序通过偏移在虚表上找到对应虚函数。
+        addq    $8, %rax
+        # 保存虚函数地址。
+        movq    (%rax), %rax
+        # 将对象的 this 指针，写入寄存器，作为参数，传递给虚函数。
+        movq    -32(%rbp), %rdx
+        movq    %rdx, %rdi
+        # 调用析构函数的虚函数（Derived::~Derived() [deleting destructor]）
+        call    *%rax
+        ...
+
+# 主程序 "call *%rax" 指令调用的虚函数。
+virtual thunk to Derived::~Derived():
+        # 虚指针指向虚表的的位置，该位置向低地址偏移 24 个字节。
+        # 获取该地址的内存偏移量 -40，this 指针向低地址偏移 40 个字节。
+        mov    (%rdi),%r10
+        add    -0x18(%r10),%rdi
+        # 调用 Derived::~Derived() [deleting destructor]
+        jmp    401488 <Derived::~Derived()>
+
+
+Derived::~Derived() [deleting destructor]:
+        ...
+        # 调用 Derived 对象析构函数。
+        call    Derived::~Derived() [complete object destructor]
+        ...
+        # 调用 delete 释放对象。
+        call    operator delete(void*)
+        leave
+        ret 
+
+# Derived 完全对象析构函数，重置对象的 this 指针和虚指针，虚指针指向对应的虚表。
+Derived::~Derived() [complete object destructor]:
+        ...
+        # this 指针指向内存首位。
+        movq    %rdi, -8(%rbp)
+        # 重置 Derived 对象虚指针，指向 Derived 虚表对应位置。
+        movl    $vtable for Derived+24, %edx
+        movq    -8(%rbp), %rax
+        movq    %rdx, (%rax)
+        movl    $40, %edx
+        movq    -8(%rbp), %rax
+        addq    %rax, %rdx
+        movl    $vtable for Derived+104, %eax
+        movq    %rax, (%rdx)
+        movl    $vtable for Derived+64, %edx
+
+        # 调整 this 指针，从 VTT 中找到保存 Base3 虚函数的位置，准备重置 Base3 的虚指针。
+        movq    -8(%rbp), %rax
+        movq    %rdx, 16(%rax)
+        movl    $VTT for Derived+24, %eax
+        movq    -8(%rbp), %rdx
+        addq    $16, %rdx
+        movq    %rax, %rsi
+        movq    %rdx, %rdi
+        call    Base3::~Base3() [base object destructor]
+
+        # 调整 this 指针，从 VTT 中找到保存 Base3 虚函数的位置，准备重置 Base2 的虚指针。
+        movl    $VTT for Derived+8, %edx
+        movq    -8(%rbp), %rax
+        movq    %rdx, %rsi
+        movq    %rax, %rdi
+        call    Base2::~Base2() [base object destructor]
+        movl    $2, %eax
+        testl   %eax, %eax
+        je      .L23
+        movq    -8(%rbp), %rax
+        addq    $40, %rax
+        movq    %rax, %rdi
+        call    Base::~Base() [base object destructor]
+        nop
+.L23:
+        movl    $0, %eax
+        testl   %eax, %eax
+        je      .L22
+        movq    -8(%rbp), %rax
+        movq    %rax, %rdi
+        call    operator delete(void*)
+.L22:
+        leave
+        ret
 ```
 
 ---
