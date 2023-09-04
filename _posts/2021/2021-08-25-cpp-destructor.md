@@ -515,6 +515,7 @@ int main() {
 <div align=center><img src="/images/2023/2023-09-03-08-16-28.png" data-action="zoom"></div>
 
 ```shell
+# Derived 虚表
 vtable for Derived:
         .quad   40
         .quad   0
@@ -532,6 +533,7 @@ vtable for Derived:
         .quad   virtual thunk to Derived::~Derived() [complete object destructor]
         .quad   virtual thunk to Derived::~Derived() [deleting destructor]
 
+# 保存虚表的表（virtual table table）。
 VTT for Derived:
         .quad   vtable for Derived+24
         .quad   construction vtable for Base2-in-Derived+24
@@ -570,7 +572,7 @@ construction vtable for Base3-in-Derived:
 
 #### 4.2.2. 析构流程
 
-虽然虚拟继承内存布局有一些特殊，但对象的析构流程与其它继承关系的对象析构流程并没有多大区别。
+虽然虚拟继承内存布局有一些特殊，但对象的整体析构流程与其它继承关系的对象析构流程并没有多大区别。
 
 ```shell
 |-- main
@@ -585,30 +587,30 @@ construction vtable for Base3-in-Derived:
             |-- operator delete(void*)
 ```
 
-<div align=center><img src="/images/2023/2023-09-03-18-13-28.png" data-action="zoom"></div>
+* 调用 ~Derived() 析构函数。
+
+<div align=center><img src="/images/2023/2023-09-04-11-07-25.png" data-action="zoom"/></div>
 
 ```shell
 main:
         ...
-        # 对象内存首位保存了虚指针。
+        # 虚指针指向虚表。
         movq    -32(%rbp), %rax
-        # 虚指针指向虚表保存虚函数的起始地址。
         movq    (%rax), %rax
-        # 程序通过偏移在虚表上找到对应虚函数。
+        # 在虚表上偏移找到对应虚函数地址（Derived::~Derived() [deleting destructor]）。
         addq    $8, %rax
-        # 保存虚函数地址。
         movq    (%rax), %rax
-        # 将对象的 this 指针，写入寄存器，作为参数，传递给虚函数。
+        # 将 b 指针，作为参数，传递给将要被调用的虚函数。
         movq    -32(%rbp), %rdx
         movq    %rdx, %rdi
-        # 调用析构函数的虚函数（Derived::~Derived() [deleting destructor]）
+        # 程序调用前面找到的虚函数。
         call    *%rax
         ...
 
 # 主程序 "call *%rax" 指令调用的虚函数。
 virtual thunk to Derived::~Derived():
         # 虚指针指向虚表的的位置，该位置向低地址偏移 24 个字节。
-        # 获取该地址的内存偏移量 -40，this 指针向低地址偏移 40 个字节。
+        # 获取该地址的内存偏移量 -40，对象 this 指针向低地址偏移 40 个字节。
         mov    (%rdi),%r10
         add    -0x18(%r10),%rdi
         # 调用 Derived::~Derived() [deleting destructor]
@@ -640,10 +642,10 @@ Derived::~Derived() [complete object destructor]:
         movl    $vtable for Derived+104, %eax
         movq    %rax, (%rdx)
         movl    $vtable for Derived+64, %edx
-
-        # 调整 this 指针，从 VTT 中找到保存 Base3 虚函数的位置，准备重置 Base3 的虚指针。
         movq    -8(%rbp), %rax
         movq    %rdx, 16(%rax)
+
+        # 调整 this 指针，从 VTT 中找到保存 Base3 虚函数地址的位置，准备重置 Base3 的虚指针。
         movl    $VTT for Derived+24, %eax
         movq    -8(%rbp), %rdx
         addq    $16, %rdx
@@ -651,37 +653,137 @@ Derived::~Derived() [complete object destructor]:
         movq    %rdx, %rdi
         call    Base3::~Base3() [base object destructor]
 
-        # 调整 this 指针，从 VTT 中找到保存 Base3 虚函数的位置，准备重置 Base2 的虚指针。
+        # 调整 this 指针，从 VTT 中找到保存 Base2 虚函数地址的位置，准备重置 Base2 的虚指针。
         movl    $VTT for Derived+8, %edx
         movq    -8(%rbp), %rax
         movq    %rdx, %rsi
         movq    %rax, %rdi
         call    Base2::~Base2() [base object destructor]
-        movl    $2, %eax
-        testl   %eax, %eax
-        je      .L23
+        ...
+        
+        # 调整 this 指针，重置 Base 虚指针
         movq    -8(%rbp), %rax
         addq    $40, %rax
         movq    %rax, %rdi
         call    Base::~Base() [base object destructor]
-        nop
-.L23:
-        movl    $0, %eax
-        testl   %eax, %eax
-        je      .L22
+        ...
+```
+
+* 调用 ~Base3() 析构函数。
+
+<div align=center><img src="/images/2023/2023-09-04-14-32-28.png" data-action="zoom"/></div>
+
+```shell
+Derived::~Derived() [complete object destructor]:
+        ...
+        # 调整 this 指针，从 VTT 中找到保存 Base3 虚函数地址的位置，准备重置 Base3 的虚指针。
+        movl    $VTT for Derived+24, %eax
+        movq    -8(%rbp), %rdx
+        addq    $16, %rdx
+        movq    %rax, %rsi
+        movq    %rdx, %rdi
+        call    Base3::~Base3() [base object destructor]
+
+Base3::~Base3() [base object destructor]:
+        ...
+        movq    %rdi, -8(%rbp)
+        movq    %rsi, -16(%rbp)
+        # Base3 第一个虚指针指向虚表对应位置。
+        movq    -16(%rbp), %rax
+        movq    (%rax), %rdx
         movq    -8(%rbp), %rax
+        movq    %rdx, (%rax)
+
+        # 通过虚表偏移找到 vbase_offset
+        movq    -8(%rbp), %rax
+        movq    (%rax), %rax
+        subq    $24, %rax
+        movq    (%rax), %rax
+
+        # 设置 Base3 第二个虚指针指向虚表对应位置。
+        movq    %rax, %rdx # 24
+        movq    -8(%rbp), %rax # this
+        addq    %rax, %rdx # rax this 向下偏移 24 个字节
+        movq    -16(%rbp), %rax # vtt 参数
+        movq    8(%rax), %rax # vtt 对应地址。
+        movq    %rax, (%rdx) # 虚指针指向对应虚表。
+        ...
+```
+
+* 调用 ~Base2() 析构函数。
+
+<div align=center><img src="/images/2023/2023-09-04-16-28-53.png" data-action="zoom"/></div>
+
+```shell
+# Derived 完全对象析构函数，重置对象的 this 指针和虚指针，虚指针指向对应的虚表。
+Derived::~Derived() [complete object destructor]:
+        ...
+        # 调整 this 指针，从 VTT 中找到保存 Base2 虚函数地址的位置，准备重置 Base2 的虚指针。
+        movl    $VTT for Derived+8, %edx
+        movq    -8(%rbp), %rax
+        movq    %rdx, %rsi
         movq    %rax, %rdi
-        call    operator delete(void*)
-.L22:
-        leave
-        ret
+        call    Base2::~Base2() [base object destructor]
+
+Base2::~Base2() [base object destructor]:
+        ...
+        movq    %rdi, -8(%rbp)
+        movq    %rsi, -16(%rbp)
+        # Base2 第一个虚指针指向虚表（Construction vtable for Base2 in Derived）对应位置。
+        movq    -16(%rbp), %rax
+        movq    (%rax), %rdx
+        movq    -8(%rbp), %rax
+        movq    %rdx, (%rax)
+
+        # 通过虚表偏移找到 vbase_offset
+        movq    -8(%rbp), %rax
+        movq    (%rax), %rax
+        subq    $24, %rax
+        movq    (%rax), %rax
+
+        # 设置 Base2 第二个虚指针指向虚表对应位置。
+        movq    %rax, %rdx
+        movq    -8(%rbp), %rax
+        addq    %rax, %rdx
+        movq    -16(%rbp), %rax
+        movq    8(%rax), %rax
+        movq    %rax, (%rdx)
+        ...
+```
+
+* 调用 ~Base() 析构函数。
+
+<div align=center><img src="/images/2023/2023-09-04-16-58-11.png" data-action="zoom"/></div>
+
+```shell
+Derived::~Derived() [complete object destructor]:
+        ...
+        # 调整 this 指针，重置 Base 虚指针
+        movq    -8(%rbp), %rax
+        addq    $40, %rax
+        movq    %rax, %rdi
+        call    Base::~Base() [base object destructor]
+        ...
+
+Base::~Base() [base object destructor]:
+        ...
+        movq    %rdi, -8(%rbp)
+        movq    -8(%rbp), %rax
+        movq    $vtable for Base+16, (%rax)
+        ...
+
+vtable for Base:
+        .quad   0
+        .quad   typeinfo for Base
+        .quad   Base::~Base() [complete object destructor]
+        .quad   Base::~Base() [deleting destructor]
 ```
 
 ---
 
 ## 5. 后记
 
-C++ 多态对象的析构工作机制，看似使用简单，实则复杂，用户稍不留神就会踩坑。个人认为，好的语言应该把复杂的事情变简单，显然 C++ 这门语言，还有很大进步空间。
+* C++ 多态对象的析构工作机制，看似使用简单，实则复杂，用户稍不留神就会踩坑。个人认为，好的语言应该把复杂的事情变简单，显然 C++ 这门语言，还有很大进步空间。
 
 ---
 
