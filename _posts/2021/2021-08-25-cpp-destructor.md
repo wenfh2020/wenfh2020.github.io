@@ -701,12 +701,12 @@ Base3::~Base3() [base object destructor]:
         movq    (%rax), %rax
 
         # 设置 Base3 第二个虚指针指向虚表对应位置。
-        movq    %rax, %rdx # 24
-        movq    -8(%rbp), %rax # this
-        addq    %rax, %rdx # rax this 向下偏移 24 个字节
-        movq    -16(%rbp), %rax # vtt 参数
-        movq    8(%rax), %rax # vtt 对应地址。
-        movq    %rax, (%rdx) # 虚指针指向对应虚表。
+        movq    %rax, %rdx
+        movq    -8(%rbp), %rax
+        addq    %rax, %rdx
+        movq    -16(%rbp), %rax
+        movq    8(%rax), %rax
+        movq    %rax, (%rdx)
         ...
 ```
 
@@ -781,13 +781,7 @@ vtable for Base:
 
 ---
 
-## 5. 后记
-
-* C++ 多态对象的析构工作机制，看似使用简单，实则复杂，用户稍不留神就会踩坑。个人认为，好的语言应该把复杂的事情变简单，显然 C++ 这门语言，还有很大进步空间。
-
----
-
-## 6. 引用
+## 5. 引用
 
 * [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 * [GNU GCC (g++): Why does it generate multiple dtors?](https://stackoverflow.com/questions/6613870/gnu-gcc-g-why-does-it-generate-multiple-dtors/6614369#6614369)
