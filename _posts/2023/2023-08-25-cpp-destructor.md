@@ -127,7 +127,8 @@ int main() {
 |-- main
     |-- ...
     |-- delete b
-        |-- Base2::~Base2() [base object destructor]
+        |-- Base2::~Base2() [complete object destructor]
+            |-- Base::~Base() [base object destructor]
         |-- operator delete(void*, unsigned long)
 ```
 
