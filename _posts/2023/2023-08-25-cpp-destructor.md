@@ -5,12 +5,12 @@ categories: c/c++
 author: wenfh2020
 ---
 
-有了前两章（[虚函数调用链路](https://www.wenfh2020.com/2022/12/27/deep-cpp/)，[继承关系](https://www.wenfh2020.com/2023/08/22/cpp-inheritance/)）对 C++ 多态特性原理的探索基础，本章内容应该更好理解一点，本章主要探索 C++ 具有多态特性的类的析构函数工作原理。
+前两章探索了 C++ 多态的 [虚函数调用链路](https://www.wenfh2020.com/2022/12/27/deep-cpp/) 和 [继承关系](https://www.wenfh2020.com/2023/08/22/cpp-inheritance/)，本章将探索 `虚析构` 的工作原理。
 
 具有虚析构多态特征的类对象，被释放时：
 
 * 有继承关系的多态类，会先析构派生类，再析构基类，与它的构造顺序刚好相反。
-* 类的析构函数被调用时，对象的 this 指针和虚指针会被重新设置，this 指针指向当前类对象对应的内存位置，虚指针也会被重置指向当前类对应的虚表。
+* 类的析构函数被调用时，对象的 this 指针和虚指针会在对应的类内部被重新设置，this 指针指向当前类对象对应的内存位置，虚指针也会被重置指向当前类对应的虚表。
 * 释放当前派生类对象内存。
 
 
@@ -26,15 +26,13 @@ author: wenfh2020
 
 ### 1.1. 概念
 
-C++ 虚析构函数是在 C++ 中用于处理继承关系的特殊函数。
+C++ 虚析构函数是在 C++ 中用于处理继承关系的特殊函数。它允许在基类中定义一个虚析构函数，以便在派生类对象被删除时正确地释放资源。虚析构函数的声明方式是在基类的析构函数前面加上关键字 "virtual"。
 
-它允许在基类中定义一个虚析构函数，以便在派生类对象被删除时正确地释放资源。
+当释放基类指针指向派生类的对象时，如果基类中的析构函数不是虚函数，那么只会调用基类的析构函数，而不会调用派生类的析构函数。这可能导致资源泄漏或未定义的行为。
 
-当一个派生类对象被删除时，如果基类中的析构函数不是虚函数，那么只会调用基类的析构函数，而不会调用派生类的析构函数。这可能导致资源泄漏或未定义的行为。通过将基类的析构函数声明为虚函数，可以确保在删除派生类对象时，会首先调用派生类的析构函数，然后再调用基类的析构函数，从而正确地释放所有相关资源。
+通过将基类的析构函数声明为虚函数，可以确保在删除派生类对象时，会首先调用派生类的析构函数，然后再调用基类的析构函数，从而正确地释放所有相关资源。
 
-虚析构函数的声明方式是在基类的析构函数前面加上关键字 "virtual"。
-
-> 文字来源 ChatGPT
+> 部分文字来源：ChatGPT
 
 ---
 
@@ -222,7 +220,7 @@ int main() {
 
 > 这里的 [complete object destructor] 和 [base object destructor] 类型的析构函数，没有区别，都指向了相同的函数。
 
-<div align=center><img src="/images/2023/2023-08-30-15-25-58.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-05-09-51-14.png" data-action="zoom"/></div>
 
 * 汇编源码。
 
@@ -364,14 +362,14 @@ int main() {
             |-- operator delete(void*)
 ```
 
-<div align=center><img src="/images/2023/2023-08-30-13-52-22.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-05-09-48-30.png" data-action="zoom"/></div>
 
 * 汇编。
 
 ```shell
 main:
         ...
-        # 程序通过虚指针 vptr2 找到虚表。
+        # 虚指针 vptr2 指向虚表。
         movq    -32(%rbp), %rax
         movq    (%rax), %rax
         # 在虚表上进行偏移，找到对应的虚析构函数。
@@ -548,7 +546,7 @@ vtable for Derived:
         .quad   virtual thunk to Derived::~Derived() [complete object destructor]
         .quad   virtual thunk to Derived::~Derived() [deleting destructor]
 
-# 保存虚表的表（virtual table table）。
+# virtual table table。
 VTT for Derived:
         .quad   vtable for Derived+24
         .quad   construction vtable for Base2-in-Derived+24
@@ -604,15 +602,16 @@ construction vtable for Base3-in-Derived:
 
 * 调用 ~Derived() 析构函数。
 
-<div align=center><img src="/images/2023/2023-09-04-11-07-25.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-05-10-02-40.png" data-action="zoom"/></div>
 
 ```shell
 main:
         ...
-        # 虚指针指向虚表。
+        # 虚指针 vptr3 指向虚表。
         movq    -32(%rbp), %rax
         movq    (%rax), %rax
-        # 在虚表上偏移找到对应虚函数地址（Derived::~Derived() [deleting destructor]）。
+        # 在虚表上偏移找到对应虚函数地址：
+        # virtual thunk to Derived::~Derived() [deleting destructor]。
         addq    $8, %rax
         movq    (%rax), %rax
         # 将 b 指针，作为参数，传递给将要被调用的虚函数。
@@ -684,9 +683,9 @@ Derived::~Derived() [complete object destructor]:
         ...
 ```
 
-* 调用 ~Base3() 析构函数。
+* ~Base3() 析构函数。
 
-<div align=center><img src="/images/2023/2023-09-04-14-32-28.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-05-10-12-32.png" data-action="zoom"/></div>
 
 ```shell
 Derived::~Derived() [complete object destructor]:
@@ -703,7 +702,7 @@ Base3::~Base3() [base object destructor]:
         ...
         movq    %rdi, -8(%rbp)
         movq    %rsi, -16(%rbp)
-        # Base3 第一个虚指针指向虚表对应位置。
+        # 虚指针 vptr2 指向虚表对应位置。
         movq    -16(%rbp), %rax
         movq    (%rax), %rdx
         movq    -8(%rbp), %rax
@@ -715,7 +714,7 @@ Base3::~Base3() [base object destructor]:
         subq    $24, %rax
         movq    (%rax), %rax
 
-        # 设置 Base3 第二个虚指针指向虚表对应位置。
+        # 虚指针 vptr3 指向虚表对应位置。
         movq    %rax, %rdx
         movq    -8(%rbp), %rax
         addq    %rax, %rdx
@@ -725,7 +724,7 @@ Base3::~Base3() [base object destructor]:
         ...
 ```
 
-* 调用 ~Base2() 析构函数。
+* ~Base2() 析构函数。
 
 <div align=center><img src="/images/2023/2023-09-04-16-28-53.png" data-action="zoom"/></div>
 
@@ -744,7 +743,7 @@ Base2::~Base2() [base object destructor]:
         ...
         movq    %rdi, -8(%rbp)
         movq    %rsi, -16(%rbp)
-        # Base2 第一个虚指针指向虚表（Construction vtable for Base2 in Derived）对应位置。
+        # 虚指针 vptr1 指向虚表（Construction vtable for Base2 in Derived）对应位置。
         movq    -16(%rbp), %rax
         movq    (%rax), %rdx
         movq    -8(%rbp), %rax
@@ -756,7 +755,7 @@ Base2::~Base2() [base object destructor]:
         subq    $24, %rax
         movq    (%rax), %rax
 
-        # 设置 Base2 第二个虚指针指向虚表对应位置。
+        # 虚指针 vptr3 指向虚表对应位置。
         movq    %rax, %rdx
         movq    -8(%rbp), %rax
         addq    %rax, %rdx
@@ -766,14 +765,14 @@ Base2::~Base2() [base object destructor]:
         ...
 ```
 
-* 调用 ~Base() 析构函数。
+* ~Base() 析构函数。
 
 <div align=center><img src="/images/2023/2023-09-04-16-58-11.png" data-action="zoom"/></div>
 
 ```shell
 Derived::~Derived() [complete object destructor]:
         ...
-        # 调整 this 指针，重置 Base 虚指针
+        # 调整 this 指针，重置 Base 虚指针。
         movq    -8(%rbp), %rax
         addq    $40, %rax
         movq    %rax, %rdi
@@ -796,7 +795,14 @@ vtable for Base:
 
 ---
 
-## 5. 引用
+## 5. 小结
+
+* 虚析构工作原理，还是那几个关键点：虚指针，虚表，虚函数，还有每个类内部 this 指针的变化。
+* 虚析构虽然使用简单，但是多态的出现可能会导致派生类对象在销毁的时，派生类的析构函数可能不被调用，对于很多用户，这是始料未及的。友好的语言应该将复杂的事情变得简单，C++ 这门语言，显然还有很大的优化空间。
+
+---
+
+## 6. 引用
 
 * [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 * [GNU GCC (g++): Why does it generate multiple dtors?](https://stackoverflow.com/questions/6613870/gnu-gcc-g-why-does-it-generate-multiple-dtors/6614369#6614369)
