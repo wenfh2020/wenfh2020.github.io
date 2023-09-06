@@ -156,493 +156,7 @@ struct vtable_prefix {
 
 ---
 
-## 5. 继承关系
-
-封装，继承，多态是 C++ 的三大特性，其中多态与继承有密切关系。C++ 语言支持三种继承关系：单一继承，多重继承，虚拟继承：
-
-<div align=center><img src="/images/2023/2023-02-25-11-37-39.png" data-action="zoom" width="80%"/></div>
-
-> 图片来源：《多型与虚拟》
-
-<div align=center><img src="/images/2023/2023-08-11-10-36-46.png" data-action="zoom"></div>
-
----
-
-### 5.1. 单一继承
-
-* 测试代码。
-
-```cpp
-/* g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test */
-#include <iostream>
-
-class Base {
-   public:
-    virtual void vBaseFunc() {}
-    virtual void vBaseFunc2() {}
-    virtual void vBaseFunc3() {}
-
-    double m_base_data;
-    double m_base_data2;
-};
-
-class Base2 : public Base {
-   public:
-    virtual void vBaseFunc() {}
-    virtual void vBase2Func() {}
-    virtual void vBase2Func2() {}
-
-    double m_base2_data;
-    double m_base2_data2;
-};
-
-class Drived : public Base2 {
-   public:
-    virtual void vBaseFunc2() {}
-    virtual void vBase2Func() {}
-    virtual void vDrivedFunc() {}
-    virtual void vDrivedFunc2() {}
-
-    double m_drived_data;
-    double m_drived_data2;
-};
-
-int main() {
-    return 0;
-}
-```
-
-* 类布局层次。我们可以通过通过 gcc 的 `fdump-class-hierarchy` 编译项查看测试代码的类层次关系。`-fdump-class-hierarchy` 是一个编译器选项，用于在编译过程中生成类层次结构的信息。它会将类的继承关系以文本形式输出到一个文件中，以便开发人员可以查看和分析类之间的关系。——这个选项在调试和理解代码中的类继承关系时非常有用。
-
-> 部分文字来源于：ChatGPT
-
-```shell
-# g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test
-# test.cpp.002t.class
-
-Vtable for Base
-Base::_ZTV4Base: 5u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI4Base)
-16    (int (*)(...))Base::vBaseFunc
-24    (int (*)(...))Base::vBaseFunc2
-32    (int (*)(...))Base::vBaseFunc3
-
-Class Base
-   size=24 align=8
-   base size=24 base align=8
-Base (0x0x7fe6a109f180) 0
-    vptr=((& Base::_ZTV4Base) + 16u)
-
-Vtable for Base2
-Base2::_ZTV5Base2: 7u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI5Base2)
-16    (int (*)(...))Base2::vBaseFunc
-24    (int (*)(...))Base::vBaseFunc2
-32    (int (*)(...))Base::vBaseFunc3
-40    (int (*)(...))Base2::vBase2Func
-48    (int (*)(...))Base2::vBase2Func2
-
-Class Base2
-   size=40 align=8
-   base size=40 base align=8
-Base2 (0x0x7fe6a1056f70) 0
-    vptr=((& Base2::_ZTV5Base2) + 16u)
-  Base (0x0x7fe6a109f1e0) 0
-      primary-for Base2 (0x0x7fe6a1056f70)
-
-# 虚表的结构。
-Vtable for Drived
-Drived::_ZTV6Drived: 9u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI6Drived)
-16    (int (*)(...))Base2::vBaseFunc
-24    (int (*)(...))Drived::vBaseFunc2
-32    (int (*)(...))Base::vBaseFunc3
-40    (int (*)(...))Drived::vBase2Func
-48    (int (*)(...))Base2::vBase2Func2
-56    (int (*)(...))Drived::vDrivedFunc
-64    (int (*)(...))Drived::vDrivedFunc2
-
-# 类的层次结构。
-Class Drived
-   size=56 align=8
-   base size=56 base align=8
-Drived (0x0x7fe6a1056478) 0
-    vptr=((& Drived::_ZTV6Drived) + 16u)
-  Base2 (0x0x7fe6a1056a28) 0
-      primary-for Drived (0x0x7fe6a1056478)
-    Base (0x0x7fe6a109f240) 0
-        primary-for Base2 (0x0x7fe6a1056a28)
-```
-
-结合上面单一继承的测试代码和类的布局层次，我们可以了解到它的整体的相关对象布局：
-
-  1. 派生类重写的虚函数是如何重写覆盖基类的虚函数的。
-  2. 虚表的数据结构的大致框架。
-  3. 对象的各个关键点是如何联系起来的。
-  
-  > 部分细节没有写测试，有兴趣的朋友可以自己动手试试。
-
-* 虚表整合。
-
-<div align=center><img src="/images/2023/2023-08-12-07-31-29.png" data-action="zoom"></div>
-
-* 对象整体对局。
-
-<div align=center><img src="/images/2023/2023-08-12-07-48-10.png" data-action="zoom"></div>
-
----
-
-### 5.2. 多重继承
-
-* 测试代码。
-
-```cpp
-/* g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test */
-#include <iostream>
-
-class Base {
-   public:
-    virtual void vBaseFunc() {}
-    virtual void vBaseFunc2() {}
-
-    double m_base_data;
-    double m_base_data2;
-};
-
-class Base2 {
-   public:
-    virtual void vBase2Func() {}
-    virtual void vBase2Func2() {}
-
-    double m_base2_data;
-    double m_base2_data2;
-};
-
-class Base3 {
-   public:
-    virtual void vBase3Func() {}
-    virtual void vBase3Func2() {}
-
-    double m_base3_data;
-    double m_base3_data2;
-};
-
-class Drived : public Base, public Base2, public Base3 {
-   public:
-    virtual void vBaseFunc() {}
-    virtual void vBase2Func2() {}
-    virtual void vBase3Func2() {}
-    virtual void vDrivedFunc() {}
-    virtual void vDrivedFunc2() {}
-
-    double m_drived_data;
-    double m_drived_data2;
-};
-
-int main() {
-    return 0;
-}
-```
-
-* 类内存布局层次。
-
-```shell
-# g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test
-# test.cpp.002t.class
-
-Vtable for Base
-Base::_ZTV4Base: 4u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI4Base)
-16    (int (*)(...))Base::vBaseFunc
-24    (int (*)(...))Base::vBaseFunc2
-
-Class Base
-   size=24 align=8
-   base size=24 base align=8
-Base (0x0x7f8e4bd3da80) 0
-    vptr=((& Base::_ZTV4Base) + 16u)
-
-Vtable for Base2
-Base2::_ZTV5Base2: 4u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI5Base2)
-16    (int (*)(...))Base2::vBase2Func
-24    (int (*)(...))Base2::vBase2Func2
-
-Class Base2
-   size=24 align=8
-   base size=24 base align=8
-Base2 (0x0x7f8e4bd3dae0) 0
-    vptr=((& Base2::_ZTV5Base2) + 16u)
-
-Vtable for Base3
-Base3::_ZTV5Base3: 4u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI5Base3)
-16    (int (*)(...))Base3::vBase3Func
-24    (int (*)(...))Base3::vBase3Func2
-
-Class Base3
-   size=24 align=8
-   base size=24 base align=8
-Base3 (0x0x7f8e4bd3db40) 0
-    vptr=((& Base3::_ZTV5Base3) + 16u)
-
-Vtable for Drived
-Drived::_ZTV6Drived: 16u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI6Drived)
-16    (int (*)(...))Drived::vBaseFunc
-24    (int (*)(...))Base::vBaseFunc2
-32    (int (*)(...))Drived::vBase2Func2
-40    (int (*)(...))Drived::vBase3Func2
-48    (int (*)(...))Drived::vDrivedFunc
-56    (int (*)(...))Drived::vDrivedFunc2
-64    (int (*)(...))-24
-72    (int (*)(...))(& _ZTI6Drived)
-80    (int (*)(...))Base2::vBase2Func
-88    (int (*)(...))Drived::_ZThn24_N6Drived11vBase2Func2Ev
-96    (int (*)(...))-48
-104   (int (*)(...))(& _ZTI6Drived)
-112   (int (*)(...))Base3::vBase3Func
-120   (int (*)(...))Drived::_ZThn48_N6Drived11vBase3Func2Ev
-
-Class Drived
-   size=88 align=8
-   base size=88 base align=8
-Drived (0x0x7f8e4babcd98) 0
-    vptr=((& Drived::_ZTV6Drived) + 16u)
-  Base (0x0x7f8e4bd3dba0) 0
-      primary-for Drived (0x0x7f8e4babcd98)
-  Base2 (0x0x7f8e4bd3dc00) 24
-      vptr=((& Drived::_ZTV6Drived) + 80u)
-  Base3 (0x0x7f8e4bd3dc60) 48
-      vptr=((& Drived::_ZTV6Drived) + 112u)
-```
-
-* 虚表整合。
-  
-  1. 首先派生类的虚表与第一个基类的虚表结合成一个虚表单元，并覆盖基类的虚函数。
-  2. 其它的基类，作为一个独立虚表单元。当派生类虚函数有重写基类的虚函数时，基类对应虚函数，通过 [thunk 技术](https://zhuanlan.zhihu.com/p/496115833) ，跳转到第一个虚表单元的对应虚函数。
-
-<div align=center><img src="/images/2023/2023-08-12-07-36-31.png" data-action="zoom"></div>
-
-* 对象整体布局。由下图可见：
-
-  1. 多重继承有多个虚指针，并指向对应的虚表。
-  2. N 个多重继承基类，有 N 多虚指针和虚表。
-
-<div align=center><img src="/images/2023/2023-08-12-08-10-42.png" data-action="zoom"></div>
-
----
-
-### 5.3. 虚拟继承
-
-虚拟继承的类层次关系结构有点复杂，有兴趣的朋友可以看看：[What is the VTT for a class?](https://blog.csdn.net/qq_30366449/article/details/85106115)。
-
-* 测试源码。
-
-```cpp
-/* g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test */
-#include <iostream>
-
-class Base {
-   public:
-    virtual void vBaseFunc() {}
-    virtual void vBaseFunc2() {}
-
-    double m_base_data;
-    double m_base_data2;
-};
-
-class Base2 : virtual public Base {
-   public:
-    virtual void vBase2Func() {}
-    virtual void vBase2Func2() {}
-
-    double m_base2_data;
-    double m_base2_data2;
-};
-
-class Base3 : virtual public Base {
-   public:
-    virtual void vBase3Func() {}
-    virtual void vBase3Func2() {}
-
-    double m_base3_data;
-    double m_base3_data2;
-};
-
-class Drived : public Base2, public Base3 {
-   public:
-    virtual void vBaseFunc() {}
-    virtual void vBase2Func2() {}
-    virtual void vBase3Func2() {}
-    virtual void vDrivedFunc() {}
-    virtual void vDrivedFunc2() {}
-
-    double m_drived_data;
-    double m_drived_data2;
-};
-
-int main() {
-    return 0;
-}
-```
-
-* 类层次关系。
-
-```shell
-Vtable for Base
-Base::_ZTV4Base: 4u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI4Base)
-16    (int (*)(...))Base::vBaseFunc
-24    (int (*)(...))Base::vBaseFunc2
-
-Class Base
-   size=24 align=8
-   base size=24 base align=8
-Base (0x0x7fcf32273a80) 0
-    vptr=((& Base::_ZTV4Base) + 16u)
-
-Vtable for Base2
-Base2::_ZTV5Base2: 11u entries
-0     24u
-8     (int (*)(...))0
-16    (int (*)(...))(& _ZTI5Base2)
-24    (int (*)(...))Base2::vBase2Func
-32    (int (*)(...))Base2::vBase2Func2
-40    0u
-48    0u
-56    (int (*)(...))-24
-64    (int (*)(...))(& _ZTI5Base2)
-72    (int (*)(...))Base::vBaseFunc
-80    (int (*)(...))Base::vBaseFunc2
-
-VTT for Base2
-Base2::_ZTT5Base2: 2u entries
-0     ((& Base2::_ZTV5Base2) + 24u)
-8     ((& Base2::_ZTV5Base2) + 72u)
-
-Class Base2
-   size=48 align=8
-   base size=24 base align=8
-Base2 (0x0x7fcf3205f750) 0
-    vptridx=0u vptr=((& Base2::_ZTV5Base2) + 24u)
-  Base (0x0x7fcf32273ae0) 24 virtual
-      vptridx=8u vbaseoffset=-24 vptr=((& Base2::_ZTV5Base2) + 72u)
-
-Vtable for Base3
-Base3::_ZTV5Base3: 11u entries
-0     24u
-8     (int (*)(...))0
-16    (int (*)(...))(& _ZTI5Base3)
-24    (int (*)(...))Base3::vBase3Func
-32    (int (*)(...))Base3::vBase3Func2
-40    0u
-48    0u
-56    (int (*)(...))-24
-64    (int (*)(...))(& _ZTI5Base3)
-72    (int (*)(...))Base::vBaseFunc
-80    (int (*)(...))Base::vBaseFunc2
-
-VTT for Base3
-Base3::_ZTT5Base3: 2u entries
-0     ((& Base3::_ZTV5Base3) + 24u)
-8     ((& Base3::_ZTV5Base3) + 72u)
-
-Class Base3
-   size=48 align=8
-   base size=24 base align=8
-Base3 (0x0x7fcf3205f820) 0
-    vptridx=0u vptr=((& Base3::_ZTV5Base3) + 24u)
-  Base (0x0x7fcf32273b40) 24 virtual
-      vptridx=8u vbaseoffset=-24 vptr=((& Base3::_ZTV5Base3) + 72u)
-
-Vtable for Drived
-Drived::_ZTV6Drived: 20u entries
-0     64u
-8     (int (*)(...))0
-16    (int (*)(...))(& _ZTI6Drived)
-24    (int (*)(...))Base2::vBase2Func
-32    (int (*)(...))Drived::vBase2Func2
-40    (int (*)(...))Drived::vBaseFunc
-48    (int (*)(...))Drived::vBase3Func2
-56    (int (*)(...))Drived::vDrivedFunc
-64    (int (*)(...))Drived::vDrivedFunc2
-72    40u
-80    (int (*)(...))-24
-88    (int (*)(...))(& _ZTI6Drived)
-96    (int (*)(...))Base3::vBase3Func
-104   (int (*)(...))Drived::_ZThn24_N6Drived11vBase3Func2Ev
-112   0u
-120   18446744073709551552u
-128   (int (*)(...))-64
-136   (int (*)(...))(& _ZTI6Drived)
-144   (int (*)(...))Drived::_ZTv0_n24_N6Drived9vBaseFuncEv
-152   (int (*)(...))Base::vBaseFunc2
-
-Construction vtable for Base2 (0x0x7fc7076748f0 instance) in Drived
-Drived::_ZTC6Drived0_5Base2: 11u entries
-0     64u
-8     (int (*)(...))0
-16    (int (*)(...))(& _ZTI5Base2)
-24    (int (*)(...))Base2::vBase2Func
-32    (int (*)(...))Base2::vBase2Func2
-40    0u
-48    0u
-56    (int (*)(...))-64
-64    (int (*)(...))(& _ZTI5Base2)
-72    (int (*)(...))Base::vBaseFunc
-80    (int (*)(...))Base::vBaseFunc2
-
-Construction vtable for Base3 (0x0x7fc707674958 instance) in Drived
-Drived::_ZTC6Drived24_5Base3: 11u entries
-0     40u
-8     (int (*)(...))0
-16    (int (*)(...))(& _ZTI5Base3)
-24    (int (*)(...))Base3::vBase3Func
-32    (int (*)(...))Base3::vBase3Func2
-40    0u
-48    0u
-56    (int (*)(...))-40
-64    (int (*)(...))(& _ZTI5Base3)
-72    (int (*)(...))Base::vBaseFunc
-80    (int (*)(...))Base::vBaseFunc2
-
-VTT for Drived
-Drived::_ZTT6Drived: 7u entries
-0     ((& Drived::_ZTV6Drived) + 24u)
-8     ((& Drived::_ZTC6Drived0_5Base2) + 24u)
-16    ((& Drived::_ZTC6Drived0_5Base2) + 72u)
-24    ((& Drived::_ZTC6Drived24_5Base3) + 24u)
-32    ((& Drived::_ZTC6Drived24_5Base3) + 72u)
-40    ((& Drived::_ZTV6Drived) + 144u)
-48    ((& Drived::_ZTV6Drived) + 96u)
-
-Class Drived
-   size=88 align=8
-   base size=64 base align=8
-Drived (0x0x7fc7076a2460) 0
-    vptridx=0u vptr=((& Drived::_ZTV6Drived) + 24u)
-  Base2 (0x0x7fc7076748f0) 0
-      primary-for Drived (0x0x7fc7076a2460)
-      subvttidx=8u
-    Base (0x0x7fc707888ba0) 64 virtual
-        vptridx=40u vbaseoffset=-24 vptr=((& Drived::_ZTV6Drived) + 144u)
-  Base3 (0x0x7fc707674958) 24
-      subvttidx=24u vptridx=48u vptr=((& Drived::_ZTV6Drived) + 96u)
-    Base (0x0x7fc707888ba0) alternative-path
-```
-
----
-
-## 6. 关键源码
+## 5. 关键源码
 
 ```cpp
 /* Offset of member MEMBER in a struct of type TYPE. */
@@ -832,7 +346,7 @@ int main() {
 
 ---
 
-## 7. dynamic_cast
+## 6. dynamic_cast
 
 `dynamic_cast` 是 C++ 中的一个类型转换运算符，用于在运行时进行类型转换。它可以将一个指向基类的指针或引用转换为指向派生类的指针或引用。dynamic_cast 会检查转换是否安全，如果转换不安全，则返回一个空指针或引发一个std::bad_cast异常。它主要用于在多态的情况下进行安全的向下转型。它的语法如下：
 
@@ -848,7 +362,7 @@ dynamic_cast<new_type>(expression)
 
 ---
 
-### 7.1. 测试实例
+### 6.1. 测试实例
 
 通过调试去观测 dynamic_cast 函数的内部源码相关数据信息。
 
@@ -906,7 +420,7 @@ int main() {
 
 ---
 
-### 7.2. 源码剖析
+### 6.2. 源码剖析
 
 `待续...`
 
@@ -987,7 +501,71 @@ extern "C" void *__dynamic_cast(
 
 ---
 
-## 8. 引用
+```shell
+vtable for B3:
+        .quad   40
+        .quad   0
+        .quad   typeinfo for B3
+        .quad   24
+        .quad   -16
+        .quad   typeinfo for B3
+        .quad   B2::vB0Func()
+        .quad   -24
+        .quad   -40
+        .quad   typeinfo for B3
+        .quad   virtual thunk to B2::vB0Func()
+
+
+00000000004008fd <main>:
+  4008fd:    55                       push   %rbp
+  4008fe:    48 89 e5                 mov    %rsp,%rbp
+  400901:    53                       push   %rbx
+  400902:    48 83 ec 18              sub    $0x18,%rsp
+  400906:    bf 38 00 00 00           mov    $0x38,%edi
+  40090b:    e8 f0 fe ff ff           callq  400800 <operator new(unsigned long)@plt>
+  400910:    48 89 c3                 mov    %rax,%rbx
+  400913:    48 89 df                 mov    %rbx,%rdi
+  400916:    e8 dd 01 00 00           callq  400af8 <B3::B3()>
+  40091b:    48 89 5d e8              mov    %rbx,-0x18(%rbp)
+  40091f:    48 83 7d e8 00           cmpq   $0x0,-0x18(%rbp)
+
+
+  400924:    74 1a                    je     400940 <main+0x43>
+  400926:    48 8b 45 e8              mov    -0x18(%rbp),%rax
+  40092a:    48 8b 00                 mov    (%rax),%rax
+  40092d:    48 83 e8 18              sub    $0x18,%rax
+  400931:    48 8b 00                 mov    (%rax),%rax
+  400934:    48 89 c2                 mov    %rax,%rdx
+  400937:    48 8b 45 e8              mov    -0x18(%rbp),%rax
+  40093b:    48 01 d0                 add    %rdx,%rax
+  40093e:    eb 05                    jmp    400945 <main+0x48>
+  400940:    b8 00 00 00 00           mov    $0x0,%eax
+  400945:    48 89 45 e0              mov    %rax,-0x20(%rbp)
+  400949:    48 83 7d e0 00           cmpq   $0x0,-0x20(%rbp)
+  40094e:    74 15                    je     400965 <main+0x68>
+  400950:    48 8b 45 e0              mov    -0x20(%rbp),%rax
+  400954:    48 8b 00                 mov    (%rax),%rax
+  400957:    48 8b 00                 mov    (%rax),%rax
+  40095a:    48 8b 55 e0              mov    -0x20(%rbp),%rdx
+  40095e:    48 89 d7                 mov    %rdx,%rdi
+  400961:    ff d0                    callq  *%rax
+  400963:    eb 1c                    jmp    400981 <main+0x84>
+  400965:    be 29 0c 40 00           mov    $0x400c29,%esi
+  40096a:    bf e0 20 60 00           mov    $0x6020e0,%edi
+  40096f:    e8 5c fe ff ff           callq  4007d0 <std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)@plt>
+  400974:    be f0 07 40 00           mov    $0x4007f0,%esi
+  400979:    48 89 c7                 mov    %rax,%rdi
+  40097c:    e8 5f fe ff ff           callq  4007e0 <std::ostream::operator<<(std::ostream& (*)(std::ostream&))@plt>
+  400981:    b8 00 00 00 00           mov    $0x0,%eax
+  400986:    48 83 c4 18              add    $0x18,%rsp
+  40098a:    5b                       pop    %rbx
+  40098b:    5d                       pop    %rbp
+  40098c:    c3                       retq
+```
+
+---
+
+## 7. 引用
 
 * [dynamic_cast conversion](https://en.cppreference.com/w/cpp/language/dynamic_cast)
 * [c++对象内存布局](https://mp.weixin.qq.com/s?__biz=Mzk0MzI4OTI1Ng==&mid=2247484652&idx=1&sn=087f34d20572614a3273c4f1028a4be2&chksm=c337622bf440eb3d0875a5e115c3545c169cbbd5fd5cae834f9387479c202d5eff1c350b3f2f&mpshare=1&scene=24&srcid=0214RAacGDpYpm1JFHL7I8iV&sharer_sharetime=1676387723635&sharer_shareid=0b4fc3750818fb2c58eb60e71e3d1c6f#rd)
