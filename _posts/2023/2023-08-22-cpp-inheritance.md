@@ -83,22 +83,15 @@ class Derived : public Base2 {
 * 类布局层次。
 
 ```shell
-# g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test
-# test.cpp.002t.class
-
 Vtable for Base
+# _ZTV4Base: vtable for Base
 Base::_ZTV4Base: 5u entries
 0     (int (*)(...))0
+# _ZTI4Base: typeinfo for Base
 8     (int (*)(...))(& _ZTI4Base)
 16    (int (*)(...))Base::vBaseFunc
 24    (int (*)(...))Base::vBaseFunc2
 32    (int (*)(...))Base::vBaseFunc3
-
-Class Base
-   size=24 align=8
-   base size=24 base align=8
-Base (0x0x7fb058ee8720) 0
-    vptr=((& Base::_ZTV4Base) + 16u)
 
 Vtable for Base2
 Base2::_ZTV5Base2: 7u entries
@@ -110,19 +103,13 @@ Base2::_ZTV5Base2: 7u entries
 40    (int (*)(...))Base2::vBase2Func
 48    (int (*)(...))Base2::vBase2Func2
 
-Class Base2
-   size=40 align=8
-   base size=40 base align=8
-Base2 (0x0x7fb058fa8f70) 0
-    vptr=((& Base2::_ZTV5Base2) + 16u)
-  Base (0x0x7fb058ee8780) 0
-      primary-for Base2 (0x0x7fb058fa8f70)
-
 # Derived 虚表。
 Vtable for Derived
+# _ZTV7Derived: vtable for Derived
 Derived::_ZTV7Derived: 9u entries
 0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI7Derived)
+# _ZTI7Derived: typeinfo for Derived
+8     (int (*)(...))(& _ZTI7Derived) 
 16    (int (*)(...))Base2::vBaseFunc
 24    (int (*)(...))Derived::vBaseFunc2
 32    (int (*)(...))Base::vBaseFunc3
@@ -131,11 +118,12 @@ Derived::_ZTV7Derived: 9u entries
 56    (int (*)(...))Derived::vDerivedFunc
 64    (int (*)(...))Derived::vDerivedFunc2
 
+# 类的继承关系
 Class Derived
    size=56 align=8
    base size=56 base align=8
 Derived (0x0x7fb058fa8478) 0
-    # 虚指针指向虚表的第 16 个字节处。
+    # 虚指针指向虚表的位置。
     vptr=((& Derived::_ZTV7Derived) + 16u)
   Base2 (0x0x7fb058fa8a28) 0
       primary-for Derived (0x0x7fb058fa8478)
@@ -229,54 +217,41 @@ class Derived : public Base, public Base2, public Base3 {
 };
 ```
 
-* 类内存布局层次。
+* 类布局层次。
 
 ```shell
-# g++ -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o test
-# test.cpp.002t.class
-
 Vtable for Base
+# _ZTV4Base: vtable for Base
 Base::_ZTV4Base: 4u entries
 0     (int (*)(...))0
+# _ZTI4Base: typeinfo for Base
 8     (int (*)(...))(& _ZTI4Base)
 16    (int (*)(...))Base::vBaseFunc
 24    (int (*)(...))Base::vBaseFunc2
 
-Class Base
-   size=24 align=8
-   base size=24 base align=8
-Base (0x0x7f4195f3e720) 0
-    vptr=((& Base::_ZTV4Base) + 16u)
-
 Vtable for Base2
+# _ZTV5Base2: vtable for Base2
 Base2::_ZTV5Base2: 4u entries
 0     (int (*)(...))0
+# _ZTI5Base2: typeinfo for Base2
 8     (int (*)(...))(& _ZTI5Base2)
 16    (int (*)(...))Base2::vBase2Func
 24    (int (*)(...))Base2::vBase2Func2
 
-Class Base2
-   size=24 align=8
-   base size=24 base align=8
-Base2 (0x0x7f4195f3e780) 0
-    vptr=((& Base2::_ZTV5Base2) + 16u)
-
 Vtable for Base3
+# _ZTV5Base3: vtable for Base3
 Base3::_ZTV5Base3: 4u entries
 0     (int (*)(...))0
+# _ZTI5Base3: typeinfo for Base3
 8     (int (*)(...))(& _ZTI5Base3)
 16    (int (*)(...))Base3::vBase3Func
 24    (int (*)(...))Base3::vBase3Func2
 
-Class Base3
-   size=24 align=8
-   base size=24 base align=8
-Base3 (0x0x7f4195f3e7e0) 0
-    vptr=((& Base3::_ZTV5Base3) + 16u)
-
 Vtable for Derived
+# _ZTV7Derived: vtable for Derived
 Derived::_ZTV7Derived: 16u entries
 0     (int (*)(...))0
+# _ZTI7Derived: typeinfo for Derived
 8     (int (*)(...))(& _ZTI7Derived)
 16    (int (*)(...))Derived::vBaseFunc
 24    (int (*)(...))Base::vBaseFunc2
@@ -287,10 +262,12 @@ Derived::_ZTV7Derived: 16u entries
 64    (int (*)(...))-24
 72    (int (*)(...))(& _ZTI7Derived)
 80    (int (*)(...))Base2::vBase2Func
+# _ZThn24_N7Derived11vBase2Func2Ev: non-virtual thunk to Derived::vBase2Func2()
 88    (int (*)(...))Derived::_ZThn24_N7Derived11vBase2Func2Ev
 96    (int (*)(...))-48
 104   (int (*)(...))(& _ZTI7Derived)
 112   (int (*)(...))Base3::vBase3Func
+# _ZThn48_N7Derived11vBase3Func2Ev: non-virtual thunk to Derived::vBase3Func2()
 120   (int (*)(...))Derived::_ZThn48_N7Derived11vBase3Func2Ev
 
 Class Derived
@@ -309,16 +286,16 @@ Derived (0x0x7f4196042348) 0
 * 虚表整合。
   
   1. 首先派生类的虚表与第一个基类的虚表结合成一个虚表单元，并覆盖基类的虚函数。
-  2. 其它的基类，作为一个独立虚表单元。当派生类虚函数有重写基类的虚函数时，基类对应虚函数，通过 [thunk 技术](https://zhuanlan.zhihu.com/p/496115833) ，跳转到第一个虚表单元的对应虚函数。
+  2. 其它的基类，作为一个独立虚表单元。当派生类虚函数有重写基类的虚函数时，基类对应虚函数，通过 thunk 技术跳转到第一个虚表单元的对应虚函数。
 
-<div align=center><img src="/images/2023/2023-08-24-16-59-19.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-06-17-25-05.png" data-action="zoom"/></div>
 
 * 对象整体布局。由下图可见：
 
   1. 多重继承有多个虚指针，并指向对应的虚表单元。
   2. 如果派生类有 N 个多重继承单一基类，那么它的对象有 N 个虚指针和虚表单元。
 
-<div align=center><img src="/images/2023/2023-08-24-17-01-40.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-06-17-25-37.png" data-action="zoom"/></div>
 
 * 虚函数调用。有了上面内存布局的理解，我们应该不难理解下面这个基类指针是怎么调用派生类虚函数的：
 
@@ -340,17 +317,25 @@ int main() {
 ```
 
   1. Base2 指针指向存储 vptr2 的地址：从对象内存顶部向高地址偏移 0x18 个字节，获得 vptr2 虚指针。
-  2. vptr2 指针指向的虚表地址向高地址偏移 0x8 个字节，获得 _ZThn24_N7Derived11vBase2Func2Ev 地址。
-  3. 通过 _ZThn24_N7Derived11vBase2Func2Ev 地址跳转到 Derived::vBase3Func2 虚函数，获取虚表上对应的虚函数地址进行调用。
+  2. vptr2 指针指向的虚表地址向高地址偏移 0x8 个字节，获得 non-virtual thunk to Derived::vBase2Func2() 地址。
+  3. 通过 non-virtual thunk to Derived::vBase2Func2() 地址跳转到 Derived::vBase2Func2 虚函数，获取虚表上对应的虚函数地址进行调用。
+
+<div align=center><img src="/images/2023/2023-09-06-17-25-59.png" data-action="zoom"/></div>
+
+* 通过汇编理解函数 thunk to 跳转的工作原理。
 
 ```shell
-# c++filt _ZThn24_N7Derived11vBase2Func2Ev
-non-virtual thunk to Derived::vBase2Func2()
+# thunk to 跳转原理（汇编）。
+0000000000400aba <non-virtual thunk to Derived::vBase2Func2()>:
+  # rdi 寄存器保存的是 b 指针指向的地址，该地址向低地址偏移 0x18 个字节，
+  # 也就是 rdi 寄存器保存的是 Derived 内存首位地址，
+  # 换句话说，将 Derived 的 this 指针作为参数传入 Derived::vBase2Func2 函数。
+  400aba:    48 83 ef 18      sub    $0x18,%rdi
+  # 调用 Derived::vBase2Func2() 函数。
+  400abe:    eb d0            jmp    400a90 <Derived::vBase2Func2()>
 ```
 
-<div align=center><img src="/images/2023/2023-08-24-17-00-08.png" data-action="zoom"/></div>
-
-* 思考，上面多重继承的多态实例，这样操作是否正确。
+* 思考，上面多重继承的多态实例对象，下面这样释放是否正确？！（详情请参考：[虚析构](https://wenfh2020.com/2023/08/25/cpp-destructor/)）。
 
 ```cpp
 int main() {
@@ -378,7 +363,11 @@ int main() {
 2. 虚拟继承引入 VTT（Virtual Table Table）构造虚表。
 3. 虚表前缀引入 vbase_offset 偏移量：当前虚表与公共基类虚表的内存位置偏移量。
 
-> 虚拟继承的类层次关系结构有点复杂，有兴趣的朋友可以看看这个帖子：[What is the VTT for a class](https://stackoverflow.com/questions/6258559/what-is-the-vtt-for-a-class)。
+> 虚拟继承的类层次关系结构有点复杂，有兴趣的朋友可以参考：[What is the VTT for a class](https://stackoverflow.com/questions/6258559/what-is-the-vtt-for-a-class)。
+
+---
+
+#### 2.3.1. 对象整体布局
 
 * 测试代码。
 
@@ -426,82 +415,17 @@ class Derived : public Base2, public Base3 {
 };
 ```
 
-* 类内存布局层次。
+* 类对象内存布局。
+
+<div align=center><img src="/images/2023/2023-09-06-16-40-55.png" data-action="zoom"/></div>
 
 ```shell
-Vtable for Base
-Base::_ZTV4Base: 4u entries
-0     (int (*)(...))0
-8     (int (*)(...))(& _ZTI4Base)
-16    (int (*)(...))Base::vBaseFunc
-24    (int (*)(...))Base::vBaseFunc2
-
-Class Base
-   size=24 align=8
-   base size=24 base align=8
-Base (0x0x7fd19d5ee720) 0
-    vptr=((& Base::_ZTV4Base) + 16u)
-
-Vtable for Base2
-Base2::_ZTV5Base2: 12u entries
-0     24u
-8     (int (*)(...))0
-16    (int (*)(...))(& _ZTI5Base2)
-24    (int (*)(...))Base2::vBaseFunc
-32    (int (*)(...))Base2::vBase2Func
-40    (int (*)(...))Base2::vBase2Func2
-48    0u
-56    18446744073709551592u
-64    (int (*)(...))-24
-72    (int (*)(...))(& _ZTI5Base2)
-80    (int (*)(...))Base2::_ZTv0_n24_N5Base29vBaseFuncEv
-88    (int (*)(...))Base::vBaseFunc2
-
-VTT for Base2
-Base2::_ZTT5Base2: 2u entries
-0     ((& Base2::_ZTV5Base2) + 24u)
-8     ((& Base2::_ZTV5Base2) + 80u)
-
-Class Base2
-   size=48 align=8
-   base size=24 base align=8
-Base2 (0x0x7fd19d6aef70) 0
-    vptridx=0u vptr=((& Base2::_ZTV5Base2) + 24u)
-  Base (0x0x7fd19d5ee780) 24 virtual
-      vptridx=8u vbaseoffset=-24 vptr=((& Base2::_ZTV5Base2) + 80u)
-
-Vtable for Base3
-Base3::_ZTV5Base3: 12u entries
-0     24u
-8     (int (*)(...))0
-16    (int (*)(...))(& _ZTI5Base3)
-24    (int (*)(...))Base3::vBaseFunc2
-32    (int (*)(...))Base3::vBase3Func
-40    (int (*)(...))Base3::vBase3Func2
-48    18446744073709551592u
-56    0u
-64    (int (*)(...))-24
-72    (int (*)(...))(& _ZTI5Base3)
-80    (int (*)(...))Base::vBaseFunc
-88    (int (*)(...))Base3::_ZTv0_n32_N5Base310vBaseFunc2Ev
-
-VTT for Base3
-Base3::_ZTT5Base3: 2u entries
-0     ((& Base3::_ZTV5Base3) + 24u)
-8     ((& Base3::_ZTV5Base3) + 80u)
-
-Class Base3
-   size=48 align=8
-   base size=24 base align=8
-Base3 (0x0x7fd19d6ae478) 0
-    vptridx=0u vptr=((& Base3::_ZTV5Base3) + 24u)
-  Base (0x0x7fd19d5ee7e0) 24 virtual
-      vptridx=8u vbaseoffset=-24 vptr=((& Base3::_ZTV5Base3) + 80u)
-
 Vtable for Derived
+# _ZTV7Derived: vtable for Derived
 Derived::_ZTV7Derived: 21u entries
 0     64u
 8     (int (*)(...))0
+# _ZTI7Derived: typeinfo for Derived
 16    (int (*)(...))(& _ZTI7Derived)
 24    (int (*)(...))Base2::vBaseFunc
 32    (int (*)(...))Derived::vBase2Func
@@ -514,26 +438,33 @@ Derived::_ZTV7Derived: 21u entries
 88    (int (*)(...))(& _ZTI7Derived)
 96    (int (*)(...))Base3::vBaseFunc2
 104   (int (*)(...))Base3::vBase3Func
+# _ZThn24_N7Derived11vBase3Func2Ev: non-virtual thunk to Derived::vBase3Func2()
 112   (int (*)(...))Derived::_ZThn24_N7Derived11vBase3Func2Ev
-120   18446744073709551576u
-128   18446744073709551552u
+120   18446744073709551576u # -40
+128   18446744073709551552u # -64
 136   (int (*)(...))-64
 144   (int (*)(...))(& _ZTI7Derived)
+# _ZTv0_n24_N5Base29vBaseFuncEv: virtual thunk to Base2::vBaseFunc()
 152   (int (*)(...))Base2::_ZTv0_n24_N5Base29vBaseFuncEv
+# _ZTv0_n32_N5Base310vBaseFunc2Ev: virtual thunk to Base3::vBaseFunc2()
 160   (int (*)(...))Base3::_ZTv0_n32_N5Base310vBaseFunc2Ev
 
 Construction vtable for Base2 (0x0x7fd19d6aea90 instance) in Derived
+# _ZTC7Derived0_5Base2: construction vtable for Base2-in-Derived
 Derived::_ZTC7Derived0_5Base2: 12u entries
 0     64u
 8     (int (*)(...))0
+# _ZTI5Base2: typeinfo for Base2
 16    (int (*)(...))(& _ZTI5Base2)
 24    (int (*)(...))Base2::vBaseFunc
 32    (int (*)(...))Base2::vBase2Func
 40    (int (*)(...))Base2::vBase2Func2
 48    0u
-56    18446744073709551552u
+56    18446744073709551552u # -64
 64    (int (*)(...))-64
+# _ZTI5Base2: typeinfo for Base2
 72    (int (*)(...))(& _ZTI5Base2)
+# _ZTv0_n24_N5Base29vBaseFuncEv: virtual thunk to Base2::vBaseFunc()
 80    (int (*)(...))Base2::_ZTv0_n24_N5Base29vBaseFuncEv
 88    (int (*)(...))Base::vBaseFunc2
 
@@ -541,22 +472,28 @@ Construction vtable for Base3 (0x0x7fd19d6aeaf8 instance) in Derived
 Derived::_ZTC7Derived24_5Base3: 12u entries
 0     40u
 8     (int (*)(...))0
+# _ZTI5Base3: typeinfo for Base3
 16    (int (*)(...))(& _ZTI5Base3)
 24    (int (*)(...))Base3::vBaseFunc2
 32    (int (*)(...))Base3::vBase3Func
 40    (int (*)(...))Base3::vBase3Func2
-48    18446744073709551576u
+48    18446744073709551576u # -40
 56    0u
 64    (int (*)(...))-40
+# _ZTI5Base3: typeinfo for Base3
 72    (int (*)(...))(& _ZTI5Base3)
 80    (int (*)(...))Base::vBaseFunc
+# _ZTv0_n32_N5Base310vBaseFunc2Ev: virtual thunk to Base3::vBaseFunc2()
 88    (int (*)(...))Base3::_ZTv0_n32_N5Base310vBaseFunc2Ev
 
 VTT for Derived
+# _ZTV7Derived: vtable for Derived
 Derived::_ZTT7Derived: 7u entries
 0     ((& Derived::_ZTV7Derived) + 24u)
+# _ZTC7Derived0_5Base2: construction vtable for Base2-in-Derived
 8     ((& Derived::_ZTC7Derived0_5Base2) + 24u)
 16    ((& Derived::_ZTC7Derived0_5Base2) + 80u)
+# _ZTC7Derived24_5Base3: construction vtable for Base3-in-Derived
 24    ((& Derived::_ZTC7Derived24_5Base3) + 24u)
 32    ((& Derived::_ZTC7Derived24_5Base3) + 80u)
 40    ((& Derived::_ZTV7Derived) + 152u)
@@ -577,13 +514,27 @@ Derived (0x0x7fd19d7401c0) 0
     Base (0x0x7fd19d5ee840) alternative-path
 ```
 
-* 对象整体布局。
+---
 
-<div align=center><img src="/images/2023/2023-08-24-18-32-22.png" data-action="zoom"/></div>
+#### 2.3.2. 构造顺序
 
-* 构造顺序。我们可以通过类的构造顺序去理解，对象的内存布局和虚表是如何一步一步构造出来的。在构造派生类 Derived 时，先构造基类，当基类构造完了，才构造自己：1. Base()，2. Base2()，3. Base3()，4.Derived()。
+我们可以通过类的构造顺序去理解：对象内存布局如何一步一步构造出来的。在构造派生类 Derived 时，先构造基类，当基类构造完了，才构造自己。
+
+* 构造流程。
 
 ```shell
+|-- main
+    |-- ...
+    |-- Derived::Derived()
+        |-- Base::Base()
+        |-- Base2::Base2()
+        |-- Base3::Base3()
+```
+
+* 构造流程（汇编）。
+
+```shell
+...
 0x400b33:    e8 34 02 00 00    callq  0x400d6c <Derived::Derived()>
 ...
 0x400d83:    e8 06 ff ff ff    callq  400c8e <Base::Base()>
@@ -593,11 +544,110 @@ Derived (0x0x7fd19d7401c0) 0
 0x400daf:    e8 60 ff ff ff    callq  400d14 <Base3::Base3()>
 ```
 
-* 对象内存构建过程。
+* 构造 Base。
 
-<div align=center><img src="/images/2023/2023-08-22-15-14-01.jpg" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-06-15-02-47.png" data-action="zoom"/></div>
 
-* 虚函数调用。
+```shell
+Vtable for Base
+# _ZTV4Base: vtable for Base
+Base::_ZTV4Base: 4u entries
+0     (int (*)(...))0
+# _ZTI4Base: typeinfo for Base
+8     (int (*)(...))(& _ZTI4Base)
+16    (int (*)(...))Base::vBaseFunc
+24    (int (*)(...))Base::vBaseFunc2
+
+Class Base
+   size=24 align=8
+   base size=24 base align=8
+Base (0x0x7fd19d5ee720) 0
+    vptr=((& Base::_ZTV4Base) + 16u)
+```
+
+* 构造 Base2。
+
+<div align=center><img src="/images/2023/2023-09-06-16-55-20.png" data-action="zoom"/></div>
+
+```shell
+Construction vtable for Base2 (0x0x7fd19d6aea90 instance) in Derived
+# _ZTC7Derived0_5Base2: construction vtable for Base2-in-Derived
+Derived::_ZTC7Derived0_5Base2: 12u entries
+0     64u
+8     (int (*)(...))0
+# _ZTI5Base2: typeinfo for Base2
+16    (int (*)(...))(& _ZTI5Base2)
+24    (int (*)(...))Base2::vBaseFunc
+32    (int (*)(...))Base2::vBase2Func
+40    (int (*)(...))Base2::vBase2Func2
+48    0u
+56    18446744073709551552u # -64
+64    (int (*)(...))-64
+# _ZTI5Base2: typeinfo for Base2
+72    (int (*)(...))(& _ZTI5Base2)
+# _ZTv0_n24_N5Base29vBaseFuncEv: virtual thunk to Base2::vBaseFunc()
+80    (int (*)(...))Base2::_ZTv0_n24_N5Base29vBaseFuncEv
+88    (int (*)(...))Base::vBaseFunc2
+
+VTT for Derived
+# _ZTV7Derived: vtable for Derived
+Derived::_ZTT7Derived: 7u entries
+0     ((& Derived::_ZTV7Derived) + 24u)
+# _ZTC7Derived0_5Base2: construction vtable for Base2-in-Derived
+8     ((& Derived::_ZTC7Derived0_5Base2) + 24u)
+16    ((& Derived::_ZTC7Derived0_5Base2) + 80u)
+# _ZTC7Derived24_5Base3: construction vtable for Base3-in-Derived
+24    ((& Derived::_ZTC7Derived24_5Base3) + 24u)
+32    ((& Derived::_ZTC7Derived24_5Base3) + 80u)
+40    ((& Derived::_ZTV7Derived) + 152u)
+48    ((& Derived::_ZTV7Derived) + 96u)
+```
+
+* 构造 Base3。
+
+<div align=center><img src="/images/2023/2023-09-06-16-53-57.png" data-action="zoom"/></div>
+
+```shell
+VTT for Derived
+# _ZTV7Derived: vtable for Derived
+Derived::_ZTT7Derived: 7u entries
+0     ((& Derived::_ZTV7Derived) + 24u)
+# _ZTC7Derived0_5Base2: construction vtable for Base2-in-Derived
+8     ((& Derived::_ZTC7Derived0_5Base2) + 24u)
+16    ((& Derived::_ZTC7Derived0_5Base2) + 80u)
+# _ZTC7Derived24_5Base3: construction vtable for Base3-in-Derived
+24    ((& Derived::_ZTC7Derived24_5Base3) + 24u)
+32    ((& Derived::_ZTC7Derived24_5Base3) + 80u)
+40    ((& Derived::_ZTV7Derived) + 152u)
+48    ((& Derived::_ZTV7Derived) + 96u)
+
+Construction vtable for Base3 (0x0x7fd19d6aeaf8 instance) in Derived
+# _ZTC7Derived24_5Base3: construction vtable for Base3-in-Derived
+Derived::_ZTC7Derived24_5Base3: 12u entries
+0     40u
+8     (int (*)(...))0
+# _ZTI5Base3: typeinfo for Base3
+16    (int (*)(...))(& _ZTI5Base3)
+24    (int (*)(...))Base3::vBaseFunc2
+32    (int (*)(...))Base3::vBase3Func
+40    (int (*)(...))Base3::vBase3Func2
+48    18446744073709551576u # -40
+56    0u
+64    (int (*)(...))-40
+# _ZTI5Base3: typeinfo for Base3
+72    (int (*)(...))(& _ZTI5Base3)
+80    (int (*)(...))Base::vBaseFunc
+# _ZTv0_n32_N5Base310vBaseFunc2Ev: virtual thunk to Base3::vBaseFunc2()
+88    (int (*)(...))Base3::_ZTv0_n32_N5Base310vBaseFunc2Ev
+```
+
+* 构造 Derived （参考上面 **整体布局**）。
+
+<div align=center><img src="/images/2023/2023-09-06-16-40-55.png" data-action="zoom"/></div>
+
+---
+
+#### 2.3.3. 虚函数调用
 
 ```cpp
 int main() {
@@ -616,11 +666,11 @@ int main() {
 // Derived::vBase3Func2
 ```
 
-  1. Base3 指针指向存储 vptr.base3 的地址：从对象内存顶部向高地址偏移 0x18 个字节，获得 vptr.base3 虚指针。
-  2. vptr.base3 指针指向的虚表地址向高地址偏移 0x10 个字节，获得 Derived::_ZThn24_N7Derived11vBase3Func2Ev 地址。
-  3. 通过 Derived::_ZThn24_N7Derived11vBase3Func2Ev 地址跳转到 Derived::vBase3Func2 虚函数，获取虚表上对应的虚函数进行调用。
+  1. b 指针指向存储 vptr.base3 的地址：从 Derived 对象内存顶部向高地址偏移 0x18 个字节。
+  2. vptr.base3 指针指向的虚表地址向高地址偏移 0x10 个字节，获得 non-virtual thunk to Derived::vBase3Func2() 函数地址。
+  3. 通过 non-virtual thunk to Derived::vBase3Func2() 地址跳转到 Derived::vBase3Func2 虚函数，获取虚表上对应的虚函数进行调用。
 
-<div align=center><img src="/images/2023/2023-08-24-18-32-48.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-06-17-36-47.png" data-action="zoom"/></div>
 
 ---
 
@@ -633,5 +683,3 @@ int main() {
 * 关于有继承关系的 C++ 多态探索，因为本人水平有限，以上只作了一些基础简单的 Demo 的分析，还有一些应用场景没有涉及（例如 [虚析构](https://wenfh2020.com/2023/08/25/cpp-destructor/)）。
 
 * 很多技术细节没有在文章中提及，有兴趣的朋友可以动手写写 demo 用 gdb 调试一下，查看对象内存布局上的地址数据，以及反汇编查看对象构造的逻辑，是否与自己的理解一致，这样才能在不断变化的问题表象里，寻获答案本质。
-
-<div align=center><img src="/images/2023/2023-08-22-12-43-37.png" data-action="zoom"/></div>
