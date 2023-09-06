@@ -5,7 +5,7 @@ categories: c/c++
 author: wenfh2020
 ---
 
-在查阅 C++ 多态 资料时，发现一篇硬核外文帖子：[What is the VTT for a class](https://blog.csdn.net/qq_30366449/article/details/85106115)。为了方便学习，我整理了一下，转载到此，侵删哈~
+在查阅 C++ 多态 资料时，发现一篇硬核外文帖子：[What is the VTT for a class](https://stackoverflow.com/questions/6258559/what-is-the-vtt-for-a-class)。为了方便学习，我整理了一下，转载到此，侵删哈~
 
 
 
