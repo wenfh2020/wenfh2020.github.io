@@ -54,7 +54,8 @@
 }
 
 .reward-container button {
-    background: #43ff2a;
+    background: rgb(201, 255, 85);
+
     border: 0;
     border-radius: 5px;
     color: #000;
@@ -66,7 +67,7 @@
 }
 
 .reward-container button:hover {
-    background: rgb(201, 255, 85);
+    background: #43ff2a;
 }
 
 #qr {
