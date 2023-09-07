@@ -767,7 +767,7 @@ Base2::~Base2() [base object destructor]:
 
 * ~Base() 析构函数。
 
-<div align=center><img src="/images/2023/2023-09-04-16-58-11.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-07-09-22-21.png" data-action="zoom"/></div>
 
 ```shell
 Derived::~Derived() [complete object destructor]:
