@@ -726,7 +726,7 @@ Base3::~Base3() [base object destructor]:
 
 * ~Base2() 析构函数。
 
-<div align=center><img src="/images/2023/2023-09-04-16-28-53.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-09-05-10-12-32.png" data-action="zoom"/></div>
 
 ```shell
 # Derived 完全对象析构函数，重置对象的 this 指针和虚指针，虚指针指向对应的虚表。
