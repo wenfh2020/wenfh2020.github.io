@@ -8,33 +8,6 @@ author: wenfh2020
 
 epoll 多路复用驱动是异步事件处理，在用户空间它提供了用户数据（`epoll_data`），方便事件触发后回调给用户处理。
 
-* glibc
-
-```c
-/* sys/epoll.h */
-typedef union epoll_data {
-    void* ptr;
-    int fd;
-    uint32_t u32;
-    uint64_t u64;
-} epoll_data_t;
-
-struct epoll_event {
-    uint32_t events;   /* Epoll events */
-    epoll_data_t data; /* User data variable */
-} __EPOLL_PACKED;
-```
-
-* 内核
-
-```c
-/* eventpoll.h */
-struct epoll_event {
-    __poll_t events;
-    __u64 data;
-} EPOLL_PACKED;
-```
-
 
 
 * content
@@ -247,84 +220,45 @@ void co_eventloop(stCoEpoll_t *ctx, pfn_co_eventloop_t pfn, void *arg) {
 
 ---
 
-### 3.2. redis
+### 3.2. muduo
 
-epoll_event.data 传的是 fd。
+陈硕大神的 muduo，epoll_wait 回调数据，data 是一个 `Channel` 对象指针，跟上面的情况一样。
 
-传 fd 缺点：我们日常使用，fd 并不是用户的唯一标识，因为当旧的 fd 被 close 掉后，它会被系统回收重复使用，导致新来的用户可能重用原来的 fd，如果逻辑处理不好，也可能会出现问题。
+```cpp
+void EPollPoller::update(int operation, Channel* channel) {
+    struct epoll_event event;
+    memZero(&event, sizeof event);
+    event.events = channel->events();
+    /* 传指针。*/
+    event.data.ptr = channel;
+    int fd = channel->fd();
+    if (::epoll_ctl(epollfd_, operation, fd, &event) < 0) {
+        ...
+    }
+}
 
-```c
-/* ae_epoll.c */
-static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
-    aeApiState *state = eventLoop->apidata;
-    int retval, numevents = 0;
-
-    retval = epoll_wait(state->epfd, state->events, eventLoop->setsize,
-                        tvp ? (tvp->tv_sec * 1000 + tvp->tv_usec / 1000) : -1);
-    if (retval > 0) {
-        int j;
-        numevents = retval;
-        for (j = 0; j < numevents; j++) {
-            ...
-            struct epoll_event *e = state->events + j;
-            ...
-            /* data 传的是 fd。 */
-            eventLoop->fired[j].fd = e->data.fd;
-            ...
+Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels) {
+    int numEvents = ::epoll_wait(epollfd_,
+                                 &*events_.begin(),
+                                 static_cast<int>(events_.size()),
+                                 timeoutMs);
+    int savedErrno = errno;
+    Timestamp now(Timestamp::now());
+    if (numEvents > 0) {
+        fillActiveChannels(numEvents, activeChannels);
+        if (implicit_cast<size_t>(numEvents) == events_.size()) {
+            events_.resize(events_.size() * 2);
         }
     }
-    return numevents;
-}
-```
-
----
-
-### 3.3. libev
-
-libev epoll_event.data 传的是 fd 和索引的（uint64_t）组合，这样添加一个索引对数据进行保护，感觉更安全一些。
-
-```c
-/* ev_epoll.c */
-static void epoll_modify(EV_P_ int fd, int oev, int nev) {
-    struct epoll_event ev;
-    ...
-    /* store the generation counter in the upper 32 bits, the fd in the
-     * lower 32 bits */
-    ev.data.u64 =
-        (uint64_t)(uint32_t)fd | ((uint64_t)(uint32_t)++anfds[fd].egen << 32);
-    ev.events = (nev & EV_READ ? EPOLLIN : 0) | (nev & EV_WRITE ? EPOLLOUT : 0);
-
-    if (ecb_expect_true(!epoll_ctl(
-            backend_fd, oev && oldmask != nev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD,
-            fd, &ev)))
-        return;
     ...
 }
 
-static void epoll_poll(EV_P_ ev_tstamp timeout) {
-    ...
-    eventcnt = epoll_wait(backend_fd, epoll_events, epoll_eventmax,
-                          EV_TS_TO_MSEC(timeout));
-    ...
-    for (i = 0; i < eventcnt; ++i) {
-        struct epoll_event *ev = epoll_events + i;
-
-        int fd = (uint32_t)ev->data.u64; /* mask out the lower 32 bits */
-        int want = anfds[fd].events;
-        ...
-        /*
-         * check for spurious notification.
-         * this only finds spurious notifications on egen updates
-         * other spurious notifications will be found by epoll_ctl, below
-         * we assume that fd is always in range, as we never shrink the
-         * anfds array
-         */
-        if (ecb_expect_false((uint32_t)anfds[fd].egen !=
-                             (uint32_t)(ev->data.u64 >> 32))) {
-            /* recreate kernel state */
-            postfork |= 2;
-            continue;
-        }
+void EPollPoller::fillActiveChannels(int numEvents,
+                                     ChannelList* activeChannels) const {
+    assert(implicit_cast<size_t>(numEvents) <= events_.size());
+    for (int i = 0; i < numEvents; ++i) {
+        /* 返回指针。*/
+        Channel* channel = static_cast<Channel*>(events_[i].data.ptr);
         ...
     }
 }
@@ -332,7 +266,7 @@ static void epoll_poll(EV_P_ ev_tstamp timeout) {
 
 ---
 
-### 3.4. nginx
+### 3.3. nginx
 
 nginx epoll_event.data 传的是指针，这样也会存在“野指针”的风险，它与 libco 不同的地方，nginx 处理这个指针，根据内存对齐规则，利用指针末位一个 bit 的标识进行保护，以此来检查 fd 的时效性。
 
@@ -392,9 +326,94 @@ static ngx_int_t ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
 
 ---
 
+### 3.4. redis
+
+epoll_event.data 传的是 fd。
+
+传 fd 缺点：我们日常使用，fd 并不是用户的唯一标识，因为当旧的 fd 被 close 掉后，它会被系统回收重复使用，导致新来的用户可能重用原来的 fd，如果逻辑处理不好，也可能会出现问题。
+
+```c
+/* ae_epoll.c */
+static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
+    aeApiState *state = eventLoop->apidata;
+    int retval, numevents = 0;
+
+    retval = epoll_wait(state->epfd, state->events, eventLoop->setsize,
+                        tvp ? (tvp->tv_sec * 1000 + tvp->tv_usec / 1000) : -1);
+    if (retval > 0) {
+        int j;
+        numevents = retval;
+        for (j = 0; j < numevents; j++) {
+            ...
+            struct epoll_event *e = state->events + j;
+            ...
+            /* data 传的是 fd。 */
+            eventLoop->fired[j].fd = e->data.fd;
+            ...
+        }
+    }
+    return numevents;
+}
+```
+
+---
+
+### 3.5. libev
+
+libev epoll_event.data 传的是 fd 和索引的（uint64_t）组合，这样添加一个索引对数据进行保护，感觉更安全一些。
+
+```c
+/* ev_epoll.c */
+static void epoll_modify(EV_P_ int fd, int oev, int nev) {
+    struct epoll_event ev;
+    ...
+    /* store the generation counter in the upper 32 bits, the fd in the
+     * lower 32 bits */
+    ev.data.u64 =
+        (uint64_t)(uint32_t)fd | ((uint64_t)(uint32_t)++anfds[fd].egen << 32);
+    ev.events = (nev & EV_READ ? EPOLLIN : 0) | (nev & EV_WRITE ? EPOLLOUT : 0);
+
+    if (ecb_expect_true(!epoll_ctl(
+            backend_fd, oev && oldmask != nev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD,
+            fd, &ev)))
+        return;
+    ...
+}
+
+static void epoll_poll(EV_P_ ev_tstamp timeout) {
+    ...
+    eventcnt = epoll_wait(backend_fd, epoll_events, epoll_eventmax,
+                          EV_TS_TO_MSEC(timeout));
+    ...
+    for (i = 0; i < eventcnt; ++i) {
+        struct epoll_event *ev = epoll_events + i;
+
+        int fd = (uint32_t)ev->data.u64; /* mask out the lower 32 bits */
+        int want = anfds[fd].events;
+        ...
+        /*
+         * check for spurious notification.
+         * this only finds spurious notifications on egen updates
+         * other spurious notifications will be found by epoll_ctl, below
+         * we assume that fd is always in range, as we never shrink the
+         * anfds array
+         */
+        if (ecb_expect_false((uint32_t)anfds[fd].egen !=
+                             (uint32_t)(ev->data.u64 >> 32))) {
+            /* recreate kernel state */
+            postfork |= 2;
+            continue;
+        }
+        ...
+    }
+}
+```
+
+---
+
 ## 4. 小结
 
-* 阅读经典的开源源码，可以深层次理解作者代码设计思路，通过对比，加深对代码的理解。
+* 阅读经典开源源码，可以深层次理解作者代码设计思路，通过对比，加深对代码的理解。
 * 做底层的事件驱动逻辑，需要缜密的思维，只要逻辑错误，无论传的是啥参数一样会出现错误。
 * 现实使用，我们可以参考开源的实现。
 
