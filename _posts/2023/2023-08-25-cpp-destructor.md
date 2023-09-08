@@ -208,9 +208,9 @@ int main() {
     |-- delete b;
         |-- Derived::~Derived() [deleting destructor] # 程序调用虚表上的虚析构函数。
             |-- Derived::~Derived() [complete object destructor] # 调用 Derived 析构函数。
-                |-- Base2::~Base2() [base object destructor] # 调用 Base2 对象函数。
+                |-- Base2::~Base2() [base object destructor] # 调用 Base2 析构函数。
                     |-- Base::~Base() [base object destructor] # 调用 Base 析构函数。
-            |-- operator delete(void*) # delelte 释放对象。
+            |-- operator delete(void*) # delete 释放对象。
 ```
 
 1. 程序通过虚指针找到虚表，虚指针指向虚表的位置向高位偏移 8 个字节，找到对应的虚函数：Derived::~Derived() [deleting destructor] 进行调用，接着调用 Derived::~Derived() [complete object destructor] 开始析构对象。
@@ -233,7 +233,7 @@ main:
         ...
         # 对象内存首位保存了虚指针。
         movq    -32(%rbp), %rax
-        # 虚指针指向虚表保存虚函数的起始地址。
+        # 虚指针指向虚表。
         movq    (%rax), %rax
         # 程序通过偏移在虚表上找到对应虚函数。
         addq    $8, %rax
