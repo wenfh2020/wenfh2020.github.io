@@ -30,9 +30,7 @@ Linux version 3.10.0-1127.19.1.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org)
 
 ## 2. 安装
 
-拉取 muduo 2.0.2 稳定版本。
-
-> 还有其它部分依赖，缺啥补啥~
+拉取 muduo 2.0.2 稳定版本代码，安装依赖插件，缺啥补啥~
 
 ```shell
 # 安装依赖。
@@ -45,7 +43,6 @@ yum install boost-doc
 # 拉取代码 2.0.2 版本。
 wget https://github.com/chenshuo/muduo/archive/refs/tags/v2.0.2.tar.gz
 tar zxf v2.0.2.tar.gz
-cd muduo-2.0.2
 ```
 
 ---
@@ -108,18 +105,15 @@ build_debug.sh
 * CPP 源码。
 
 ```cpp
-// test.cpp
 // g++ -O0 test.cpp -std=c++11 -lmuduo_net -lmuduo_base -lpthread -o test
 #include <muduo/base/Logging.h>
 #include <muduo/net/EventLoop.h>
 #include <muduo/net/TcpServer.h>
 
-using std::placeholders::_1;
-using std::placeholders::_2;
-using std::placeholders::_3;
+using namespace std::placeholders;
 
 void onConnection(const muduo::net::TcpConnectionPtr& conn) {
-    LOG_INFO << "new conn from: " << conn->peerAddress().toIpPort() << " to "
+    LOG_INFO << "conn from " << conn->peerAddress().toIpPort() << " to "
              << conn->localAddress().toIpPort() << " is "
              << (conn->connected() ? "connected" : "disconnected");
 }
@@ -128,8 +122,8 @@ void onMessage(const muduo::net::TcpConnectionPtr& conn,
                muduo::net::Buffer* buf,
                muduo::Timestamp time) {
     muduo::string msg(buf->retrieveAllAsString());
-    LOG_INFO << conn->name() << " echo " << msg.size() << " bytes, "
-             << "data received at " << time.toString();
+    LOG_INFO << "received data len: " << msg.size() << " bytes, "
+             << "time at " << time.toString() << ", data: " << msg;
     conn->send(msg);
 }
 
@@ -152,30 +146,37 @@ int main() {
 g++ -O0 test.cpp -std=c++11 -lmuduo_net -lmuduo_base -lpthread -o test
 # 运行测试实例。
 ./test
-# 测试程序输出。 
-20230910 01:02:45.640819Z 21097 INFO  TcpServer::newConnection [test-tcp-server] - new connection [test-tcp-server-0.0.0.0:8888#1] from 127.0.0.1:32824 - TcpServer.cc:73
-20230910 01:02:45.641029Z 21097 INFO  new conn from: 127.0.0.1:32824 to 127.0.0.1:8888 is connected - test.cpp:10
-20230910 01:02:56.719027Z 21097 INFO  test-tcp-server-0.0.0.0:8888#1 echo 3 bytes, data received at 1694307776.718978 - test.cpp:19
+# 测试程序输出。
+20230910 07:22:44.948029Z 15829 INFO  TcpServer::newConnection [test-tcp-server] - new connection [test-tcp-server-0.0.0.0:8888#1] from 127.0.0.1:36690 - TcpServer.cc:73
+20230910 07:22:44.948241Z 15829 INFO  conn from 127.0.0.1:36690 to 127.0.0.1:8888 is connected - test.cpp:10
+20230910 07:22:47.412926Z 15829 INFO  received data len: 6 bytes, time at 1694330567.412885, data: 1234
+ - test.cpp:19
+20230910 07:22:50.836231Z 15829 INFO  conn from 127.0.0.1:36690 to 127.0.0.1:8888 is disconnected - test.cpp:10
+20230910 07:22:50.836254Z 15829 INFO  TcpServer::removeConnectionInLoop [test-tcp-server] - connection test-tcp-server-0.0.0.0:8888#1 - TcpServer.cc:100
 ```
 
-* 使用 telnet 进行测试。
+* telnet 测试客户端。
 
 ```shell
-telnet 127.0.0.1 8888
+# ➜  muduo-2.0.2 telnet 127.0.0.1 8888
 Trying 127.0.0.1...
 Connected to 127.0.0.1.
 Escape character is '^]'.
-1
-1
+1234
+1234
+^]
+
+telnet> quit
+Connection closed.
 ```
 
 ---
 
 ## 5. vscode 调试配置
 
-在 muduo 源码目录下的 .vscode 文件夹，编写对应的配置文件。
+### 5.1. 配置
 
-> 配置好后，打开测试 test.cpp 文件，设置调试断点，F5 快捷键，vscode 调试 test.cpp 文件。
+在 muduo 源码目录下的 `.vscode` 文件夹，编写对应的配置文件。
 
 <div align=center><img src="/images/2023/2023-09-10-10-05-09.png" data-action="zoom"></div>
 
@@ -234,5 +235,11 @@ Escape character is '^]'.
     ]
 }
 ```
+
+---
+
+### 5.2. 调试
+
+配置好后，打开测试 test.cpp 文件，设置调试断点，F5 快捷键，vscode 调试 test.cpp 文件进入 muduo 源码。
 
 <div align=center><img src="/images/2023/2023-09-10-10-03-54.png" data-action="zoom"></div>
