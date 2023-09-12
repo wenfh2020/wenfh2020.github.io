@@ -182,7 +182,7 @@ Connection closed.
 
 * luanch.json
 
-```shell
+```json
 {
     "version": "0.2.0",
     "configurations": [
@@ -212,7 +212,7 @@ Connection closed.
 
 * tasks.json
 
-```shell
+```json
 {
     "version": "2.0.0",
     "tasks": [
@@ -243,3 +243,10 @@ Connection closed.
 配置好后，打开测试 test.cpp 文件，设置调试断点，F5 快捷键，vscode 调试 test.cpp 文件进入 muduo 源码。
 
 <div align=center><img src="/images/2023/2023-09-10-10-03-54.png" data-action="zoom"></div>
+
+---
+
+## 6. 引用
+
+* [ubuntu18.04 muduo编译安装](https://blog.csdn.net/u013944212/article/details/88086804)
+* [muduo网络库 ---- Linux 平台下 muduo 编译安装](https://blog.csdn.net/JACKSONMHLK/article/details/122089545)
