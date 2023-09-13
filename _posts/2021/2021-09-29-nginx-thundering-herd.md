@@ -65,13 +65,13 @@ telnet 127.0.0.1 80
 # 子进程 epoll 监控共享的 listen socket ---> 6。
 79981 epoll_ctl(8, EPOLL_CTL_ADD, 6, {EPOLLIN|EPOLLRDHUP, {u32=1868849168, u64=140318450409488}} <unfinished ...>
 # 子进程 79981 被唤醒。
-79981 epoll_wait(8, {{EPOLLIN, {u32=1868849392, u64=140318450409712}}}, 512, -1) = 1
+79981 epoll_wait(8, {EPOLLIN, {u32=1868849392, u64=140318450409712}}, 512, -1) = 1
 79981 epoll_wait(8,  <unfinished ...>
 79981 accept4(6,  <unfinished ...>
 # accept4 成功获取一个链接资源。
 79981 <... accept4 resumed> {sa_family=AF_INET, sin_port=htons(58960), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 10
 79981 epoll_ctl(8, EPOLL_CTL_ADD, 10, {EPOLLIN|EPOLLRDHUP|EPOLLET, {u32=1868849616, u64=140318450409936}}) = 0
-79981 epoll_wait(8, {{EPOLLIN|EPOLLRDHUP, {u32=1868849616, u64=140318450409936}}}, 512, 60000) = 1
+79981 epoll_wait(8, {EPOLLIN|EPOLLRDHUP, {u32=1868849616, u64=140318450409936}}, 512, 60000) = 1
 79981 recvfrom(10, "", 1024, 0, NULL, NULL) = 0
 79981 close(10)                         = 0
 ...
