@@ -6,11 +6,11 @@ tags: redis sentinel SubjectivelyDown ObjectivelyDown
 author: wenfh2020
 ---
 
-redis 哨兵集群有 3 个角色：sentinel/master/slave，每个角色都可能出现故障，故障转移主要针对 <font color='red'>master</font>，而且故障转移是个复杂的工作流程。在分布式系统中，多个节点要保证数据一致性，需要相互通信协调，要经历几个环节：
+本章重点走读 redis 源码，理解 sentinel 检测 master 节点的主客观下线流程。
+
+redis 哨兵集群有 3 个角色：sentinel/master/slave，每个角色都可能出现故障，故障转移主要针对 `master`：
 
 > master 主观下线 --> master 客观下线 --> 投票选举 leader --> leader 执行故障转移。
-
-本章重点走读 redis 源码，理解 sentinel 检测 master 节点的主客观下线流程。
 
 
 
@@ -113,7 +113,7 @@ void sentinelCheckSubjectivelyDown(sentinelRedisInstance *ri) {
 
 ### 2.2. 客观下线
 
-* 询问主观下线。
+#### 2.2.1. 询问主观下线
 
 当 sentinel 检测到 master 主观下线，它会询问其它 sentinel（发送 IS-MASTER-DOWN-BY-ADDR 请求）：是否也检测到该 master 已经主观下线了。
 
@@ -121,8 +121,8 @@ void sentinelCheckSubjectivelyDown(sentinelRedisInstance *ri) {
 
 `SENTINEL IS-MASTER-DOWN-BY-ADDR` 命令有两个作用：
 
-1. 询问其它 sentinel 节点，该 master 是否已经主观下线。命令最后一个参数为 <*>。
-2. 确认 master 客观下线，当前 sentinel 向其它 sentinel 拉选票，让其它 sentinel 选自己为 “代表”。命令最后一个参数为 <sentinel_runid>，sentinel 自己的 runid。
+1. 询问其它 sentinel 节点，该 master 是否已经主观下线。命令最后一个参数为 \<*\>。
+2. 确认 master 客观下线，当前 sentinel 向其它 sentinel 拉选票，让其它 sentinel 选自己为 “代表”。命令最后一个参数为 \<sentinel_runid\>，sentinel 自己的 runid。
 
 这里是 sentinel 发现了 master 主观下线，所以先进入询问环节，再进行选举拉票。
 
@@ -175,7 +175,9 @@ void sentinelAskMasterStateToOtherSentinels(sentinelRedisInstance *master, int f
 }
 ```
 
-* 其它 sentinel 接收命令。
+---
+
+#### 2.2.2. 其它 sentinel 接收命令
 
 ```c
 void sentinelCommand(client *c) {
@@ -206,7 +208,7 @@ void sentinelCommand(client *c) {
 }
 ```
 
-* 当前 sentinel 接收命令回复。
+#### 2.2.3. 当前 sentinel 接收命令回复
 
 当前 sentinel 接收到询问的回复，如果确认该 master 已经主观下线，那么将其标识为 `SRI_MASTER_DOWN`。
 
@@ -233,9 +235,9 @@ void sentinelReceiveIsMasterDownReply(redisAsyncContext *c, void *reply, void *p
 
 ---
 
-* 确认客观下线
+#### 2.2.4. 确认客观下线
 
-当 >= 法定个数（quorum）的 sentinel 节点确认该 master 主观下线，那么标识当前主观下线的 master 被标识为客观下线。
+当大于等于法定个数（quorum）的 sentinel 节点确认该 master 主观下线，那么标识该主观下线的 master 为客观下线。
 
 ```c
 void sentinelCheckObjectivelyDown(sentinelRedisInstance *master) {
@@ -257,7 +259,9 @@ void sentinelCheckObjectivelyDown(sentinelRedisInstance *master) {
         }
         dictReleaseIterator(di);
         /* 是否满足当前 sentinel 配置的法定个数：quorum。 */
-        if (quorum >= master->quorum) odown = 1;
+        if (quorum >= master->quorum) {
+            odown = 1;
+        }
     }
 
     /* Set the flag accordingly to the outcome. */

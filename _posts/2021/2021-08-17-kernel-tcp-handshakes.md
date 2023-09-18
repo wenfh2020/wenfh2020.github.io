@@ -35,7 +35,9 @@ tcp 通信，客户端和服务端通过三次握手进行连接；握手流程�
 
 > 图片来源：[TCP 三次握手（内核）](https://www.processon.com/view/610f1bbb1efad41a37e200c7)
 
-### 2.1. TCP_SYN_SENT
+---
+
+### 2.1. 客户端 - TCP_SYN_SENT
 
 第一次握手，客户端向服务端发送 SYN 报文包。
 
@@ -70,7 +72,7 @@ int tcp_v4_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len) {
 
 ---
 
-### 2.2. TCP_NEW_SYN_RECV
+### 2.2. 服务端 - TCP_NEW_SYN_RECV
 
 服务端收到客户端发送的 SYN 包后，将状态修改为 TCP_NEW_SYN_RECV，为了节省资源，并没有为 `struct sock` 分配空间，而是创建轻量级的连接请求 `struct request_sock`。
 
@@ -246,7 +248,7 @@ void tcp_finish_connect(struct sock *sk, struct sk_buff *skb) {
 
 ---
 
-### 2.4. TCP_SYN_RECV
+### 2.4. 服务端 - TCP_SYN_RECV
 
 服务端收到客户端第三次握手发过来的 ACK 包，服务端将 TCP 状态从 TCP_NEW_SYN_RECV 修改为 TCP_SYN_RECV，然后为连接结构（`struct sock`）分配空间，这样可以提高资源的分配效率。
 

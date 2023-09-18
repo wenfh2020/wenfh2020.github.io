@@ -22,11 +22,11 @@ author: wenfh2020
 
 投票原理："先到先得"，每个 sentinel 机会是对等的，都有投票权利。
 
-每个 sentinel 当确认 master 客观下线，它需要向其它 sentinel 拉票，让它们投票给自己。当然 sentinel 除了拉票，它自己也能主动投，投别人，或者投自己。
+每个 sentinel 当确认 master 客观下线后，它需要向其它 sentinel 拉票，让它们投票给自己。当然 sentinel 除了拉票，它自己也能主动投，投别人，或者投自己。
 
 少数服从多数，当集群里超过半数的 sentinel 选某个 sentinel 为代表，那么它就是 leader，这样选举结束。
 
-![选举投票](/images/2020/2020-09-27-12-46-37.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-15-16-42-11.png" data-action="zoom"/></div>
 
 ---
 
@@ -44,7 +44,7 @@ SENTINEL is-master-down-by-addr <masterip> <masterport> <sentinel.current_epoch>
 1. \<masterip\>， \<masterport\> 参数传输 master 的 ip 和 端口（注意：不是传 mastername，因为每个 sentinel 上配置的 name 有可能不一样）。
 2. \<sentinel.current_epoch\> 选举纪元，可以理解为选举计数器，每次 sentinel 之间选举，不一定成功，有可能会进行多次，所以每次选举计数器会加 1，表示第几轮选举。
 3. \<sentinel_runid\> 当前 sentinel 的 runid，因为选举投票原理是“先到先得”。当其它 sentinel 在一轮选举中，先接收到拉票信息的，会先投给它。
-   > 例如 sentinel A，B，C 三个实例，当 A 向 B，C 进行拉票。B 先接收到 A 的拉票信息，那么 B 就选 A 为 leader，但是 C 在接收到 A 的拉票信息前，它已经接到 B 的拉票信息，它已经将票投给了 B，不能再投给 A 了，所以 B 会返回它选的 C 的信息。
+   > 例如：sentinel A，B，C 三个实例，当 A 向 B，C 进行拉票。如果 B 先接收到 A 的拉票信息，那么 B 就选 A 为 leader。如果 B 在接收到 A 的拉票信息前，已接收到 C 的拉票，那么 B 已将票投给了 C，B 将会回复 "已投票给 C" 给 A。
 
 ---
 
@@ -78,7 +78,9 @@ void sentinelAskMasterStateToOtherSentinels(sentinelRedisInstance *master, int f
                                    master->addr->ip, port,
                                    sentinel.current_epoch,
                                    (master->failover_state > SENTINEL_FAILOVER_STATE_NONE) ? sentinel.myid : "*");
-        if (retval == C_OK) ri->link->pending_commands++;
+        if (retval == C_OK) {
+            ri->link->pending_commands++;
+        }
     }
     dictReleaseIterator(di);
 }
@@ -114,7 +116,9 @@ void sentinelCommand(client *c) {
         addReply(c, isdown ? shared.cone : shared.czero);
         addReplyBulkCString(c, leader ? leader : "*");
         addReplyLongLong(c, (long long)leader_epoch);
-        if (leader) sdsfree(leader);
+        if (leader) {
+            sdsfree(leader);
+        }
     }
     ...
 }
@@ -168,7 +172,9 @@ sentinel 的投票有两种方式：
 1. 被动：接收到别人的投票请求（上述的别人拉票 `SENTINEL IS-MASTER-DOWN-BY-ADDR`）。
 2. 主动：“我”主动投票（`sentinelVoteLeader`）给别人/自己。
 
-投票是“先到先得”，可以投给别人也可以投给自己，如果实在没人拉票，就投给自己。“先到先得” 是通过 `epoch` 去标识，它是一个计数器，表示第几轮投票。所有 sentinel 节点第一轮投票从 epoch == 1 开始，区别是有些 sentinel 投得快，有的投得慢，因为每个 sentinel 时钟定时执行的频率有可能不一样。
+投票是 “先到先得”，可以投给别人也可以投给自己，如果实在没人拉票，就投给自己。
+
+“先到先得” 是通过 `epoch` 去标识，它是一个计数器，表示第几轮投票。所有 sentinel 节点第一轮投票从 epoch == 1 开始，区别是有些 sentinel 投得快，有的投得慢，因为每个 sentinel 时钟定时执行的频率有可能不一样。
 
 ```c
 char *sentinelVoteLeader(sentinelRedisInstance *master, uint64_t req_epoch, char *req_runid, uint64_t *leader_epoch) {
@@ -203,7 +209,9 @@ char *sentinelVoteLeader(sentinelRedisInstance *master, uint64_t req_epoch, char
 
 故障转移有很多环节，sentinel 要选举中赢得选举，成为 leader，才能完成故障转移所有环节。
 
-当 sentinel 检测到 master 客观下线，它进入了“选举”环节，已经开启了故障转移，并统计投票选举结果。在统计票数过程中，它会根据统计结果进行主动投票：如果没人来拉票，我也没有投过票，那么可以投自己，否则自己投票数多的人。
+当 sentinel 检测到 master 客观下线，它进入了 “选举” 环节后，已经开启了故障转移，并统计投票选举结果。
+
+在统计票数过程中，它会根据统计结果进行主动投票：如果没人来拉票，我也没有投过票，那么可以投自己，否则自己投票数多的人。
 
 ```c
 void sentinelFailoverWaitStart(sentinelRedisInstance *ri) {
@@ -347,6 +355,9 @@ int sentinelStartFailoverIfNeeded(sentinelRedisInstance *master) {
 }
 
 void sentinelStartFailover(sentinelRedisInstance *master) {
+    ...
+    /* 设定故障转移的选举纪元，标识第几轮选举。*/
+    master->failover_epoch = ++sentinel.current_epoch;
     ...
     /* 开启故障转移，设置故障转移时间。 */
     master->failover_start_time = mstime() + rand() % SENTINEL_MAX_DESYNC;

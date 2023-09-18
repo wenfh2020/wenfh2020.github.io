@@ -21,12 +21,12 @@ mathjax: true
 归并排序采用了分治法的递归排序。分治法：分解子问题，解决子问题，合并子结果。
 
 * 分解：分解待排序的 $n$ 个元素的序列各成 $\frac{n}{2}$ 个元素的子列。
-* 解决：使用归并排序递å归地排序两个子序列。
+* 解决：使用归并排序递归地排序两个子序列。
 * 合并：合并两个已排序的子序列以产生已排序的答案。
 
 因为排序数组会被 $\frac{n}{2}$ 拆开，归并排序时间复杂度稳定的 $nlgn$。
 
-![算法深度](/images/2020/2020-06-03-06-53-58.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-15-11-50-54.png" data-action="zoom"/></div>
 
 相对于其它的 $nlgn$ 排序，它需要额外的临时空间辅助，有一定的资源损耗。小数量级（百万级别）的排序，要比快速排序慢。但是大数量级数据（千万级别），因为归并排序树深最小，排序比快速排序快。
 > 快速排序，最优算法复杂度，数组会被 $\frac{n}{2}$ 拆开。实际操作中数据很难达到最优。而归并一直都是通过 $\frac{n}{2}$ 进行拆分。
@@ -40,9 +40,9 @@ mathjax: true
 1. 拆分左右两个临时数组，临时数组最后是一个∞无穷大的数字。
 2. 两个子数组进行比较，小的数值会拷贝到原数组。
 
-![算法](/images/2020/2020-06-03-06-54-21.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-15-11-51-27.png" data-action="zoom"/></div>
 
-![归并](/images/2020/2020-06-03-06-54-38.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-15-11-51-33.png" data-action="zoom"/></div>
 
 ---
 
@@ -85,7 +85,7 @@ void merge(int array[], int start, int end) {
 
 数组 A = {5, 2,4,7, 1, 3, 2, 6} 子数组最后一次合并排序流程。
 
-![实现流程](/images/2020/2020-06-03-06-55-17.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-15-11-51-48.png" data-action="zoom"/></div>
 
 ---
 
