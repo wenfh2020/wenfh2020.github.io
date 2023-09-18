@@ -63,7 +63,7 @@ void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
 
 ## 2. 故障发现
 
-<div align=center><img src="/images/2023/2023-09-18-18-12-25.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-09-18-18-20-19.png" data-action="zoom"></div>
 
 ### 2.1. 主观下线
 
