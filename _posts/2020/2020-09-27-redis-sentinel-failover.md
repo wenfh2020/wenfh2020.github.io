@@ -14,6 +14,7 @@ author: wenfh2020
 
 master 主观下线 -> master 客观下线 -> 选举 -> leader 筛选 master 的最优 slave -> 晋升最优 slave 为 master -> 通知原 master 的其它 slave 链接新 master -> 结束故障转移 -> 更新新 master 的存储结构关系 -> 旧 master 重新上线被降级为 slave。
 
+---
 
 
 
