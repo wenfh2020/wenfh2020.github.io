@@ -214,6 +214,8 @@ sentinel 进程对 sentinel / master / slave 三个角色用数据结构 `sentin
 
 ![sentinelRedisInstance 节点保存关系](/images/2020/2020-09-17-16-23-59.png){:data-action="zoom"}
 
+<div align=center><img src="/images/2023/2023-09-18-20-15-12.png" data-action="zoom"></div>
+
 ```c
 // 角色数据结构。
 typedef struct sentinelRedisInstance {

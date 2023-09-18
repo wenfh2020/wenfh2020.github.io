@@ -6,7 +6,13 @@ tags: redis sentinel failover
 author: wenfh2020
 ---
 
-接上一章投票选举 [《[redis 源码走读] sentinel 哨兵 - 选举投票》](https://wenfh2020.com/2020/09/26/redis-sentinel-vote/)。前面几章已经讲了：各个角色的通信，主客观下线，投票选举，当 sentinel 的 leader 被选出来后，由它来完成 redis 实例的角色转换。
+前面几章已经讲了：redis 集群各个角色之间的通信，主客观下线，投票选举；在选举中胜出的哨兵 leader，由它来完成 redis 集群的故障转移：**redis 实例的角色转换**。
+
+---
+
+哨兵故障转移主体流程：
+
+master 主观下线 -> master 客观下线 -> 选举 -> leader 筛选 master 的最优 slave -> 晋升最优 slave 为 master -> 通知原 master 的其它 slave 链接新 master -> 结束故障转移 -> 更新新 master 的存储结构关系 -> 旧 master 重新上线被降级为 slave。
 
 
 
@@ -18,11 +24,11 @@ author: wenfh2020
 
 ## 1. 故障转移
 
-故障转移有很多个环节组成，集群中每个 sentinel 都有机会执行，但是只有在选举过程中，赢得选票的人，才能完整完成整个故障转移流程。
+故障转移由许多环节组成，集群中每个 sentinel 都有机会实行，但是只有在选举过程中赢得选票的人，才可以完整完成整个故障转移流程。
 
 ### 1.1. 流程
 
-sentinel 的故障转移流程有几个环节组成，主要可以看它源码定义的几个宏：
+sentinel 节点故障转移流程的几个环节：
 
 ```c
 /* 初始状态。*/
@@ -75,6 +81,8 @@ void sentinelFailoverStateMachine(sentinelRedisInstance *ri) {
 
 * 测试节点。
 
+<style> table th:first-of-type { width: 150px; } </style>
+<style> table th:nth-of-type(2) { width: 150px; } </style>
 | node       | ip        | port  |
 | :--------- | :-------- | :---- |
 | sentinel A | 127.0.0.1 | 26379 |
@@ -84,7 +92,7 @@ void sentinelFailoverStateMachine(sentinelRedisInstance *ri) {
 | slave      | 127.0.0.1 | 6378  |
 | slave2     | 127.0.0.1 | 6377  |
 
-![故障转移测试环节](/images/2020/2020-09-30-16-47-51.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-18-20-07-28.png" data-action="zoom"></div>
 
 * 测试脚本（[github](https://github.com/wenfh2020/shell/blob/master/redis/test_redis_sentinel.sh)）
 
@@ -312,9 +320,9 @@ void sentinelStartFailover(sentinelRedisInstance *master) {
 
 ---
 
-### 2.2. 等待投票结果
+### 2.2. 统计投票结果
 
-开启故障转移后，要经过选举投票环节，确认当前 sentinel 是否在投票中胜出，否则不能执行故障转移的其它流程。
+开启故障转移后，要经过选举投票环节，经过票数统计，确认当前 sentinel 在选举中胜出，当前 sentinel 节点作为 leader 执行下一个环节：筛选客观下线 master 的最优 slave。
 
 ```c
 void sentinelFailoverWaitStart(sentinelRedisInstance *ri) {
@@ -371,7 +379,7 @@ void sentinelAbortFailover(sentinelRedisInstance *ri) {
 1. 网络连接没有处于异常状态的。
 2. 优先级小的。
 3. 数据复制偏移量比较大的。
-4. slave runid 字符串比较，小于 0 的。
+4. slave runid 字符串进行比较，筛选比较结果小于 0 的。
 
 ---
 
@@ -816,7 +824,7 @@ void sentinelFailoverDetectEnd(sentinelRedisInstance *master) {
 
 sentinel 存储节点信息的拓扑结构(如下图)，所以当故障转移成功，sentinel leader 理应更新对应节点的数据和数据结构关系。
 
-![sentinelRedisInstance 节点保存关系](/images/2020/2020-09-17-16-23-59.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-18-20-15-12.png" data-action="zoom"></div>
 
 ```c
 /* 定时监控节点的工作情况。 */
