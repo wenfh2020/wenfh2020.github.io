@@ -74,7 +74,7 @@ author: wenfh2020
 
 当 socket 对应的事件发生时，内核能不能只唤醒一个进程呢？可以的，方法也很简单，把 add_wait_queue 换成 add_wait_queue_exclusive 就可以了，这个函数添加了一个比较重要的（独占）排它性标识 WQ_FLAG_EXCLUSIVE。
 
-其实这也是 epollexclusive 解决方案的做法，通过 epoll_ctl 添加 EPOLLEXCLUSIVE 属性，不过 EPOLLEXCLUSIVE 是 2016 年 4.5+ 内核版本新添加的一个 epoll 标识，目前比较普及的 Linux 稳定版本大部分是 3.x + ，还不支持，道理还是那个道理，可以通过这个 Linux patch (github)了解下。
+其实这也是 epollexclusive 解决方案的做法，通过 epoll_ctl 添加 EPOLLEXCLUSIVE 属性，不过 EPOLLEXCLUSIVE 是 2016 年 4.5+ 内核版本新添加的一个 epoll 标识，目前比较普及的 Linux 稳定版本大部分是 3.x + ，还不支持，道理还是那个道理，可以通过这个 Linux patch ([github](https://github.com/torvalds/linux/commit/df0108c5da561c66c333bb46bfe3c1fc65905898))了解下。
 
 ```c
 /* include/linux/wait.h */
