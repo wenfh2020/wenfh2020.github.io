@@ -10,8 +10,9 @@ author: wenfh2020
 
 redis 哨兵集群有 3 个角色：sentinel/master/slave，每个角色都可能出现故障，故障转移主要针对 `master`：
 
-> master 主观下线 --> master 客观下线 --> 投票选举 leader --> leader 执行故障转移。
-
+```shell
+master 主观下线 --> master 客观下线 --> 投票选举 leader --> leader 执行故障转移。
+```
 
 
 
@@ -24,10 +25,10 @@ redis 哨兵集群有 3 个角色：sentinel/master/slave，每个角色都可�
 
 1. sentinel 时钟定时检查监控的各个 redis 实例角色，是否通信异常。
 2. 发现 master 主观下线。
-3. 向其它 sentinel 节点询问它们是否也检测到该 master 主观下线。
-4. sentinel 通过询问，确认 master 客观下线。
+3. 向其它 sentinel 节点询问它们是否也检测到该 master 已下线。
+4. sentinel 通过向其它 sentinel 节点询问，确认 master 客观下线。
 5. 进入选举环节，sentinel 向其它 sentinel 节点拉票，希望它们选自己为代表进行故障转移。
-6. 少数服从多数，当超过法定 sentinel 个数选择某个 sentinel 为代表。
+6. 少数服从多数，在最新一轮选举中，当超过法定个数的 sentinel 选择某个 sentinel 为代表，那么该 sentienl 当选 leader。
 7. sentinel 代表执行故障转移。
 
 ```c
@@ -62,7 +63,7 @@ void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
 
 ## 2. 故障发现
 
-![主客观下线时序](/images/2020/2020-09-26-07-38-49.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-18-18-12-25.png" data-action="zoom"></div>
 
 ### 2.1. 主观下线
 
@@ -115,13 +116,13 @@ void sentinelCheckSubjectivelyDown(sentinelRedisInstance *ri) {
 
 #### 2.2.1. 询问主观下线
 
-当 sentinel 检测到 master 主观下线，它会询问其它 sentinel（发送 IS-MASTER-DOWN-BY-ADDR 请求）：是否也检测到该 master 已经主观下线了。
+当 sentinel 检测到 master 主观下线，它会询问其它 sentinel（发送 IS-MASTER-DOWN-BY-ADDR 请求）：是否也检测到该 master 已经下线。
 
 ---
 
 `SENTINEL IS-MASTER-DOWN-BY-ADDR` 命令有两个作用：
 
-1. 询问其它 sentinel 节点，该 master 是否已经主观下线。命令最后一个参数为 \<*\>。
+1. 询问其它 sentinel 节点，该 master 是否已经下线，命令最后一个参数为 \<*\>。
 2. 确认 master 客观下线，当前 sentinel 向其它 sentinel 拉选票，让其它 sentinel 选自己为 “代表”。命令最后一个参数为 \<sentinel_runid\>，sentinel 自己的 runid。
 
 这里是 sentinel 发现了 master 主观下线，所以先进入询问环节，再进行选举拉票。
@@ -168,7 +169,8 @@ void sentinelAskMasterStateToOtherSentinels(sentinelRedisInstance *master, int f
                                    sentinelInstanceMapCommand(ri, "SENTINEL"),
                                    master->addr->ip, port,
                                    sentinel.current_epoch,
-                                   (master->failover_state > SENTINEL_FAILOVER_STATE_NONE) ? sentinel.myid : "*");
+                                   (master->failover_state > SENTINEL_FAILOVER_STATE_NONE)
+                                   ? sentinel.myid : "*");
         if (retval == C_OK) ri->link->pending_commands++;
     }
     dictReleaseIterator(di);
@@ -194,7 +196,8 @@ void sentinelCommand(client *c) {
 
         /* 询问 master 主观下线命令参数是 *，选举投票参数是请求的 sentinel 的 runid。*/
         if (ri && ri->flags & SRI_MASTER && strcasecmp(c->argv[5]->ptr, "*")) {
-            leader = sentinelVoteLeader(ri, (uint64_t)req_epoch, c->argv[5]->ptr, &leader_epoch);
+            leader = sentinelVoteLeader(
+                     ri, (uint64_t)req_epoch, c->argv[5]->ptr, &leader_epoch);
         }
 
         /* 根据询问主观下线或投票选举业务确定回复的内容参数。 */
@@ -285,7 +288,7 @@ void sentinelCheckObjectivelyDown(sentinelRedisInstance *master) {
 
 ## 3. 开启故障转移
 
-当 sentinel 检测到某个 master 客观下线，可以进入开启故障转移流程了。
+当 sentinel 检测到某个 master 客观下线，开启故障转移流程，进入选举环节。
 
 ```c
 /* 定时检查 master 故障情况情况。 */
