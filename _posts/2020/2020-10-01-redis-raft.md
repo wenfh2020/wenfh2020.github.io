@@ -40,7 +40,7 @@ Raft 算法的另一个关键特性是日志复制。当领导者接收到客户
 
 ### 1.2. 要点
 
-核心要点：leader 选举，日志复制，数据安全性。
+raft 算法的核心要点：leader 选举，日志复制，数据安全性。
 
 * 领导选举：Raft 算法通过选举一个领导者来协调分布式系统中的操作。选举过程中，每个节点都可以成为候选者，并通过投票来选择领导者。
 * 日志复制：Raft 算法使用日志来记录系统状态的变化。领导者负责接收客户端的请求，并将其作为日志条目附加到自己的日志中。然后，领导者将这些日志条目发送给其他节点，以便复制它们的日志。
@@ -49,6 +49,17 @@ Raft 算法的另一个关键特性是日志复制。当领导者接收到客户
 * 成员变更：Raft 算法允许动态地添加或删除节点，以适应系统的变化。
 
 > 部分文字来源：ChatGPT。
+
+---
+
+### 1.3. 文档
+
+个人只是简单浏览了一下 raft 算法的相关文档和论文，并没研读细节。B 站有个视频（[动画：Raft算法Leader选举、脑裂后选举、日志复制、修复不一致日志和数据安全](https://www.bilibili.com/video/BV1so4y1r7eM/?spm_id_from=333.880.my_history.page.click&vd_source=a2a56cf0a934465d3945d595a71e68dc)） 对 raft 算法的讲解还是挺通俗易懂的。
+
+* raft 算法官网[《The Raft Consensus Algorithm》](https://raft.github.io/)
+* raft 算法中文翻译[《寻找一种易于理解的一致性算法（扩展版）》](https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md)
+* raft 算法[《动画 ppt》](http://thesecretlivesofdata.com/raft/)
+* [动画：Raft算法Leader选举、脑裂后选举、日志复制、修复不一致日志和数据安全](https://www.bilibili.com/video/BV1so4y1r7eM/?spm_id_from=333.880.my_history.page.click&vd_source=a2a56cf0a934465d3945d595a71e68dc)
 
 ---
 
@@ -70,12 +81,3 @@ Raft 算法的另一个关键特性是日志复制。当领导者接收到客户
   
   1. [《[redis 源码走读] 主从数据复制 ①》](https://wenfh2020.com/2020/05/17/redis-replication/)
   2. [《[redis 源码走读] 主从数据复制 ②》](https://wenfh2020.com/2020/05/31/redis-replication-next/)
-
----
-
-## 3. 引用
-
-* raft 算法官网[《The Raft Consensus Algorithm》](https://raft.github.io/)
-* raft 算法中文翻译[《寻找一种易于理解的一致性算法（扩展版）》](https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md)
-* raft 算法[《动画 ppt》](http://thesecretlivesofdata.com/raft/)
-* [动画：Raft算法Leader选举、脑裂后选举、日志复制、修复不一致日志和数据安全](https://www.bilibili.com/video/BV1so4y1r7eM/?spm_id_from=333.880.my_history.page.click&vd_source=a2a56cf0a934465d3945d595a71e68dc)
