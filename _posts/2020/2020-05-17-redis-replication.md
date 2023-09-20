@@ -6,7 +6,7 @@ tags: redis replication
 author: wenfh2020
 ---
 
-阅读源码前，先了解 redis 主从复制的基本知识。
+redis 主从复制，master 将数据通过全量复制或者增量复制方式，异步将数据复制到与它链接的 slave 节点，保证数据的最终一致性。本章将探索 redis 数据复制的工作流程。
 
 > 详细源码分析，请参考 [下一章](https://wenfh2020.com/2020/05/31/redis-replication-next/)
 
@@ -34,7 +34,7 @@ author: wenfh2020
 * A 图，数据复制实时性比较好，但是如果 slave 节点数量多了，master 复制数据量就会增大，特别是全量复制场景。
 * B 图，D，E sub-slave 节点数据复制实时性相对差一点，但是能解决多个从节点下，master 数据复制压力，能支撑系统更大的负载。
 
-![主从复制模式](/images/2020/2020-05-31-12-04-10.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-20-15-33-50.png" data-action="zoom"/></div>
 
 ---
 
@@ -49,7 +49,8 @@ replicaof <masterip> <masterport>
 # slave是否支持写命令操作。
 replica-read-only yes
 
-# 积压缓冲区大小。缓冲区在 master，slave 断线重连后，如果是增量复制，master 就从缓冲区里取出数据复制给 slave。
+# 积压缓冲区大小。缓冲区在 master，slave 断线重连后，
+# 如果是增量复制，master 就从缓冲区里取出数据复制给 slave。
 repl-backlog-size 1mb
 
 # 防止脑裂设置，对 slave 的链接数量和 slave 复制（保活）时间限制。
@@ -164,7 +165,7 @@ Linux 平台可以通过 `strace` 抓包，观察主从数据复制工作流程�
 replicaof 127.0.0.1 16379
 ```
 
-![redis 全量复制流程](/images/2020/2020-05-31-10-16-02.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-20-15-03-54.png" data-action="zoom"/></div>
 
 ---
 

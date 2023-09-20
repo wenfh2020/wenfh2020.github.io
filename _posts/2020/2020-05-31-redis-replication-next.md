@@ -6,10 +6,11 @@ tags: redis replication
 author: wenfh2020
 ---
 
-redis 主从模式主要作用：读写分离，提高系统的负载能力；保证服务高可用。
+redis 主从模式主要作用：多节点协调工作保证服务高可用；读写分离，提高系统负载能力；多节点保存数据副本，确保数据安全性。
 
-承接 [上一章](https://wenfh2020.com/2020/05/17/redis-replication/)，本章继续走读 redis 6.0 源码 [github](https://github.com/antirez/redis)，理解 redis 主从数据复制流程。
+[上一章](https://wenfh2020.com/2020/05/17/redis-replication/) 讲述了主从复制的基本配置，以及数据全量复制的机制，本章继续走读 [redis 6.0](https://github.com/antirez/redis) 源码，理解 redis 主从数据复制的增量复制方式的工作流程。
 
+> redis 是纯 c 源码，阅读起来实现比较清晰，缺点：它也是一个异步的网络框架，回调处理的逻辑理解有点费劲。
 
 
 
@@ -18,13 +19,102 @@ redis 主从模式主要作用：读写分离，提高系统的负载能力；�
 
 ---
 
-## 1. PSYNC
+## 1. 数据结构
 
-![psync 工作流程](/images/2020/2020-06-04-16-53-39.png){:data-action="zoom"}
+### 1.1. redisServer
 
-### 1.1. slave
+redis master / slave 节点数据结构。
 
-* 发送 PSYNC 命令，处理 master 回复。
+```c
+#define CONFIG_RUN_ID_SIZE 40
+
+struct redisServer {
+    ...
+    list *slaves, *monitors;    /* List of slaves and MONITORs */
+    ...
+    /* Replication (master) */
+    char replid[CONFIG_RUN_ID_SIZE+1];  /* My current replication ID. */
+    char replid2[CONFIG_RUN_ID_SIZE+1]; /* replid inherited from master*/
+    long long master_repl_offset;   /* My current replication offset */
+    long long master_repl_meaningful_offset; /* Offset minus latest PINGs. */
+    long long second_replid_offset; /* Accept offsets up to this for replid2. */
+    char *repl_backlog;             /* Replication backlog for partial syncs */
+    long long repl_backlog_size;    /* Backlog circular buffer size */
+    long long repl_backlog_histlen; /* Backlog actual data length */
+    long long repl_backlog_idx;     /* Backlog circular buffer current offset,
+                                       that is the next byte will'll write to.*/
+    long long repl_backlog_off;     /* Replication "master offset" of first
+    ...
+    /* Replication (slave) */
+    char *masterhost;               /* Hostname of master */
+    int masterport;                 /* Port of master */
+    client *master;     /* Client that is master for this slave */
+    client *cached_master; /* Cached master to be reused for PSYNC. */
+    int repl_state;          /* Replication status if the instance is a slave */
+    ...
+    char master_replid[CONFIG_RUN_ID_SIZE+1];  /* Master PSYNC runid. */
+    long long master_initial_offset;           /* Master PSYNC offset. */
+}
+```
+
+* master
+
+| 结构成员             | 描述                                                                                                                                                                                                                             |
+| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| slaves               | slaves 副本链接列表。                                                                                                                                                                                                            |
+| replid               | 副本 id，只有 master 有自己独立的 replid，如果服务是 slave，那么它需要复制 master 的 replid，进行填充。                                                                                                                          |
+| replid2              | master 历史 replid。复制双方断开链接或者故障转移过程中，服务节点角色发生改变，需要缓存旧的 master replid 到 replid2。因为所有 slave 数据到来自 master。复制双方重新建立链接后，通过 `PSYNC <replid> <offset>` 命令进行数据复制。 |
+| master_repl_offset   | master 数据偏移量。复制双方是异步进行的，所以数据并不是严格的数据一致。                                                                                                                                                          |
+| second_replid_offset | 历史数据偏移量。与 replid2 搭配使用。                                                                                                                                                                                            |
+| repl_backlog         | 积压缓冲区。被设计成环形数据结构。                                                                                                                                                                                               |
+| repl_backlog_size    | 积压缓冲区容量。可以通过配置文件进行配置。                                                                                                                                                                                       |
+| repl_backlog_histlen | 积压缓冲区实际填充了多少数据。                                                                                                                                                                                                   |
+| repl_backlog_idx     | 积压缓冲区，当前填充数据的位置。                                                                                                                                                                                                 |
+| repl_backlog_off     | 积压缓冲区数据起始位置。 <br/>server.repl_backlog_off = server.master_repl_offset+1                                                                                                                                              |
+
+* slave
+
+| 结构成员              | 描述                                                                                                                     |
+| :-------------------- | :----------------------------------------------------------------------------------------------------------------------- |
+| masterhost            | Hostname of master (replicaofCommand \| replicationSetMaster)                                                            |
+| masterport            | Port of master (replicaofCommand \| replicationSetMaster)                                                                |
+| repl_state            | 副本状态，复制双方建立数据复制要经过很多步骤，而这些步骤被进行到哪个环节被记录在 repl_state。                            |
+| master                | slave 链接 master 的客户端链接。                                                                                         |
+| cached_master         | slave 与 master 断开链接后，原链接被释放回收。为方便断线重连后数据重复被利用，需要缓存 master 链接数据到 cached_master。 |
+| master_replid         | master 的 replid。                                                                                                       |
+| master_initial_offset | slave 通过命令 PSYNC 向 master 全量复制的数据偏移量。                                                                    |
+
+---
+
+### 1.2. client
+
+master 与 slave 节点间异步通信链接对象。
+
+```c
+typedef struct client {
+    ...
+    long long read_reploff; /* Read replication offset if this is a master. */
+    long long reploff;      /* Applied replication offset if this is a master. */
+    char replid[CONFIG_RUN_ID_SIZE+1]; /* Master replication ID (if master). */
+    ...
+}
+```
+
+| 结构成员     | 描述                                                                                                                                        |
+| :----------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| replid       | master 副本 id。                                                                                                                            |
+| read_reploff | slave 当前向 master 读取的数据偏移量。                                                                                                      |
+| masterport   | slave 当前实际处理的数据偏移量。因为异步复制，有些读数据，读出来没有完全处理完，还在缓冲区里。例如 tcp 粘包问题，数据没有接收完整，等原因。 |
+
+---
+
+## 2. PSYNC
+
+<div align=center><img src="/images/2023/2023-09-20-15-37-11.png" data-action="zoom"/></div>
+
+### 2.1. slave
+
+* salve 发送 PSYNC 命令给 master。
 
 ```c
 void syncWithMaster(connection *conn) {
@@ -39,7 +129,7 @@ void syncWithMaster(connection *conn) {
         return;
     }
     ...
-    // slave 处理 PSYNC 命令的回复数据包。
+    /* slave 处理 PSYNC 命令的回复数据包。*/
     psync_result = slaveTryPartialResynchronization(conn,1);
     ...
     /* 增量复制。
@@ -59,19 +149,21 @@ void syncWithMaster(connection *conn) {
 }
 ```
 
-* 增量 / 全量复制。
+* 处理 master 的回复：根据回复协议分析，确认数据的复制方式：数据复制/增量复制，并做相应的处理。
 
 ```c
 int slaveTryPartialResynchronization(connection *conn, int read_reply) {
     ...
     if (!read_reply) {
+        /* 发送 */
         ...
         /* 复制双方有可能是断线重连，断线后，原来的链接 server.master 失效，被回收，
          * 为了重复利用原有数据，slave 会缓存 server.master 链接到 server.cached_master。*/
         if (server.cached_master) {
             psync_replid = server.cached_master->replid;
             // slave 发送当前的数据偏移量。
-            snprintf(psync_offset,sizeof(psync_offset),"%lld", server.cached_master->reploff+1);
+            snprintf(psync_offset, sizeof(psync_offset), "%lld", 
+                     server.cached_master->reploff+1);
         } else {
             // slave 第一次链接 master，还没有 master 对应数据，所以用特殊符号标识。
             psync_replid = "?";
@@ -79,9 +171,12 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
         }
 
         // slave 发送 PSYNC 命令到 master。
-        reply = sendSynchronousCommand(SYNC_CMD_WRITE,conn,"PSYNC",psync_replid,psync_offset,NULL);
+        reply = sendSynchronousCommand(SYNC_CMD_WRITE, conn, "PSYNC",
+                psync_replid, psync_offset, NULL);
         ...
     }
+
+    /* 接收 */
     ...
     /* 全量复制。
      * slave 接收到 master 的回复：+FULLRESYNC <replid> <offset>
@@ -115,9 +210,10 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
     }
 
     /* 增量复制
-     * slave 接收到 master 的回复： +CONTINUE <new repl ID> */
+     * slave 接收到 master 的回复：+CONTINUE <new repl ID> */
     if (!strncmp(reply,"+CONTINUE",9)) {
-        // 检查 master 是否有新的 <new repl ID>，有可能 redis 集群故障转移后，集群产生新的 master。
+        /* 检查 master 是否有新的 <new repl ID>，
+         * 有可能 redis 集群故障转移后，集群产生新的 master。*/
         char *start = reply+10;
         char *end = reply+9;
         while(end[0] != '\r' && end[0] != '\n' && end[0] != '\0') end++;
@@ -139,10 +235,12 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
                 /* 更新 master client 对应的 replid。
                  * 因为增量复制是之前曾经链接成功的，后来断开链接了，需要缓存断开的链接
                  * 方便后续重连操作。所以会将原来 server.master，缓存到 server.cached_master。
-                 * 当重连成功后 server.cached_master 会被清空。详看 replicationResurrectCachedMaster()。*/
+                 * 当重连成功后 server.cached_master 会被清空。
+                 * 详看 replicationResurrectCachedMaster()。*/
                 memcpy(server.cached_master->replid,new,sizeof(server.replid));
 
-                // 如果当前 slave 有子服务 sub-slave，断开子服务链接，让它们重新走 PSYNC 复制流程。
+                /* 如果当前 slave 有子服务 sub-slave，
+                 * 那么断开子服务链接，让它们重新走 PSYNC 复制流程。*/
                 disconnectSlaves();
             }
         }
@@ -161,9 +259,9 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
 
 ---
 
-### 1.2. master
+### 2.2. master
 
-* 处理 PSYNC 命令。
+* 处理 slave 发送的 PSYNC 命令。
 
 ```c
 void syncCommand(client *c) {
@@ -179,10 +277,10 @@ void syncCommand(client *c) {
         ...
     }
     ...
-    // 全量复制。
+    /* 全量复制。*/
     server.stat_sync_full++;
 
-    // 更新链接同步状态，建立 slave 数据复制链接。
+    /* 更新链接同步状态，建立 slave 数据复制链接。*/
     c->replstate = SLAVE_STATE_WAIT_BGSAVE_START;
     if (server.repl_disable_tcp_nodelay)
         connDisableTcpNoDelay(c->conn); /* Non critical if it fails. */
@@ -190,7 +288,7 @@ void syncCommand(client *c) {
     c->flags |= CLIENT_SLAVE;
     listAddNodeTail(server.slaves,c);
 
-    // 创建复制的积压缓冲区对应数据。
+    /* 创建复制的积压缓冲区对应数据。*/
     if (listLength(server.slaves) == 1 && server.repl_backlog == NULL) {
         /* When we create the backlog from scratch, we always use a new
          * replication ID and clear the ID2, since there is no valid
@@ -259,7 +357,7 @@ need_full_resync:
 
 ---
 
-## 2. 服务副本 ID
+## 3. 服务副本 ID
 
 每个 **master** 拥有自己的副本 ID \<replid>。
 
@@ -288,13 +386,13 @@ need_full_resync:
 
 ---
 
-## 3. 复制偏移量
+## 4. 复制偏移量
 
 主从服务双方会维护一个复制偏移量（一个数据统计值）。
 
-master 把需要数据复制给 slave 的数据填充到积压缓冲区，并且更新复制偏移量的值。这样，双方的偏移量可以通过对比，可以知道双方数据相差多少。
+master 把需要数据复制给 slave 的数据填充到 **积压缓冲区**，并且更新复制偏移量的值。这样，双方的偏移量可以通过对比，可以知道双方数据相差多少。
 
-### 3.1. master
+### 4.1. master
 
 ```c
 struct redisServer {
@@ -312,7 +410,7 @@ void feedReplicationBacklog(void *ptr, size_t len) {
 }
 ```
 
-### 3.2. slave
+### 4.2. slave
 
 ```c
 typedef struct client {
@@ -345,7 +443,8 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
         if (server.cached_master) {
             psync_replid = server.cached_master->replid;
             // 断线重连 slave 发送保存的数据偏移量。
-            snprintf(psync_offset,sizeof(psync_offset),"%lld", server.cached_master->reploff+1);
+            snprintf(psync_offset,sizeof(psync_offset),"%lld",
+                    server.cached_master->reploff+1);
         } else {
             // slave 第一次链接 master，还没有偏移量，所以用 -1 填充。
             psync_replid = "?";
@@ -353,7 +452,8 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
         }
 
         // slave 发送 PSYNC 命令到 master。
-        reply = sendSynchronousCommand(SYNC_CMD_WRITE,conn,"PSYNC",psync_replid,psync_offset,NULL);
+        reply = sendSynchronousCommand(SYNC_CMD_WRITE,conn,"PSYNC",
+                psync_replid,psync_offset,NULL);
         ...
     }
     ...
@@ -388,7 +488,7 @@ void replicationCreateMasterClient(connection *conn, int dbid) {
 }
 ```
 
-### 3.3. rdb
+### 4.3. rdb
 
 双方全量复制，通过 rdb 文件传输。rdb 会保存 replid 和 server.master_repl_offset 信息。
 
@@ -398,14 +498,14 @@ int rdbSaveInfoAuxFields(rio *rdb, int rdbflags, rdbSaveInfo *rsi) {
     /* Handle saving options that generate aux fields. */
     if (rsi) {
         // 当前 master 正在操作的 db。
-        if (rdbSaveAuxFieldStrInt(rdb,"repl-stream-db",rsi->repl_stream_db)
-            == -1) return -1;
+        if (rdbSaveAuxFieldStrInt(rdb,"repl-stream-db",rsi->repl_stream_db) == -1)
+            return -1;
         // master 的 replid。
-        if (rdbSaveAuxFieldStrStr(rdb,"repl-id",server.replid)
-            == -1) return -1;
+        if (rdbSaveAuxFieldStrStr(rdb,"repl-id",server.replid) == -1)
+            return -1;
         // master 的数据偏移量。
-        if (rdbSaveAuxFieldStrInt(rdb,"repl-offset",server.master_repl_offset)
-            == -1) return -1;
+        if (rdbSaveAuxFieldStrInt(rdb,"repl-offset",server.master_repl_offset) == -1)
+            return -1;
     }
     ...
     return 1;
@@ -414,7 +514,7 @@ int rdbSaveInfoAuxFields(rio *rdb, int rdbflags, rdbSaveInfo *rsi) {
 
 ---
 
-## 4. 复制积压缓冲区
+## 5. 复制积压缓冲区
 
 复制积压缓冲区，是一个连续内存空间，被设计成**环形数据结构**。
 
@@ -422,7 +522,7 @@ master 把需要复制到 slave 的数据，填充到积压缓冲区里。当复
 
 > master 淘汰过期数据，也需要复制给 slave。查看函数的实现：replicationFeedSlaves()
 
-![数据积压缓冲区](/images/2020/2020-06-03-18-14-30.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-20-15-28-16.png" data-action="zoom"/></div>
 
 * master 填充积压缓冲区。
 
@@ -498,91 +598,6 @@ long long addReplyReplicationBacklog(client *c, long long offset) {
     return server.repl_backlog_histlen - skip;
 }
 ```
-
----
-
-## 5. 数据结构
-
-### 5.1. redisServer
-
-```c
-#define CONFIG_RUN_ID_SIZE 40
-
-struct redisServer {
-    ...
-    list *slaves, *monitors;    /* List of slaves and MONITORs */
-    ...
-    /* Replication (master) */
-    char replid[CONFIG_RUN_ID_SIZE+1];  /* My current replication ID. */
-    char replid2[CONFIG_RUN_ID_SIZE+1]; /* replid inherited from master*/
-    long long master_repl_offset;   /* My current replication offset */
-    long long master_repl_meaningful_offset; /* Offset minus latest PINGs. */
-    long long second_replid_offset; /* Accept offsets up to this for replid2. */
-    char *repl_backlog;             /* Replication backlog for partial syncs */
-    long long repl_backlog_size;    /* Backlog circular buffer size */
-    long long repl_backlog_histlen; /* Backlog actual data length */
-    long long repl_backlog_idx;     /* Backlog circular buffer current offset,
-                                       that is the next byte will'll write to.*/
-    long long repl_backlog_off;     /* Replication "master offset" of first
-    ...
-    /* Replication (slave) */
-    char *masterhost;               /* Hostname of master */
-    int masterport;                 /* Port of master */
-    client *master;     /* Client that is master for this slave */
-    client *cached_master; /* Cached master to be reused for PSYNC. */
-    int repl_state;          /* Replication status if the instance is a slave */
-    ...
-    char master_replid[CONFIG_RUN_ID_SIZE+1];  /* Master PSYNC runid. */
-    long long master_initial_offset;           /* Master PSYNC offset. */
-}
-```
-
-* master
-
-| 结构成员             | 描述                                                                                                                                                                                                                             |
-| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| slaves               | slaves 副本链接列表。                                                                                                                                                                                                            |
-| replid               | 副本 id，只有 master 有自己独立的 replid，如果服务是 slave，那么它需要复制 master 的 replid，进行填充。                                                                                                                          |
-| replid2              | master 历史 replid。复制双方断开链接或者故障转移过程中，服务节点角色发生改变，需要缓存旧的 master replid 到 replid2。因为所有 slave 数据到来自 master。复制双方重新建立链接后，通过 `PSYNC <replid> <offset>` 命令进行数据复制。 |
-| master_repl_offset   | master 数据偏移量。复制双方是异步进行的，所以数据并不是严格的数据一致。                                                                                                                                                          |
-| second_replid_offset | 历史数据偏移量。与 replid2 搭配使用。                                                                                                                                                                                            |
-| repl_backlog         | 积压缓冲区。被设计成环形数据结构。                                                                                                                                                                                               |
-| repl_backlog_size    | 积压缓冲区容量。可以通过配置文件进行配置。                                                                                                                                                                                       |
-| repl_backlog_histlen | 积压缓冲区实际填充了多少数据。                                                                                                                                                                                                   |
-| repl_backlog_idx     | 积压缓冲区，当前填充数据的位置。                                                                                                                                                                                                 |
-| repl_backlog_off     | 积压缓冲区数据起始位置。 <br/>server.repl_backlog_off = server.master_repl_offset+1                                                                                                                                              |
-
-* slave
-
-| 结构成员              | 描述                                                                                                                     |
-| :-------------------- | :----------------------------------------------------------------------------------------------------------------------- |
-| masterhost            | Hostname of master (replicaofCommand \| replicationSetMaster)                                                            |
-| masterport            | Port of master (replicaofCommand \| replicationSetMaster)                                                                |
-| repl_state            | 副本状态，复制双方建立数据复制要经过很多步骤，而这些步骤被进行到哪个环节被记录在 repl_state。                            |
-| master                | slave 链接 master 的客户端链接。                                                                                         |
-| cached_master         | slave 与 master 断开链接后，原链接被释放回收。为方便断线重连后数据重复被利用，需要缓存 master 链接数据到 cached_master。 |
-| master_replid         | master 的 replid。                                                                                                       |
-| master_initial_offset | slave 通过命令 PSYNC 向 master 全量复制的数据偏移量。                                                                    |
-
----
-
-### 5.2. client
-
-```c
-typedef struct client {
-    ...
-    long long read_reploff; /* Read replication offset if this is a master. */
-    long long reploff;      /* Applied replication offset if this is a master. */
-    char replid[CONFIG_RUN_ID_SIZE+1]; /* Master replication ID (if master). */
-    ...
-}
-```
-
-| 结构成员     | 描述                                                                                                                                        |
-| :----------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
-| replid       | master 副本 id。                                                                                                                            |
-| read_reploff | slave 当前向 master 读取的数据偏移量。                                                                                                      |
-| masterport   | slave 当前实际处理的数据偏移量。因为异步复制，有些读数据，读出来没有完全处理完，还在缓冲区里。例如 tcp 粘包问题，数据没有接收完整，等原因。 |
 
 ---
 
