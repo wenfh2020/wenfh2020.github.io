@@ -104,11 +104,14 @@ perf script -i perf_with_stack.data | stackcollapse-perf.pl | flamegraph.pl > pe
 
 <div align=center><img src="/images/2020/2020-08-07-00-05-48.png" data-action="zoom" width="40%"/></div>
 
-上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。在源码中查找 vsnprintf，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致不需要存盘的日志数据，仍然执行了 vsnprintf 操作。后面将日志过滤判断放在 vsnprintf 前，重复进行测试，占 1.54%，性能比之前提高了 5 个百分点 —— good 😄!
+上图可以看到 `vsnprintf` 在优化前使用频率非常高，占 6.7%。
+
+在源码中查找 vsnprintf，发现日志入口，对日志等级 level 的判断写在 `log_raw` 里面了，导致不需要存盘的日志数据，仍然执行了 vsnprintf 操作。后面将日志过滤判断放在 vsnprintf 前，重复进行测试，占 1.54%，性能比之前提高了 **5** 个百分点 —— good 😄!
 
 ```cpp
 /* 优化后的的代码。 */
-bool Log::log_data(const char* file_name, int file_line, const char* func_name, int level, const char* fmt, ...) {
+bool Log::log_data(const char* file_name, int file_line, const char* func_name,
+                   int level, const char* fmt, ...) {
     /* 根据日志等级，过滤不需要存盘的日志。 */
     if (level < LL_EMERG || level > LL_DEBUG || level > m_cur_level) {
         return false;

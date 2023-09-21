@@ -6,9 +6,14 @@ tags: redis replication
 author: wenfh2020
 ---
 
-redis 主从复制，master 将数据通过全量复制或者增量复制方式，异步将数据复制到与它链接的 slave 节点，保证数据的最终一致性。本章将探索 redis 数据复制的工作流程。
+redis 主从模式作用：多节点协调工作保证服务高可用；读写分离，提高系统负载能力；多节点保存数据副本，确保数据安全性。
+
+主从模式，需要实现数据同步，master 节点将数据（全量/增量）复制到链接它的 slave 节点。redis 为了保证节点高性能，采用了异步的数据复制方式，高效地实现了数据的最终一致，并非强一致。
+
+那么接下来，将分两个章节来探索 redis 数据复制的核心工作流程。
 
 > 详细源码分析，请参考 [下一章](https://wenfh2020.com/2020/05/31/redis-replication-next/)
+
 
 
 
@@ -17,7 +22,7 @@ redis 主从复制，master 将数据通过全量复制或者增量复制方式�
 
 ---
 
-## 1. 复制模式
+## 1. 复制架构
 
 ```shell
 # Master-Replica replication. Use replicaof to make a Redis instance a copy of
@@ -29,10 +34,10 @@ redis 主从复制，master 将数据通过全量复制或者增量复制方式�
 #   +------------------+      +---------------+
 ```
 
-主从复制，数据是由 master 发送到 slave。一般有两种模式：一主多从，链式主从。这两种复制模式各有优缺点：
+主从复制，数据是由 master 发送到 slave。一般有两种架构：一主多从，链式主从。这两种复制架构各有优缺点：
 
-* A 图，数据复制实时性比较好，但是如果 slave 节点数量多了，master 复制数据量就会增大，特别是全量复制场景。
-* B 图，D，E sub-slave 节点数据复制实时性相对差一点，但是能解决多个从节点下，master 数据复制压力，能支撑系统更大的负载。
+* A 图，主从节点间数据复制实时性较好，但是如果 slave 节点数量多了，master 复制数据量就会增大，特别是全量复制场景，对 master 性能影响比较大。
+* B 图，D，E `sub-slave` 节点数据复制实时性相对差一点，但是能降低 master 数据复制给多个从节点的压力，整个系统能支撑更大的负载。
 
 <div align=center><img src="/images/2023/2023-09-20-15-33-50.png" data-action="zoom"/></div>
 
@@ -118,11 +123,13 @@ into replication
 
 ### 4.1. 复制方式
 
-主从数据复制，有三种方式：
+<style> table th:first-of-type { width: 120px; } </style>
 
-1. 全量数据复制，当 slave 第一次与 master 链接或 slave 与 master 断开链接很久，重新链接后，主从数据严重不一致了，需要全部数据进行复制。
-2. 增量数据复制，slave 因为网络抖动或其它原因，与 master 断开一段时间，重新链接，发现主从数据差异不大，master 只需要复制增加部分数据即可。
-3. 正常链接数据复制，主从成功链接，在工作过程中，master 数据有变化，异步复制到 slave。
+|模式|描述|
+|:--:|:--|
+|全量数据复制|当 slave 第一次与 master 链接或 slave 与 master 断开链接很久，重新链接后，主从数据严重不一致了，需要全部数据进行复制。|
+|增量数据复制|slave 因为网络抖动或其它原因，与 master 断开一段时间，重新链接，发现主从数据差异不大，master 只需要复制增加部分数据即可。|
+|正常链接数据复制|主从节点链接正常，工作过程中，master 数据有变动（增删改），这些变化的数据被 master 异步复制到 slave。|
 
 ---
 
@@ -180,6 +187,8 @@ strace -p 19836 -s 512 -o /tmp/connect.slave
 # 太多时间接口调用了。可以通过 sed 过滤这些数据。
 sed '/gettimeofday/d' /tmp/connect.slave >  /tmp/connect.slave.bak
 ```
+
+* 查看系统调用日志。
 
 ```shell
 ...
@@ -374,10 +383,14 @@ write(8, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n14\r\n", 35) = 35
 
 ### 5.2. master (127.0.0.1:16379)
 
+* strace 查看底层通信流程。
+
 ```shell
 strace -p 19831 -s 512 -o /tmp/connect.master
 sed '/gettimeofday/d' /tmp/connect.master >  /tmp/connect.master.bak
 ```
+
+* 查看系统调用日志。
 
 ```shell
 ...
@@ -469,5 +482,3 @@ epoll_wait(5, [{EPOLLIN, {u32=7, u64=7}}], 10128, 999) = 1
 read(7, "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n14\r\n", 16384) = 35
 ...
 ```
-
-上面主要通过 `strace` 抓包，描述了全量复制的流程。其它场景也一样可以通过这个方法，熟悉它们的工作流程。
