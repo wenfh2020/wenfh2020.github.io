@@ -6,9 +6,9 @@ tags: redis raft
 author: wenfh2020
 ---
 
-raft 一致性算法，它是分布式系统中一种高可用算法策略，只单纯看算法论文，很难掌握它的工作流程。
+redis 是否使用了 raft 一致性算法呢？有，但不是严格意义上的 raft，然而 raft 算法的核心要点：leader 选举，日志复制，数据安全性，你都可以在 redis 中找到类似的实现。
 
-有兴趣的朋友，可以阅读 redis sentinel 源码，当理解了 sentinel 的工作原理，raft 算法自然理解了。
+下面将探索一下 redis 关于 raft 的有关实现。
 
 
 
