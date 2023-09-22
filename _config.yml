@@ -11,6 +11,7 @@ brief-intro: ' '
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "https://wenfh2020.com/" # the base hostname & protocol for your site
 post_site: 'https://wenfh2020.com' # 链接域名。
+feedurl: https://wenfh2020.com
 
 permalink: /:year/:month/:day/:title/
 gitalk_clientid: 3d1547be2ae6256e29b8
