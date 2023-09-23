@@ -6,9 +6,9 @@ tags: redis sentinel contact
 author: wenfh2020
 ---
 
-上一章讲述了哨兵的[工作原理](https://wenfh2020.com/2020/06/06/redis-sentinel/)。
+[上一章](https://wenfh2020.com/2020/06/06/redis-sentinel/) 简述了哨兵的工作原理。
 
-本章通过 `strace` 命令抓取 sentinel 的系统调用日志，熟悉节点通信流程，阅读相关源码。
+本文通过 `strace` 命令抓取 sentinel 节点的系统调用日志，去熟悉节点的通信流程，更好地理解 redis 哨兵集群，是如何通过 PING / INFO / PUBLISH / SUBSCRIBE 这几个命令，将整个集群节点链接成一个整体的通信系统的。
 
 
 
@@ -22,7 +22,7 @@ author: wenfh2020
 
 ### 1.1. 命令
 
-* 下面两个命令都可以启动 sentinel 进程。
+* 启动命令。下面两个命令都可以启动 sentinel 进程。
 
 ```shell
 redis-sentinel /path/to/your/sentinel.conf
@@ -59,7 +59,7 @@ struct redisCommand sentinelcmds[] = {
 | sentinel B | 26377 |
 | sentinel C | 26378 |
 
-![角色关系](/images/2020/2020-09-17-16-00-08.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-23-08-09-46.png" data-action="zoom"></div>
 
 ---
 
@@ -69,7 +69,7 @@ struct redisCommand sentinelcmds[] = {
 
 > 箭头代表节点 connect 的方向，箭头上面的数字是 fd，可以根据 strace 日志，对号入座。fd 从小到大，展示了创建链接的时序。
 
-![抓包工作流程](/images/2020/2020-09-17-15-29-12.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-23-08-12-05.png" data-action="zoom"></div>
 
 ---
 
@@ -211,8 +211,6 @@ read(15, "*3\r\n$6\r\nCLIENT\r\n$7\r\nSETNAME\r\n$21\r\nsentinel-de0ffb0d-cmd\r\
 ### 2.1. 结构
 
 sentinel 进程对 sentinel / master / slave 三个角色用数据结构 `sentinelRedisInstance` 进行管理。
-
-![sentinelRedisInstance 节点保存关系](/images/2020/2020-09-17-16-23-59.png){:data-action="zoom"}
 
 <div align=center><img src="/images/2023/2023-09-18-20-15-12.png" data-action="zoom"></div>
 

@@ -1,14 +1,14 @@
 ---
 layout: post
-title:  "[redis 源码走读] raft 一致性算法（进行中）"
+title:  "[redis 源码走读] redis 与 raft 算法"
 categories: redis
 tags: redis raft 
 author: wenfh2020
 ---
 
-redis 是否使用了 raft 一致性算法呢？有，但不是严格意义上的 raft，然而 raft 算法的核心要点：leader 选举，日志复制，数据安全性，你都可以在 redis 中找到类似的实现。
+redis 是否使用了 raft 一致性算法呢？使用了，但不是严格意义上的 raft，然而 raft 算法的核心要点：领导者选举，日志复制，安全性，你都可以在 redis 中找到相似的实现。
 
-下面将探索一下 redis 关于 raft 的有关实现。
+下面将探索一下 redis 关于 raft 算法的有关实现。
 
 
 
@@ -34,13 +34,72 @@ Raft 算法的另一个关键特性是日志复制。当领导者接收到客户
 
 总的来说，Raft 算法是一种可靠且易于理解的共识算法，适用于构建分布式系统。它通过领导者选举、日志复制和安全性保证来实现一致性。
 
-> 部分文字来源：[The Raft Consensus Algorithm](https://raft.github.io/)
+> 部分文字来源：[The Raft Consensus Algorithm](https://raft.github.io/)，如果觉得文字抽象的朋友可以观看 [B 站的视频](https://www.bilibili.com/video/BV1so4y1r7eM/?spm_id_from=333.880.my_history.page.click&vd_source=a2a56cf0a934465d3945d595a71e68dc)。
 
 ---
 
-### 1.2. 文档
+### 1.2. 角色
 
-个人只是简单浏览了一下 raft 算法的相关文档和论文，并没研读细节。B 站有个视频（[动画：Raft算法Leader选举、脑裂后选举、日志复制、修复不一致日志和数据安全](https://www.bilibili.com/video/BV1so4y1r7eM/?spm_id_from=333.880.my_history.page.click&vd_source=a2a56cf0a934465d3945d595a71e68dc)） 对 raft 算法的讲解还是挺通俗易懂的。
+Raft 算法中有三个角色：领导者（leader）、候选人（candidate）、跟随者（follower）。
+
+* **领导者（leader）**：负责处理客户端请求，并将日志复制到其他节点。
+* **候选人（candidate）**：是在选举过程中的临时角色，它负责发起选举并尝试成为新的领导者。
+* **跟随者（follower）**：只是被动地接受来自领导者的指令，并将日志复制到自己的日志中。
+
+> 部分文字来源：ChatGPT。
+
+---
+
+## 2. redis
+
+试着从 raft 算法的几个特点（领导选举，日志复制，安全性）去理解一下 redis。
+
+### 2.1. 领导选举
+
+* raft 算法，当集群节点发现领导者故障下线，健康节点会重新选举，选出新的领导选举，由它去协调分布式系统操作。
+
+---
+
+* redis 哨兵选举策略与 raft 算法大同小异，都是通过（多轮）选举，选出票数超过半数（法定人数可配）的候选人作为领导选举。
+* 而 redis（哨兵）集群节点有三种角色：master/slave/sentinel，sentinel 主要负责检测 master 故障，一旦发现 master [客观下线](https://wenfh2020.com/2020/06/15/redis-sentinel-master-down/)，sentinel 马上进入 [投票选举](https://wenfh2020.com/2020/09/26/redis-sentinel-vote/) 环节，从多个 sentinel 节点中选出领导选举，由它去执行 master 的 [故障转移](https://wenfh2020.com/2020/09/27/redis-sentinel-failover/)。
+
+---
+
+### 2.2. 日志复制
+
+* raft 算法的数据复制是 `强一致`，领导者接收客户端的请求，将日志复制到其他节点，并确保被复制节点上的数据日志顺序一致。
+* 当半数以上的其他节点成功接收日志，领导者才会确认该条日志提交成功，并修改其它节点上的日志状态为提交成功，通过这样的方式保证集群的数据一致性。
+
+---
+
+* redis 的数据复制是 `最终一致`，master 负责接收客户端的请求，将数据写入内存后，异步复制数据到 slave。
+* slave 初始或断线重连 master，发现数据不一致后，会根据 slave 当前的数据偏移量或 master 节点 ID，向 master 实现增量同步或者全量同步。
+* 如果 slave 正常链接 master，master 数据发生变化会正常发送给对应 slave，但不需要半数以上的 slave 节点确认接收才确认数据同步成功。
+* redis 是高性能服务，它需要在保证性能的前提下进行数据复制，因此数据的 `最终一致` < `强一致`。
+
+---
+
+### 2.3. 安全性
+
+* raft 算法的日志复制是强一致，安全性明显要比 redis 要好。
+* raft 算法的领导选举，需要确保日志的 term 和日志的 index 最优的健康的节点当选领导者。
+
+---
+
+* redis 数据复制是最终一致，master 设置数据积压缓冲区和数据偏移量，与 slave 的数据量进行对比，进行数据复制实现最终一致。
+* redis master 故障下线后，redis 哨兵重新选举，选出新的哨兵领导者。哨兵领导者在下线 master 的 slave 节点中筛选出最优（网络链接正常，优先级低，数据偏移量最大）的 slave 将其晋升为 master。
+
+---
+
+## 3. 小结
+
+* redis 里并没有格使用 raft 算法，它某些特点与 raft 算法相似。
+* redis 哨兵的领导者选举与 raft 算法大同小异。
+* redis 数据复制是最终一致，raft 算法是强一致。
+
+---
+
+## 4. 参考
 
 * raft 算法官网[《The Raft Consensus Algorithm》](https://raft.github.io/)
 * raft 算法中文翻译[《寻找一种易于理解的一致性算法（扩展版）》](https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md)
@@ -49,47 +108,10 @@ Raft 算法的另一个关键特性是日志复制。当领导者接收到客户
 
 ---
 
-## 2. redis 系列
-
-### 2.1. 领导选举
-
-raft 算法，当 leader 出现故障时，在节点群中选出一个 leader，由它去实现分布式系统的日志复制和保证集群高可用。
-
----
-
-redis sentinel 的在选举策略与 raft 算法大同小异，都是在多轮选举中，选出获得选票超过半数（法定人数可配）的候选人作为 leader。而 redis （哨兵）集群有三种角色：master/slave/sentinel，sentinel 主要负责检测 master 故障，一旦 master 发生故障，sentinel 进入投票选举环节，从多个 sentinel 节点中选出 leader，由它去执行 master 的故障转移。
-
----
-
-### 2.2. 日志复制
-
-raft 领导者负责接收客户端的请求，并将其作为日志条目附加到自己的日志中，然后，领导者将这些日志条目发送给其他节点，以便复制它们的日志。当半数以上的其他节点成功接收日志，leader 确认该条日志提交成功，通过这样的方式保证集群的数据数据一致。
-
----
-
-redis 的数据复制是 master 与 slave 异步数据同步，slave 链接 master 会进行全量同步或者根据当前数据偏移量，从 master 实现增量同步，如果 slave 正常链接 master，master 数据发生变化会正常发送给对应 slave，但不需要通过半数以上的 slave 节点确认接收才确认数据同步成功。所以 redis 的数据一致性策略，确实没有 raft 算法那么好，因为 redis 是高性能服务，它需要在保证性能的情况下进行数据复制。
-
----
-
-### 2.3. 安全性
-
-
-
----
-
-### 2.4. sentinel
-  
-  1. [《[redis 源码走读] sentinel 哨兵 - 原理》](https://wenfh2020.com/2020/06/06/redis-sentinel/)
-  2. [《[redis 源码走读] sentinel 哨兵 - 节点链接流程》](https://wenfh2020.com/2020/06/12/redis-sentinel-nodes-contact/)
-  3. [《[redis 源码走读] sentinel 哨兵 - 主客观下线》](https://wenfh2020.com/2020/06/15/redis-sentinel-master-down/)
-  4. [《[redis 源码走读] sentinel 哨兵 - 选举投票》](https://wenfh2020.com/2020/09/26/redis-sentinel-vote/)
-  5. [《[redis 源码走读] sentinel 哨兵 - 故障转移》](https://wenfh2020.com/2020/09/27/redis-sentinel-failover/)
-  6. [《[redis 源码走读] sentinel 哨兵 - 通知第三方》](https://wenfh2020.com/2020/10/09/redis-sentinel-script/)
-  7. [《[redis 源码走读] sentinel 哨兵 - 脑裂处理方案》](https://wenfh2020.com/2019/12/27/redis-split-brain/)
-
----
-
-### 2.5. 主从数据复制
-  
-  1. [《[redis 源码走读] 主从数据复制 ①》](https://wenfh2020.com/2020/05/17/redis-replication/)
-  2. [《[redis 源码走读] 主从数据复制 ②》](https://wenfh2020.com/2020/05/31/redis-replication-next/)
+* [《[redis 源码走读] sentinel 哨兵 - 原理》](https://wenfh2020.com/2020/06/06/redis-sentinel/)
+* [《[redis 源码走读] sentinel 哨兵 - 节点链接流程》](https://wenfh2020.com/2020/06/12/redis-sentinel-nodes-contact/)
+* [《[redis 源码走读] sentinel 哨兵 - 主客观下线》](https://wenfh2020.com/2020/06/15/redis-sentinel-master-down/)
+* [《[redis 源码走读] sentinel 哨兵 - 选举投票》](https://wenfh2020.com/2020/09/26/redis-sentinel-vote/)
+* [《[redis 源码走读] sentinel 哨兵 - 故障转移》](https://wenfh2020.com/2020/09/27/redis-sentinel-failover/)
+* [《[redis 源码走读] 主从数据复制 ①》](https://wenfh2020.com/2020/05/17/redis-replication/)
+* [《[redis 源码走读] 主从数据复制 ②》](https://wenfh2020.com/2020/05/31/redis-replication-next/)
