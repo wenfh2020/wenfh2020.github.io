@@ -308,7 +308,9 @@ char *sentinelHandleConfiguration(char **argv, int argc) {
 }
 
 // 创建角色实例对象。角色间关系，通过哈希表进行管理。
-sentinelRedisInstance *createSentinelRedisInstance(char *name, int flags, char *hostname, int port, int quorum, sentinelRedisInstance *master) {
+sentinelRedisInstance *createSentinelRedisInstance(
+                       char *name, int flags, char *hostname, int port,
+                       int quorum, sentinelRedisInstance *master) {
     sentinelRedisInstance *ri;
     sentinelAddr *addr;
     dict *table = NULL;
@@ -321,7 +323,8 @@ sentinelRedisInstance *createSentinelRedisInstance(char *name, int flags, char *
     addr = createSentinelAddr(hostname,port);
     if (addr == NULL) return NULL;
 
-    /* 一般以 master 为核心管理。只有 master 才配置名称。slave 通过 ip:port 组合成名称进行管理。*/
+    /* 一般以 master 为核心管理。只有 master 才配置名称。
+     * slave 通过 ip:port 组合成名称进行管理。*/
     if (flags & SRI_SLAVE) {
         anetFormatAddr(slavename, sizeof(slavename), hostname, port);
         name = slavename;
@@ -664,7 +667,7 @@ void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
 
 #### 2.3.6. 发布订阅 hello 频道
 
-![抓包工作流程](/images/2020/2020-09-17-15-29-12.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-23-08-12-05.png" data-action="zoom"></div>
 
 * sentinel 发布的文本内容。
 
@@ -772,7 +775,8 @@ void sentinelProcessHelloMessage(char *hello, int hello_len) {
             ...
         }
         ...
-        /* 如果 master 链接信息改变，那么修改 master 的属性信息，以及重置 master 对应的 slave 信息。 */
+        /* 如果 master 链接信息改变，那么修改 master 的属性信息，
+         * 以及重置 master 对应的 slave 信息。 */
         if (si && master->config_epoch < master_config_epoch) {
             master->config_epoch = master_config_epoch;
             if (master_port != master->addr->port || strcmp(master->addr->ip, token[5])) {
