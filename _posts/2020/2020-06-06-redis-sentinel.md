@@ -36,7 +36,7 @@ redis 高可用集群，有三种角色：`master`，`slave`，`sentinel`。
 * sentinel 与 master / slave 通信，为了对 master / slave 进行管理：检查故障，发现故障，转移故障。
 * sentinel 节点之间通信，为了选举 leader，通过 leader 进行集群故障转移。
 
-![高可用节点通信关系](/images/2020/2020-06-09-20-24-46.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-23-18-43-29.png" data-action="zoom"></div>
 
 ---
 
@@ -52,7 +52,7 @@ sentinel monitor mymaster 127.0.0.1 6379 2
 
 >\<quorum\> 是`法定人数`。作用：多个 sentinel 进行相互选举，有超过一定`法定人数`选举某人为领导，那么他就成为 sentinel 的领导，领导负责故障转移。这个法定人数，可以配置，一般是 sentinel 个数一半以上 (n/2 + 1) 比较合理。
 
-![节点关联](/images/2020/2020-06-09-21-09-04.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-23-18-42-14.png" data-action="zoom"></div>
 
 ```shell
 sentinel <--> master，sentinel <--> slave，sentinel A <--> sentinel B
@@ -90,7 +90,7 @@ redis 集群三个角色 sentinel / master / slave 都可能出现故障，当 r
 2. sentinel 向其它 sentinel 节点询问，是否同样检测到该结点出现故障。
 3. 其它节点回复确认故障，当前 sentinel 将该节点标记为客观下线。
 
-![发现故障](/images/2020/2020-06-10-11-51-36.png){:data-action="zoom"}
+<div align=center><img src="/images/2023/2023-09-23-18-47-21.png" data-action="zoom"></div>
 
 ---
 
@@ -103,19 +103,7 @@ redis 集群三个角色 sentinel / master / slave 都可能出现故障，当 r
 
 ---
 
-## 4. 源码走读
-
-通过 gdb 调试，去落实 sentinel 的源码工作流程。
-
-在 main 函数入口下断点，在 `sentinel.c` 源码文件里，几乎每个函数都下断点，启动调试，这个方法好像有点笨，但是这样每个细节流程都不会错过（^_^!）。
-
-> 调试请参考 《[用 gdb 调试 redis](https://wenfh2020.com/2020/01/05/redis-gdb/)》。
-
-![启动调试](/images/2020/2020-06-12-14-31-49.png){:data-action="zoom"}
-
----
-
-## 5. 参考
+## 4. 参考
 
 * [Redis Sentinel Documentation](https://redis.io/topics/sentinel)
 * [[redis 源码走读] 主从数据复制 ①](https://wenfh2020.com/2020/05/17/redis-replication/)
