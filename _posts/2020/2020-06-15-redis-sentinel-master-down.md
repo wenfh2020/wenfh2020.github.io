@@ -349,8 +349,5 @@ void sentinelStartFailover(sentinelRedisInstance *master) {
 
 ## 4. 参考
 
-* [raft 论文翻译](https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md)
-* [raft 算法官网](https://raft.github.io)
-* [raft 算法原理](http://thesecretlivesofdata.com/raft/)
 * [Redis Sentinel 高可用原理](https://521-wf.com/archives/356.html)
 * [Redis源码解析：21sentinel(二)定期发送消息、检测主观下线](https://www.cnblogs.com/gqtcgq/p/7247048.html)
