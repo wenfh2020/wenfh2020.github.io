@@ -93,7 +93,7 @@ Raft 算法中有三个角色：领导者（leader）、候选人（candidate）
 
 ## 3. 小结
 
-* redis 里并没有格使用 raft 算法，它某些特点与 raft 算法相似。
+* redis 里并没有严格使用 raft 算法，它某些特点与 raft 算法相似。
 * redis 哨兵的领导者选举与 raft 算法大同小异。
 * redis 数据复制是最终一致，raft 算法是强一致。
 
