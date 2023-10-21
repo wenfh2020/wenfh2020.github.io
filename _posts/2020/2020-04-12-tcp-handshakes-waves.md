@@ -37,6 +37,12 @@ tcpdump -i lo -vvn port 8080 -w /tmp/tcpdump.cap
 telnet 127.0.0.1 8080
 ```
 
+* tcp 包结构。
+
+<div align=center><img src="/images/2023/2023-10-21-16-48-04.png" data-action="zoom"></div>
+
+> 图片来源：《图解 TCP_IP》 – 6.7 TCP 首部格式
+
 * 链接，三次握手抓包内容：
 
 <div align=center><img src="/images/2023/2023-10-21-16-17-06.png" data-action="zoom"></div>
