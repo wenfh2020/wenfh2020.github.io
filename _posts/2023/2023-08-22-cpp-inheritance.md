@@ -7,6 +7,10 @@ author: wenfh2020
 
 [上一章](https://wenfh2020.com/2022/12/27/deep-cpp/) 简述了虚函数的调用链路，本章主要探索 C++ 各种继承关系的类对象的多态特性。
 
+* [深入探索 C++ 多态 ① - 虚函数调用链路](https://wenfh2020.com/2022/12/27/deep-cpp/)
+* [深入探索 C++ 多态 ② - 继承关系](https://wenfh2020.com/2023/08/22/cpp-inheritance/)
+* [深入探索 C++ 多态 ③ - 虚析构](https://www.wenfh2020.com/2023/08/25/cpp-destructor/)
+
 
 
 
