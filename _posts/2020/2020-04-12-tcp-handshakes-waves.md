@@ -28,59 +28,30 @@ Linux 环境下，用 `tcpdump` 抓包分析 tcp 三次握手和四次挥手/三
 * 服务端口 `12456`。
 
 ```shell
-tcpdump -i lo -vvn port 12456 -w /tmp/tcpdump.cap
+tcpdump -i lo -vvn port 8080 -w /tmp/tcpdump.cap
 ```
 
 * 客户端 `telnet`：
 
 ```shell
-telnet 127.0.0.1 12456
+telnet 127.0.0.1 8080
 ```
 
-* 三次握手，四次挥手抓包内容：
+* 链接，三次握手抓包内容：
 
-```c
-# tcpdump -r /tmp/tcpdump.cap
---- handshakes
-02:24:03.518594 IP localhost.27749 > localhost.12456: Flags [S], seq 1527358664, win 43690, options [mss 65495,sackOK,TS val 102124122 ecr 0,nop,wscale 11], length 0
-22:49:27.762588 IP localhost.12456 > localhost.27749: Flags [S.], seq 2031984515, ack 1527358665, win 43690, options [mss 65495,sackOK,TS val 102124122 ecr 102124122,nop,wscale 11], length 0
-02:24:03.518636 IP localhost.27749 > localhost.12456: Flags [.], ack 1, win 22, options [nop,nop,TS val 102124122 ecr 102124122], length 0
---- send msg
-02:24:05.472290 IP localhost.27749 > localhost.12456: Flags [P.], seq 1:4, ack 1, win 22, options [nop,nop,TS val 102126076 ecr 102124122], length 3
-02:24:05.472304 IP localhost.12456 > localhost.27749: Flags [.], ack 4, win 22, options [nop,nop,TS val 102126076 ecr 102126076], length 0
---- waves
-02:24:15.614921 IP localhost.27749 > localhost.12456: Flags [F.], seq 4, ack 1, win 22, options [nop,nop,TS val 102136219 ecr 102126076], length 0
-02:24:15.654843 IP localhost.12456 > localhost.27749: Flags [.], ack 5, win 22, options [nop,nop,TS val 102136259 ecr 102136219], length 0
-02:24:25.615242 IP localhost.12456 > localhost.27749: Flags [F.], seq 1, ack 5, win 22, options [nop,nop,TS val 102146219 ecr 102136219], length 0
-02:24:25.615276 IP localhost.27749 > localhost.12456: Flags [.], ack 2, win 22, options [nop,nop,TS val 102146219 ecr 102146219], length 0
-```
+<div align=center><img src="/images/2023/2023-10-21-16-17-06.png" data-action="zoom"></div>
 
-* 用神器 `wireshark` 打开 `*.cap` 文件。
+* 断开链接，四次挥手抓包内容：
 
-![wireshark](/images/2020/2020-04-13-09-46-38.png){: data-action="zoom"}
+<div align=center><img src="/images/2023/2023-10-21-16-18-27.png" data-action="zoom"></div>
 
-* 流程
+* 流程。从上面抓包数据看，我们可以描述一下 tcp 握手挥手工作流程。
 
-从上面抓包数据看，我们可以描述一下 tcp 握手挥手工作流程。
+<div align=center><img src="/images/2023/2023-10-21-16-33-39.png" data-action="zoom"></div>
 
-![握手挥手流程](/images/2021/2021-06-08-17-01-28.png){: data-action="zoom"}
+* 四次挥手，如果双方同时关闭链接。
 
-* 三次握手，三次挥手。
-  
-  在本地进行简单测试，抓到的挥手包，多数只有三个，而不是四个。那为什么会出现三个挥手包呢？当客户端主动 close 关闭链接，服务端收到 FIN 后，发现已经没有新的数据要发送给客户端了，那么 ACK 和 FIN 会合成一个包下发，这样就节省了一次挥手，否则还是四次挥手。
-  > 当服务端发现客户端断开后 (read () == 0)，sleep 一下，再调用 close，那么将会抓到 4 个挥手包。
-
-```c
-# tcpdump -r /tmp/tcpdump.cap
---- handshakes
-13:15:40.439590 IP localhost.25541 > localhost.12456: Flags [S], seq 2751955316, win 43690, options [mss 65495,sackOK,TS val 54821043 ecr 0,nop,wscale 11], length 0
-12:03:10.399044 IP localhost.12456 > localhost.25541: Flags [S.], seq 2140744854, ack 2751955317, win 43690, options [mss 65495,sackOK,TS val 54821043 ecr 54821043,nop,wscale 11], length 0
-13:15:40.439616 IP localhost.25541 > localhost.12456: Flags [.], ack 1, win 22, options [nop,nop,TS val 54821043 ecr 54821043], length 0
---- waves
-13:15:57.601816 IP localhost.12456 > localhost.25541: Flags [F.], seq 1, ack 1, win 22, options [nop,nop,TS val 54838205 ecr 54821043], length 0
-13:15:57.602406 IP localhost.25541 > localhost.12456: Flags [F.], seq 1, ack 2, win 22, options [nop,nop,TS val 54838206 ecr 54838205], length 0
-13:15:57.602425 IP localhost.12456 > localhost.25541: Flags [.], ack 2, win 22, options [nop,nop,TS val 54838206 ecr 54838206], length 0
-```
+<div align=center><img src="/images/2023/2023-10-21-16-29-00.png" data-action="zoom"></div>
 
 ---
 
