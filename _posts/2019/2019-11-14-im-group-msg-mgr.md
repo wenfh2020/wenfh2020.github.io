@@ -110,7 +110,7 @@ msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
 
 * database 数据落地。
 
-<div align=center><img src="/images/2020/2020-02-25-08-16-18.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-10-30-10-41-58.png" width="80%" data-action="zoom"/></div>
 
 ---
 
@@ -118,13 +118,13 @@ msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
 
 ### 5.1. 写数据
 
-<div align=center><img src="/images/2020/2020-02-25-08-16-44.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-10-30-10-40-03.png" data-action="zoom"/></div>
 
 ---
 
 ### 5.2. 读数据
 
-<div align=center><img src="/images/2020/2020-02-25-08-17-14.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2023-10-30-10-41-26.png" data-action="zoom"/></div>
 
 ---
 
