@@ -93,7 +93,7 @@ group_id, uid
 * 消息结构
 
 ```shell
-msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
+msg_id, group_id, send_uid, recv_uid, recv_time, msg_body
 ```
 
 ---
