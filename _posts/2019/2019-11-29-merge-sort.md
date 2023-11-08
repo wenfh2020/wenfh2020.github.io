@@ -33,14 +33,7 @@ mathjax: true
 
 ---
 
-## 2. 算法
-
-算法导论实现思想：
-
-1. 拆分左右两个临时数组，临时数组最后是一个∞无穷大的数字。
-2. 两个子数组进行比较，小的数值会拷贝到原数组。
-
-<div align=center><img src="/images/2023/2023-09-15-11-51-27.png" data-action="zoom"/></div>
+## 2. 视图
 
 <div align=center><img src="/images/2023/2023-09-15-11-51-33.png" data-action="zoom"/></div>
 
