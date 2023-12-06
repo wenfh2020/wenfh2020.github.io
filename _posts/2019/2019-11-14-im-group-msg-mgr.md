@@ -27,7 +27,7 @@ author: wenfh2020
 
 ---
 
-![消息时序](/images/2020/2020-02-25-08-14-15.png){: data-action="zoom"}
+<div align=center><img src="/images/2023/2023-10-29-15-13-42.png" data-action="zoom"/></div>
 
 > 设计图来源：[《即时通讯（IM）- 千人群组消息管理》](https://www.processon.com/apps/5dbb0ac4e4b0ea86c41ca550)
 
@@ -68,13 +68,17 @@ key: group_id, score: recv_time, value: msg_id
 key: msg_id, value: msg_body
 ```
 
-* set 存储未读消息对象。
+* hash 存储未读消息对象。
 
-  每个用户都可能有 N 个群组，N 个好友。用户重新上线后，不可能遍历所有好友或群组对象。所以服务在处理离线消息时，需要记录未读消息对象。
+  每个用户都可能有 N 个群组，N 个好友。用户重新上线后，不可能遍历所有好友或群组对象。所以服务在处理离线消息时，需要记录未读消息对象。为避免某些用户长久不上线，导致存储数据积压，使用 hash 进行存储。value 保存某个对象第一条未读消息的时间戳，知道了起始时间，就能从 redis 或者 mysql 里读取某个时间到当前时间段内的所有数据。
 
 ```shell
-key: uid, member:group_id/send_uid
+key: uid, filed: obj_id(group_id/send_uid), value: msg_id/time_stamp
 ```
+
+<div align=center><img src="/images/2023/2023-10-29-15-08-29.png" width="90%" data-action="zoom"/></div>
+
+<div align=center><img src="/images/2023/2023-10-29-15-08-51.png" data-action="zoom"/></div>
 
 ---
 
@@ -89,7 +93,7 @@ group_id, uid
 * 消息结构
 
 ```shell
-msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
+msg_id, group_id, send_uid, recv_uid, recv_time, msg_body
 ```
 
 ---
@@ -106,7 +110,7 @@ msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
 
 * database 数据落地。
 
-![存储架构](/images/2020/2020-02-25-08-16-18.png){: data-action="zoom"}
+<div align=center><img src="/images/2023/2023-10-30-10-41-58.png" width="80%" data-action="zoom"/></div>
 
 ---
 
@@ -114,13 +118,13 @@ msg_id, group_id, send_uid, recv_uid,  recv_time, msg_body
 
 ### 5.1. 写数据
 
-![写逻辑](/images/2020/2020-02-25-08-16-44.png){: data-action="zoom"}
+<div align=center><img src="/images/2023/2023-10-30-10-40-03.png" data-action="zoom"/></div>
 
 ---
 
 ### 5.2. 读数据
 
-![读逻辑](/images/2020/2020-02-25-08-17-14.png){: data-action="zoom"}
+<div align=center><img src="/images/2023/2023-10-30-10-41-26.png" data-action="zoom"/></div>
 
 ---
 
