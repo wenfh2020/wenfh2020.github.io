@@ -8,7 +8,7 @@ author: wenfh2020
 
 本文通过测试和走读 [std::vector::emplace_back](https://cplusplus.com/reference/vector/vector/emplace_back/) 源码，理解 C++11 引入的 emplace 新特性。
 
-原理相对简单：emplace_back 函数的参数类型是可变数量的 `万能引用`，参数通过 `完美转发` 到 std::vector 内部进行对象创建构造，可以有效减少参数传递过程中产生临时对象，避免了对象的移动和拷贝。
+原理相对简单：emplace_back 函数的参数类型是可变数量的 `万能引用`，实参通过 `万能引用`，`完美转发` 到 std::vector 内部进行对象创建构造，可以有效减少参数传递过程中产生临时对象，避免了对象的移动和拷贝。
 
 ```cpp
 /* /usr/include/c++/4.8.2/debug/vector */
@@ -155,13 +155,11 @@ ee constructed
 
 通过走读源码：
 
-1. 我们可以发现 emplace_back 的输入参数类型是 `万能引用`，入参通过 `完美转发` 给内部 ::new 进行对象构造，并将其追加到数组对应的位置。
+1. 我们可以发现 emplace_back 的输入参数类型是 `万能引用`，入参 `完美转发` 给内部 ::new 进行对象创建和就地构造，并将其追加到数组对应的位置。
 
-2. 测试例程里 `datas.emplace_back("ee");`，它插入对象元素，并没有触发拷贝构造和移动构造。因为 emplace_back 接口传递的是字符串常量，而真正的对象构造是在内部实现的：`::new ((void*)__p) _Up(std::forward<_Args>(__args)...);` ，在插入对象元素的整个过程中，并未产生须要拷贝和移动的 `临时对象`。
+2. 测试例程里 `datas.emplace_back("ee");`，它插入对象元素，并没有触发拷贝构造和移动构造。因为 emplace_back 接口传递的是字符串常量，而真正的对象创建和构造是在 std::vector 内部实现的：`::new ((void*)__p) _Up(std::forward<_Args>(__args)...);`，相当于 `new Data("ee")`，在插入对象元素的整个过程中，并未产生须要拷贝和移动的 `临时对象`。
 
-* 万能引用参数类型 + 完美转发。
-
-> 详细知识请查看《Effective Modern C++》- 第五章：右值引用、移动语义和完美转发。
+> 万能引用/完美转发 相关知识点请参考：详细知识请查看《Effective Modern C++》- 第五章：右值引用、移动语义和完美转发。
 
 ```cpp
 /* /usr/include/c++/4.8.2/debug/vector */
