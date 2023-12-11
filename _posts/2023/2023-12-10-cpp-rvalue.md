@@ -61,12 +61,12 @@ int main() {
     // 临时变量：右值引用。
     f(A());
 
-    // 强制转换：右值引用。
+    // 强制转换左值 a 为右值引用。
     A a;
     f(std::move(a));
 
-    // 强制转换：b 是右值引用。
     A b;
+    // 强制转换左值 b 为右值引用。
     A&& c = std::move(b);
     std::cout << "c is rvalue? "
               << std::is_same<decltype(c), A&&>::value
@@ -121,15 +121,15 @@ void f2(const A&& a) {
 }
 
 int main() {
-    // 强制转换：b 是右值引用。
-    A b;
-    A&& c = std::move(b);
-    std::cout << "c is rvalue? "
+    A a;
+    // 强制转换左值 a 为右值引用。
+    A&& b = std::move(a);
+    std::cout << "b is rvalue? "
               << std::is_same<decltype(c), A&&>::value
               << std::endl;
     // 虽然 b 的变量类型是右值引用，
     // 但是 b 作为 f 函数的实参，以左值方式给 f 函数传值。
-    f(c);
+    f(b);
 
     // f2 的形参类型 A&& 虽然是右值引用，
     // 但是在函数内部，形参作为左值使用~~~~~
@@ -138,7 +138,7 @@ int main() {
 }
 
 // 输出：
-// c is rvalue? 1
+// b is rvalue? 1
 // f(A&)
 // f2(A&&) arg is rvalue? 0
 ```
