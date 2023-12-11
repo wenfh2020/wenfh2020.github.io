@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "[c++] 右值引用"
-categories: c++
+title:  "[C++] 右值引用"
+categories: c/c++
 author: wenfh2020
 ---
 
