@@ -341,7 +341,7 @@ class A {
    private:
     void release() {
         if (m_data != nullptr) {
-            delete m_data;
+            delete[] m_data;
             m_data = nullptr;
         }
     }
@@ -430,7 +430,7 @@ class A {
    private:
     void release() {
         if (m_data != nullptr) {
-            delete m_data;
+            delete[] m_data;
             m_data = nullptr;
         }
     }
