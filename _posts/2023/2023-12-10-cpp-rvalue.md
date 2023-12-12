@@ -69,8 +69,6 @@ int main() {
 ...
 ```
 
-<div align=center><img src="/images/2023/2023-12-12-12-49-22.png" data-action="zoom"></div>
-
 <div align=center><img src="/images/2023/2023-12-12-12-51-01.png" data-action="zoom"></div>
 
 ---
