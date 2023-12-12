@@ -149,8 +149,6 @@ int main() {
 1. 右值引用变量作为函数的实参传递。
 2. 函数的形参是左值。
 
-* 源码。
-
 ```cpp
 // g++ -std=c++11 test.cpp -o test && ./test
 #include <iostream>
