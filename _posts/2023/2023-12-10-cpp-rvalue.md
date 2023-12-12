@@ -95,6 +95,11 @@ C++11 引入了一种新的引用类型：右值引用，它主要用于优化�
 class A {
 };
 
+A makeObj() {
+    A a;
+    return a;
+}
+
 void f(const A&& a) {
     std::cout << "f(A&&)" << std::endl;
 }
@@ -105,32 +110,34 @@ void f(const A& a) {
 
 int main() {
     // 字面量：k 右值引用。
-    int&& k = 1;
-    std::cout << "k is rvalue? "
-              << std::is_same<decltype(k), int&&>::value
+    int&& a = 1;
+    std::cout << "a is rvalue? "
+              << std::is_same<decltype(a), int&&>::value
               << std::endl;
 
-    // 临时变量：右值引用。
+    // 临时变量作为右值引用在函数中传递。
     f(A());
 
-    // 强制转换左值 a 为右值引用。
-    A a;
-    f(std::move(a));
+    // 延长函数返回值的生命周期。
+    auto&& b = makeObj();
+    std::cout << "b is rvalue? "
+              << std::is_same<decltype(b), A&&>::value
+              << std::endl;
 
-    A b;
-    // 强制转换左值 b 为右值引用。
-    A&& c = std::move(b);
-    std::cout << "c is rvalue? "
-              << std::is_same<decltype(c), A&&>::value
+    A c;
+    // 强制转换左值 c 为右值引用 d。
+    A&& d = std::move(c);
+    std::cout << "d is rvalue? "
+              << std::is_same<decltype(d), A&&>::value
               << std::endl;
     return 0;
 }
 
 // 输出：
-// k is rvalue? 1
+// a is rvalue? 1
 // f(A&&)
-// f(A&&)
-// c is rvalue? 1
+// b is rvalue? 1
+// d is rvalue? 1
 ```
 
 ---
