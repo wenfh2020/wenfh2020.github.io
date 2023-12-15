@@ -348,6 +348,8 @@ void test(ThreadPool& pool, const A& a) {
 
 lambda 匿名类对象（__lambda_32_12）成员 `const A a;`，在程序传递过程中不停地发生拷贝。
 
+**原因**：线程池中 submit 函数直接和间接地多次使用 std::bind，导致执行函数传递的参数多次发生拷贝。
+
 <div align=center><img src="/images/2023/2023-12-15-14-21-21.png" data-action="zoom"></div>
 
 拷贝具体位置：
