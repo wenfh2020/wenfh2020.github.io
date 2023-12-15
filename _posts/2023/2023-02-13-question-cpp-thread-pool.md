@@ -28,8 +28,6 @@ Github 上有个[轻量级线程池](https://github.com/mtrebi/thread-pool)，�
 
 ## 2. 源码
 
-### 2.1. 线程池源码
-
 考虑到有些同学上不了 Github，所以把源码贴到下面来了。能上的同学，直接通过链接访问 [Github](https://github.com/mtrebi/thread-pool) 即可。
 
 * 安全队列。
@@ -188,7 +186,7 @@ class ThreadPool {
 
 ---
 
-### 2.2. 测试源码
+* 测试源码。
 
 ```cpp
 #include <iostream>
@@ -260,5 +258,215 @@ int main(int argc, char* argv[]) {
     pool.shutdown();
 
     return 0;
+}
+```
+
+---
+
+## 3. 缺点
+
+### 3.1. 问题
+
+缺点非常明显，实际应用中，线程执行函数的参数拷贝次数有点多。
+
+```cpp
+// g++ -g -O0 -std=c++11 test.cpp -lpthread -o t && ./t
+#include <iostream>
+
+#include "thread_pool.h"
+
+class A {
+   public:
+    A() {
+        std::cout << "A()\n";
+    }
+    A(const A&) {
+        std::cout << "A(const A&)\n";
+    }
+    A(A&&) {
+        std::cout << "A(A&&)\n";
+    }
+    void f() const {
+        std::cout << "thread work\n";
+    }
+};
+
+void test(ThreadPool& pool, const A& a) {
+    std::cout << "submit\n";
+    auto r = pool.submit([=]() {
+        a.f();
+    });
+    r.get();
+}
+
+int main(int argc, char* argv[]) {
+    ThreadPool pool(1);
+    pool.init();
+    A a;
+    test(pool, a);
+    pool.shutdown();
+    return 0;
+}
+
+// 输出：
+// A()
+// submit
+// A(const A&)
+// A(const A&)
+// A(const A&)
+// A(const A&)
+// thread work
+```
+
+如果执行函数传参为引用，效果要好很多，但是把引用传到多线程中去，貌似不安全啊~~~。
+
+> 下面源码，如果调用了 submit 后，不调用 `r.get` 进行等待，那么函数生命期结束后，引用指向的变量实体就会被销毁，而在线程内，引用变量可能继续被使用，这是危险的。
+
+```cpp
+void test(ThreadPool& pool, const A& a) {
+    std::cout << "submit\n";
+    // 修改 ‘=’ 为 ‘&a’
+    auto r = pool.submit([&a]() {
+        a.f();
+    });
+    r.get();
+}
+
+// 输出：
+// A()
+// submit
+// thread work
+```
+
+---
+
+### 3.2. 问题分析
+
+现在把 submit 函数影响拷贝的地方抽取出来，定位问题。
+
+通过工具 [cppinsights](https://cppinsights.io/) 查看 lambda 的模板实例化源码：
+
+lambda 匿名类对象（__lambda_32_12）成员 `const A a;`，在程序传递过程中不停地发生拷贝。
+
+<div align=center><img src="/images/2023/2023-12-15-14-21-21.png" data-action="zoom"></div>
+
+拷贝具体位置：
+
+1. 创建 lambada 匿名函数对象。
+2. 调用 std::bind。
+3. std::bind 返回变量赋值给左值变量。
+4. 创建回调任务：std::packaged_task 内部实现有 std::bind 调用。
+
+* 测试源码。
+
+```cpp
+// g++ -g -O0 -std=c++11 test.cpp -lpthread -o t && ./t
+#include <functional>
+#include <future>
+#include <iostream>
+#include <thread>
+
+class A {
+   public:
+    A() {
+        std::cout << "A()\n";
+    }
+    A(const A&) {
+        std::cout << "A(const A&)\n";
+    }
+    A(A&&) {
+        std::cout << "A(A&&)\n";
+    }
+    void f() const {}
+};
+
+template <typename F, typename... Args>
+auto submit(F&& f, Args&&... args) -> void {
+    // std::bind 拷贝参数。
+    // std::bind 返回赋值给 func，产生二次拷贝。
+    std::function<decltype(f(args...))()> func =
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+    // 创建 std::packaged_task 回调对象，内部封装有 std::bind，再次拷贝参数 ^_^！。
+    auto task_ptr =
+        std::make_shared<std::packaged_task<decltype(f(args...))()>>(func);
+    std::function<void()> wrapper_func = [task_ptr]() { (*task_ptr)(); };
+}
+
+void f2(const A& a) {
+    submit([=]() {
+        a.f();
+    });
+}
+
+int main(int argc, char* argv[]) {
+    A a;
+    f2(a);
+    return 0;
+}
+
+// 输出：
+// A()
+// A(const A&)
+// A(const A&)
+// A(const A&)
+// A(const A&)
+```
+
+* 模板实例化代码。
+
+```cpp
+void f2(const A& a) {
+    class __lambda_32_12 {
+       public:
+        inline /*constexpr */ void operator()() const {
+            a.f();
+        }
+
+       private:
+        const A a;
+
+       public:
+        __lambda_32_12(const A& _a)
+            : a{_a} {}
+    };
+
+    submit(__lambda_32_12{a});
+}
+```
+
+---
+
+* 如果匿名函数改为 `引用` 情况就不一样了，匿名函数对象的成员变成了引用 `const A& a;`，**引用变量在程序内部传递不会产生拷贝**。
+
+```cpp
+void f2(const A& a) {
+    submit([&a]() {
+        a.f();
+    });
+}
+
+// 输出：
+// A()
+```
+
+* 模板实例化代码。
+
+```cpp
+void f2(const A& a) {
+    class __lambda_35_12 {
+       public:
+        inline /*constexpr */ void operator()() const {
+            a.f();
+        }
+
+       private:
+        const A& a;
+
+       public:
+        __lambda_35_12(const A& _a)
+            : a{_a} {}
+    };
+
+    submit(__lambda_35_12{a});
 }
 ```
