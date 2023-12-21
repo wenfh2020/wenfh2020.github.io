@@ -7,7 +7,10 @@ author: wenfh2020
 
 动态多态虽然使用灵活，但在某些性能要求极高的嵌入式系统，虚函数调用的性能开销往往显得不那么友好。
 
-
+* [深入探索 C++ 多态 ① - 虚函数调用链路](https://wenfh2020.com/2022/12/27/deep-cpp/)
+* [深入探索 C++ 多态 ② - 继承关系](https://wenfh2020.com/2023/08/22/cpp-inheritance/)
+* [深入探索 C++ 多态 ③ - 虚析构](https://www.wenfh2020.com/2023/08/25/cpp-destructor/)
+* [深入探索 C++ 多态 ④ - 模板静态多态](https://wenfh2020.com/2023/12/21/cpp-static-polymorphism/)
 
 ---
 
