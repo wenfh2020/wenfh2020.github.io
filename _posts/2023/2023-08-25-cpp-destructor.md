@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "深入探索 C++ 多态 ③ - 虚析构"
+title:  "[C++] 深入探索 C++ 多态 ③ - 虚析构"
 categories: c/c++
 author: wenfh2020
 ---

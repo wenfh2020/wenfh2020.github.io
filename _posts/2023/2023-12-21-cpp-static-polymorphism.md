@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "深入探索 C++ 多态 ④ - 模板静态多态"
+title:  "[C++] 深入探索 C++ 多态 ④ - 模板静态多态"
 categories: c/c++
 author: wenfh2020
 ---
