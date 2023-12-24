@@ -31,6 +31,26 @@ author: wenfh2020
 
 虚指针 -> 虚函数表 -> 虚函数，这是动态多态虚函数调用原理。
 
+* 虚函数测试源码。
+
+```cpp
+// g++ -g -O0 -std=c++11 -fdump-class-hierarchy test.cpp -o t
+#include <iostream>
+
+class A {
+   public:
+    int m_a = 0;
+    virtual void vfuncA1() {}
+    virtual void vfuncA2() {}
+};
+
+int main(int argc, char** argv) {    
+    A* a = new A;
+    a->vfuncA2();
+    return 0;
+}
+```
+
 * 虚函数调用的内存布局。
 
 <div align=center><img src="/images/2023/2023-08-16-12-15-41.png" data-action="zoom"/></div>
@@ -94,9 +114,8 @@ int main(int argc, char** argv) {
 * 动态多态。派生类重写基类虚函数。
 
 ```cpp
-/* g++ -std='c++11' test.cpp -o t && ./t */
+/* g++ -std='c++11' test.cpp -o t && .\t */
 #include <iostream>
-#include <memory>
 
 class Model {
    public:
@@ -107,38 +126,39 @@ class Model {
 
 class Gril : public Model {
    public:
-    virtual void face() {
+    void face() override {
         std::cout << "girl's face!\n";
     }
 };
 
 class Man : public Model {
    public:
-    virtual void face() {
+    void face() override {
         std::cout << "man's face!\n";
     }
 };
 
 class Boy : public Model {
    public:
-    virtual void face() {
+    void face() override {
         std::cout << "boy's face!\n";
     }
 };
 
-void take_photo(const std::unique_ptr<Model>& m) {
-    m->face();
+void takePhoto(Model& m) {
+    m.face();
 }
 
 int main() {
-    auto model = std::unique_ptr<Model>(new Model);
-    auto girl = std::unique_ptr<Model>(new Gril);
-    auto man = std::unique_ptr<Model>(new Man);
-    auto boy = std::unique_ptr<Model>(new Boy);
-    take_photo(model);
-    take_photo(girl);
-    take_photo(man);
-    take_photo(boy);
+    Model model;
+    Gril girl;
+    Man man;
+    Boy boy;
+
+    takePhoto(model);
+    takePhoto(girl);
+    takePhoto(man);
+    takePhoto(boy);
     return 0;
 }
 
@@ -203,6 +223,7 @@ int main() {
     Gril girl;
     Man man;
     Boy boy;
+
     takePhoto(who);
     takePhoto(girl);
     takePhoto(man);
