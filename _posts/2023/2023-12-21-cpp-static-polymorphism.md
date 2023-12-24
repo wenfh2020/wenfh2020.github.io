@@ -174,7 +174,6 @@ int main() {
 ```cpp
 // g++ -std='c++11' test.cpp -o t && ./t
 #include <iostream>
-#include <memory>
 
 template <class T>
 class Model {
