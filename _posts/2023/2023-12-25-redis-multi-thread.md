@@ -28,23 +28,15 @@ Redis 使用了 多进程 + 多线程混合并发模型。
 * 子进程持久化：重写 aof 文件 / 保存 rdb 文件。
 * 多线程：主线程 + 后台惰性处理线程 + IO 额外线程（Redis 6.0）。
 
+<div align=center><img src="/images/2023/2023-12-26-15-31-48.png" data-action="zoom"></div>
+
 ---
 
 ## 2. 多进程
 
 子进程持久化：重写 aof 文件 / 保存 rdb 文件。
 
-多进程优点：
-
-1. 简单性：多进程模型相比于多线程模型在编程上更为简单。在多线程模型中，线程间的共享状态会导致复杂的同步问题，而在多进程模型中，进程间的状态是隔离的，这大大简化了编程的复杂性。
-
-2. 内存复制：当Redis进行fork操作时，操作系统会创建一个与父进程拥有完全相同内存的子进程。这个过程中，操作系统使用了写时复制（Copy-On-Write，COW）技术，只有当数据被修改时，才会复制一份数据，这样可以节省大量的内存空间。
-
-3. 稳定性：如果持久化过程中出现问题，使用子进程可以保证主进程的稳定性。因为子进程是主进程的完全复制品，所以即使子进程崩溃，也不会影响到主进程的运行。
-
-4. 高效的磁盘I/O：Redis的持久化操作主要是磁盘I/O操作，而磁盘I/O操作在多线程环境下并不能得到有效的提升，反而可能因为线程切换带来额外的开销。而多进程模型可以更好地利用多核CPU，提高磁盘I/O的效率。
-
-> 部分文字来源：ChatGPT
+为了性能和安全，一般情况下，Redis 同一时刻只允许创建一个子进程在工作。
 
 * bgsave 命令，保存 rdb 文件。
 
@@ -110,7 +102,7 @@ void killThreads(void) {
 
 ---
 
-### 3.1. 惰性后台线程
+### 3.1. 后台线程
 
 后台线程个数为 3 个（BIO_NUM_OPS），通过消息队列实现多线程的生产者和消费者工作方式，主线程生产，后台线程消费。
 
@@ -177,6 +169,10 @@ void *bioProcessBackgroundJobs(void *arg) {
 
 ### 3.2. IO 读写线程
 
+开启 IO 线程并发，是为了利用多核的资源，提高服务整体性能，并减轻主线程的网络 IO 负载。
+
+---
+
 #### 3.2.1. 配置
 
 io-threads 线程配置，redis.conf 配置文件默认是不开放的，默认只有一个线程在工作，这个线程就是 `主线程`。
@@ -197,31 +193,157 @@ io-threads 线程配置，redis.conf 配置文件默认是不开放的，默认�
 
 ---
 
-#### 3.2.2. 必要性
+#### 3.2.2. 实现
 
-额外的 IO 线程有存在的必要吗？
+##### 3.2.2.1. 配置
 
-有！且不说普通的读数据，下面的一主多从框架，A 图的 master 与 slaves 断开一段时间，重连后 slaves 需要向 master 全量同步数据。4 个 slaves 节点同时要求传输整个 rdb 持久化文件，master 的写 IO 压力山大！！
+如果 redis.conf 文件开启 io-threads 配置项，那么从配置中读取线程个数，否则网络 IO 线程默认为 1。
 
-当然您的框架可以设置为 B 模型。但是 master 如果还是主线程负责 IO，既当爸又当妈的压力，只有当事进程才知道~~~
-
-<div align=center><img src="/images/2023/2023-09-20-15-33-50.png" data-action="zoom"/></div>
+```c
+// config.c
+standardConfig static_configs[] = {
+    ...
+    /* Single threaded by default */
+    createIntConfig("io-threads", NULL, \
+    DEBUG_CONFIG | IMMUTABLE_CONFIG, 1, 128, \
+    server.io_threads_num, 1, INTEGER_CONFIG, NULL, NULL),
+    ...
+}
+```
 
 ---
 
-#### 3.2.3. 实现
+##### 3.2.2.2. 主逻辑
+
+* 为了保证主逻辑是串行，不允许同时读写操作，同一时刻只允许读或只允许写。
+* 如果没开启多线程，那么只使用主线程处理读写。
+* 如果开启了多线程，而且等待处理的 client 数量很少，额外开启的多线程会被挂起，仍然使用主线程工作；否则启用多线程工作，将等待的 client，平均分配给多个线程进行处理。
+* 等待线程（单线程/多线程）都处理完任务后，才会执行下一个步骤的其它操作，这样做的目的是为了保证整体逻辑串行，不因为引入多线程处理方式改变了原来的主逻辑，将多线程并行逻辑的影响减少到最小。
+
+<div align=center><img src="/images/2023/2023-12-26-16-01-34.png" data-action="zoom"></div>
 
 ```shell
-
+|-- main
+  |-- aeMain
+    |-- aeProcessEvents
+      |-- beforeSleep
+        # 多线程读 IO（与多线程写 IO 实现方式类似）。
+        |-- handleClientsWithPendingReadsUsingThreads
+        # 多线程写 IO。
+        |-- handleClientsWithPendingWritesUsingThreads
+          # 如果配置没开启多线程，使用主线程处理。
+          # 如果开启了多线程，但等待传输数据的 client 数量很少，
+          # 挂起额外线程，使用主线程处理。
+          |-- if (server.io_threads_num == 1 || stopThreadedIOIfNeeded())
+            # 主线程写 IO。
+            |-- handleClientsWithPendingWrites
+          # 如果已开启多线程，并且等待处理的 clients 很多，采用多线程写 IO。
+          |-- if (!server.io_threads_active) startThreadedIO();
+>>>>>>>>> |-- # 多线程写 IO 逻辑，
+              # 将等待发送数据的 clients 平均分配给 n 个线程分别处理。
+      # 事件驱动获取就绪的读写事件。
+      |-- aeApiPoll
+      |-- afterSleep
+        # 多线程读 IO。
+        |-- handleClientsWithPendingReadsUsingThreads
+      # 处理从事件驱动获取的读写事件。
+      |-- fe->rfileProc
+      |-- fe->wfileProc
 ```
 
 ---
 
 ## 4. 优化
 
-1. 处理器个数。避免线程频繁切换，增加线程了线程切换的开销，而且主线程获得的时间片将会减少！
-2. 处理器亲和性设置。经过大佬的压测，发现整体性能可以提升 15%。[Redis 如何绑定 CPU](https://www.yisu.com/zixun/672271.html)
+### 4.1. 线程个数
+
+默认开启多线程 IO 方式：
+
+线程个数：主线程 + 3 个后台线程 + 3 个 IO 线程 = 7 个线程。
+
+进程个数：主进程 + 1 个子进程 = 2 进程。
+
+> 当然可以根据实际需要设置 IO 线程个数。
+
+`默认` 开启多线程 IO 后，经过统计线程共有 7 个，子线程有 1 个。所以 CPU 的核心最少得 8 个, Redis 跑起来才能发挥最佳性能。要避免 CPU 核心太少，或者线程太多，导致线程频繁切换，增加性能开销，并且每个线程获得的时间片减少！
+
+---
+
+### 4.2. 处理器亲和性
+
+Redis 6.0 引入 IO 多线程后，增加了处理器亲和性的设置功能。
+
+进程/线程绑定指定的处理器（亲和性）设置优点：
+
+1. 可以提高处理器的高速缓存命中率。
+2. 保证处理器高速缓存数据一致性。
+
+经过某大佬压测，发现开启 CPU 亲缘性设置，整体性能可以提升 15%（参考：[Redis 如何绑定 CPU](https://www.yisu.com/zixun/672271.html)）。
+
+* 配置。
+
+```shell
+# Set redis server/io threads to cpu affinity 0,2,4,6:
+# server_cpulist 0-7:2
+#
+# Set bio threads to cpu affinity 1,3:
+# bio_cpulist 1,3
+#
+# Set aof rewrite child process to cpu affinity 8,9,10,11:
+# aof_rewrite_cpulist 8-11
+#
+# Set bgsave child process to cpu affinity 1,10,11
+# bgsave_cpulist 1,10-11
+```
+
+* CPU 亲和性设置代码。
+
+```c
+// setcpuaffinity.c
+void setcpuaffinity(const char *cpulist) {
+    ...
+#ifdef __linux__
+    cpu_set_t cpuset;
+#endif
+    ...
+#ifdef __linux__
+    sched_setaffinity(0, sizeof(cpuset), &cpuset);
+#endif
+    ...
+}
+
+// server.c
+void redisSetCpuAffinity(const char *cpulist) {
+#ifdef USE_SETCPUAFFINITY
+    setcpuaffinity(cpulist);
+#else
+    UNUSED(cpulist);
+#endif
+}
+```
+
+* 亲和性应用场景。
+
+```c
+// 主线程。
+int main(int argc, char **argv) { ... }
+
+// IO 线程。
+void *IOThreadMain(void *myid) { ... }
+
+// 后台线程。
+void *bioProcessBackgroundJobs(void *arg) { ... }
+
+// 子进程。
+int rdbSaveBackground(
+    int req, char *filename, 
+    rdbSaveInfo *rsi, int rdbflags) { ... }
+int rewriteAppendOnlyFileBackground(void) { ... }
+int rdbSaveToSlavesSockets(int req, rdbSaveInfo *rsi) { ... }
+```
 
 ---
 
 ## 5. 参考
+
+* [Redis 如何绑定 CPU](https://www.yisu.com/zixun/672271.html)
