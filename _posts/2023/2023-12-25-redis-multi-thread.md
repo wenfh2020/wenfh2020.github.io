@@ -8,7 +8,7 @@ author: wenfh2020
 很多朋友以为 Redis 是单线程程序，事实上它是 `多进程 + 多线程` 混合并发模型。
 
 * 子进程持久化：重写 aof 文件 / 保存 rdb 文件。
-* 多线程：主线程 + 后台惰性处理线程 + IO 额外线程（Redis 6.0）。
+* 多线程：主线程 + 后台线程 + IO 线程（Redis 6.0）。
 
 
 
@@ -26,7 +26,7 @@ author: wenfh2020
 Redis 使用了 多进程 + 多线程混合并发模型。
 
 * 子进程持久化：重写 aof 文件 / 保存 rdb 文件。
-* 多线程：主线程 + 后台惰性处理线程 + IO 额外线程（Redis 6.0）。
+* 多线程：主线程 + 后台线程 + IO 线程（Redis 6.0）。
 
 <div align=center><img src="/images/2023/2023-12-26-15-31-48.png" data-action="zoom"></div>
 
@@ -87,7 +87,7 @@ int rewriteAppendOnlyFileBackground(void) {
 
 1. 主线程：负责程序的主逻辑，当然也负责 IO。
 2. 后台线程：延时回收耗时的系统资源。
-3. IO 线程：Redis 6.0 版本增加的额外 IO 线程，主要为了减轻主线程的工作量，利用多核资源实现 IO 并发处理。
+3. IO 线程：Redis 6.0 版本增加的 IO 线程，主要为了减轻主线程的工作量，利用多核资源实现 IO 并发处理。
 
 ```c
 // debug.c
@@ -179,7 +179,7 @@ io-threads 线程配置，redis.conf 配置文件默认是不开放的，默认�
 
 如果开放多线程配置，`io-threads 4` 那么 IO 处理线程共有 4 个，包括主线程。也就是额外创建的 IO 线程有 3 个。
 
-> IO 额外线程默认不开放 `读` 操作，因为 Redis 作为缓存服务，一般读入数据是非常小的，写出数据非常大。
+> IO 线程默认不开放 `读` 操作，因为 Redis 作为缓存服务，一般读入数据是非常小的，写出数据非常大。
 
 ```shell
 # redis.conf
@@ -217,7 +217,7 @@ standardConfig static_configs[] = {
 
 * 为了保证主逻辑是串行，不允许同时读写操作，同一时刻只允许读或只允许写。
 * 如果没开启多线程，那么只使用主线程处理读写。
-* 如果开启了多线程，而且等待处理的 client 数量很少，额外开启的多线程会被挂起，仍然使用主线程工作；否则启用多线程工作，将等待的 client，平均分配给多个线程进行处理。
+* 如果开启了多线程，而且等待处理的 client 数量很少，开启的多线程会被挂起，仍然使用主线程工作；否则启用多线程工作，将等待的 client，平均分配给多个线程进行处理。
 * 等待线程（单线程/多线程）都处理完任务后，才会执行下一个步骤的其它操作，这样做的目的是为了保证整体逻辑串行，不因为引入多线程处理方式改变了原来的主逻辑，将多线程并行逻辑的影响减少到最小。
 
 <div align=center><img src="/images/2023/2023-12-26-16-01-34.png" data-action="zoom"></div>
@@ -233,7 +233,7 @@ standardConfig static_configs[] = {
         |-- handleClientsWithPendingWritesUsingThreads
           # 如果配置没开启多线程，使用主线程处理。
           # 如果开启了多线程，但等待传输数据的 client 数量很少，
-          # 挂起额外线程，使用主线程处理。
+          # 挂起开启的新线程，使用主线程处理。
           |-- if (server.io_threads_num == 1 || stopThreadedIOIfNeeded())
             # 主线程写 IO。
             |-- handleClientsWithPendingWrites
