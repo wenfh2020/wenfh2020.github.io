@@ -223,6 +223,7 @@ standardConfig static_configs[] = {
 <div align=center><img src="/images/2023/2023-12-26-16-01-34.png" data-action="zoom"></div>
 
 ```shell
+# 主线程。
 |-- main
   |-- aeMain
     |-- aeProcessEvents
@@ -241,6 +242,7 @@ standardConfig static_configs[] = {
           |-- if (!server.io_threads_active) startThreadedIO();
 >>>>>>>>> |-- # 多线程写 IO 逻辑，
               # 将等待发送数据的 clients 平均分配给 n 个线程分别处理。
+          |-- writeToClient(c,0);
       # 事件驱动获取就绪的读写事件。
       |-- aeApiPoll
       |-- afterSleep
@@ -249,6 +251,14 @@ standardConfig static_configs[] = {
       # 处理从事件驱动获取的读写事件。
       |-- fe->rfileProc
       |-- fe->wfileProc
+
+>>>>>>>>>
+# IO 线程。
+|-- IOThreadMain
+  |-- if (io_threads_op == IO_THREADS_OP_WRITE)
+    |-- writeToClient(c,0);
+  |-- else if (io_threads_op == IO_THREADS_OP_READ)
+    |-- readQueryFromClient(c->conn);
 ```
 
 ---
