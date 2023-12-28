@@ -28,7 +28,7 @@ Redis 使用了 多进程 + 多线程混合并发模型。
 * 子进程持久化：重写 aof 文件 / 保存 rdb 文件。
 * 多线程：主线程 + 后台线程 + 新增网络 IO 线程。
 
-<div align=center><img src="/images/2023/2023-12-26-15-31-48.png" data-action="zoom"></div>
+<div align=center><img src="/images/2023/2023-12-28-08-47-16.png" data-action="zoom"></div>
 
 ---
 
@@ -175,7 +175,7 @@ void *bioProcessBackgroundJobs(void *arg) {
 
 #### 3.2.1. 主线程异步网络 IO
 
-Redis 客户端与服务端主线程异步通信流程，有兴趣的朋友可以参考：[《[redis 源码走读] 异步通信流程-单线程》](https://wenfh2020.com/2020/04/30/redis-async-communication/)，这里不详细展开了。
+下图描述了 Redis 客户端与服务端主线程异步通信流程，有兴趣的朋友可以参考：[《[redis 源码走读] 异步通信流程-单线程》](https://wenfh2020.com/2020/04/30/redis-async-communication/)，这里不详细展开了。
 
 <div align=center><img src="/images/2020/2020-05-04-01-19-51.png" data-action="zoom"></div>
 
