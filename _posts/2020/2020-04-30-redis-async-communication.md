@@ -200,13 +200,15 @@ redis 对事件驱动封装了一层，核心代码在 `ae.c`，目的有两个�
 * 服务端回调流程
 
 ```shell
-aeEventLoop -> epoll_wait(fd + events) -> aeFileEvent.rfileProc -> acceptTcpHandler
+aeEventLoop -> epoll_wait(fd + events)
+  -> aeFileEvent.rfileProc -> acceptTcpHandler
 ```
 
 * 客户端回调流程
 
 ```shell
-aeEventLoop -> epoll_wait(fd + events) -> aeFileEvent.rfileProc/wfileProc -> client.connection.ae_handler
+aeEventLoop -> epoll_wait(fd + events) 
+  -> aeFileEvent.rfileProc/wfileProc -> client.connection.ae_handler
 ```
 
 * 事件结构

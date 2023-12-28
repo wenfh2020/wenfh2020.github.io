@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[Redis] Redis 并发模型"
+title:  "[Redis] 浅析 Redis 并发模型"
 categories: redis
 author: wenfh2020
 ---
@@ -173,7 +173,15 @@ void *bioProcessBackgroundJobs(void *arg) {
 
 ---
 
-#### 3.2.1. 配置
+#### 3.2.1. 主线程异步网络 IO
+
+Redis 客户端与服务端主线程异步通信流程，有兴趣的朋友可以参考：[《[redis 源码走读] 异步通信流程-单线程》](https://wenfh2020.com/2020/04/30/redis-async-communication/)，这里不详细展开了。
+
+<div align=center><img src="/images/2020/2020-05-04-01-19-51.png" data-action="zoom"></div>
+
+---
+
+#### 3.2.2. 多线程配置
 
 io-threads 线程配置，redis.conf 配置文件默认是不开放的，默认只有一个线程在工作，这个线程就是 `主线程`。
 
@@ -193,9 +201,9 @@ io-threads 线程配置，redis.conf 配置文件默认是不开放的，默认�
 
 ---
 
-#### 3.2.2. 实现
+#### 3.2.3. 实现
 
-##### 3.2.2.1. 配置
+##### 3.2.3.1. 配置
 
 如果 redis.conf 文件开启 io-threads 配置项，那么从配置中读取线程个数，否则网络 IO 线程默认为 1，只有主线程。
 
@@ -205,15 +213,15 @@ standardConfig static_configs[] = {
     ...
     /* Single threaded by default */
     createIntConfig("io-threads", NULL, \
-    DEBUG_CONFIG | IMMUTABLE_CONFIG, 1, 128, \
-    server.io_threads_num, 1, INTEGER_CONFIG, NULL, NULL),
+        DEBUG_CONFIG | IMMUTABLE_CONFIG, 1, 128, \
+        server.io_threads_num, 1, INTEGER_CONFIG, NULL, NULL),
     ...
 }
 ```
 
 ---
 
-##### 3.2.2.2. 主逻辑
+##### 3.2.3.2. 主逻辑
 
 * 如果没开启多线程，那么 Redis 只会使用主线程处理网络 IO，主线程单线程处理网络 IO 是串行的。
 * 为了保证主逻辑处理方式整体不变，多线程 IO 工作方式，不允许同时并发读写操作，同一时刻只允许读或只允许写。
@@ -278,13 +286,13 @@ standardConfig static_configs[] = {
 
 `默认` 开启多线程 IO 后，经过统计线程共有 7 个，子进程有 1 个。理论上 CPU 的核心最少得 8 个, Redis 跑起来才能发挥最佳性能。
 
-要避免 CPU 核心太少，或者线程太多，导致线程调度频繁切换，增加性能开销，使得每个线程获得的时间片减少！
+要避免 CPU 核心太少，或者线程太多，导致线程调度频繁切换，性能开销增加，每个线程获得的时间片减少！
 
 ---
 
 ### 4.2. 压测
 
-开启默认 IO 多线程，经过压测（参考下图），有 4 个 IO 线程正在运行（R），符合预期。
+开启默认 IO 多线程，经过压测（参考下图），有 4 个 IO 线程正在运行（<font color=green>R</font>），符合预期。
 
 上面线程个数统计，Redis 应该有 7 个线程在运行，压测发现 Redis 启动了 9 个线程？！原来 Redis 默认使用自带的第三方内存库：`jemalloc`，它也创建了 2 线程。
 
