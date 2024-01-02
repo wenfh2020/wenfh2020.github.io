@@ -66,11 +66,11 @@ import time
 
 # 建表
 def create_table(c):
-    c.execute("CREATE TABLE IF NOT EXISTS file_object ( \
+    c.execute("create table if not exists file_object ( \
                     id INTEGER PRIMARY KEY AUTOINCREMENT, \
-                    file_name TEXT NOT NULL, \
-                    file_path TEXT NOT NULL, \
-                    file_type UNSIGNED SHORT NOT NULL, \
+                    name TEXT NOT NULL, \
+                    path TEXT NOT NULL, \
+                    type UNSIGNED SHORT NOT NULL, \
                     date TEXT NOT NULL);"
     )
 
@@ -78,21 +78,19 @@ def create_table(c):
 def recursive_file_search(connect, dir_path):
     obj_cnt = 0
     cur = connect.cursor()
-
     for root, dirs, files in os.walk(dir_path):
         for dir in dirs:
             obj_cnt += 1
-            dir_path = os.path.join(root, dir)
-            cur.execute("INSERT INTO file_object (file_name, file_path, file_type, date) \
-                VALUES (?, ?, ?, ?)", \
-                (dir, dir_path, 1, datetime.now().strftime('%Y-%m-%d')))
+            path = os.path.join(root, dir)
+            cur.execute("insert into file_object (name, path, type, date) \
+                values (?, ?, ?, ?)", \
+                (dir, path, 1, datetime.now().strftime('%Y-%m-%d')))
         for file in files:
             obj_cnt += 1
-            file_path = os.path.join(root, file)
-            cur.execute("INSERT INTO file_object (file_name, file_path, file_type, date) \
-                VALUES (?, ?, ?, ?)", \
-                (file, file_path, 2, datetime.now().strftime('%Y-%m-%d')))
-
+            path = os.path.join(root, file)
+            cur.execute("insert into file_object (name, path, type, date) \
+                values (?, ?, ?, ?)", \
+                (file, path, 2, datetime.now().strftime('%Y-%m-%d')))
     # 提交事务
     connect.commit()
     return obj_cnt
@@ -100,7 +98,7 @@ def recursive_file_search(connect, dir_path):
 # 模糊查找数据
 def search(connect, text):
     cur = connect.cursor()
-    cur.execute("SELECT * FROM file_object WHERE file_name LIKE '%{}%'".format(text))
+    cur.execute("select * from file_object where name like '%{}%'".format(text))
     return cur.fetchall()
 
 if __name__ == "__main__":
@@ -140,17 +138,17 @@ if __name__ == "__main__":
 从 481533 条数据里，模糊搜索关键字，200 毫秒不到，效率还是不错的。
 
 ```shell
-# 遍历根目录，将文件插入数据库。
+# 遍历根目录，将文件/文件夹名称插入数据库。
 ➜ python folder.py create /   
 cmd: create, data: /
 cnt: 481533, time val: 11612.842083 ms
 
-# 搜索带有 '请' 字的文件名。
+# 搜索带有 '请' 关键字的名称。
 ➜ python folder.py search '请'
 cmd: search, data: 请
 cnt: 1, time val: 184.631824493 ms
 
-# 搜索带有 'mp4' 关键字的文件名。 
+# 搜索带有 'mp4' 关键字的名称。 
 ➜ python folder.py search 'mp4'
 cmd: search, data: mp4
 cnt: 17, time val: 186.680078506 ms
