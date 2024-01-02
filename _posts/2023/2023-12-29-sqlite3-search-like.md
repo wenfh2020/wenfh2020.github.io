@@ -47,7 +47,7 @@ sqlite3 --version
 3.44.2 2023-11-24 ... (64-bit)
 
 # 建库
-sqlite3 ./db_file_objs.db
+sqlite3 db_file_objs.db
 ```
 
 ---
