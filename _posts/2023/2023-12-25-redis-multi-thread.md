@@ -12,8 +12,6 @@ author: wenfh2020
 
 > 本文使用的 Redis 版本：[6.0.20](https://codeload.github.com/redis/redis/tar.gz/refs/tags/6.0.20)。
 
----
-
 
 
 * content
