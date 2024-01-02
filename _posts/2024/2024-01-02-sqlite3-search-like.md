@@ -37,6 +37,7 @@ Linux version 3.10.0-1127.19.1.el7.x86_64
 wget https://www.sqlite.org/2023/sqlite-autoconf-3440200.tar.gz
 tar zxf sqlite-autoconf-3440200.tar.gz
 cd sqlite-autoconf-3440200
+./configure --prefix=/usr/local --enable-fts5
 make -j4
 make install
 ln -s /usr/local/bin/sqlite3 /usr/bin/sqlite3
@@ -153,3 +154,11 @@ cnt: 1, time val: 184.631824493 ms
 cmd: search, data: mp4
 cnt: 17, time val: 186.680078506 ms
 ```
+
+---
+
+## 4. 小结
+
+* sqlite 使用了 like 模糊搜索。
+* 因为被搜索内容是文件夹/文件名称，可能搜索的内容长度不会太大，所以效率比较高。
+* 如果数据量很大，被搜索内容很多，可以尝试使用全文搜索（FTS）。
