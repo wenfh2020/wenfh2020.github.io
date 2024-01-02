@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "mysql 数据库创建，删除，导入，导出数据 shell 脚本"
-categories: mysql
+title:  "【数据库】mysql 数据库创建，删除，导入，导出数据 shell 脚本"
+categories: database
 tags: mysql script
 author: wenfh2020
 --- 
