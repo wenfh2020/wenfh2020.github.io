@@ -75,30 +75,33 @@ def create_table(c):
     )
 
 # 遍历文件夹/文件，插入数据
-def recursive_file_search(c, dir_path):
+def recursive_file_search(connect, dir_path):
     obj_cnt = 0
+    cur = connect.cursor()
+
     for root, dirs, files in os.walk(dir_path):
         for dir in dirs:
             obj_cnt += 1
             dir_path = os.path.join(root, dir)
-            c.execute("INSERT INTO file_object (file_name, file_path, file_type, date) \
+            cur.execute("INSERT INTO file_object (file_name, file_path, file_type, date) \
                 VALUES (?, ?, ?, ?)", \
                 (dir, dir_path, 1, datetime.now().strftime('%Y-%m-%d')))
         for file in files:
             obj_cnt += 1
             file_path = os.path.join(root, file)
-            c.execute("INSERT INTO file_object (file_name, file_path, file_type, date) \
+            cur.execute("INSERT INTO file_object (file_name, file_path, file_type, date) \
                 VALUES (?, ?, ?, ?)", \
                 (file, file_path, 2, datetime.now().strftime('%Y-%m-%d')))
 
     # 提交事务
-    conn.commit()
+    connect.commit()
     return obj_cnt
 
 # 模糊查找数据
-def search(conn, text):
-    conn.execute("SELECT * FROM file_object WHERE file_name LIKE '%{}%'".format(text))
-    return conn.fetchall()
+def search(connect, text):
+    cur = connect.cursor()
+    cur.execute("SELECT * FROM file_object WHERE file_name LIKE '%{}%'".format(text))
+    return cur.fetchall()
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -111,7 +114,6 @@ if __name__ == "__main__":
 
     conn = sqlite3.connect('db_file_objs.db')
     conn.text_factory = str
-    c = conn.cursor()
 
     if cmd == 'create':
         create_table(conn)
@@ -121,7 +123,7 @@ if __name__ == "__main__":
         print("cnt: {}, time val: {} ms".format(cnt, time_elapsed))
     elif cmd == 'search':
         start_time = time.time()
-        results = search(c, data)
+        results = search(conn, data)
         time_elapsed = (time.time() - start_time) * 1000
         print("cnt: {}, time val: {} ms".format(len(results), time_elapsed))
     else:
@@ -129,7 +131,6 @@ if __name__ == "__main__":
 
     # 关闭数据库连接
     conn.close()
-
 ```
 
 ---
