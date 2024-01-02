@@ -83,7 +83,7 @@ int rewriteAppendOnlyFileBackground(void) {
 
 ## 3. 多线程
 
-从 Redis 调试代码中，我们可以看到，Reids 线程主要分为 3 类：
+从 Redis 调试代码中，我们可以看到，Redis 线程主要分为 3 类：
 
 1. 主线程：负责程序的主逻辑，当然也负责 IO。
 2. 后台线程：延时回收耗时的系统资源。
@@ -97,8 +97,6 @@ void killThreads(void) {
     killIOThreads();
 }
 ```
-
-> 从上面 Redis 内部代码可以看出线程的类型。
 
 ---
 
@@ -122,25 +120,9 @@ void killThreads(void) {
 #define BIO_NUM_OPS       3
 
 void *bioProcessBackgroundJobs(void *arg) {
-    bio_job *job;
-    unsigned long type = (unsigned long) arg;
     ...
     while(1) {
-        listNode *ln;
-
-        /* The loop always starts with the lock hold. */
-        if (listLength(bio_jobs[type]) == 0) {
-            pthread_cond_wait(&bio_newjob_cond[type], &bio_mutex[type]);
-            continue;
-        }
-        /* Pop the job from the queue. */
-        ln = listFirst(bio_jobs[type]);
-        job = ln->value;
-        /* It is now possible to 
-         * unlock the background system as we know have
-         * a stand alone job structure to process.*/
-        pthread_mutex_unlock(&bio_mutex[type]);
-
+        ...
         /* Process the job accordingly to its type. */
         if (type == BIO_CLOSE_FILE) {
             if (job->fd_args.need_fsync) {
