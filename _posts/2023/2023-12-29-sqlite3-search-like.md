@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "【数据库】sqlite3 模糊查找效率"
+title:  "[数据库] sqlite3 模糊查找效率"
 categories: database
 tags: mysql config command
 author: wenfh2020

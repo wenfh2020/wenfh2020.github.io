@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "【数据库】mysql 常用命令配置"
+title:  "[数据库] mysql 常用命令配置"
 categories: database
 tags: mysql config command
 author: wenfh2020

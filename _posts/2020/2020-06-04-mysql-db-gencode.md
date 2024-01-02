@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "【数据库】自动代码工具 - 分析 mysql 脚本（*.sql）生成 C++ 源码"
+title:  "[数据库] 自动代码工具 - 分析 mysql 脚本（*.sql）生成 C++ 源码"
 categories: c/c++ database
 tags: mysql script database gencode c++
 author: wenfh2020
