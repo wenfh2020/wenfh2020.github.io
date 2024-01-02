@@ -8,7 +8,7 @@ author: wenfh2020
 
 sqlite 是轻量级数据库，适用于小型的数据存储应用场景。
 
-在 Linux 系统下测试了一下它的模糊搜索功能，50 万条数据搜索时间约 200 毫秒，效率还是不错的，这个时间应该不影响终端的丝滑使用。
+在 Linux 系统下测试一下 sqlite 的模糊查询功能：从 100w 条数据里，模糊查询字符串，返回结果，耗时约 400 毫秒，效率还不错。
 
 
 
@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
 ### 3.2. 测试结果
 
-从 481533 条数据里，模糊搜索关键字，200 毫秒不到，效率还是不错的。
+从 1,043,249 条数据里，模糊搜索关键字，400 毫秒左右，效率还是不错的。
 
 ```shell
 # 遍历根目录，将文件/文件夹名称插入数据库。
@@ -144,15 +144,21 @@ if __name__ == "__main__":
 cmd: create, data: /
 cnt: 481533, time val: 11612.842083 ms
 
+# 查询数据量
+➜ sqlite3 ./db_file_objs.db
+SQLite version 3.44.2 2023-11-24 11:41:44
+sqlite> select count(*) from file_object;
+1043249
+
 # 搜索带有 '请' 关键字的名称。
 ➜ python folder.py search '请'
 cmd: search, data: 请
-cnt: 1, time val: 184.631824493 ms
+cnt: 2, time val: 403.656959534 ms
 
 # 搜索带有 'mp4' 关键字的名称。 
 ➜ python folder.py search 'mp4'
 cmd: search, data: mp4
-cnt: 17, time val: 186.680078506 ms
+cnt: 34, time val: 386.833906174 ms
 ```
 
 ---
@@ -161,4 +167,5 @@ cnt: 17, time val: 186.680078506 ms
 
 * sqlite 使用了 like 模糊搜索。
 * 因为被搜索内容是文件夹/文件名称，可能搜索的内容长度不会太大，所以效率比较高。
+* 如果设置更多的 where sql 条件，搜索的速度应该还能加快。
 * 如果数据量很大，被搜索内容很多，可以尝试使用全文搜索（FTS）。
