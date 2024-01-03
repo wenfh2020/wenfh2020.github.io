@@ -8,7 +8,7 @@ author: wenfh2020
 
 sqlite 是轻量级数据库，适用于小型的数据存储应用场景。
 
-在 Linux 系统下测试一下 sqlite 的模糊查询功能：从 100w 条数据里，模糊查询字符串，返回结果，耗时约 400 毫秒，效率还不错。
+在 Linux 系统下测试一下 sqlite 的模糊查询功能：从 100w 条数据里，模糊查询字符串，从请求到返回结果耗时约 400 毫秒，效率还不错。
 
 
 
@@ -76,9 +76,9 @@ def create_table(c):
     )
 
 # 遍历文件夹/文件，插入数据
-def recursive_file_search(connect, dir_path):
+def recursive_file_search(conn, dir_path):
     obj_cnt = 0
-    cur = connect.cursor()
+    cur = conn.cursor()
     for root, dirs, files in os.walk(dir_path):
         for dir in dirs:
             obj_cnt += 1
@@ -93,50 +93,50 @@ def recursive_file_search(connect, dir_path):
                 values (?, ?, ?, ?)", \
                 (file, path, 2, datetime.now().strftime('%Y-%m-%d')))
     # 提交事务
-    connect.commit()
+    conn.commit()
     return obj_cnt
 
 # 模糊查找数据
-def search(connect, text):
-    cur = connect.cursor()
+def search(conn, text):
+    cur = conn.cursor()
     cur.execute("select * from file_object where name like '%{}%'".format(text))
     return cur.fetchall()
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("pls input arg: [cmd][arg]")
+        print("pls input args: [cmd][arg]")
         exit(1)
 
     cmd = sys.argv[1]
     data = sys.argv[2]
     print("cmd: {}, data: {}".format(cmd, data))
 
-    conn = sqlite3.connect('db_file_objs.db')
-    conn.text_factory = str
+    c = sqlite3.connect('db_file_objs.db')
+    c.text_factory = str
 
     if cmd == 'create':
-        create_table(conn)
+        create_table(c)
         start_time = time.time()
-        cnt = recursive_file_search(conn, data)
+        cnt = recursive_file_search(c, data)
         time_elapsed = (time.time() - start_time) * 1000
         print("cnt: {}, time val: {} ms".format(cnt, time_elapsed))
     elif cmd == 'search':
         start_time = time.time()
-        results = search(conn, data)
+        results = search(c, data)
         time_elapsed = (time.time() - start_time) * 1000
         print("cnt: {}, time val: {} ms".format(len(results), time_elapsed))
     else:
         print("invalid cmd: {}".format(cmd))
 
     # 关闭数据库连接
-    conn.close()
+    c.close()
 ```
 
 ---
 
 ### 3.2. 测试结果
 
-从 1,043,249 条数据里，模糊搜索关键字，400 毫秒左右，效率还是不错的。
+从 1,043,249 条数据里，模糊搜索关键字，400 毫秒左右返回结果，这效率还是不错的。
 
 ```shell
 # 遍历根目录，将文件/文件夹名称插入数据库。
