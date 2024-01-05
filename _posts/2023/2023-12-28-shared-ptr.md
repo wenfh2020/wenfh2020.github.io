@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "[C++] 浅析 std::share_ptr 内部结构"
-categories: redis
+categories: c/c++
 author: wenfh2020
 ---
 
@@ -203,7 +203,7 @@ std::shared_ptr 对象生命期结束时，如果引用计数为零，那么销�
     |-- _M_pi->_M_release();
       |-- if (__gnu_cxx::__exchange_and_add_dispatch(&_M_use_count, -1) == 1)
         |-- _Sp_counted_base::_M_dispose(); # 销毁数据块。
-        # 【注意】控制块结构要在弱引用计数为 0 才会销毁控制块。
+        # 【注意】在弱引用计数为 0 才会销毁控制块。
         |-- if (__gnu_cxx::__exchange_and_add_dispatch(&_M_weak_count, -1) == 1)
           |-- _Sp_counted_base::_M_destroy(); # 销毁控制块。
 ```
@@ -259,7 +259,7 @@ std::weak_ptr 是 C++11 中引入的另一种智能指针。
 作用：
 
 1. 它的主要用途是防止 std::shared_ptr 的 `循环引用问题`，生命期结束后，没有自动销毁元素对象。
-2. std::weak_ptr 不会增加 std::shared_ptr 所指向对象的引用计数。如果所有的 std::shared_ptr 都已经被销毁，那么即使还有 std::weak_ptr 指向该对象，该对象也会被销毁。
+2. std::weak_ptr **不会增加** std::shared_ptr 所指向对象的 **引用计数**。（具体请参考上面描述的 数据块 和 控制块 销毁的时机）。
 3. std::weak_ptr 通常用于观察 std::shared_ptr。如果 std::weak_ptr 所指向的对象还存在的话，可以通过 std::weak_ptr::lock() 来创建一个新的 std::shared_ptr，否则这个新的 std::shared_ptr 就会是空的。
 
 > 参考下面 Demo，循环引用问题导致元素对象没有释放。
