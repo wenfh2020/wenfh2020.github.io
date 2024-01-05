@@ -119,52 +119,6 @@ std::shared_ptr 通过引用计数维护共享对象实体的生命周期：
 
 <div align=center><img src="/images/2023/2024-01-04-12-15-03.png" data-action="zoom"></div>
 
-```cpp
-// g++ -std=c++11 test.cpp -o t && ./t
-#include <iostream>
-#include <memory>
-
-class A {
-   public:
-    A() { std::cout << "A()\n"; }
-    ~A() { std::cout << "~A()\n"; }
-};
-
-int main() {
-    {
-        std::shared_ptr<A> b;
-        {
-            auto a = std::make_shared<A>();
-            std::cout << "a's use_cnt: " << a.use_count()
-                      << "\n---\n";
-            // b 对象指向 a 对象后，引用计数加一。
-            b = a;
-            std::cout << "a's use_cnt: " << a.use_count()
-                      << "\nb's use_cnt: " << b.use_count()
-                      << "\n";
-        }
-        // a 结束生命期，引用计数减一。
-        std::cout << "---\n";
-        std::cout << "b's use_cnt: " << b.use_count() << "\n";
-    }
-    // b 结束生命期，引用计数减一后，引用计数为零，自动销毁对象。
-    std::cout << "---\nexit\n";
-    return 0;
-}
-
-// 输出：
-// A()
-// a's use_cnt: 1
-// ---
-// a's use_cnt: 2
-// b's use_cnt: 2
-// ---
-// b's use_cnt: 1
-// ~A()
-// ---
-// exit
-```
-
 ---
 
 #### 1.3.1. 增加引用计数
