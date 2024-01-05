@@ -30,7 +30,6 @@ std::shared_ptr 是 C++11 中引入的一种智能指针，它可以用来自动
 #### 1.2.1. 常规创建对象
 
 ```cpp
-
 class A {
    public:
     std::string m_str;
