@@ -85,7 +85,7 @@ auto a = std::make_shared<A>("hello");
       |-- unsigned char __data[_Len];  <---------------------------+
 ```
 
-* 内部内存分配。（有兴趣的朋友可以通过调试深入研读源码，这里不详细展开了。）
+* 内部内存分配。（有兴趣的朋友可以研读源码，这里不详细展开了。）
 
 ```cpp
 template <typename _Tp, typename _Alloc, typename... _Args>
@@ -301,7 +301,7 @@ int main() {
 
 ### 2.2. 结构
 
-std::weak_ptr 的内部成员结构与 std::shared_ptr 有惊人相似，原理大同小异，参考上文~~~。
+std::weak_ptr 的内部成员结构与 std::shared_ptr 有惊人相似，原理大同小异。
 
 ```shell
 |-- weak_ptr
