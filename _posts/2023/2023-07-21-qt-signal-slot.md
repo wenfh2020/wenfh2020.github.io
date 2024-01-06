@@ -94,8 +94,8 @@ class Q_CORE_EXPORT QObjectPrivate : public QObjectData {
          /*发送者*/
         QObject *sender;
         /*发送者信号索引*/
-        int signal_index : 27;      // In signal range (see
-                                    // QObjectPrivate::signalIndex())
+         // In signal range (see QObjectPrivate::signalIndex())
+        int signal_index : 27;
         /*接收者*/
         QAtomicPointer<QObject> receiver;
         /*接收者线程信息*/
@@ -106,8 +106,8 @@ class Q_CORE_EXPORT QObjectPrivate : public QObjectData {
             QtPrivate::QSlotObjectBase *slotObj;
         };
         /*信号槽链接方式*/
-        ushort connectionType : 3;  // 0 == auto, 1 == direct, 2 == queued, 4 ==
-                                    // blocking
+        // 0 == auto, 1 == direct, 2 == queued, 4 == blocking
+        ushort connectionType : 3;
     };
 };
 ```
@@ -227,14 +227,15 @@ void TestThread::sigThreadNotify(qint64 _t1, const QString &_t2) {
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 
-void TestThread::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
-{
+void TestThread::qt_static_metacall(
+    QObject *_o, QMetaObject::Call _c, int _id, void **_a) {
     ...
     else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         {
             using _t = void (TestThread::*)(qint64 , const QString & );
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&TestThread::sigThreadNotify)) {
+            if (*reinterpret_cast<_t *>(_a[1]) ==
+                static_cast<_t>(&TestThread::sigThreadNotify)) {
                 // 设置信号对应的索引偏移量。
                 *result = 0;
                 return;
@@ -248,24 +249,28 @@ void TestThread::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
 
 ```cpp
 // C:\Qt\Qt5.14.2\5.14.2\Src\qtbase\src\corelib\kernel\qobject.cpp
-QMetaObject::Connection QObject::connectImpl(const QObject *sender, void **signal,
-                                             const QObject *receiver, void **slot,
-                                             QtPrivate::QSlotObjectBase *slotObj, Qt::ConnectionType type,
-                                             const int *types, const QMetaObject *senderMetaObject)
-{
+QMetaObject::Connection QObject::connectImpl(
+    const QObject *sender, void **signal,
+    const QObject *receiver, void **slot,
+    QtPrivate::QSlotObjectBase *slotObj, Qt::ConnectionType type,
+    const int *types, const QMetaObject *senderMetaObject) {
     ...
     int signal_index = -1;
     void *args[] = { &signal_index, signal };
-    for (; senderMetaObject && signal_index < 0; senderMetaObject = senderMetaObject->superClass()) {
+    for (; senderMetaObject && signal_index < 0;
+        senderMetaObject = senderMetaObject->superClass()) {
         // 从 TestThread::qt_static_metacall 中获取对应的 signal_index
         senderMetaObject->static_metacall(QMetaObject::IndexOfMethod, 0, args);
-        if (signal_index >= 0 && signal_index < QMetaObjectPrivate::get(senderMetaObject)->signalCount)
+        if (signal_index >= 0 
+            && signal_index < QMetaObjectPrivate::get(senderMetaObject)->signalCount)
             break;
     }
 
-    // 有可能当前 QObject 对象有父类，父类也有默认信号或者自定义信号，所以需要经过统计，计算出合适的偏移量。
+    // 有可能当前 QObject 对象有父类，
+    // 父类也有默认信号或者自定义信号，所以需要经过统计，计算出合适的偏移量。
     signal_index += QMetaObjectPrivate::signalOffset(senderMetaObject);
-    return QObjectPrivate::connectImpl(sender, signal_index, receiver, slot, slotObj, type, types, senderMetaObject);
+    return QObjectPrivate::connectImpl(
+        sender, signal_index, receiver, slot, slotObj, type, types, senderMetaObject);
 }
 ```
 
@@ -313,11 +318,9 @@ void TestThread::sigThreadNotify(qint64 _t1, const QString &_t2) {
 
 ```cpp
 // C:\Qt\Qt5.14.2\5.14.2\Src\qtbase\src\corelib\kernel\qobject.cpp
-void QMetaObject::activate(QObject *sender, const QMetaObject *m, int local_signal_index,
-                           void **argv)
-{
+void QMetaObject::activate(
+    QObject *sender, const QMetaObject *m,int local_signal_index, void **argv) {
     int signal_index = local_signal_index + QMetaObjectPrivate::signalOffset(m);
-
     if (Q_UNLIKELY(qt_signal_spy_callback_set.loadRelaxed()))
         doActivate<true>(sender, signal_index, argv);
     else
