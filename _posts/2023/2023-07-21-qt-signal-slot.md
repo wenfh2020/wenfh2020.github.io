@@ -353,9 +353,8 @@ void doActivate(QObject *sender, int signal_index, void **argv) {
             if (!receiver) continue;
             ...
             // 如果发送者和接收者处在不同线程，那么事件放到队列异步触发信号对应的槽函数。
-            if ((c->connectionType == Qt::AutoConnection &&
-                 !receiverInSameThread) ||
-                (c->connectionType == Qt::QueuedConnection)) {
+            if ((c->connectionType == Qt::AutoConnection && !receiverInSameThread)
+                || (c->connectionType == Qt::QueuedConnection)) {
                 queued_activate(sender, signal_index, c, argv);
                 continue;
             }
