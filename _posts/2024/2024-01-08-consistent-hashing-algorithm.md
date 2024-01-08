@@ -105,7 +105,7 @@ uint32_t Nodes::hash(const std::string& obj) {
 
 ## 4. 服务应用实现
 
-<div align=center><img src="/images/2024/2024-01-08-09-54-01.png" data-action="zoom"></div>
+<div align=center><img src="/images/2024/2024-01-08-10-16-16.png" data-action="zoom"></div>
 
 ### 4.1. 数据结构
 
