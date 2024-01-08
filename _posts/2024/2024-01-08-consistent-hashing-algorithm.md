@@ -22,7 +22,7 @@ author: wenfh2020
 1. 数据比较均匀地路由到各个节点（负载均衡）。
 2. 当对应的服务集群节点发生抖动（添加，删除）时，数据路由的路径变化不会很大，这样避免了服务节点上的用户数据缓存出现大面积失效。
 
-<div align=center><img src="/images/2024/2024-01-08-09-54-01.png" data-action="zoom"></div>
+<div align=center><img src="/images/2024/2024-01-08-10-16-16.png" data-action="zoom"></div>
 
 ---
 
