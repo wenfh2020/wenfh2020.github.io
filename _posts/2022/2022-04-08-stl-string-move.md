@@ -19,45 +19,181 @@ author: wenfh2020
 
 ## 1. 概念
 
-这里借助 ChatGPT 的回答来借花献佛。
-
 ### 1.1. 移动语义
 
-C++ 移动语义是一种在 C++11 中引入的特性，它允许对象的资源（如堆内存）在移动时被转移而不是复制。
+移动语义是 C++11 引入的新特性。换句话说，增加了语法糖，使得开发者有机会实现对象资源的转移而不是复制。
 
-传统上，当对象被赋值或传递给函数时，会进行复制操作，这可能会导致性能损失，移动语义通过使用 `右值引用` 和 `移动构造函数` 来解决这个问题。`右值引用` 允许我们标识出临时对象或即将销毁的对象，而移动构造函数则允许我们将资源从一个对象转移到另一个对象，而不进行复制。
-
-这样可以避免不必要的内存分配和释放，提高程序的性能。
-
-> 文字来源：ChatGPT
+> 移动语义涉及到其它的一些 C++11 的概念，例如：右值引用，完美转发等等，要搞明白它们的关系，请参考：[《[C++] 右值引用》](https://wenfh2020.com/2023/12/10/cpp-rvalue/)
 
 ---
 
-### 1.2. std::move
+### 1.2. 实例
 
-C++11 中的 std::move 是一个函数模板，用于将对象转换为右值引用。
+原理不复杂，但是概念有点抽象，还是上测试实例吧：
 
-它的作用是告诉编译器，我们希望将对象的资源转移到另一个对象，而不是进行复制操作。std::move 实际上只是将对象的类型转换为右值引用类型，并不会真正移动对象的资源。
+下面实例展示了数据拷贝和通过移动语义（移动构造/移动赋值）进行数据移动。
 
-移动操作的实际发生是由对象的移动构造函数或移动赋值运算符来完成的。使用 std::move 可以显式地指示编译器进行移动操作，从而提高代码的性能。
+（B--->A）对象间资源的移动主要有三步：
 
-> 文字来源：ChatGPT
+1. A 重置自己的资源。
+2. A 移动 B 的资源给自己。
+3. A 重置 B 的资源。
 
----
+`【注意】` B 的资源已经转移给 A 后，如果某些地方再次使用 B 的资源，这是危险行为，得谨慎使用。
+
+> 事例代码，有些代码编译器会实行 RVO 返回值优化，为了达到测试效果，这里编译项添加了 `-fno-elide-constructors` 禁止 RVO 优化）。
 
 ```cpp
-/* bits/move.h */
+// g++ -std=c++11 -fno-elide-constructors test.cpp -o t && ./t
+#include <string.h>
+#include <iostream>
 
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type&&
-move(_Tp&& __t) noexcept {
-    return static_cast<typename std::remove_reference<_Tp>::type&&>(__t);
+class A {
+   public:
+    // 默认构造
+    A() {
+        std::cout << "A()\n";
+    }
+
+    // 带参构造
+    A(const char* s) {
+        if (s != nullptr) {
+            copyData(s, strlen(s));
+            std::cout << "A(const char*): "
+                      << m_data << "\n";
+        }
+    }
+
+    // 拷贝构造
+    A(const A& a) {
+        if (copyData(a.m_data, a.m_data_len)) {
+            std::cout << "A(const A&): "
+                      << m_data << "\n";
+        }
+    }
+
+    // 移动构造
+    A(A&& a) {
+        // 右值引用 a 作为实参传递给函数 moveData，
+        // 这时它是个左值，需要对其完美转发，保持它原来的右值属性。
+        if (moveData(std::forward<A>(a))) {
+            std::cout << "A(A&&): " << m_data << "\n";
+        }
+    }
+
+    // 拷贝赋值
+    A& operator=(const A& a) {
+        if (this != &a) {
+            if (copyData(a.m_data, a.m_data_len)) {
+                std::cout << "operator=(const A&): "
+                          << m_data << "\n";
+            }
+        }
+        return *this;
+    }
+
+    // 移动赋值
+    A& operator=(A&& a) {
+        if (this != &a) {
+            if (moveData(std::forward<A>(a))) {
+                std::cout << "operator=(const A&&): "
+                          << m_data << "\n";
+            }
+        }
+        return *this;
+    }
+
+    ~A() { release(); }
+
+   private:
+    // 释放数据
+    void release() {
+        if (m_data != nullptr) {
+            delete[] m_data;
+            m_data = nullptr;
+            m_data_len = 0;
+        }
+    }
+
+    // 拷贝数据
+    char* copyData(const char* p, int len) {
+        if (p != nullptr && len != 0) {
+            release();
+            m_data = new char[len];
+            memcpy(m_data, p, len);
+            m_data_len = len;
+            return m_data;
+        }
+        return nullptr;
+    }
+
+    // 移动数据
+    char* moveData(A&& a) {
+        // 先释放自己
+        release();
+        // 浅拷贝对方数据
+        m_data = a.m_data;
+        m_data_len = a.m_data_len;
+        // 重置对方成员数据
+        a.m_data = nullptr;
+        a.m_data_len = 0;
+        return m_data;
+    }
+
+   private:
+    char* m_data = nullptr;  // 数据指针
+    int m_data_len = 0;      // 数据长度
+};
+
+int main() {
+    std::cout << "> copy ---\n";
+    // 带参构造
+    A a("hello");
+    // 复制构造
+    A b(a);
+    // 默认构造
+    A c;
+    // 赋值复制
+    c = b;
+
+    std::cout << "> move 1---\n";
+    // 移动构造
+    A d(A("world"));
+    // 移动构造
+    A e(std::move(d));
+    // 移动复制
+    A f("!");
+    f = std::move(e);
+    return 0;
 }
+
+// 输出：
+// > copy ---
+// A(const char*): hello
+// A(const A&): hello
+// A()
+// operator=(const A&): hello
+// > move 1---
+// A(const char*): world
+// A(A&&): world
+// A(A&&): world
+// A(const char*): !
+// operator=(const A&&): world
+// > move 2---
+// A(const char*): haha
+// A(const char*): hehe
+// operator=(const A&&): hehe
 ```
 
 ---
 
-## 2. 源码分析
+## 2. stl 源码分析
+
+上面通过测试实例简单演示了移动语义是怎么工作的，下面将通过 C++ 标准库源码，展示移动语义的实现。
+
+> 复制和移动有点像深拷贝和浅拷贝的之间区别。
+
+---
 
 ### 2.1. std::string
 
@@ -72,15 +208,20 @@ move(_Tp&& __t) noexcept {
 * 测试源码。
 
 ```cpp
-/* g++ -g -O0 -W -std=c++11 test.cpp -o test -D_GLIBCXX_DEBUG && ./test */
+// g++ -std=c++11 test.cpp -o t && ./t
 #include <iostream>
 
 int main() {
     std::string s("1234567890123456789");
-    std::string ss(std::move(s)); /* 右值引用。*/
-    std::cout << s << " " << ss << std::endl;
+    std::string ss(std::move(s));
+    std::cout << (s.empty() ? "empty" : s) << "\n"
+              << ss << "\n";
     return 0;
 }
+
+// 输出：
+// empty
+// 1234567890123456789
 ```
 
 * stl 源码，移动构造逻辑简单，当数据量比较大时，可以避免深拷贝数据带来的开销。
@@ -121,15 +262,19 @@ class basic_string {
 * 测试源码。
 
 ```cpp
-/* g++ -g -O0 -W -std=c++11 test.cpp -o test -D_GLIBCXX_DEBUG && ./test */
+// g++ -std=c++11 test.cpp -o t && ./t
 #include <iostream>
 
 int main() {
     std::string s("1234567890123456789");
     std::string ss(s); /* 复制构造，深拷贝数据。*/
-    std::cout << s << " " << ss << std::endl;
+    std::cout << s << "\n" << ss << "\n";
     return 0;
 }
+
+// 输出：
+// 1234567890123456789
+// 1234567890123456789
 ```
 
 * stl 源码。
@@ -214,30 +359,35 @@ basic_string<_CharT, _Traits, _Alloc>::
 * 测试源码。
 
 ```cpp
-/* g++ -g -O0 -std=c++11 test.cpp -o test -D_GLIBCXX_DEBUG && ./test */
+// g++ -std=c++11 test.cpp -o t && ./t
 #include <iostream>
 #include <vector>
 
 int main() {
-    std::vector<std::string> v;
+    std::vector<std::string> a;
     for (int i = 0; i < 5; i++) {
-        v.emplace_back(std::to_string(i));
+        a.emplace_back(std::to_string(i));
     }
 
-    std::cout << "--- no move ---" << std::endl;
-    std::vector<std::string> vv = v;
-    std::cout << "v   size: " << v.size() << std::endl;
-    std::cout << "vv  size: " << vv.size() << std::endl;
-    std::cout << "--- no move ---" << std::endl;
+    std::cout << "--- no move ---" << "\n";
+    std::vector<std::string> b = a;
+    std::cout << "a   size: " << a.size() << "\n";
+    std::cout << "b   size: " << b.size() << "\n";
 
-    std::cout << "--- move ---" << std::endl;
-    std::vector<std::string> vvv = std::move(v); /* 右值引用。*/
-    std::cout << "v   size: " << v.size() << std::endl;
-    std::cout << "vv  size: " << vv.size() << std::endl;
-    std::cout << "vvv size: " << vvv.size() << std::endl;
-    std::cout << "--- move ---" << std::endl;
+    std::cout << "--- move ---" << "\n";
+    std::vector<std::string> c = std::move(a);
+    std::cout << "a   size: " << a.size() << "\n";
+    std::cout << "c   size: " << c.size() << "\n";
     return 0;
 }
+
+// 输出：
+// --- no move ---
+// a   size: 5
+// b   size: 5
+// --- move ---
+// a   size: 0
+// c   size: 5
 ```
 
 * stl 源码，通过 gdb 调试方式，看看关键部分代码的处理。
@@ -290,69 +440,9 @@ struct _Vector_base {
 }
 ```
 
-* 其它。有兴趣的朋友可以观测一下下面自定义结构的程序运行结果。
-
-```cpp
-#include <iostream>
-#include <vector>
-
-struct A {
-    std::string s;
-    A(std::string str) : s(std::move(str)) { std::cout << "constructed\n"; }
-    A(const A& o) : s(o.s) { std::cout << "copy constructed\n"; }
-    A(A&& o) : s(std::move(o.s)) { std::cout << "move constructed\n"; }
-    ~A() { std::cout << "destructed\n"; }
-    A& operator=(const A& rhs) {
-        if (&rhs != this) {
-            s = rhs.s;
-            std::cout << " copy assigned\n";
-        }
-        return *this;
-    }
-    A& operator=(A&& rhs) {
-        if (&rhs != this) {
-            s = std::move(rhs.s);
-            std::cout << " move assigned\n";
-        }
-        return *this;
-    }
-};
-
-int main() {
-    std::vector<A> v;
-    for (int i = 0; i < 5; i++) {
-        std::cout << i << " ---" << std::endl;
-        // v.push_back(std::to_string(i));
-        v.emplace_back(std::to_string(i));
-    }
-
-    std::cout << "--- no move ---" << std::endl;
-    std::vector<A> vv = v;
-    std::cout << "v size: " << v.size() << std::endl;
-    std::cout << "vv size: " << vv.size() << std::endl;
-    std::cout << "--- no move ---" << std::endl;
-
-    std::cout << "--- move ---" << std::endl;
-    /* 右值引用。*/
-    std::vector<A> vvv = std::move(vv);
-    std::cout << "v size: " << vv.size() << std::endl;
-    std::cout << "vv size: " << vv.size() << std::endl;
-    std::cout << "vvv size: " << vvv.size() << std::endl;
-    std::cout << "--- move ---" << std::endl;
-    return 0;
-}
-```
-
 ---
 
-## 3. 小结
-
-* 通过调试和走读 stl 源码，可以看到 std::string / std::vector 移动语义的实现，它们是如何影响程序性能的。
-* 自定义的类实体对象，轻易不要传到 stl 容器里，因为你不知道里面有啥拷贝操作，反之应该传递对象指针，这样内部拷贝的成本就会比较低。
-
----
-
-## 4. 参考
+## 3. 参考
 
 * 《Effective Modern C++》
 * [(ubuntu) vscode + gdb 调试 c++](https://wenfh2020.com/2022/02/19/vscode-gdb-cpp/)
