@@ -1,14 +1,12 @@
 ---
 layout: post
-title:  "[stl 源码分析] 移动语义是如何影响程序性能的（C++11）"
+title:  "[C++] 浅析 C++11 移动语义"
 categories: c/c++
 tags: stl move
 author: wenfh2020
 ---
 
-本文将结合测试例子走读 `std::string` 和 `std::vector` 源码，观察程序是如何通过 `移动语义` 影响程序性能的。
-
-> 右值引用，移动语义，等详细知识可以参考：《Effective Modern C++》-- 第五章
+本文将会结合测试例子走读 `std::string` 和 `std::vector` 源码，观察程序是如何通过 C++11 `移动语义` 影响程序性能的。
 
 
 
@@ -17,13 +15,57 @@ author: wenfh2020
 
 ---
 
-## 1. 概念
+## 1. 简述
 
-### 1.1. 移动语义
+### 1.1. 概念
 
-移动语义是 C++11 引入的新特性。换句话说，增加了语法糖，使得开发者有机会实现对象资源的转移而不是复制。
+移动语义是 C++11 引入的新特性，它使得开发者有机会实现对象资源的转移而不是复制。
 
-> 移动语义涉及到其它一些 C++11 概念，例如：右值引用，完美转发等等，这里不详细展开了，有兴趣的朋友请参考：[《[C++] 右值引用》](https://wenfh2020.com/2023/12/10/cpp-rvalue/)
+**移动语义** 与 **右值引用** 有着千丝万缕的关系。请看下面 A 类伪代码，移动语义操作，多了一个 `A&&` 右值引用参数。右值引用与左值引用同样是引用，而右值引用指向的对象一般是 **临时对象** 或 **即将销毁** 的对象（标识该对象可以进行资源转移）。
+
+<font color=blue>所以通过移动语义实现对象间的资源移动而非拷贝，从而提升程序性能。</font>
+
+> 移动语义涉及到其它一些 C++11 概念，详细请参考：[《[C++] 右值引用》](https://wenfh2020.com/2023/12/10/cpp-rvalue/)
+
+```cpp
+class A {
+   public:
+    // 默认构造
+    A() {...}
+    // 带参构造
+    A(const char* s) {...}
+    // 拷贝构造
+    A(const A& a) {...}
+    // 拷贝赋值
+    A& operator=(const A& a) {...}
+
+    // 移动构造
+    A(A&& a) { moveData(a); }
+    // 移动赋值
+    A& operator=(A&& a) { moveData(a); }
+
+   private:
+    // 移动数据
+    char* moveData(A&& a) {...}
+};
+
+int main() {
+    // 默认构造
+    A a;
+    // 带参构造
+    A b("hello");
+    // 拷贝构造
+    A c(b);
+    // 拷贝赋值
+    a = c;
+
+    // 移动构造，A("haha") 是临时变量
+    A d(A("haha"));
+    // 移动赋值，std::move 强制转换左值 d 为右值引用
+    a = std::move(d);
+    return 0;
+}
+```
 
 ---
 
@@ -189,7 +231,7 @@ int main() {
 
 ## 2. stl 源码分析
 
-上面通过测试实例简单演示了移动语义是怎么工作的，下面将通过 C++ 标准库源码，展示移动语义的实现。
+下面将阅读 C++ 标准库源码，看看内部是如何移动语义的。
 
 > 复制和移动有点像深拷贝和浅拷贝的之间区别。
 
@@ -233,11 +275,13 @@ class basic_string {
     ...
     /* 移动构造函数。*/
     basic_string(basic_string&& __str) noexcept
-        : _M_dataplus(_M_local_data(), std::move(__str._M_get_allocator())) {
+        : _M_dataplus(_M_local_data(),
+          std::move(__str._M_get_allocator())) {
         if (__str._M_is_local()) {
             /* 参考：enum { _S_local_capacity = 15 / sizeof(_CharT) };
                当原对象数据长度 <= 15，程序会跑到这里来。*/
-            traits_type::copy(_M_local_buf, __str._M_local_buf, _S_local_capacity + 1);
+            traits_type::copy(_M_local_buf,
+                __str._M_local_buf, _S_local_capacity + 1);
         } else {
             /* 字符串指针浅拷贝。*/
             _M_data(__str._M_data());
@@ -287,7 +331,7 @@ class basic_string {
     ...
     basic_string(const basic_string& __str)
         : _M_dataplus(_M_local_data(),
-                      _Alloc_traits::_S_select_on_copy(__str._M_get_allocator())) {
+          _Alloc_traits::_S_select_on_copy(__str._M_get_allocator())) {
         /* 构造分配空间，深拷贝数据。*/
         _M_construct(__str._M_data(), __str._M_data() + __str.length());
     }
@@ -301,8 +345,8 @@ class basic_string {
 
     template <typename _InIterator>
     void
-    _M_construct_aux(_InIterator __beg, _InIterator __end,
-                     std::__false_type) {
+    _M_construct_aux(_InIterator __beg,
+        _InIterator __end, std::__false_type) {
         typedef typename iterator_traits<_InIterator>::iterator_category _Tag;
         _M_construct(__beg, __end, _Tag());
     }
@@ -313,7 +357,8 @@ class basic_string {
 template <typename _CharT, typename _Traits, typename _Alloc>
 template <typename _InIterator>
 void basic_string<_CharT, _Traits, _Alloc>::
-    _M_construct(_InIterator __beg, _InIterator __end, std::forward_iterator_tag) {
+    _M_construct(_InIterator __beg, _InIterator __end,
+                 std::forward_iterator_tag) {
     ...
     size_type __dnew = static_cast<size_type>(std::distance(__beg, __end));
 
@@ -354,7 +399,7 @@ basic_string<_CharT, _Traits, _Alloc>::
 
 ### 2.2. std::vector
 
-接下来分析一下，动态数组容器是如何通过移动方式减少拷贝的。
+接下来再来看看动态数组容器是如何通过移动方式减少拷贝的。
 
 * 测试源码。
 
@@ -444,6 +489,6 @@ struct _Vector_base {
 
 ## 3. 参考
 
-* 《Effective Modern C++》
+* 《Effective Modern C++》-- 第五章
 * [(ubuntu) vscode + gdb 调试 c++](https://wenfh2020.com/2022/02/19/vscode-gdb-cpp/)
 * [C++17剖析：string在Modern C++中的实现](https://www.cnblogs.com/bigben0123/p/14043586.html)
