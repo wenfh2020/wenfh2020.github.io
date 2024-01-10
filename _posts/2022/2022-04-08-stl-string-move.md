@@ -88,6 +88,7 @@ int main() {
 ```cpp
 // g++ -std=c++11 -fno-elide-constructors test.cpp -o t && ./t
 #include <string.h>
+
 #include <iostream>
 
 class A {
@@ -189,42 +190,36 @@ class A {
 
 int main() {
     std::cout << "> copy ---\n";
-    // 带参构造
-    A a("hello");
-    // 复制构造
-    A b(a);
     // 默认构造
-    A c;
-    // 赋值复制
-    c = b;
+    A a;
+    // 带参构造
+    A b("hello");
+    // 拷贝构造
+    A c(b);
+    // 拷贝赋值
+    a = c;
 
-    std::cout << "> move 1---\n";
+    std::cout << "> move ---\n";
     // 移动构造
     A d(A("world"));
     // 移动构造
     A e(std::move(d));
     // 移动复制
-    A f("!");
-    f = std::move(e);
+    a = std::move(e);
     return 0;
 }
 
 // 输出：
 // > copy ---
+// A()
 // A(const char*): hello
 // A(const A&): hello
-// A()
 // operator=(const A&): hello
-// > move 1---
+// > move ---
 // A(const char*): world
 // A(A&&): world
 // A(A&&): world
-// A(const char*): !
 // operator=(const A&&): world
-// > move 2---
-// A(const char*): haha
-// A(const char*): hehe
-// operator=(const A&&): hehe
 ```
 
 ---
