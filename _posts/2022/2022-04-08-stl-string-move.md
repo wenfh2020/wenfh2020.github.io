@@ -101,7 +101,7 @@ class A {
     // 带参构造
     A(const char* s) {
         if (s != nullptr) {
-            copyData(s, strlen(s));
+            copyData(s, strlen(s) + 1);
             std::cout << "A(const char*): "
                       << m_data << "\n";
         }
