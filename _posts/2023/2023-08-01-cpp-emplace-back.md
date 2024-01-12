@@ -8,8 +8,13 @@ author: wenfh2020
 
 本文通过测试和结合 [std::vector::emplace_back](https://cplusplus.com/reference/vector/vector/emplace_back/) 实现源码，去理解它的功能和作用。
 
+
+
+
 * content
 {:toc}
+
+
 
 ---
 
@@ -27,9 +32,9 @@ author: wenfh2020
 
 1. 参数都支持左值引用，外部对象通过左值引用参数类型，传入 vector 内部进行**复制保存**。
 2. 参数都支持右值引用，A 临时对象通过右值引用参数类型，传入 vector 内部进行**资源转移**。
-3. push_back 的字符串实参隐形转换为 A 临时对象，传入 vector 内部再进行资源转移，而 emplace_back 将参数传入 std::vector 内部进行构造对象 A，减少了临时对象的创建。
+3. push_back 的字符串实参隐形转换为 A 临时对象，传入 vector 内部再进行资源转移，而 emplace_back 将参数传入 std::vector 内部进行构造对象 A，`减少了临时对象的创建`。
 
-小结：接口都支持左值引用和右值引用，emplace_back 接口支持参数传递到 vector 进行构造，避免临时对象的创建开销。
+小结：接口都支持左值引用和右值引用，emplace_back 接口支持参数传递到 vector 进行构造，<font color=blue>避免临时对象的创建开销</font>。
 
 |序号|push_back| 结果| emplace_back|结果|
 |:--:|:--|:--|:--|:--|
@@ -140,8 +145,9 @@ void emplace_back(_Args&&... __args) {
 ```shell
 |-- main
   |-- std::vector
+    # 万能引用形参
     |-- emplace_back(_Args&&... __args)
-      # std::forward 完美转发参数
+      # std::forward 完美转发参数到内部
       |-- _Base::emplace_back(std::forward<_Args>(__args)...);
         # 内部构造对象
         |-- _Alloc_traits::construct(this->_M_impl, this->_M_impl._M_finish,
@@ -154,14 +160,15 @@ void emplace_back(_Args&&... __args) {
                 |-- return _p;
 ```
 
-* emplace_back 内部详细实现源码。
+* emplace_back 内部详细实现源码。（代码删减不少，发现贴得越多，越没人看，越没人点赞 ^_^！）
 
 ```cpp
-#if __cplusplus >= 201103L
+// 万能引用形参
 template <typename _Tp, typename _Alloc>
 template <typename... _Args>
 void vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
     if (this->_M_impl._M_finish != this->_M_impl._M_end_of_storage) {
+        // 完美转发参数到内部
         _Alloc_traits::construct(this->_M_impl, this->_M_impl._M_finish,
                                  std::forward<_Args>(__args)...);
         ++this->_M_impl._M_finish;
@@ -169,8 +176,8 @@ void vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
         _M_emplace_back_aux(std::forward<_Args>(__args)...);
     }
 }
-#endif
 
+// 根据传递的参数构造对象
 template <typename _Tp, typename... _Args>
 static typename enable_if<__construct_helper<_Tp, _Args...>::value, void>::type
 _S_construct(_Alloc& __a, _Tp* __p, _Args&&... __args) {
@@ -185,14 +192,18 @@ static auto construct(_Alloc& __a, _Tp* __p, _Args&&... __args)
 
 template <typename _Tp>
 class new_allocator {
-#if __cplusplus >= 201103L
     template <typename _Up, typename... _Args>
     void construct(_Up* __p, _Args&&... __args) {
-        // 新建构造对象，并通过完美转发给对象传递对应的参数。
+        // 通过完美转发的参数，在自由存储区构造对象
         ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
     }
-#endif
 };
+
+// 重载的 new 操作符
+_GLIBCXX_NODISCARD inline void*
+operator new(std::size_t, void* __p) _GLIBCXX_USE_NOEXCEPT {
+    return __p;
+}
 ```
 
 ---
