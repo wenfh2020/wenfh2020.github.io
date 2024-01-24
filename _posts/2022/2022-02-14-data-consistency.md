@@ -108,7 +108,11 @@ def update_data(key, obj):
 
 ### 4.2. 删除缓存
 
-第一次删除是为了快点实现一致，第二次删除为了最终一致。
+* 第一次删除是为了删除脏读，也有可能提前实现前面操作的最终一致。
+
+<div align=center><img src="/images/2024/2024-01-24-08-49-06.png" data-action="zoom"></div>
+
+* 第二次删除为了最终一致。
 
 <div align=center><img src="/images/2022/2022-02-14-12-38-47.png" data-action="zoom"/></div>
 
