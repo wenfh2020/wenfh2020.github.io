@@ -582,6 +582,7 @@ tcpdump port 80 and host www.baidu.com
 tcpdump  host 192.168.100.18 and dst host 10.10.10.122
 tcpdump -i eth0 -vnn dst host 10.10.10.122
 tcpdump -i eth0 -vnn src host 192.168.100.18 and dst port 8060
+tcpdump -i ens33 -vnn host 192.168.1.80 and port 443 -w /tmp/123.cap
 
 #生产环境内网抓包。
 tcpdump -i eth1 port 12911 -vvvv -nnn -w 123.cap
@@ -653,6 +654,33 @@ lsof -p <pid>
 nc -l 8333
 # 连接指定服务，显示数据。
 nc -nvv 127.0.0.1 8333
+```
+
+---
+
+### 7.15. curl
+
+```shell
+# curl 访问某个域名
+curl https://lan-grpc.abc.in/ -vv
+
+# curl POST json 通信
+curl 'https://lan-grpc.abc.in/register/send_notify' -X POST -H 'Content-Type: application/json' -d '{"Param":"","Token":"0dda18b27de4f82e35344bf7af960b76","TokenCheckCode":"123479"}'
+```
+
+---
+
+### 7.15. wireshark
+
+```shell
+# 域名过滤。
+dns.qry.name contains "service.abc.woa.com"
+# 抓取指定域名的包。
+http.host contains git-70503.gzc.vod.abc-cloud.com
+# ip 过滤
+ip.addr==9.147.124.231
+# 端口过滤
+tcp.port == 3002
 ```
 
 ---
