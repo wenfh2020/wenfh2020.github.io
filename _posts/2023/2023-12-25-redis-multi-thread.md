@@ -208,7 +208,7 @@ standardConfig static_configs[] = {
 * 如果开启了多线程，而且等待处理的 client 数量很少，新增的网络 IO 线程会被挂起，仍然使用主线程工作；否则启用多线程工作，将等待的 clients，平均分配给多个线程（主线程+新增线程）并行处理。
 * 任务分配完以后，主线程将处理自己的任务，并等待新增线程都处理完任务后，才会执行下一个步骤的其它操作，这样做的目的是为了保证整体逻辑串行；不因为引入多线程处理方式改变了原来的主逻辑，尽力将多线程并行逻辑的影响减少到最小。
 
-<div align=center><img src="/images/2023/2023-12-26-16-01-34.png" data-action="zoom"></div>
+<div align=center><img src="/images/2024/2024-02-01-10-31-46.png" width="85%" data-action="zoom"></div>
 
 ```shell
 # 主线程。
