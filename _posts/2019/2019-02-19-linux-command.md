@@ -118,8 +118,17 @@ exit
 ### 1.11. 日期
 
 ```shell
-date -d @1361542596 +"%Y-%m-%d %H:%M:%S"
-date -d @$(expr 1712138975328 / 1000) +"%Y-%m-%d %H:%M:%S"
+# 格式化时间戳为日期输出
+timestamp_to_date() {
+    timestamp_in_seconds=$(echo "scale=3; $1/1000" | bc)
+    date -d @$timestamp_in_seconds +"%Y-%m-%d %H:%M:%S.%3N"
+}
+alias tsdate='timestamp_to_date'
+
+# date -d @1361542596 +"%Y-%m-%d %H:%M:%S"
+# 2013-02-22 22:16:36
+# tsdate 1712982114618
+# 2024-04-13 12:21:54.618
 ```
 
 ---
