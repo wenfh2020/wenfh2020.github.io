@@ -10,7 +10,9 @@ author: wenfh2020
 
 通过[调试](https://wenfh2020.com/2021/11/09/gdb-glibc/)和查阅 [glibc 源码](https://ftp.gnu.org/pub/gnu/glibc/)，好不容易才搞明白它 "泄漏" 的原因。
 
-问题在于：`ptmalloc2` 内存池的 `fast bins` 快速缓存和 `top chunk` 内存返还系统的特点导致。
+核心原因：`内存碎片`！它将大块的空闲等待回收的连续内存块割裂，导致空闲内存块没有达到回收的阈值，内存回收失败！
+
+> `ptmalloc2` 内存池的 `fast bins` 快速缓存和 `top chunk` 内存返还系统的特点导致。
 
 
 

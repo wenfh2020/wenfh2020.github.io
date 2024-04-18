@@ -122,7 +122,7 @@ int main() {
 * 编译运行。
 
 ```shell
-g++ -std='c++11' nodes.pb.cc test_proto_json.cpp -lprotobuf -o pj && ./pj
+g++ -std='c++11' nodes.pb.cc test_proto_json.cpp -lprotobuf -lpthread -o pj && ./pj
 ```
 
 * 程序运行结果。
