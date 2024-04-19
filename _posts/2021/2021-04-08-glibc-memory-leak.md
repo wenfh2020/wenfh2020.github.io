@@ -8,11 +8,11 @@ author: wenfh2020
 
 最近项目增加了一个模块，在 Centos 系统压测，进程一直不释放内存。因为新增代码量不多，经过排查，发现 stl + glibc 这个经典组合竟然有问题，见鬼了！
 
-通过[调试](https://wenfh2020.com/2021/11/09/gdb-glibc/)和查阅 [glibc 源码](https://ftp.gnu.org/pub/gnu/glibc/)，好不容易才搞明白它 "泄漏" 的原因。
+通过[调试](https://wenfh2020.com/2021/11/09/gdb-glibc/)和查阅 [glibc 源码](https://ftp.gnu.org/pub/gnu/glibc/)，好不容易才搞明白它 "泄漏" 的原因：`内存碎片`！
 
-核心原因：`内存碎片`！它将大块的空闲等待回收的连续内存块割裂，导致空闲内存块没有达到回收的阈值，内存回收失败！
+碎片将大块的空闲连续内存块割裂，导致空闲内存块没有达到返还系统的阈值，内存回收失败！
 
-> `ptmalloc2` 内存池的 `fast bins` 快速缓存和 `top chunk` 内存返还系统的特点导致。
+深层原因：glibc 内部内存池管理空闲内存的策略问题，`ptmalloc2` 内存池的 `fast bins` 快速缓存和 `top chunk` 内存返还系统的特点导致。
 
 
 
