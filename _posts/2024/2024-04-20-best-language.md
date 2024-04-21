@@ -5,7 +5,7 @@ categories: 随笔
 author: wenfh2020
 ---
 
-ChatGPT 产品横空出世，让我重新思考，什么是最好的编程语言，母语?
+ChatGPT 产品横空出世，让我重新思考，什么是最好的编程语言。
 
 
 
