@@ -473,53 +473,53 @@ delete from mytest.test_async_mysql where id = 1;
 package main
 
 import (
-	"database/sql"
-	"fmt"
-	"log"
+    "database/sql"
+    "fmt"
+    "log"
 
-	_ "github.com/go-sql-driver/mysql"
+    _ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
-	// 连接数据库
-	db, err := sql.Open("mysql", "root:mima123456@tcp(192.168.1.81:3306)/db_user")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+    // 连接数据库
+    db, err := sql.Open("mysql", "root:mima123456@tcp(192.168.1.81:3306)/db_user")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer db.Close()
 
-	// 检查数据库连接
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
-	}
+    // 检查数据库连接
+    err = db.Ping()
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// 查询 user_base_info 表的 user_id
-	rows, err := db.Query("SELECT user_id FROM user_info")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
+    // 查询 user_base_info 表的 user_id
+    rows, err := db.Query("SELECT user_id FROM user_info")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
 
-	// 循环处理查询结果
-	for rows.Next() {
-		var userID int
-		if err := rows.Scan(&userID); err != nil {
-			log.Fatal(err)
-		}
+    // 循环处理查询结果
+    for rows.Next() {
+        var userID int
+        if err := rows.Scan(&userID); err != nil {
+            log.Fatal(err)
+        }
 
-		// 插入数据到 user_black_list 表
-		_, err := db.Exec("INSERT INTO user_black_list (user_id, black_list) VALUES (?, ?)", userID, "[]")
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("Inserted user_id %d into user_black_list\n", userID)
-	}
+        // 插入数据到 user_black_list 表
+        _, err := db.Exec("INSERT INTO user_black_list (user_id, black_list) VALUES (?, ?)", userID, "[]")
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("Inserted user_id %d into user_black_list\n", userID)
+    }
 
-	// 检查是否有错误
-	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-	}
+    // 检查是否有错误
+    if err := rows.Err(); err != nil {
+        log.Fatal(err)
+    }
 }
 ```
 
