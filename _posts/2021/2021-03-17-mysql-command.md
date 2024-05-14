@@ -465,7 +465,67 @@ delete from mytest.test_async_mysql where id = 1;
 
 ---
 
-## 7. 参考
+## 7. demo
+
+简单读取用户数据库表，向黑名单表插入数据。
+
+```go
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+
+	_ "github.com/go-sql-driver/mysql"
+)
+
+func main() {
+	// 连接数据库
+	db, err := sql.Open("mysql", "root:mima123456@tcp(192.168.1.81:3306)/db_user")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// 检查数据库连接
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 查询 user_base_info 表的 user_id
+	rows, err := db.Query("SELECT user_id FROM user_info")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	// 循环处理查询结果
+	for rows.Next() {
+		var userID int
+		if err := rows.Scan(&userID); err != nil {
+			log.Fatal(err)
+		}
+
+		// 插入数据到 user_black_list 表
+		_, err := db.Exec("INSERT INTO user_black_list (user_id, black_list) VALUES (?, ?)", userID, "[]")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Inserted user_id %d into user_black_list\n", userID)
+	}
+
+	// 检查是否有错误
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+---
+
+## 8. 参考
 
 * [CentOS 7.4使用yum源安装MySQL 5.7.20](http://www.linuxidc.com/Linux/2017-12/149614.htm)
 * [You must reset your password using ALTER USER statement before executing thi](https://blog.csdn.net/qq_38366063/article/details/100736999)
