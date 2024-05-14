@@ -494,7 +494,7 @@ func main() {
         log.Fatal(err)
     }
 
-    // 查询 user_base_info 表的 user_id
+    // 查询 user_info 表的 user_id
     rows, err := db.Query("SELECT user_id FROM user_info")
     if err != nil {
         log.Fatal(err)
