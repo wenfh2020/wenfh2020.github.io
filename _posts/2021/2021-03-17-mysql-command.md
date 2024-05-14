@@ -495,7 +495,7 @@ func main() {
     }
 
     // 查询 user_info 表的 user_id
-    rows, err := db.Query("SELECT user_id FROM user_info")
+    rows, err := db.Query("select user_id from user_info")
     if err != nil {
         log.Fatal(err)
     }
@@ -509,7 +509,7 @@ func main() {
         }
 
         // 插入数据到 user_black_list 表
-        _, err := db.Exec("INSERT INTO user_black_list (user_id, black_list) VALUES (?, ?)", userID, "[]")
+        _, err := db.Exec("insert into user_black_list (user_id, black_list) values (?, ?)", userID, "[]")
         if err != nil {
             log.Fatal(err)
         }

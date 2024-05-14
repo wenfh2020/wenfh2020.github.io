@@ -7,7 +7,7 @@ author: wenfh2020
 
 ChatGPT 横空出世，让我重新思考：什么才是最好的编程语言。
 
-现在流行的编程语言有：PHP / JAVA / C / C++ / Python / Rust / GO（排名不分先后），谁才是最好的？
+现在流行的编程语言有：PHP / JAVA / C / C++ / C# / Python / Rust / GO（排名不分先后），谁才是最好的？
 
 
 
