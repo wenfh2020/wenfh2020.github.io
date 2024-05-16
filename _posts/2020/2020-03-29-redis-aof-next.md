@@ -6,7 +6,9 @@ tags: redis aof persistence
 author: wenfh2020
 ---
 
-文章重点讲述 aof 持久化的应用场景。aof 持久化，拆分上下为两章，可以先读[上一章](https://wenfh2020.com/2020/03/29/redis-aof-prev/)。
+文章重点讲述 aof 持久化的应用场景。
+
+aof 持久化，拆分上下为两章，可以先读上一章：[[redis 源码走读] aof 持久化 ①](https://wenfh2020.com/2020/03/29/redis-aof-prev/)。
 
 
 
@@ -258,11 +260,15 @@ void bgrewriteaofCommand(client *c) {
 ```shell
 # redis.conf
 
-# 当前增加的内存超过上一次重写后的内存百分比，才会触发自动重写。
-auto-aof-rewrite-percentage 100
-
-# 内存重写下限
+# 触发 aof 重写的最小 aof 文件大小
+# 配置 64mb，说明 aof 持久化文件，只有超过了 64 mb 才会触发重写。
 auto-aof-rewrite-min-size 64mb
+
+# 触发 aof 重写的条件
+# aof 文件大小相对于上一次重写后的大小的增长百分比
+# 配置 100，当 aof 文件的大小增长到上一次重写后的大小的两倍时
+# （即增长了 100%）才会触发 aof 重写。
+auto-aof-rewrite-percentage 100
 ```
 
 ```c
@@ -291,7 +297,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 #### 1.4.2. 重写实现
 
 1. 父进程 fork 子进程实现重写逻辑。
-2. 子进程创建 aof 临时文件存储重写子进程`fork-on-write` 内存到 aof 文件。
+2. 子进程创建 aof 临时文件存储重写子进程 `fork-on-write` 内存到 aof 文件。
 3. 子进程重写完成 fork 内存数据内容后，追加在重写过程中父进程发送的新的内容。
 4. 子进程结束父子进程管道通信。
 5. 更新临时文件覆盖旧的文件。
