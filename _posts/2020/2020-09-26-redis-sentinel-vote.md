@@ -30,113 +30,113 @@ author: wenfh2020
 ```shell
 # 只有检查到 master 客观掉线了才会去询问，在确认客观下线了，马上进行多轮选举，直到选出 leader。
 |-- main
-    # 定时检测处理故障。
-    |-- sentinelTimer
-        |-- server.hz = CONFIG_DEFAULT_HZ + rand() % CONFIG_DEFAULT_HZ;
-        |-- sentinelHandleDictOfRedisInstances(sentinel.masters);
-            |-- sentinelHandleRedisInstance(ri);
-                # 通过 PING/INFO/PUBLISH 协议定时给集群其它节点发送数据，使得集群紧密联系起来。
-                |-- sentinelSendPeriodicCommands(ri);
-                    # 往 __sentinel__:hello 频道发布数据。
-                    |-- sentinelSendHello(ri)
-                        # 定时更新 master 的选举纪元 current_epoch，使得整个集群保持选举纪元数据一致。
-                        |-- <ip>,<port>,<runid>,<current_epoch>,<master_name>,<master_ip>,<master_port>,<master_config_epoch>
-                # 检查节点是否已经主观下线（所有类型的节点 sentinel/master/slave）。
-                |-- sentinelCheckSubjectivelyDown(ri);
-                # 检测 master 节点是否客观下线。
-                |-- sentinelCheckObjectivelyDown(ri);
-                    |-- if (master->flags & SRI_S_DOWN)
-                        # 统计已检测到该 master 节点下线的 sentinel 节点个数，如果总数大于法定人数，就确认某个 master 节点客观下线。
-                        |-- if (quorum >= master->quorum) odown = 1;
-                        # 确认客观下线后，设置标识。
-                        |-- odown ? master->flags |= SRI_O_DOWN : master->flags &= ~SRI_O_DOWN;
-                # 如果检测到 master 节点是客观下线，马上开启进入故障转移的选举投票环节。
-                |-- if (sentinelStartFailoverIfNeeded(ri))
-                        # 满足选举投票条件，进入新一轮的投票环节。
-                        |-- if ((master->flags & SRI_O_DOWN) && !(master->flags & SRI_FAILOVER_IN_PROGRESS))
-                                |-- sentinelStartFailover(master);
-                                    # 进入投票环节。
-                                    |-- master->failover_state = SENTINEL_FAILOVER_STATE_WAIT_START; 
-                                    # 设置故障转移状态为开启状态（选举投票）。
-                                    |-- master->flags |= SRI_FAILOVER_IN_PROGRESS; 
-                                    # 设置当前投票纪元（标识当前 sentinel 发起的投票是第几轮投票）
-                                    |-- master->failover_epoch = ++sentinel.current_epoch;
-                        # 刚开启新一轮的选举，强制马上执行拉票动作。
-                        |-- sentinelAskMasterStateToOtherSentinels(ri, SENTINEL_ASK_FORCED); 
-                # 故障转移流程状态机。
-                |-- sentinelFailoverStateMachine(ri);
-                    # 投票环节。
-                    |-- SENTINEL_FAILOVER_STATE_WAIT_START:
-                        |-- sentinelFailoverWaitStart(ri);
-                            # 定时统计选票。
-                            |-- leader = sentinelGetLeader(ri, ri->failover_epoch); 
-                                         # 先统计当前接收到的选票，暂时将获得票数最多的 sentinel 节点确定为 winner。
-                                         |-- ...
-                                         # 然后再统计自己的投票。
-                                         |-- if (winner)
-                                             # 在新一轮的选举中将自己的选票投给获得票数最多的 winnder。
-                                             |-- myvote = sentinelVoteLeader(master, epoch, winner, &leader_epoch);
-                                                          # 刷新最新选举纪元。
-                                                          |-- if (req_epoch > sentinel.current_epoch)
-                                                              |-- sentinel.current_epoch = req_epoch;
-                                                          # 在新一轮选举中，将票投给对应的 sentinel 节点（req_runid）
-                                                          |-- if (master->leader_epoch < req_epoch && sentinel.current_epoch <= req_epoch)
-                                                              |-- master->leader = sdsnew(req_runid);
-                                                              |-- master->leader_epoch = sentinel.current_epoch;
-                                                              # 如果其它 sentinel 节点获得选票，那么当前 sentinel 节点需延后自己进入下一轮选举的时间。
-                                                              |-- if (strcasecmp(master->leader, sentinel.myid))
-                                                                  master->failover_start_time = mstime() + rand() % SENTINEL_MAX_DESYNC;
-                                                          |-- return master->leader ? sdsnew(master->leader) : NULL;
-                                         |-- else
-                                             # 在新一轮选举中，如果当前 sentinel 节点暂时没发现别的 sentinel 节点获得选票，就将票投给自己。
-                                             |-- myvote = sentinelVoteLeader(master, epoch, sentinel.myid, &leader_epoch);
-                                         # 如果 winner 获得超过法定人数的选票，那么它就获选 leader。
-                                         |-- voters_quorum = voters/2+1;
-                                         |-- if (winner && (max_votes < voters_quorum || max_votes < master->quorum))
-                                             |-- winner = NULL;
-                                         |-- return winner;
-                            |-- isleader = leader && strcasecmp(leader, sentinel.myid) == 0;
-                            # 通过票数统计，选出 leader，如果这个 leader 是自己，那么马上进入下一个故障转移环节。
-                            |-- if (isleader)
-                                |-- ri->failover_state = SENTINEL_FAILOVER_STATE_SELECT_SLAVE;
-                            |-- else
-                                # 如果当前 sentinel 节点开启选举后，在预定的选举时间内，没有选出 leader，那准备进入下一轮投票。
-                                |-- if (mstime() - ri->failover_start_time > election_timeout)
-                                    |-- sentinelAbortFailover(ri);
-                # 定时在当前一轮投票中，进行节点客观下线询问或者拉票。
-                |-- sentinelAskMasterStateToOtherSentinels(ri, SENTINEL_NO_FLAGS);
-    |-- ...
-        # 网络端接收信息。
-        |-- sentinelCommand(client *c)
-            # 接收到其它 sentinel 节点客观下线询问或者拉票。
-            |-- if (!strcasecmp(c->argv[1]->ptr,"is-master-down-by-addr"))
-                |-- if (!sentinel.tilt && ri && (ri->flags & SRI_S_DOWN) && (ri->flags & SRI_MASTER))
-                    |-- isdown = 1; # 检测到询问的 master 节点已下线。
-                # 接收到其它 sentinel 节点的拉票，。
-                |-- if (ri && ri->flags & SRI_MASTER && strcasecmp(c->argv[5]->ptr,"*"))
-                    |-- leader = sentinelVoteLeader(ri,(uint64_t)req_epoch, c->argv[5]->ptr, &leader_epoch);
-                |-- addReply(c, isdown ? shared.cone : shared.czero);
-                |-- addReplyBulkCString(c, leader ? leader : "*");
-        # 接收到其它 sentinel 的回复，设置客观下线，或者选举。
-        |-- sentinelReceiveIsMasterDownReply
-            # 根据别的 sentinel 节点的回复，设置它是否确认 master 已经下线。
-            |-- if (r->element[0]->integer == 1)
-                |-- ri->flags |= SRI_MASTER_DOWN;
+  # 定时检测处理故障。
+  |-- sentinelTimer
+    |-- server.hz = CONFIG_DEFAULT_HZ + rand() % CONFIG_DEFAULT_HZ;
+    |-- sentinelHandleDictOfRedisInstances(sentinel.masters);
+      |-- sentinelHandleRedisInstance(ri);
+        # 通过 PING/INFO/PUBLISH 协议定时给集群其它节点发送数据，使得集群紧密联系起来。
+        |-- sentinelSendPeriodicCommands(ri);
+          # 往 __sentinel__:hello 频道发布数据。
+          |-- sentinelSendHello(ri)
+            # 定时更新 master 的选举纪元 current_epoch，使得整个集群保持选举纪元数据一致。
+            |-- <ip>,<port>,<runid>,<current_epoch>,<master_name>,<master_ip>,<master_port>,<master_config_epoch>
+        # 检查节点是否已经主观下线（所有类型的节点 sentinel/master/slave）。
+        |-- sentinelCheckSubjectivelyDown(ri);
+        # 检测 master 节点是否客观下线。
+        |-- sentinelCheckObjectivelyDown(ri);
+          |-- if (master->flags & SRI_S_DOWN)
+            # 统计已检测到该 master 节点下线的 sentinel 节点个数，如果总数大于法定人数，就确认某个 master 节点客观下线。
+            |-- if (quorum >= master->quorum) odown = 1;
+            # 确认客观下线后，设置标识。
+            |-- odown ? master->flags |= SRI_O_DOWN : master->flags &= ~SRI_O_DOWN;
+        # 如果检测到 master 节点是客观下线，马上开启进入故障转移的选举投票环节。
+        |-- if (sentinelStartFailoverIfNeeded(ri))
+          # 满足选举投票条件，进入新一轮的投票环节。
+          |-- if ((master->flags & SRI_O_DOWN) && !(master->flags & SRI_FAILOVER_IN_PROGRESS))
+            |-- sentinelStartFailover(master);
+              # 进入投票环节。
+              |-- master->failover_state = SENTINEL_FAILOVER_STATE_WAIT_START; 
+              # 设置故障转移状态为开启状态（选举投票）。
+              |-- master->flags |= SRI_FAILOVER_IN_PROGRESS; 
+              # 设置当前投票纪元（标识当前 sentinel 发起的投票是第几轮投票）
+              |-- master->failover_epoch = ++sentinel.current_epoch;
+          # 刚开启新一轮的选举，强制马上执行拉票动作。
+          |-- sentinelAskMasterStateToOtherSentinels(ri, SENTINEL_ASK_FORCED); 
+        # 故障转移流程状态机。
+        |-- sentinelFailoverStateMachine(ri);
+          # 投票环节。
+          |-- SENTINEL_FAILOVER_STATE_WAIT_START:
+            |-- sentinelFailoverWaitStart(ri);
+              # 定时统计选票。
+              |-- leader = sentinelGetLeader(ri, ri->failover_epoch); 
+                # 先统计当前接收到的选票，暂时将获得票数最多的 sentinel 节点确定为 winner。
+                |-- ...
+                # 然后再统计自己的投票。
+                |-- if (winner)
+                  # 在新一轮的选举中将自己的选票投给获得票数最多的 winnder。
+                  |-- myvote = sentinelVoteLeader(master, epoch, winner, &leader_epoch);
+                    # 刷新最新选举纪元。
+                    |-- if (req_epoch > sentinel.current_epoch)
+                      |-- sentinel.current_epoch = req_epoch;
+                    # 在新一轮选举中，将票投给对应的 sentinel 节点（req_runid）
+                    |-- if (master->leader_epoch < req_epoch && sentinel.current_epoch <= req_epoch)
+                      |-- master->leader = sdsnew(req_runid);
+                      |-- master->leader_epoch = sentinel.current_epoch;
+                      # 如果其它 sentinel 节点获得选票，那么当前 sentinel 节点需延后自己进入下一轮选举的时间。
+                      |-- if (strcasecmp(master->leader, sentinel.myid))
+                        master->failover_start_time = mstime() + rand() % SENTINEL_MAX_DESYNC;
+                    |-- return master->leader ? sdsnew(master->leader) : NULL;
+                |-- else
+                  # 在新一轮选举中，如果当前 sentinel 节点暂时没发现别的 sentinel 节点获得选票，就将票投给自己。
+                  |-- myvote = sentinelVoteLeader(master, epoch, sentinel.myid, &leader_epoch);
+                # 如果 winner 获得超过法定人数的选票，那么它就获选 leader。
+                |-- voters_quorum = voters/2+1;
+                |-- if (winner && (max_votes < voters_quorum || max_votes < master->quorum))
+                  |-- winner = NULL;
+                |-- return winner;
+            |-- isleader = leader && strcasecmp(leader, sentinel.myid) == 0;
+            # 通过票数统计，选出 leader，如果这个 leader 是自己，那么马上进入下一个故障转移环节。
+            |-- if (isleader)
+              |-- ri->failover_state = SENTINEL_FAILOVER_STATE_SELECT_SLAVE;
             |-- else
-                |-- ri->flags &= ~SRI_MASTER_DOWN;
-            |-- if (strcmp(r->element[1]->str, "*"))
-                # 接收到别的 sentinel 节点的拉票，将票投给拉票者。
-                |-- ri->leader = sdsnew(r->element[1]->str);
-                |-- ri->leader_epoch = r->element[2]->integer;
-        # 接收其它节点的发布信息并处理。
-        |-- sentinelProcessHelloMessage
-            |-- sentinelProcessHelloMessage(r->element[2]->str, r->element[2]->len);
-                # 刷新当前选举纪元，争取每次选举都在最新一轮的选举上进行。
-                |-- if (current_epoch > sentinel.current_epoch)
-                    # 更新当前的选举纪元。
-                    |-- sentinel.current_epoch = current_epoch;
-                    # 将当前选举纪元持久化到本地配置文件。
-                    |-- sentinelFlushConfig();
+              # 如果当前 sentinel 节点开启选举后，在预定的选举时间内，没有选出 leader，那准备进入下一轮投票。
+              |-- if (mstime() - ri->failover_start_time > election_timeout)
+                |-- sentinelAbortFailover(ri);
+        # 定时在当前一轮投票中，进行节点客观下线询问或者拉票。
+        |-- sentinelAskMasterStateToOtherSentinels(ri, SENTINEL_NO_FLAGS);
+  |-- ...
+    # 网络端接收信息。
+    |-- sentinelCommand(client *c)
+      # 接收到其它 sentinel 节点客观下线询问或者拉票。
+      |-- if (!strcasecmp(c->argv[1]->ptr,"is-master-down-by-addr"))
+        |-- if (!sentinel.tilt && ri && (ri->flags & SRI_S_DOWN) && (ri->flags & SRI_MASTER))
+          |-- isdown = 1; # 检测到询问的 master 节点已下线。
+        # 接收到其它 sentinel 节点的拉票。
+        |-- if (ri && ri->flags & SRI_MASTER && strcasecmp(c->argv[5]->ptr,"*"))
+          |-- leader = sentinelVoteLeader(ri,(uint64_t)req_epoch, c->argv[5]->ptr, &leader_epoch);
+        |-- addReply(c, isdown ? shared.cone : shared.czero);
+        |-- addReplyBulkCString(c, leader ? leader : "*");
+    # 接收到其它 sentinel 的回复，设置客观下线，或者选举。
+    |-- sentinelReceiveIsMasterDownReply
+      # 根据别的 sentinel 节点的回复，设置它是否确认 master 已经下线。
+      |-- if (r->element[0]->integer == 1)
+        |-- ri->flags |= SRI_MASTER_DOWN;
+      |-- else
+        |-- ri->flags &= ~SRI_MASTER_DOWN;
+      |-- if (strcmp(r->element[1]->str, "*"))
+        # 接收到别的 sentinel 节点的拉票，将票投给拉票者。
+        |-- ri->leader = sdsnew(r->element[1]->str);
+        |-- ri->leader_epoch = r->element[2]->integer;
+    # 接收其它节点的发布信息并处理。
+    |-- sentinelProcessHelloMessage
+      |-- sentinelProcessHelloMessage(r->element[2]->str, r->element[2]->len);
+        # 刷新当前选举纪元，争取每次选举都在最新一轮的选举上进行。
+        |-- if (current_epoch > sentinel.current_epoch)
+          # 更新当前的选举纪元。
+          |-- sentinel.current_epoch = current_epoch;
+          # 将当前选举纪元持久化到本地配置文件。
+          |-- sentinelFlushConfig();
 ```
 
 ---
