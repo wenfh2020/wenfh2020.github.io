@@ -85,7 +85,7 @@ author: wenfh2020
                       |-- master->leader_epoch = sentinel.current_epoch;
                       # 如果其它 sentinel 节点获得选票，那么当前 sentinel 节点需延后自己进入下一轮选举的时间。
                       |-- if (strcasecmp(master->leader, sentinel.myid))
-                        master->failover_start_time = mstime() + rand() % SENTINEL_MAX_DESYNC;
+                            master->failover_start_time = mstime() + rand() % SENTINEL_MAX_DESYNC;
                     |-- return master->leader ? sdsnew(master->leader) : NULL;
                 |-- else
                   # 在新一轮选举中，如果当前 sentinel 节点暂时没发现别的 sentinel 节点获得选票，就将票投给自己。
