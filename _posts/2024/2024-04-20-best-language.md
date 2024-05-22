@@ -43,3 +43,9 @@ OpenAI 产品：ChatGPT 横空出世。
 但是母语是人类大脑最简单的表达方式吗？
 
 好像现在已经有 `脑机` 了！
+
+---
+
+官网 [ChatGPT-3.5](https://chat.openai.com/) 已经免费对外开放，`4o` 也正在免费公测~
+
+<div align=center><img src="/images/2024/2024_05_22_08_52_00.png" width="50%" data-action="zoom"></div>
