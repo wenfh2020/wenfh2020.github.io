@@ -56,7 +56,8 @@ redis 对文件数量限制主要分两类:
 standardConfig configs[] = {
     ...
     /* Unsigned int configs */
-    createUIntConfig("maxclients", NULL, MODIFIABLE_CONFIG, 1, UINT_MAX, server.maxclients, 10000, INTEGER_CONFIG, NULL, updateMaxclients),
+    createUIntConfig("maxclients", NULL, MODIFIABLE_CONFIG, 
+        1, UINT_MAX, server.maxclients, 10000, INTEGER_CONFIG, NULL, updateMaxclients),
     ...
 }
 
@@ -97,7 +98,8 @@ void adjustOpenFilesLimit(void) {
     struct rlimit limit;
 
     if (getrlimit(RLIMIT_NOFILE,&limit) == -1) {
-        serverLog(LL_WARNING,"Unable to obtain the current NOFILE limit (%s), assuming 1024 and setting the max clients configuration accordingly.",
+        serverLog(LL_WARNING,"Unable to obtain the current NOFILE limit (%s), "
+            "assuming 1024 and setting the max clients configuration accordingly.",
             strerror(errno));
         server.maxclients = 1024-CONFIG_MIN_RESERVED_FDS;
     } else {
