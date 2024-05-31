@@ -347,7 +347,8 @@ int masterTryPartialResynchronization(client *c) {
         buflen = snprintf(buf,sizeof(buf),"+CONTINUE\r\n");
     }
 
-    // 发送 +CONTINUE 增量复制回包。注意这里是同步发送的，避免异步导致新的数据到来破坏当前同步场景。
+    // 发送 +CONTINUE 增量复制回包。注意这里是同步发送的，
+    // 避免异步导致新的数据到来破坏当前同步场景。
     if (connWrite(c->conn,buf,buflen) != buflen) {
         freeClientAsync(c);
         return C_OK;
