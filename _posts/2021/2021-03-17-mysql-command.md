@@ -97,7 +97,7 @@ server_id=200
 
 * 授权 slave，ip: 192.168.0.201，user: mytest，pwd: mytest。
 
-```shell
+```sql
 GRANT REPLICATION SLAVE,FILE ON *.* TO 'mytest'@'192.168.0.201' IDENTIFIED BY 'mytest';
 ```
 
@@ -415,7 +415,7 @@ use <xxx>
 
 * 建库。
 
-```shell
+```sql
 CREATE DATABASE IF NOT EXISTS mytest DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_general_ci;
 ```
 
@@ -425,13 +425,13 @@ CREATE DATABASE IF NOT EXISTS mytest DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_gen
 
 * 展示数据库表。
 
-```shell
+```sql
 show tables;
 ```
 
 * 建表。
 
-```shell
+```sql
 CREATE TABLE `test_async_mysql` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
     `value` varchar(32) NOT NULL,
@@ -439,27 +439,45 @@ CREATE TABLE `test_async_mysql` (
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4; 
 ```
 
+* 查看表详情
+
+```sql
+SELECT 
+    COLUMN_NAME, 
+    COLUMN_TYPE, 
+    IS_NULLABLE, 
+    COLUMN_KEY, 
+    COLUMN_DEFAULT, 
+    EXTRA, 
+    COLUMN_COMMENT 
+FROM 
+    INFORMATION_SCHEMA.COLUMNS 
+WHERE 
+    TABLE_NAME = 'user_setting_info'
+    AND TABLE_SCHEMA = 'db_user';
+```
+
 * 查数据。
 
-```shell
+```sql
 select value from mytest.test_async_mysql where id = 1;
 ```
 
 * 插入数据。
 
-```shell
+```sql
 insert into mytest.test_async_mysql (value) values ('hello world');
 ```
 
 * 改数据。
 
-```shell
+```sql
 update mytest.test_async_mysql set value = 'hello world 2' where id = 1;
 ```
 
 * 删除数据。
 
-```shell
+```sql
 delete from mytest.test_async_mysql where id = 1;
 ```
 
