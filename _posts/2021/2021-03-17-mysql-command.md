@@ -399,18 +399,12 @@ mysql> show global status like 'Max_used_connections';
 
 ## 6. 命令
 
-### 6.1. 数据库
+### 6.1. 数据库操作
 
 * 展示数据库。
 
-```shell
+```sql
 show databases;
-```
-
-* 选择数据库。
-
-```shell
-use <xxx>
 ```
 
 * 建库。
@@ -419,9 +413,15 @@ use <xxx>
 CREATE DATABASE IF NOT EXISTS mytest DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_general_ci;
 ```
 
+* 选择数据库。
+
+```sql
+use mytest
+```
+
 ---
 
-### 6.2. 表
+### 6.2. 表操作
 
 * 展示数据库表。
 
@@ -439,7 +439,7 @@ CREATE TABLE `test_async_mysql` (
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4; 
 ```
 
-* 查看表详情
+* 查表详情。
 
 ```sql
 SELECT 
@@ -456,6 +456,24 @@ WHERE
     TABLE_NAME = 'user_setting_info'
     AND TABLE_SCHEMA = 'db_user';
 ```
+
+* 改表。
+
+```sql
+-- 添加字段
+ALTER TABLE `group_info`
+CHANGE COLUMN `city_id` `group_city_id` int NOT NULL DEFAULT 0 COMMENT '群组城市 ID',
+CHANGE COLUMN `city_name` `group_city_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '群组城市名称';
+
+-- 修改字段
+ALTER TABLE `group_info`
+CHANGE COLUMN `city_id` `group_city_id` int NOT NULL DEFAULT 0 COMMENT '城市 ID',
+CHANGE COLUMN `city_name` `group_city_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '城市名称';
+```
+
+---
+
+### 6.3. 数据操作
 
 * 查数据。
 

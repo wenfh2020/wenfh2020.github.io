@@ -12,18 +12,19 @@ ccache 是个好东西，缓存了编译过的项，第一次编译源码有点�
 
 
 
+
 * content
 {:toc}
 
 ---
 
-Centos 下安装也很简单，安装：
+* 安装，Centos 下安装也很简单，安装：
 
 ```shell
 yum install ccache
 ```
 
-项目里替换一下 Makefile 的编译项:
+* Makefile，项目里替换一下 Makefile 的编译项:
 
 ```shell
 CXX = g++
@@ -31,4 +32,17 @@ CXX = g++
 ==>
 
 CXX = $(shell command -v ccache >/dev/null 2>&1 && echo "ccache g++" || echo "g++")
+```
+
+* cmake，在 CMakeLists.txt 文件里添加 ccache。
+
+```shell
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+else()
+    message(STATUS "ccache not found")
+endif()
 ```
