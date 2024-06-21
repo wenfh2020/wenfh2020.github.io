@@ -6,7 +6,11 @@ tags: libev
 author: wenfh2020
 ---
 
-理解 libev 工作流程，[官方文档](http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#code_ev_timer_code_relative_and_opti) 和网上有很多资料可以查阅（[事件库之Libev（一）](https://my.oschina.net/u/917596/blog/176658)，[随笔分类 - libev](https://www.cnblogs.com/gqtcgq/category/1043758.html)）。libev 源码，宏的使用频率比较高，也因为这样，源码理解起来比较费脑，可以展开宏查阅源码，或者通过调试方式，理解 libev 的工作流程。redis-ae 事件管理与 libev 有点类似，也可以相互比较一下。
+理解 libev 工作流程，[官方文档](http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#code_ev_timer_code_relative_and_opti) 和网上有很多资料可以查阅（[事件库之Libev（一）](https://my.oschina.net/u/917596/blog/176658)，[随笔分类 - libev](https://www.cnblogs.com/gqtcgq/category/1043758.html)）。
+
+libev 源码，宏的使用频率比较高，也因为这样，源码理解起来比较费脑，可以展开宏查阅源码，或者通过调试方式，理解 libev 的工作流程。
+
+> redis-ae 事件管理与 libev 有点类似，也可以相互比较一下。
 
 
 
@@ -19,7 +23,9 @@ author: wenfh2020
 
 ## 1. 展开宏
 
-程序编译流程：预编译，编译，汇编器，链接。预编译阶段，还没涉及程序语义解析，可以将文件的宏进行展开。
+程序编译流程：预编译，编译，汇编器，链接。
+
+预编译阶段，还没涉及程序语义解析，可以将文件的宏进行展开。
 
 libev 核心逻辑在 `ev.c` 文件，对这个文件进行预编译（其它文件也可以参考这个方法）。
 
@@ -87,8 +93,8 @@ ev_timer_start (struct ev_loop *loop, ev_timer *w)
 
 1. 下载 libev 源码：[源码地址](http://dist.schmorp.de/libev/)
    > 地址如果打不开，可能被墙了。
-2. 修改源码目录下的 configure 文件，将所有编译优化项（CFLAGS），修改为 CFLAGS="-g O0"。
-3. 编译安装源码：./configure && make && make install
+2. 修改源码目录下的 configure 文件，将所有编译优化项（CFLAGS），修改为 `CFLAGS="-g O0"`。
+3. 编译安装源码：`./configure && make && make install`
 4. gdb 调试测试源码。
 
 > 详细请参考：[gdb & libev 调试视频](https://www.bilibili.com/video/BV1U54y1D7uM/)
