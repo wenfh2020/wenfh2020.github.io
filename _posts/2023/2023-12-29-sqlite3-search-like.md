@@ -80,7 +80,7 @@ def create_table(c):
     )
 
 # 遍历文件夹/文件，插入数据
-def recursive_file_search(conn, dir_path):
+def recursive_local_files_to_db(conn, dir_path):
     obj_cnt = 0
     cur = conn.cursor()
     for root, dirs, files in os.walk(dir_path):
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     if cmd == 'create':
         create_table(c)
         start_time = time.time()
-        cnt = recursive_file_search(c, data)
+        cnt = recursive_local_files_to_db(c, data)
         time_elapsed = (time.time() - start_time) * 1000
         print("cnt: {}, time val: {} ms".format(cnt, time_elapsed))
     elif cmd == 'search':
