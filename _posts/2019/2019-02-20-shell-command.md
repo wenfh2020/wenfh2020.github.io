@@ -164,16 +164,20 @@ function func_check_path() {
 ---
 
 ```shell
+function check_process() {
+    [ -z "$1" ] && return 1
+    pro_num=$(ps -ef | grep -w "$1" | grep -v "grep" | wc -l)
+    [ $pro_num -eq 0 ] && return 0 || return 1
+}
+
 function kill_process() {
-    for process_name in ${PN_ARRAY[@]}
-    do
-        #echo ${process_name}
-        process=`ps -ef|grep ${process_name}|grep -v grep|grep -v vim|grep -v PPID|awk '{ print $2}'`
-        for i in $process
-        do
-            #echo "Kill the process [ $i ]"
-            kill $i
-        done
+    [ -z "$1" ] && return 1
+
+    pro_name=$1
+    pids=$(pgrep -f "$pro_name")
+
+    for pid in $pids; do
+        kill $pid
     done
 }
 ```
