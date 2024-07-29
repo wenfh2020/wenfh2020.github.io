@@ -102,7 +102,7 @@ cd linux-5.0.1
 apt install build-essential flex bison libssl-dev libelf-dev libncurses-dev -y
 
 # 设置调试的编译菜单。
-export ARCH=x86
+export ARCH=x86_64
 make x86_64_defconfig
 make menuconfig
 
