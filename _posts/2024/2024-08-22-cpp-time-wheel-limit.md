@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[C++] 使用时间轮实现对象的操作频率"
+title:  "[C++] 使用时间轮实现对象的操作频率限制"
 categories: c/c++
 author: wenfh2020
 ---
