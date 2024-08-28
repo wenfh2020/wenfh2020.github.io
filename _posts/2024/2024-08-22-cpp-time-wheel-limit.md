@@ -54,6 +54,9 @@ public:
     // nSlotDuration: 每个槽的时间段（单位：秒）
     // nMsgLimitCnt: （nSlots * nSlotDuration）时间段内允许操作消息的条数
     bool Init(int nSlots, int nSlotDuration, int nMsgLimitCnt) {
+        if (nSlots <= 0 || nSlotDuration <= 0 || nMsgLimitCnt <=0) {
+            return false;
+        }
         std::lock_guard<std::mutex> lock(m_mtx);
         m_nSlots = nSlots;
         m_nMsgLimitCnt = nMsgLimitCnt;
@@ -62,9 +65,6 @@ public:
 
     // 增加数量
     bool IncrCnt(const std::string& strObjId) {
-        if (nSlots <= 0 || nSlotDuration <= 0 || nMsgLimitCnt <=0) {
-            return false;
-        }
         std::lock_guard<std::mutex> lock(m_mtx);
 
         auto it = m_umapObj.find(strObjId);
