@@ -153,3 +153,41 @@ private:
     std::unordered_map<std::string, std::shared_ptr<SLimitObject>> m_umapObj;
 };
 ```
+
+---
+
+## 3. 环形数据结构
+
+时间轮是环形数组的实现，思路非常巧妙，其中环形数据结构，在很多开源项目中也有广泛的应用。
+
+### 3.1. 定时器
+
+采用时间轮实现的策略并不少见，例如定时器。
+
+* libco 定时器：60 * 1000 大小的数组，每一毫秒一个刻度，轻松实现 1 分钟以内的定时任务。
+
+<div align=center><img src="/images/2021/2021-03-30-14-03-54.png" data-action="zoom"/></div>
+
+> 参考：[[libco] libco 定时器（时间轮）](https://wenfh2020.com/2021/03/30/libco-timer/)
+
+* redis 多定时任务设计。
+
+<div align=center><img src="/images/2020/2020-04-07-14-40-30.png" data-action="zoom"/></div>
+
+> 参考：[[redis 源码走读] 事件 - 定时器](https://wenfh2020.com/2020/04/06/ae-timer/)
+
+---
+
+### 3.2. 环形缓冲区
+
+* redis 复制积压缓冲区。master 把需要复制到 slave 的数据，填充到积压缓冲区里。当复制双方增量复制时，master 从缓冲区中取增量数据，发送给 slave。
+
+<div align=center><img src="/images/2023/2023-09-20-15-28-16.png" data-action="zoom"/></div>
+
+> 参考：[[redis 源码走读] 主从数据复制 ②](https://wenfh2020.com/2020/05/31/redis-replication-next/)
+
+* linux 网卡环形缓冲区（ring buffer），系统分配内存缓冲区，映射为 DMA 内存，提供网卡直接访问。
+
+<div align=center><img src="/images/2021/2021-12-28-20-50-58.png" data-action="zoom"/></div>
+
+> 参考：[[内核源码] Linux 网络数据接收流程（TCP）- NAPI](https://wenfh2020.com/2021/12/29/kernel-tcp-receive/)
