@@ -47,8 +47,8 @@ author: wenfh2020
 // 管理对象一个时间段内的操作数量
 class CRateLimitMgr {
 public:
-    CRateLimitMgr();
-    virtual ~CRateLimitMgr();
+    CRateLimitMgr() {}
+    virtual ~CRateLimitMgr() {}
 
     // nSlots: 槽个数
     // nSlotDuration: 每个槽的时间段（单位：秒）
@@ -114,7 +114,7 @@ private:
     };
 
     // 转动时间轮，重算对象统计的数据
-    void RotateWheel(std::shared_ptr<SLimitObject>& userWheel) {
+    void RotateWheel(std::shared_ptr<SLimitObject>& obj) {
         // 获取当前时间点
         auto tpNow = std::chrono::steady_clock::now();
         // 计算自上次轮换以来经过的秒数
@@ -152,28 +152,4 @@ private:
     // 哈希结构记录限制对象，查询效率高
     std::unordered_map<std::string, std::shared_ptr<SLimitObject>> m_umapObj;
 };
-```
-
-* 测试源码。
-
-```cpp
-void testNormal() {
-    int nUserId = 1;
-    CRateLimitMgr limit;
-    if (limit.Init(4, 10, 20, 100)) {
-        const int nTotal = 50;
-        for (int i = 1; i <= nTotal; i++) {
-            if (limit.IncrCnt(nUserId)) {
-                printf("msg ok: %d\n", i);
-            } else {
-                printf("msg xx: %d\n", i);
-            }
-        }
-    }
-}
-
-int main() {
-    testNormal();
-    return 0;
-}
 ```
