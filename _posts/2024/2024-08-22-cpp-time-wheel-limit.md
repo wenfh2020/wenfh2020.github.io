@@ -5,17 +5,15 @@ categories: c/c++
 author: wenfh2020
 ---
 
+
 需求：限制用户一段时间内的发包数量。
 
 实现：想了不少方案，最终确认使用时间轮实现。
 
 
 
-
 * content
 {:toc}
-
-
 
 ---
 
@@ -141,7 +139,8 @@ private:
             // 更新当前槽的索引
             obj->m_nCurSlot = (obj->m_nCurSlot + nSlotsToUpdate) % m_nSlots;
             // 更新上次轮换时间点，设置为当前槽的开始时间
-            obj->m_tpLastRotation = tpNow - std::chrono::seconds(nElapsed % m_nSlotDuration);
+            obj->m_tpLastRotation = tpNow - std::chrono::seconds(
+                nElapsed % m_nSlotDuration);
         }
     }
 
