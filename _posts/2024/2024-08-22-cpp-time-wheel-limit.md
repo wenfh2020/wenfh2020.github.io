@@ -46,6 +46,21 @@ author: wenfh2020
 class CRateLimitMgr
 {
 private:
+    // 被限制的对象
+    struct SLimitObject {
+        explicit SLimitObject(const std::string& strId, int nSlots, 
+            const std::chrono::steady_clock::time_point& tp) 
+            : m_strId(strId), m_vecWheel(nSlots, 0), m_tpLastRotation(tp) {}
+
+        std::string m_strId;          // 对象 ID
+        int m_nCurSlot = 0;           // 时间轮，当前指向槽位置
+        int m_nMsgTotalCnt = 0;       // 消息总数
+        std::vector<int> m_vecWheel;  // 记录时间轮每个槽上的操作数量
+        // 记录最近一次执行轮换操作的时间点
+        std::chrono::steady_clock::time_point m_tpLastRotation;
+    };
+
+private:
     std::mutex m_mtx;
     int m_nSlots = 0;        // 时间轮：槽个数
     int m_nSlotDuration = 0; // 时间轮：每个槽的时间段（精度：秒）
@@ -107,19 +122,6 @@ public:
     }
 
 private:
-    struct SLimitObject {
-        explicit SLimitObject(const std::string& strId, int nSlots, 
-            const std::chrono::steady_clock::time_point& tp) 
-            : m_strId(strId), m_vecWheel(nSlots, 0), m_tpLastRotation(tp) {}
-
-        std::string m_strId;          // 对象 ID
-        int m_nCurSlot = 0;           // 时间轮，当前指向槽位置
-        int m_nMsgTotalCnt = 0;       // 消息总数
-        std::vector<int> m_vecWheel;  // 记录时间轮每个槽上的操作数量
-        // 记录最近一次执行轮换操作的时间点
-        std::chrono::steady_clock::time_point m_tpLastRotation;
-    };
-
     // 转动时间轮，重算对象统计的数据
     void RotateWheel(std::shared_ptr<SLimitObject>& obj) {
         // 获取当前时间点
