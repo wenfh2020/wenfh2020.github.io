@@ -8,7 +8,7 @@ author: wenfh2020
 
 需求：限制用户一段时间内的发包数量。
 
-实现：想了不少方案，最终确认使用时间轮实现。
+实现：想了不少方案，最终决定使用 `时间轮` 实现。
 
 
 
@@ -19,7 +19,7 @@ author: wenfh2020
 
 ## 1. 时间轮
 
-时钟，大家应该不陌生，12 个刻度，每个大刻度 5 分钟。无论时钟上的针怎么转，都在 12 个刻度范围内，所以这个思路非常适合解决一段时间内的业务逻辑统计。
+时钟，大家应该不陌生，12 个刻度，每个大刻度 5 分钟。无论时钟上的针怎么转，都在 12 个刻度范围内，所以这个思路非常适合解决一段时间内的业务逻辑统计，而且非常高效。
 
 1. 通过数组实现时间轮。
 2. 数组每个下标表示一个刻度值。
@@ -41,11 +41,18 @@ author: wenfh2020
 2. nSlotDuration：每个槽代表的时间段（单位：秒）
 3. nMsgLimitCnt： 整个时间段内，限制的操作数量。
 
-* 源码。
-
 ```cpp
 // 管理对象一个时间段内的操作数量
-class CRateLimitMgr {
+class CRateLimitMgr
+{
+private:
+    std::mutex m_mtx;
+    int m_nSlots = 0;        // 时间轮：槽个数
+    int m_nSlotDuration = 0; // 时间轮：每个槽的时间段（精度：秒）
+    int m_nMsgLimitCnt = 0;  //（nSlots * nSlotDuration）时间段内允许操作消息的条数
+    // 哈希结构记录限制对象，查询效率高
+    std::unordered_map<std::string, std::shared_ptr<SLimitObject>> m_umapObj;
+
 public:
     CRateLimitMgr() {}
     virtual ~CRateLimitMgr() {}
@@ -143,14 +150,6 @@ private:
                 nElapsed % m_nSlotDuration);
         }
     }
-
-private:
-    std::mutex m_mtx;
-    int m_nSlots = 0;        // 时间轮：槽个数
-    int m_nSlotDuration = 0; // 时间轮：每个槽的时间段（精度：秒）
-    int m_nMsgLimitCnt = 0;  //（nSlots * nSlotDuration）时间段内允许操作消息的条数
-    // 哈希结构记录限制对象，查询效率高
-    std::unordered_map<std::string, std::shared_ptr<SLimitObject>> m_umapObj;
 };
 ```
 
@@ -158,7 +157,7 @@ private:
 
 ## 3. 环形数据结构
 
-时间轮是环形数组的实现，思路非常巧妙，其中环形数据结构，在很多开源项目中也有广泛的应用。
+时间轮由环形数组实现，思路非常巧妙，其中环形数据结构，在很多开源项目中也有广泛应用。
 
 ### 3.1. 定时器
 
