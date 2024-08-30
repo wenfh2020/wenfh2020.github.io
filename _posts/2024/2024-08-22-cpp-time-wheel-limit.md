@@ -93,7 +93,6 @@ public:
         if (it == m_umapObj.end()) {
             auto obj = std::make_shared<SLimitObject>(strObjId, m_nSlots,
                 std::chrono::steady_clock::now());
-            m_mapObj[strObjId] = obj;
             it = m_umapObj.insert(std::make_pair(strObjId, obj)).first;
         }
 
