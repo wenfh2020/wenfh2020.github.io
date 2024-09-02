@@ -41,10 +41,25 @@ author: wenfh2020
 2. nSlotDuration：每个槽代表的时间段（单位：秒）
 3. nMsgLimitCnt： 整个时间段内，限制的操作数量。
 
+* 头文件。
+
 ```cpp
 // 管理对象一个时间段内的操作数量
-class CRateLimitMgr
-{
+class CRateLimitMgr {
+public:
+    CRateLimitMgr() {}
+    virtual ~CRateLimitMgr() {}
+
+    // nSlots: 槽个数
+    // nSlotDuration: 每个槽的时间段（单位：秒）
+    // nMsgLimitCnt: （nSlots * nSlotDuration）时间段内允许操作消息的条数
+    bool Init(int nSlots, int nSlotDuration, int nMsgLimitCnt);
+
+    // 增加对象统计数量
+    bool IncrCnt(const std::string& strObjId);
+    // 对象是否已被限制
+    bool IsLimited(const std::string& strObjId);
+     
 private:
     // 被限制的对象
     struct SLimitObject {
@@ -59,6 +74,9 @@ private:
         // 记录最近一次执行轮换操作的时间点
         std::chrono::steady_clock::time_point m_tpLastRotation;
     };
+    
+    // 转动时间轮，重算对象统计的数据
+    void RotateWheel(std::shared_ptr<SLimitObject>& obj);
 
 private:
     std::mutex m_mtx;
@@ -67,91 +85,84 @@ private:
     int m_nMsgLimitCnt = 0;  //（nSlots * nSlotDuration）时间段内允许操作消息的条数
     // 哈希结构记录限制对象，查询效率高
     std::unordered_map<std::string, std::shared_ptr<SLimitObject>> m_umapObj;
-
-public:
-    CRateLimitMgr() {}
-    virtual ~CRateLimitMgr() {}
-
-    // nSlots: 槽个数
-    // nSlotDuration: 每个槽的时间段（单位：秒）
-    // nMsgLimitCnt: （nSlots * nSlotDuration）时间段内允许操作消息的条数
-    bool Init(int nSlots, int nSlotDuration, int nMsgLimitCnt) {
-        if (nSlots <= 0 || nSlotDuration <= 0 || nMsgLimitCnt <=0) {
-            return false;
-        }
-        std::lock_guard<std::mutex> lock(m_mtx);
-        m_nSlots = nSlots;
-        m_nMsgLimitCnt = nMsgLimitCnt;
-        m_nSlotDuration = nSlotDuration;
-    }
-
-    // 增加数量
-    bool IncrCnt(const std::string& strObjId) {
-        std::lock_guard<std::mutex> lock(m_mtx);
-
-        auto it = m_umapObj.find(strObjId);
-        if (it == m_umapObj.end()) {
-            auto obj = std::make_shared<SLimitObject>(strObjId, m_nSlots,
-                std::chrono::steady_clock::now());
-            it = m_umapObj.insert(std::make_pair(strObjId, obj)).first;
-        }
-
-        auto& obj = it->second;
-        RotateWheel(obj);
-
-        if (obj->m_nMsgTotalCnt >= m_nMsgLimitCnt) {
-            return false;
-        }
-
-        obj->m_vecWheel[obj->m_nCurSlot]++;
-        obj->m_nMsgTotalCnt++;
-        return true;
-    }
-    
-    // 是否已被限制
-    bool IsLimited(const std::string& strObjId) {
-        std::lock_guard<std::mutex> lock(m_mtx);
-        auto it = m_umapObj.find(strObjId);
-        if (it == m_umapObj.end()) {
-            return false;
-        }
-        auto& obj = it->second;
-        RotateWheel(obj);
-        return obj->m_nMsgTotalCnt >= m_nMsgLimitCnt;
-    }
-
-private:
-    // 转动时间轮，重算对象统计的数据
-    void RotateWheel(std::shared_ptr<SLimitObject>& obj) {
-        // 获取当前时间点
-        auto tpNow = std::chrono::steady_clock::now();
-        // 计算自上次轮换以来经过的秒数
-        auto nElapsed = std::chrono::duration_cast<std::chrono::seconds>(
-            tpNow - obj->m_tpLastRotation).count();
-        // 计算经过的完整轮盘槽数
-        int nElapsedSlots = nElapsed / m_nSlotDuration;
-
-        // 如果经过的槽数大于 0，则需要更新轮盘（顺时针）
-        if (nElapsedSlots > 0) {
-            // 计算实际需要更新的槽数，不能超过总槽数
-            int nSlotsToUpdate = std::min(nElapsedSlots, m_nSlots);
-            // 遍历需要更新的槽数
-            for (int i = 1; i <= nSlotsToUpdate; i++) {
-                // 计算当前槽的索引
-                int nSlotIndex = (obj->m_nCurSlot + i) % m_nSlots;
-                // 从总消息计数中减去当前槽的消息数
-                obj->m_nMsgTotalCnt -= obj->m_vecWheel[nSlotIndex];
-                // 将当前槽的消息数重置为 0
-                obj->m_vecWheel[nSlotIndex] = 0;
-            }
-            // 更新当前槽的索引
-            obj->m_nCurSlot = (obj->m_nCurSlot + nSlotsToUpdate) % m_nSlots;
-            // 更新上次轮换时间点，设置为当前槽的开始时间
-            obj->m_tpLastRotation = tpNow - std::chrono::seconds(
-                nElapsed % m_nSlotDuration);
-        }
-    }
 };
+```
+
+* 源文件。
+
+```cpp
+bool CRateLimitMgr::Init(int nSlots, int nSlotDuration, int nMsgLimitCnt) {
+    if (nSlots <= 0 || nSlotDuration <= 0 || nMsgLimitCnt <=0) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_mtx);
+    m_nSlots = nSlots;
+    m_nMsgLimitCnt = nMsgLimitCnt;
+    m_nSlotDuration = nSlotDuration;
+}
+
+bool CRateLimitMgr::IncrCnt(const std::string& strObjId) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+
+    auto it = m_umapObj.find(strObjId);
+    if (it == m_umapObj.end()) {
+        auto obj = std::make_shared<SLimitObject>(strObjId, m_nSlots,
+            std::chrono::steady_clock::now());
+        it = m_umapObj.insert(std::make_pair(strObjId, obj)).first;
+    }
+
+    auto& obj = it->second;
+    RotateWheel(obj);
+
+    if (obj->m_nMsgTotalCnt >= m_nMsgLimitCnt) {
+        return false;
+    }
+
+    obj->m_vecWheel[obj->m_nCurSlot]++;
+    obj->m_nMsgTotalCnt++;
+    return true;
+}
+
+bool CRateLimitMgr::IsLimited(const std::string& strObjId) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+    auto it = m_umapObj.find(strObjId);
+    if (it == m_umapObj.end()) {
+        return false;
+    }
+    auto& obj = it->second;
+    RotateWheel(obj);
+    return obj->m_nMsgTotalCnt >= m_nMsgLimitCnt;
+}
+
+void CRateLimitMgr::RotateWheel(std::shared_ptr<SLimitObject>& obj) {
+    // 获取当前时间点
+    auto tpNow = std::chrono::steady_clock::now();
+    // 计算自上次轮换以来经过的秒数
+    auto nElapsed = std::chrono::duration_cast<std::chrono::seconds>(
+        tpNow - obj->m_tpLastRotation).count();
+    // 计算经过的完整轮盘槽数
+    int nElapsedSlots = nElapsed / m_nSlotDuration;
+
+    // 如果经过的槽数大于 0，则需要更新轮盘（顺时针）
+    if (nElapsedSlots > 0) {
+        // 计算实际需要更新的槽数，不能超过总槽数
+        int nSlotsToUpdate = std::min(nElapsedSlots, m_nSlots);
+        // 遍历需要更新的槽数
+        for (int i = 1; i <= nSlotsToUpdate; i++) {
+            // 计算当前槽的索引
+            int nSlotIndex = (obj->m_nCurSlot + i) % m_nSlots;
+            // 从总消息计数中减去当前槽的消息数
+            obj->m_nMsgTotalCnt -= obj->m_vecWheel[nSlotIndex];
+            // 将当前槽的消息数重置为 0
+            obj->m_vecWheel[nSlotIndex] = 0;
+        }
+        // 更新当前槽的索引
+        obj->m_nCurSlot = (obj->m_nCurSlot + nSlotsToUpdate) % m_nSlots;
+        // 更新上次轮换时间点，设置为当前槽的开始时间
+        obj->m_tpLastRotation = tpNow - std::chrono::seconds(
+            nElapsed % m_nSlotDuration);
+    }
+}
 ```
 
 ---
