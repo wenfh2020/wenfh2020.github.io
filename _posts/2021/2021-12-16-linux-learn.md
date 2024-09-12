@@ -4,6 +4,7 @@ title:  "学习 linux 内核一阶段小结"
 categories: kernel
 tags: kernel linux learn
 author: wenfh2020
+stickie: true
 ---
 
 做服务端多年，但是学习 linux 内核才一年多，深入研究源码后，解决了我之前的很多疑惑。

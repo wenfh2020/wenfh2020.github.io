@@ -4,6 +4,7 @@ title:  "[内核源码] Linux 网络数据接收流程（TCP）- NAPI"
 categories: kernel
 tags: linux kernel tcp receive
 author: wenfh2020
+stickie: true
 ---
 
 走读 Linux（5.0.1）源码，理解 TCP 网络数据接收和读取工作流程（NAPI）。

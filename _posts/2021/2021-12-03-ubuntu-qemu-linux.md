@@ -4,6 +4,7 @@ title:  "搭建 Linux 内核网络调试环境（vscode + gdb + qemu）"
 categories: kernel
 tags: qemu gdb vscode
 author: wenfh2020
+stickie: true
 ---
 
 如题，主要搭建 linux 内核的调试环境。

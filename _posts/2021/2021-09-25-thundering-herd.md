@@ -4,6 +4,7 @@ title:  "探索惊群 ①"
 categories: network
 tags: thundering herd
 author: wenfh2020
+stickie: true
 ---
 
 惊群比较抽象，类似于抢红包 😁。它多出现在高性能的多进程/多线程服务中，例如：nginx。

@@ -4,6 +4,7 @@ title:  "[内核源码] epoll 实现原理"
 categories: kernel epoll
 tags: epoll Linux kernel
 author: wenfh2020
+stickie: true
 ---
 
 文章主要对 tcp 通信进行 epoll 源码走读。

@@ -3,6 +3,7 @@ layout: post
 title:  "[C++] 浅析 std::share_ptr 内部结构"
 categories: c/c++
 author: wenfh2020
+stickie: true
 ---
 
 最近阅读了 C++ 智能指针的部分实现源码，简单总结和记录一下 std::share_ptr/std::weak_ptr 内部结构和工作原理。
