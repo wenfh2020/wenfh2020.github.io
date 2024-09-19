@@ -4,6 +4,7 @@ title:  "[内核源码] 网络协议栈 - tcp 三次握手状态"
 categories: kernel
 tags: linux kernel handshakes tcp
 author: wenfh2020
+stickie: true
 ---
 
 走读网络协议栈 tcp 的内核源码（Linux - 5.0.1 [下载](https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.0.1.tar.xz)）。通过 Linux 内核源码理解 tcp 三次握手状态变化。

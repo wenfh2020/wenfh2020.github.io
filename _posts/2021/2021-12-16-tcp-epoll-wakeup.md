@@ -4,6 +4,7 @@ title:  "tcp + epoll 内核睡眠唤醒工作流程"
 categories: kernel
 tags: tcp epoll kernel
 author: wenfh2020
+stickie: true
 ---
 
 本章整理了一下服务端 tcp 的第三次握手和 epoll 内核的等待唤醒工作流程。

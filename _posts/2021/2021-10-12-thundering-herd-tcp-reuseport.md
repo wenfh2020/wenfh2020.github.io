@@ -4,6 +4,7 @@ title:  "探索惊群 ⑥ - nginx - reuseport"
 categories: nginx kernel
 tags: reuseport nginx
 author: wenfh2020
+stickie: true
 ---
 
 SO_REUSEPORT (reuseport) 是网络的一个选项设置，它能开启内核功能：网络链接分配 `内核负载均衡`。

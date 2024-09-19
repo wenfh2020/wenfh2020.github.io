@@ -4,6 +4,7 @@ title:  "[内核源码] Linux 系统调用（x86_64）"
 categories: kernel
 tags: linux kernel syscall
 author: wenfh2020
+stickie: true
 ---
 
 Linux 操作系统，为了避免用户程序非法操作设备资源，需要限制进程的操作权限，这样内核为用户程序提供了一组交互的接口，用户程序通过这组接口进行 `系统调用`。

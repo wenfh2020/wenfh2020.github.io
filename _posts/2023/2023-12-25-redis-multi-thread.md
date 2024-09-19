@@ -3,6 +3,7 @@ layout: post
 title:  "[Redis] 浅析 Redis 并发模型"
 categories: redis
 author: wenfh2020
+stickie: true
 ---
 
 很多朋友以为 Redis 是单线程程序，事实上它是 `多进程 + 多线程` 混合并发模型。
@@ -83,7 +84,7 @@ int rewriteAppendOnlyFileBackground(void) {
 
 从 Redis 调试代码中，我们可以看到，Redis 线程主要分为 3 类：
 
-1. 主线程：负责程序的主逻辑，当然也负责 IO。
+1. `主线程`：负责程序的主逻辑，当然也负责 IO。
 2. 后台线程：延时回收耗时的系统资源。
 3. 网络 IO 线程：Redis 6.0 版本增加的 IO 线程，利用多核资源，实现 IO 并发。
 

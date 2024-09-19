@@ -4,6 +4,7 @@ title:  "[stl 源码分析] 浅析 std::vector::emplace_back"
 categories: c/c++
 tags: stl emplace
 author: wenfh2020
+stickie: true
 ---
 
 本文通过测试和结合 [std::vector::emplace_back](https://cplusplus.com/reference/vector/vector/emplace_back/) 实现源码，去理解它的功能和作用。

@@ -4,6 +4,7 @@ title:  "[libco] 协程栈空间"
 categories: libco
 tags: libco share stack
 author: wenfh2020
+stickie: true
 ---
 
 协程“栈”空间，有独立栈和共享栈，重点理解一下协程共享栈。
