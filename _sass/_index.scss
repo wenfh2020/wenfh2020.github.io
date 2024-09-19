@@ -79,7 +79,10 @@
         }
     }
     .right {
-        visibility: hidden;
+        // visibility: hidden;
+        display: none; /* 隐藏元素 */
+        height: 0; /* 设置高度为 0 */
+        overflow: hidden; /* 隐藏溢出的内容 */
         .wrap {
             .side {
                 margin-bottom: 20px;
