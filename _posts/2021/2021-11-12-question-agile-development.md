@@ -1,16 +1,12 @@
 ---
 layout: post
-title:  "[知乎回答] 为何谷歌之类大厂程序员认为敏捷开发是瞎扯淡？"
-categories: 知乎
+title:  "[随笔] 敏捷开发"
+categories: 随笔
 tags: agile
 author: wenfh2020
 ---
 
-[**知乎问题**](https://www.zhihu.com/question/340916482/answer/2285167821)：
-
-原问题来自 quora，附了一个个人认可[答案](https://www.quora.com/Why-do-some-developers-at-strong-companies-like-Google-consider-Agile-development-to-be-nonsense/answer/David-Jeske?share=1)。
-
-想知道知乎程序员怎么看？
+敏捷开发本质：如何在最短时间内调动资源解决问题。
 
 
 
