@@ -36,7 +36,7 @@ TOTP 工作原理：
 
 下图是用户使用谷歌验证码的逻辑：
 
-<div align=center><img src="/images/2024/2024-10-16-08-49-06.jpg" width="85%" data-action="zoom"></div>
+<div align=center><img src="/images/2024/2024-10-16-08-49-06.png" width="85%" data-action="zoom"></div>
 
 ---
 
