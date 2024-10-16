@@ -222,7 +222,7 @@ New Secret: IZGFIRKXIRAVCRCNKRIUSMSILAZVQQZVJVCFIUCEKVGEUUSUGZNA
 Title: example
 Account: test
 # 生成第三方的二维码图片链接
-QR code url: https://api.qrserver.com/v1/create-qr-code/?data=otpauth%3A%2F%2Ftotp%2Ftest%3Fsecret%3DIZGFIRKXIRAVCRCNKRIUSMSILAZVQQZVJVCFIUCEKVGEUUSUGZNA%26issuer%3Dexample&size=200x200&ecc=M
+QR code url: https://api.qrserver.com/v1/create-qr-code/?data=...
 # 校验验证码正确
 2024-10-15 17:03:44, Current code: 874228
 Check code ok!
@@ -244,5 +244,81 @@ Input code to check:
 2024-10-15 17:04:19, Check code ok!
 ```
 
+---
 
+## 4. 参考
 
+上述 C++ 代码主要参考了 [PHP](https://github.com/PHPGangsta/GoogleAuthenticator/blob/master/PHPGangsta/GoogleAuthenticator.php) 和 Go 语言实现的方案（参考下面代码）。
+
+```go
+package main
+
+import (
+    "fmt"
+    "net/url"
+    "time"
+
+    "github.com/pquerna/otp/totp"
+)
+
+// 验证 OTP
+func verifyCode(inputOTP, secret string) bool {
+    return totp.Validate(inputOTP, secret)
+}
+
+func getQRCodeGoogleURL(name, secret string, title *string, 
+    params map[string]interface{}) string {
+
+    width := 200
+    height := 200
+    level := "M"
+
+    otpauth := fmt.Sprintf("otpauth://totp/%s?secret=%s",
+        url.QueryEscape(name), url.QueryEscape(secret))
+    if title != nil {
+        otpauth += "&issuer=" + url.QueryEscape(*title)
+    }
+
+    return fmt.Sprintf(
+        "https://api.qrserver.com/v1/create-qr-code/?data=%s&size=%dx%d&ecc=%s",
+        url.QueryEscape(otpauth), width, height, level)
+}
+
+// 获取当前 OTP
+func getCode(secret string) (string, error) {
+    return totp.GenerateCode(secret, time.Now())
+}
+
+func main() {
+    // 生成密钥
+    key, err := totp.Generate(totp.GenerateOpts{
+        Issuer:      "YourAppName",
+        AccountName: "user@example.com",
+        Secret:      []byte("2VZUWYTWHDYTFV7L32NQVMVI2FCJHU6X"),
+    })
+    if err != nil {
+        fmt.Println("Error generating key:", err)
+        return
+    }
+
+    // 打印密钥和二维码链接
+    title := "YourAppName"
+    params := map[string]interface{}{
+        "width":  200,
+        "height": 200,
+        "level":  "M",
+    }
+
+    qrCodeURL := getQRCodeGoogleURL(key.AccountName(), key.Secret(), &title, params)
+    fmt.Printf("Secret: %s\n", key.Secret())
+    fmt.Println("QR Code URL:", qrCodeURL)
+
+    // 获取当前 OTP
+    for {
+        otp, _ := getCode(key.Secret())
+        fmt.Printf("Current OTP: %s\n", otp)
+        // 等待 1 秒
+        time.Sleep(1 * time.Second)
+    }
+}
+```
