@@ -3,6 +3,7 @@ layout: post
 title:  "[知乎回答] C++ 有什么好用的线程池？"
 categories: 知乎 c/c++
 author: wenfh2020
+stickie: true
 ---
 
 [**知乎问题**](https://www.zhihu.com/question/397916107/answer/2848415125)：

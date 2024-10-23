@@ -3,6 +3,7 @@ layout: post
 title:  "[QT] 浅析信号与槽"
 categories: c/c++
 author: wenfh2020
+stickie: true
 ---
 
 QT 的信号与槽技术，是一种用于对象间通信的机制。它允许一个对象发出一个信号，而其他对象可以通过连接到该信号的槽来接收并处理该信号。
