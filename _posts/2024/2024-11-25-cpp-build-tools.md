@@ -126,8 +126,8 @@ distccd --daemon --allow 192.168.1.122 --verbose --log-file=/tmp/distcc.log
 ```shell
 # 配置远程主机，指定 192.168.1.36 使用最多 42 个并行编译进程
 export DISTCC_HOSTS="192.168.1.36/42,lzo"
-# 设置本地不使用任何核心，全部使用远程机器（可以根据自己需要配置）
-export DISTCC_SLOTS="0"
+# 设置本地编译 4 个任务（可以根据自己需要配置）
+export DISTCC_SLOTS="4"
 # 编译核心，提供 make -j$(nproc) 使用，从配置读取核心数值
 CORES=32
 ```
