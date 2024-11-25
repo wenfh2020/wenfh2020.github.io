@@ -3,7 +3,6 @@ layout: post
 title:  "[C++] Google Authenticator 算法实现"
 categories: c/c++
 author: wenfh2020
-stickie: true
 ---
 
 `谷歌验证码` 验证的工作原理是：服务端和客户端双方通过 `共享密钥` 基于 TOTP（Time-based One-Time Password）算法产生的动态验证码进行校验。

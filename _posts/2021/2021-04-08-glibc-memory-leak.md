@@ -4,6 +4,7 @@ title:  "剖析 stl + glibc “内存泄漏” 原因"
 categories: c/c++
 tags: stl glibc memory leak
 author: wenfh2020
+stickie: true
 ---
 
 最近项目增加了一个模块，在 Centos 系统压测，进程一直不释放内存。因为新增代码量不多，经过排查，发现 stl + glibc 这个经典组合竟然有问题，见鬼了！
