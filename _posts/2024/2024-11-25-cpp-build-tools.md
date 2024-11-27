@@ -94,6 +94,8 @@ distccd --daemon --allow 192.168.1.122 --verbose --log-file=/tmp/distcc.log
 
 ## 3. cmake 构建脚本
 
+C++ 项目源码使用 cmake 构建编译脚本，结合编译工具优化源码编译脚本。
+
 * 查找工具脚本：distcc_ccahe_compiler.cmake。
   
   脚本目的是编译器编译过程中查找 ccache/distcc 工具，便于项目引入工具脚本进行编译。
