@@ -14,7 +14,7 @@ stickie: true
 
 1. 多核并行编译：  make -j$(nproc)
 2. 编译缓存工具：  [ccache](https://wenfh2020.com/2017/12/06/cpp-ccache/)
-3. 分布式编译工具：distcc
+3. 分布式编译工具：[distcc](https://www.distcc.org/)
 
 
 
@@ -73,21 +73,22 @@ distccd --daemon --allow 192.168.1.122 --verbose --log-file=/tmp/distcc.log
 
 ### 2.2 客户端配置
 
-* 写入 `/etc/distcc.conf` 配置文件。
+* 写入 `~/.bashrc` 配置文件。
 
 ```shell
-# 配置远程主机，指定 192.168.1.36 使用最多 42 个并行编译进程
-export DISTCC_HOSTS="192.168.1.36/42,lzo"
-# 设置本地编译 4 个任务（可以根据自己需要配置）
-export DISTCC_SLOTS="4"
-# 编译核心，提供 make -j$(nproc) 使用，从配置读取核心数值
-CORES=32
+# 配置远程主机，指定 192.168.1.36 编译，localhost 本地也参与编译。
+export DISTCC_HOSTS="192.168.1.36 localhost"
+# 配置输出日志路径（方便调试）
+export DISTCC_LOG='/tmp/distcc.log'
+# 输出详细日志 1/2/3
+export DISTCC_VERBOSE=1
 ```
 
-* 后台启动 distcc。
+* 观察编译任务分布情况。
 
 ```shell
-distccd --daemon --allow 192.168.1.122 --verbose --log-file=/tmp/distcc.log
+# 每秒输出一次
+distccmon-text 1
 ```
 
 ---
