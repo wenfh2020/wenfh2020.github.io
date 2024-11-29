@@ -106,7 +106,7 @@ distccmon-text 1
 
 C++ 项目源码使用 cmake 构建编译脚本，结合编译工具优化源码编译脚本。
 
-* 查找工具脚本：distcc_ccahe_compiler.cmake。
+* 查找工具脚本：distcc_ccache_compiler.cmake。
   
   脚本目的是编译器编译过程中查找 ccache/distcc 工具，便于项目引入工具脚本进行编译。
 
@@ -147,7 +147,7 @@ endif()
   在项目的编译脚本（CMakeLists.txt）中引入前面的工具脚本。
 
 ```shell
-include(../distcc_ccahe_compiler.cmake)
+include(../distcc_ccache_compiler.cmake)
 ```
 
 ---
