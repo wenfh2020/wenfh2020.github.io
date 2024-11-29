@@ -29,9 +29,11 @@ stickie: true
 
 |手段|描述|
 |:---:|:----|
-|<span style="display:inline-block;width:60px">并行编译</span>|Linux 项目通过 CMake 构建的，编译过程中，没发现使用多核，将对应的脚本 make 命令后面添加上 `-j$(nproc)` 参数，支持多核编译，编译速度有惊人的提高。|
+|<span style="display:inline-block;width:60px">并行编译</span>|`make -j N` 是 make 工具中用来并行编译的一个选项，-j 参数后面跟的是并行任务的数量 N，这表示你希望 make 在编译过程中启动多少个并行的编译进程。|
 |ccache|编译缓存工具，通过缓存编译过程中的中间结果和元数据，避免对相同代码的重复编译。第一次编译时，由于没有缓存，可能会稍慢；而从第二次编译开始，利用之前的缓存，编译速度大幅提升。|
 |distcc|分布式编译工具，通过将编译任务分发到多台计算机上并行处理，从而加速编译过程。其主要目的是充分利用其他机器的计算资源，提高编译效率。|
+
+> 部分文字来源：ChatGPT
 
 <div align=center><img src="/images/2024/2024-11-29-11-26-01.png" width="85%" data-action="zoom"></div>
 
