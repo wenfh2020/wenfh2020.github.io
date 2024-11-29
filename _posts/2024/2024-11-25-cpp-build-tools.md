@@ -42,7 +42,7 @@ stickie: true
 
 ## 2. distcc 配置
 
-搭建 distcc 编译环境并不复杂，但使用前仍建议先看它的 [官网](https://www.distcc.org/)，以及 [官方部署文档](https://raw.githubusercontent.com/distcc/distcc/master/INSTALL)。
+搭建 distcc 编译环境并不复杂，详细请参考： [官网](https://www.distcc.org/)，以及 [官方部署文档](https://raw.githubusercontent.com/distcc/distcc/master/INSTALL)。
 
 distcc 是 C/S 工作模式，须要服务端和客户端进行安装配置。
 
