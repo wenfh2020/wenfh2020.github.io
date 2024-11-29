@@ -33,11 +33,16 @@ stickie: true
 |ccache|编译缓存工具，它通过缓存已编译过的文件来减少重复编译，从而提高构建效率。项目第一次编译，因为没有编译缓存可能相对会慢，第二次编译，使用前面编译的缓存结果，速度直线提高。|
 |distcc|分布式编译工具，它允许多个计算机并行编译源代码，从而加速编译过程。目的就是利用其它机器的资源。|
 
+<div align=center><img src="/images/2024/2024-11-29-11-26-01.png" width="85%" data-action="zoom"></div>
+
+
 ---
 
 ## 2. distcc 配置
 
-[distcc](https://www.distcc.org/) 是 C/S 工作模式，须要服务端和客户端进行安装配置。
+搭建 distcc 编译环境并不复杂，但使用前仍建议先看它的 [官网](https://www.distcc.org/)，以及 [官方部署文档](https://raw.githubusercontent.com/distcc/distcc/master/INSTALL)。
+
+distcc 是 C/S 工作模式，须要服务端和客户端进行安装配置。
 
 我的开发机器是双核的，刚好有一台闲置的 48 核机器，可以利用上。
 
@@ -63,6 +68,10 @@ stickie: true
 
 ```shell
 distccd --daemon --allow 192.168.1.122 --verbose --log-file=/tmp/distcc.log
+
+# 如果你在 192.168.1.0/24 网络中运行 distcc，
+# 并希望允许该网络中的所有机器使用 distcc 编译，也可以这样运行
+# distccd --daemon --allow 192.168.1.0/24 --verbose --log-file=/tmp/distcc.log
 ```
 
 > 服务端默认监听 3632 端口，防火墙要支持该端口的访问。
