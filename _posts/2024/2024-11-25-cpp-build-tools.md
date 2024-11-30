@@ -12,7 +12,7 @@ stickie: true
 
 划重点，三板斧：
 
-1. 多核并行编译：  make -j$(nproc)
+1. 多核并行编译：  make -j N
 2. 编译缓存工具：  [ccache](https://wenfh2020.com/2017/12/06/cpp-ccache/)
 3. 分布式编译工具：[distcc](https://www.distcc.org/)
 
@@ -100,11 +100,17 @@ export DISTCC_VERBOSE=1
 distccmon-text 1
 ```
 
+* 测试。环境部署好后，写个 demo 结合 `distccmon-text` 命令测试一下。
+
+```shell
+distcc g++ -c test.cpp -o test.o
+```
+
 ---
 
 ## 3. cmake 构建脚本
 
-C++ 项目源码使用 cmake 构建编译脚本，结合编译工具优化源码编译脚本。
+我的 C++ 项目源码通过 cmake 构建，接下来结合编译工具优化编译脚本。
 
 * 查找工具脚本：distcc_ccache_compiler.cmake。
   
