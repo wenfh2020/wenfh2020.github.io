@@ -12,7 +12,15 @@ author: wenfh2020
 
 哨兵故障转移主体流程：
 
-master 主观下线 -> master 客观下线 -> 选举 -> leader 筛选原 master 的最优 slave -> 晋升最优 slave 为新 master -> 通知原 master 的其它 slave 链接新 master -> 结束故障转移 -> 更新新 master 的存储结构关系 -> 旧 master 重新上线被降级为 slave。
+1. master 主观下线
+2. master 客观下线
+3. 选举
+4. leader 筛选原 master 的最优 slave
+5. 晋升最优 slave 为新 master
+6. 通知原 master 的其它 slave 链接新 master
+7. 结束故障转移
+8. 更新新 master 的存储结构关系
+9. 旧 master 重新上线被降级为 slave。
 
 ---
 
