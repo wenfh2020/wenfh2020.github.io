@@ -160,7 +160,15 @@ include(../distcc_ccache_compiler.cmake)
 
 ---
 
-## 4. 参考
+## 4. 扩展
+
+Windows Visual Studio 2019 多核编译设置：
+
+<div align=center><img src="/images/2024/2024-12-11-11-53-01.png" width="85%" data-action="zoom"></div>
+
+---
+
+## 5. 参考
 
 * [ccache 优化 C++ 编译速度](https://wenfh2020.com/2017/12/06/cpp-ccache/)
 * [如何加速 C++ 文件的编译速度](https://www.cnblogs.com/CocoML/p/14643379.html)
