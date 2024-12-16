@@ -275,9 +275,15 @@ std::weak_ptr 的内部成员结构与 std::shared_ptr 有惊人相似，原理�
 
 ## 3. 线程安全
 
+### 3.1 问题
+
 问：std::shared_ptr 对象是否线程安全？！
 
 答：<font color=red>不安全</font>！
+
+---
+
+### 3.2 分析
 
 ```shell
 |-- shared_ptr 
@@ -296,3 +302,12 @@ std::weak_ptr 的内部成员结构与 std::shared_ptr 有惊人相似，原理�
     3. A 线程执行步骤三还安全吗？！
 
 <div align=center><img src="/images/2023/2024-01-05-11-40-49.png" data-action="zoom"></div>
+
+---
+
+### 3.3 小结
+
+以上分析可见：多线程并发场景下直接使用共享的 std::shared_ptr 变量并非线程安全；得 `上锁`，让它呆在线程安全的临界区内才能保证安全使用。
+
+1. std::shared_ptr 对象本身不线程安全。
+2. std::shared_ptr<T> 管理的 T 元数据也不线程安全。
