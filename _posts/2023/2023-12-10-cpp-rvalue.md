@@ -104,7 +104,7 @@ A makeObj() {
     return a;
 }
 
-void f(const A&& a) {
+void f(A&& a) {
     std::cout << "f(A&&)" << std::endl;
 }
 
@@ -159,13 +159,32 @@ int main() {
 #include <type_traits>
 
 class A {
+public:
+    A() = default;
+    A(const A& a) {
+        std::cout <<"A(const A& a)" << std::endl;
+    }
+
+    A(A&& a) {
+        std::cout <<"A(A&& a)" << std::endl;
+    }
+
+    A& operator=(A& a) {
+        std::cout << "operator=(A& a)" << std::endl;
+        return *this;
+    }
+
+    A& operator=(A&& a) noexcept {
+        std::cout << "operator=(A&& a)" << std::endl;
+        return *this;
+    }
 };
 
 void f(const A& a) {
     std::cout << "f(A&)" << std::endl;
 }
 
-void f(const A&& a) {
+void f(A&& a) {
     std::cout << "f(A&&)" << std::endl;
 }
 
@@ -175,10 +194,13 @@ void f2(const A& a) {
               << std::endl;
 }
 
-void f2(const A&& a) {
+void f2(A&& a) {
     std::cout << "f2(A&&) arg is rvalue? "
               << std::is_same<decltype(a), A&&>::value
               << std::endl;
+    A b(a);
+    // 完美转发可以将 a 转化为原来的变量类型（晕了吧~~~~~~）
+    // b = std::forward<A>(a); 
 }
 
 int main() {
@@ -186,7 +208,7 @@ int main() {
     // 强制转换左值 a 为右值引用。
     A&& b = std::move(a);
     std::cout << "b is rvalue? "
-              << std::is_same<decltype(c), A&&>::value
+              << std::is_same<decltype(b), A&&>::value
               << std::endl;
     // 虽然 b 的变量类型是右值引用，
     // 但是 b 作为 f 函数的实参，以左值方式给 f 函数传值。
@@ -201,7 +223,8 @@ int main() {
 // 输出：
 // b is rvalue? 1
 // f(A&)
-// f2(A&&) arg is rvalue? 0
+// f2(A&&) arg is rvalue? 1
+// A(const A& a)
 ```
 
 ---
@@ -479,7 +502,7 @@ move<A&>(A& __t) noexcept {
 
 ### 6.1. 概念
 
-完美转发 - std::forward，正常的使用方式是结合万能引用使用，将模板函数的参数类型：万能引用转换为对应的左值引用或右值引用。
+`std::forward` 完美转发，通常与 右值引用（T&&）一起使用，主要用于保持参数的原始值类别，在将其传递给其他函数时能够正确处理左值和右值。
 
 ```cpp
 // g++ -std=c++11 test.cpp -o test && ./test
@@ -492,7 +515,7 @@ void f2(const A& a) {
     std::cout << "lvalue" << std::endl;
 }
 
-void f2(const A&& a) {
+void f2(A&& a) {
     std::cout << "rvalue" << std::endl;
 }
 
@@ -556,7 +579,7 @@ void f2(const A& a) {
     std::cout << "lvalue" << std::endl;
 }
 
-void f2(const A&& a) {
+void f2(A&& a) {
     std::cout << "rvalue" << std::endl;
 }
 
@@ -626,7 +649,7 @@ forward<A>(A& __t) noexcept {
 
 template <>
 void f<A>(A&& t) {
-    f2(static_cast<const A&&>(forward<A>(t)));
+    f2(static_cast<A&&>(forward<A>(t)));
 }
 ```
 
