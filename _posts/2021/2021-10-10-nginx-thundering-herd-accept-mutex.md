@@ -357,3 +357,15 @@ Changes with nginx 1.11.3                                        26 Jul 2016
 * [Nginx的accept_mutex配置](https://blog.csdn.net/adams_wu/article/details/51669203)
 * [Nginx 是如何解决 epoll 惊群的](https://ld246.com/article/1588731832846)
 * [关于ngx_trylock_accept_mutex的一些解释](https://blog.csdn.net/brainkick/article/details/9081017)
+
+---
+
+## 5. 纠正
+
+这篇文章内容，本人还没理解透彻，论点不正确。
+
+最近没有足够的时间去修正，非常抱歉，看到此文的同学不要被我带偏了。
+
+非常感谢感谢 [@cs-moushuai](https://github.com/cs-moushuai) 指出文章的问题（[issues](https://github.com/wenfh2020/wenfh2020.github.io/issues/109)），谢谢。
+
+<div align=center><img src="/images/2024/2024-12-31-17-55-24.png" data-action="zoom"/></div>
