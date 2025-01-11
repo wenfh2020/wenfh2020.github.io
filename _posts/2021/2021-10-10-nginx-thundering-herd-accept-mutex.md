@@ -6,11 +6,9 @@ tags: linux nginx thundering herd
 author: wenfh2020
 ---
 
-由主进程创建的 listen socket，要被 fork 出来的子进程共享，但是为了避免多个子进程同时争抢共享资源，nginx 采用一种策略：使得多个子进程，同一时段，只有一个子进程能获取资源，就不存在共享资源的争抢问题。
+nginx 是 Master-Worker 架构。accept_mutex 是一个用于控制多个 Worker 进程互斥接受新连接的机制。
 
-成功获取锁的，能获取一定数量的资源，而其它没有成功获取锁的子进程，不能获取资源，只能等待成功获取锁的进程释放锁后，nginx 多进程再重新进入锁竞争环节。
-
-
+主进程创建的 listen socket，要被 fork 出来的子进程共享，但是为了避免多个子进程无差别地消费 listen socket 的共享资源，它通过抢锁的方式：使得多个子进程，同一时段，`尽量` 只有一个子进程能获取资源，尽量避免共享资源的争抢问题和尽量使得各个子进程负载均衡。
 
 * content
 {:toc}
@@ -46,61 +44,67 @@ events {
 
 ### 2.1. 负载均衡
 
-nginx 子进程通过抢共享锁 🔐 实现负载均衡，现在用下面的伪代码去理解它的实现原理。
-
-```c
-int main() {
-    efd = epoll_create();
-
-    while (1) {
-        if (is_disabled) {
-            ...
-            /* 不抢，但是为了避免一直不抢，也要递减它的 disable 程度。*/
-            is_disabled = reduce_disabled();
-        } else {
-            /* 抢。*/
-            if (try_lock()) {
-                /* 抢锁成功，epoll 关注 listen_fd 的 POLLIN 事件。 */
-                if (!is_locked) {
-                    epoll_ctl(efd, EPOLL_CTL_ADD, listen_fd, ...);
-                    is_locked = true;
-                }
-            } else {
-                if (is_locked) {
-                    /* 抢锁失败，epoll 不再关注 listen_fd 事件。 */
-                    epoll_ctl(efd, EPOLL_CTL_DEL, listen_fd, ...);
-                    is_locked = false;
-                }
-            }
-        }
-
-        /* 超时等待链接资源到来。 */
-        n = epoll_wait(...)
-        if (n > 0) {
-            if (is_able_to_accept) {
-                /* 链接资源到来，取出链接。*/
-                client_fd = accept();
-                /* 每次取出链接后，重新检查 disabled 值。*/
-                is_disabled = check_disabled();
-            }
-        }
-
-        if (is_locked) {
-            unlock();
-        }
-    }
-
-    return 0;
-}
-```
-
-nginx 通过 `ngx_accept_disabled` 负载均衡数值控制抢锁的时机，每次 accept 完链接资源后，都检查一下它。
+nginx 子进程通过 ngx_accept_disabled 变量控制抢锁时机。
 
 ```c
 ngx_accept_disabled = ngx_cycle->connection_n / 8 - ngx_cycle->free_connection_n;
 ```
 
-connection_n 最大连接数是固定的；free_connection_n 空闲连接数是变化的。只有在 ngx_accept_disabled > 0 的情况下，进程才不愿意抢锁，换句话说，就是已使用链接大于总链接的 7/8 了，`空闲链接快用完了，原来拥有锁的进程才不会频繁去抢锁`。
+* 关键变量。
+
+|变量|描述|
+|:--|:--|
+|<span style="display:inline-block;width:200px">ngx_accept_disabled</span>|用于控制 worker 进程是否接受新连接。值为正时，表示当前 worker 进程负载较高，暂时不接受新连接；为负或零时，表示可以接受新连接。|
+|ngx_cycle->connection_n|表示当前 worker 进程管理的最大连接数（配置文件可配置的固定数值）。|
+|ngx_cycle->free_connection_n|表示当前 worker 进程可用的空闲连接数。|
+
+* 伪代码：
+
+```c
+void worker_logic () {
+    efd = epoll_create();
+
+    while (1) {
+        if (ngx_accept_disabled > 0) {
+            ...
+            /* 不抢，但是为了避免一直不抢，也要递减它的 disable 程度*/
+            ngx_accept_disabled = reduce_disabled();
+        } else {
+            /* 抢锁 */
+            if (ngx_shmtx_trylock()) {
+                /* 抢锁成功，epoll 关注 listen_fd 的 POLLIN 事件 */
+                if (!is_cur_worker_locked) {
+                    epoll_ctl(efd, EPOLL_CTL_ADD, listen_fd, ...);
+                    is_cur_worker_locked = true;
+                }
+            } else {
+                if (is_cur_worker_locked) {
+                    /* 抢锁失败，epoll 不再关注 listen_fd 事件 */
+                    epoll_ctl(efd, EPOLL_CTL_DEL, listen_fd, ...);
+                    is_cur_worker_locked = false;
+                }
+            }
+        }
+
+        /* 超时等待链接资源到来 */
+        n = epoll_wait(...)
+        if (n > 0) {
+            if (is_able_to_accept) {
+                /* 链接资源到来，取出链接 */
+                client_fd = accept();
+                /* 每次取出链接后，重新检查 disabled 值 */
+                ngx_accept_disabled = check_disabled();
+            }
+        }
+
+        if (is_cur_worker_locked) {
+            ngx_shmtx_unlock();
+        }
+    }
+}
+```
+
+* nginx 源码剖析。
 
 ```c
 /* src/event/ngx_event.c */
@@ -352,20 +356,20 @@ Changes with nginx 1.11.3                                        26 Jul 2016
 
 ---
 
-## 4. 参考
+## 4. 感谢
+
+非常感谢 [@cs-moushuai](https://github.com/cs-moushuai) 指出文章的问题（[issues](https://github.com/wenfh2020/wenfh2020.github.io/issues/109)）。
+
+nginx 高负载情况下（ngx_accept_disabled > 0）并不只有一个 worker 会 accept 资源。因为 worker 的 ngx_accept_disabled > 0 时会执行 `ngx_accept_disabled--`，并不会马上执行 ngx_trylock_accept_mutex 里的 ngx_disable_accept_events。
+
+所以高负载情况下可能会出现多个 worker 去 accept listen socket 的资源的现象。
+
+<div align=center><img src="/images/2024/2024-12-31-17-55-24.png" data-action="zoom"/></div>
+
+---
+
+## 5. 参考
 
 * [Nginx的accept_mutex配置](https://blog.csdn.net/adams_wu/article/details/51669203)
 * [Nginx 是如何解决 epoll 惊群的](https://ld246.com/article/1588731832846)
 * [关于ngx_trylock_accept_mutex的一些解释](https://blog.csdn.net/brainkick/article/details/9081017)
-
----
-
-## 5. 纠正
-
-这篇文章内容，本人还没理解透彻，论点不正确。
-
-最近没有足够的时间去修正，非常抱歉，看到此文的同学不要被我带偏了。
-
-非常感谢感谢 [@cs-moushuai](https://github.com/cs-moushuai) 指出文章的问题（[issues](https://github.com/wenfh2020/wenfh2020.github.io/issues/109)），谢谢。
-
-<div align=center><img src="/images/2024/2024-12-31-17-55-24.png" data-action="zoom"/></div>
