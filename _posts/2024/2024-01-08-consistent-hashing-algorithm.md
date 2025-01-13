@@ -3,6 +3,7 @@ layout: post
 title:  "[算法] 一致性哈希算法"
 categories: algorithm
 author: wenfh2020
+stickie: true
 ---
 
 一致性哈希算法，是后端比较常用的一种数据路由策略。本文介绍一下它的算法原理，以及使用场景。
