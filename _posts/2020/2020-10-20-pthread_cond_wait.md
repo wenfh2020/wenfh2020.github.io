@@ -1,12 +1,14 @@
 ---
 layout: post
-title:  "[多线程] 条件变量 pthread_cond_wait"
+title:  "[C++] 理解 C++ 多线程条件变量 pthread_cond_wait 使用"
 categories: c/c++
-tags: 多线程 pthread_cond_wait
+tags: 多线程 条件变量
 author: wenfh2020
 ---
 
-这个函数，在多线程场景与锁结合使用。如果某些线程没事干，就把它阻塞，等待唤醒，这样可以避免线程空跑，浪费系统资源。
+pthread_cond_wait 是 POSIX 线程库中用于条件变量等待的函数。
+
+它的作用是让线程在条件变量上等待，并在等待期间释放与之关联的互斥锁。当条件变量被通知（通过 pthread_cond_signal 或 pthread_cond_broadcast）时，线程会被唤醒并重新获取互斥锁。
 
 
 
@@ -20,6 +22,14 @@ author: wenfh2020
 
 The pthread_cond_wait() function atomically blocks the current thread waiting on the condition variable specified by cond, and releases the mutex specified by mutex. The waiting thread unblocks only after another thread calls pthread_cond_signal(3), or pthread_cond_broadcast(3) with the same condition variable, and the current thread reac-
 quires the lock on mutex.
+
+---
+
+pthread_cond_wait 的主要功能是：
+
+1. 释放互斥锁：线程在等待条件变量之前，必须释放与之关联的互斥锁。
+2. 等待条件变量：线程进入等待状态，直到条件变量被通知（通过 pthread_cond_signal 或 pthread_cond_broadcast）。
+3. 重新获取互斥锁：线程被唤醒后，重新获取互斥锁。
 
 ---
 
@@ -70,88 +80,161 @@ void* Bio::bio_process_tasks(void* arg) {
 
 ## 3. 流程
 
-`pthread_cond_wait` 主要做这几件事。
+`pthread_cond_wait` 工作流程：
 
 1. 解锁。
-2. 阻塞等待唤醒。
+2. 阻塞等待唤醒（如果不满足条件唤醒条件，阻塞等待）。
 3. 被唤醒（pthread_cond_signal / pthread_cond_broadcast）。
-4. “回复”唤醒者。
-5. 重新上锁。
+4. 重新上锁。
 
-![pthread_cond_wait 工作流程](/images/2020/2020-10-20-17-33-25.png){:data-action="zoom"}
+<div align=center><img src="/images/2024/2025-01-13-11-10-42.png" width="90%" data-action="zoom"></div>
 
 ---
 
 ## 4. glibc 源码
 
-`pthread_cond_wait` 实现在 `glibc` 的 [pthread_cond_wait.c](https://code.woboq.org/userspace/glibc/nptl/pthread_cond_wait.c.html) 文件。个人不熟悉内核源码，理解可能有偏差 ^_^！
+要了解条件变量各个接口的工作原理，可以参考 glibc 源码的实现：
+
+[pthread_cond_signal](https://codebrowser.dev/glibc/glibc/nptl/pthread_cond_signal.c.html) / [pthread_cond_broadcast](https://codebrowser.dev/glibc/glibc/nptl/pthread_cond_broadcast.c.html) / [pthread_cond_wait](https://codebrowser.dev/glibc/glibc/nptl/pthread_cond_wait.c.html)
+
 
 ```c
-/* pthread_cond_wait.c */
-versioned_symbol (libpthread, __pthread_cond_wait, pthread_cond_wait, GLIBC_2_3_2);
-
-int
-__pthread_cond_wait (pthread_cond_t *cond, pthread_mutex_t *mutex) {
-  return __pthread_cond_wait_common (cond, mutex, NULL);
+// https://codebrowser.dev/glibc/glibc/nptl/pthread_cond_signal.c.html
+int ___pthread_cond_signal(pthread_cond_t* cond) {
+    ...
+    // 唤醒
+    if (do_futex_wake)
+        futex_wake(cond->__data.__g_signals + g1, 1, private);
+    return 0;
 }
 
-static __always_inline int
-__pthread_cond_wait_common(pthread_cond_t* cond, pthread_mutex_t* mutex,
-                           const struct timespec* abstime) {
+// https://codebrowser.dev/glibc/glibc/nptl/pthread_cond_broadcast.c.html
+int ___pthread_cond_broadcast(pthread_cond_t* cond) {
     ...
-    /* 解锁。 */
+    // 唤醒
+    if (do_futex_wake)
+        futex_wake(cond->__data.__g_signals + g1, INT_MAX, private);
+    return 0;
+}
+
+// https://codebrowser.dev/glibc/glibc/nptl/pthread_cond_wait.c.html
+static __always_inline int
+__pthread_cond_wait_common(pthread_cond_t *cond, pthread_mutex_t *mutex,
+                           clockid_t clockid, const struct __timespec64 *abstime) {
+    ...
+    // 解锁
     err = __pthread_mutex_unlock_usercnt(mutex, 0);
     ...
     unsigned int signals = atomic_load_acquire(cond->__data.__g_signals + g);
     do {
         while (1) {
             ...
-            /* If our group will be closed as indicated by the flag on signals,
-             don't bother grabbing a signal.  */
-            if (signals & 1)
-                goto done;
-            /* If there is an available signal, don't block.  */
-            if (signals != 0)
-                break;
-            ...
-            if (abstime == NULL) {
-                /* 睡眠阻塞等待。 */
-                err = futex_wait_cancelable(
-                    cond->__data.__g_signals + g, 0, private);
-            } else {
-                ...
-                /* 限时阻塞等待。 */
-                err = futex_reltimed_wait_cancelable(...);
-                ...
-            }
-            ...
-            if (__glibc_unlikely(err == ETIMEDOUT)) {
-                __condvar_dec_grefs(cond, g, private);
-                /* 超时唤醒。 */
-                __condvar_cancel_waiting(cond, seq, g, private);
-                result = ETIMEDOUT;
-                goto done;
-            }
+            // 等待唤醒
+            err = __futex_abstimed_wait_cancelable64(
+                cond->__data.__g_signals + g, 0, clockid, abstime, private);
             ...
         }
     }
     ...
-    /* “回复”唤醒者。 */
-    futex_wake(cond->__data.__g_signals + g, 1, private);
-    ...
 done:
-    /* 确认唤醒。 */
-    __condvar_confirm_wakeup(cond, private);
-    /* 上锁。*/
+    ...
+    // 加锁
     err = __pthread_mutex_cond_lock(mutex);
-    /* XXX Abort on errors that are disallowed by POSIX?  */
-    return (err != 0) ? err : result;
+ ...
 }
 ```
 
 ---
 
-## 5. 参考
+## 5. 条件变量 demo
+
+```cpp
+// g++ -g -O0 -std=c++17 test.cpp  -lpthread -o test && ./test
+
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <cstdio>
+#include <iostream>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <vector>
+
+std::queue<int> g_queue;          // 共享队列
+std::mutex g_mutex;               // 互斥锁
+std::condition_variable g_cv;     // 条件变量
+std::atomic<bool> g_done{false};  // 使用原子变量替代普通 bool
+
+// 生产者
+void producer() {
+    for (int i = 0; i < 10; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        {
+            std::lock_guard<std::mutex> lock(g_mutex);
+            g_queue.push(i);
+        }
+
+        printf("Produced: %d\n", i);
+        g_cv.notify_one();
+    }
+
+    g_done = true;
+    g_cv.notify_all();
+}
+
+// 消费者
+void consumer(int id) {
+    while (true) {
+        int item = -1;
+
+        {
+            std::unique_lock<std::mutex> lock(g_mutex);
+            g_cv.wait(lock, [&] { return !g_queue.empty() || g_done; });
+            if (g_done) {
+                break;
+            }
+
+            if (!g_queue.empty()) {
+                item = g_queue.front();
+                g_queue.pop();
+            }
+        }
+
+        if (item != -1) {
+            printf("Consumer %d consumed: %d\n", id, item);
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+    }
+}
+
+int main() {
+    std::thread prod(producer);
+
+    std::vector<std::thread> consumers;
+    for (int i = 0; i < 10; ++i) {
+        consumers.emplace_back(consumer, i + 1);
+    }
+
+    if (prod.joinable()) {
+        prod.join();
+    }
+
+    for (auto& cons : consumers) {
+        if (cons.joinable()) {
+            cons.join();
+        }
+    }
+
+    printf("Main thread finished.\n");
+    return 0;
+}
+```
+
+---
+
+## 6. 参考
 
 * [pthread_cond_wait函数实现](https://www.cnblogs.com/kuikuitage/p/12907904.html)
 * [Linux Futex浅析](http://blog.sina.com.cn/s/blog_e59371cc0102v29b.html)
