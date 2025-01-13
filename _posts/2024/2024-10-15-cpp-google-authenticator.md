@@ -31,7 +31,15 @@ TOTP 工作原理：
 
 ---
 
-## 2. 使用逻辑
+## 2. 应用
+
+应用参考 Github 用户账号和密码登录成功后，需要二次验证码验证功能。
+
+<div align=center><img src="/images/2024/2025-01-13-12-05-53.png" width="50%" data-action="zoom"></div>
+
+---
+
+## 3. 使用逻辑
 
 下图是用户账号登录使用谷歌验证码的逻辑：
 
@@ -42,11 +50,11 @@ TOTP 工作原理：
 
 ---
 
-## 3. 源码
+## 4. 源码
 
 详细源码请参考 [GitHub](https://github.com/wenfh2020/GoogleAuthenticator)。
 
-### 3.1 接口
+### 4.1. 接口
 
 ```cpp
 class GoogleAuthenticator {
@@ -70,7 +78,7 @@ public:
 
 ---
 
-### 3.2 TOTP 算法
+### 4.2. TOTP 算法
 
 * 生成验证码。通过密钥，基于（本地）当前时间戳生成动态验证码。
 
@@ -158,7 +166,7 @@ bool GoogleAuthenticator::ValidateCode(const std::string &inputCode,
 
 ---
 
-### 3.3. 测试
+### 4.3. 测试
 
 * 源码。
 
@@ -245,7 +253,7 @@ Input code to check:
 
 ---
 
-## 4. 参考
+## 5. 参考
 
 上述 C++ 代码主要参考了 [PHP](https://github.com/PHPGangsta/GoogleAuthenticator/blob/master/PHPGangsta/GoogleAuthenticator.php) 和 Go 语言实现的方案（参考下面代码）。
 
