@@ -263,7 +263,7 @@ bt
 
 <div align=center><img src="/images/2021/2021-06-23-13-42-26.png" data-action="zoom"/></div>
 
-* ms-vscode.cpptools
+* ms-vscode.cpptools （建议安装 1.4.0 版本）
 
 <div align=center><img src="/images/2021/2021-06-23-13-17-05.png" data-action="zoom"/></div>
 
@@ -371,17 +371,24 @@ telnet 192.168.10.221 5001
 
 ---
 
-## 4. 注意
+## 4. 更好方案
 
-* 跑通了流程，记得保存镜像，避免以后修改了配置跑不起来。
+有热心的大佬给出了更好的解决方案：使用 docker 搭建调试环，有兴趣的朋友不妨折腾一下。
+
+<div align=center><img src="/images/2021/2021-12-15-07-19-59.png" data-action="zoom"/></div>
 
 ---
 
-## 5. 更好方案
+## 5. 注意
 
-前段时间有一位热心网友在我的博客上留言，给出了一个更好的解决方案：描述了使用 docker 搭建调试环境。
+1. 搭建过程比较复杂，跑通了流程的朋友，记得保存镜像，避免以后修改了配置跑不起来。
+2. vscode 的 cpptools 比较耗资源，使用 vscode 工具的朋友要有心理准备。
 
-<div align=center><img src="/images/2021/2021-12-15-07-19-59.png" data-action="zoom"/></div>
+<div align=center><img src="/images/2023/2025-03-22-15-03-01.png" data-action="zoom"/></div>
+
+3. 有的朋友反馈跑虚拟机比较耗资源，可以将调试环境搭建在 docker 容器里，这是个非常不错的选择，而搭建流程也是大同小异。
+
+<div align=center><img src="/images/2023/2025-03-22-15-04-42.png" data-action="zoom"/></div>
 
 ---
 
