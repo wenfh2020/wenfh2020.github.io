@@ -373,7 +373,7 @@ telnet 192.168.10.221 5001
 
 ## 4. 更好方案
 
-有热心的大佬给出了更好的解决方案：使用 docker 搭建调试环，有兴趣的朋友不妨折腾一下。
+有热心的大佬给出了更好的解决方案：使用 docker 搭建调试环境，有兴趣的朋友不妨折腾一下。
 
 <div align=center><img src="/images/2021/2021-12-15-07-19-59.png" data-action="zoom"/></div>
 
@@ -382,13 +382,17 @@ telnet 192.168.10.221 5001
 ## 5. 注意
 
 * 搭建过程比较复杂，跑通了流程的朋友，记得保存镜像，避免以后修改了配置跑不起来。
-* vscode 的 cpptools 比较耗资源，使用 vscode 工具的朋友要有心理准备。
+* vscode 的 cpptools 有时候比较耗资源，使用 vscode 工具的朋友要有心理准备。
 
 <div align=center><img src="/images/2023/2025-03-22-15-03-01.png" data-action="zoom"/></div>
 
-* 有的朋友反馈跑虚拟机比较耗资源，可以将调试环境搭建在 docker 容器里，这是个非常不错的选择，而搭建流程也是大同小异。
+* 跑虚拟机比较耗资源，可以将调试环境搭建在 docker 容器里，这是个非常不错的选择，而搭建流程也是大同小异。
 
 <div align=center><img src="/images/2023/2025-03-22-15-04-42.png" data-action="zoom"/></div>
+
+* 有些朋友反馈，gdb 调试过程中，变量显示 \<optimized out\>，而且有时候单步调试会乱跳，这是因为 linux 内核编译优化级别是 **-O2**，不是 **-O0**，遇到这种情况，多调试几步有些变量会正常显示，而且主体的调试流程一般不会乱跳。（改到 **-O0** 级别，内核源码编译不通过^_^！）
+
+<div align=center><img src="/images/2023/2025-03-22-15-55-22.png" data-action="zoom" width=40%/></div>
 
 ---
 
