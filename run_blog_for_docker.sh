@@ -3,7 +3,8 @@
 # brief    server run in docker.
 # author:  wenfh2020.com
 # date:    2025-03-29
-# note:    docker run -d --name my-blog -p 4000:4000 -v "$(pwd)":/home/blog crpi-ogok7v08unnpdeus.cn-shenzhen.personal.cr.aliyuncs.com/wenfh2020/ubuntu-jekyll-ruby-bundle:v1 /home/blog/run_blog_for_docker.sh
+# note:    docker pull crpi-ogok7v08unnpdeus.cn-shenzhen.personal.cr.aliyuncs.com/wenfh2020/ubuntu-jekyll-ruby-bundle:v1
+#          docker run -d --name my-blog -p 4000:4000 -v "$(pwd)":/home/blog crpi-ogok7v08unnpdeus.cn-shenzhen.personal.cr.aliyuncs.com/wenfh2020/ubuntu-jekyll-ruby-bundle:v1 /home/blog/run_blog_for_docker.sh
 # -------------------------------------------------------------------------------
 
 cd $(dirname $0)
